@@ -68,7 +68,7 @@ class MonetizationService:
             # 剥离信源情报图的深度信息
             if "sourceIntelligenceMap" in data:
                 data["sourceIntelligenceMap"] = {
-                    "nodes": [{"id": "brand", "name": "品牌核心", "level": 0}],
+                    "nodes": [{"id": "brand", "name": "品牌核心", "level": 0, "symbolSize": 60, "category": "brand"}],
                     "links": []
                 } # 只显示核心节点
 

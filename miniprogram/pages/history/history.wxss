@@ -161,4 +161,9 @@ page {
   border-radius: 40rpx;
   padding: 20rpx 40rpx;
   font-size: 28rpx;
+  margin-bottom: 20rpx;
+}
+.secondary-btn {
+  background-color: #00A9FF;
+  color: #fff;
 }

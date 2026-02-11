@@ -38,6 +38,9 @@
     <text class="empty-icon">🗂️</text>
     <text class="empty-text">暂无历史报告</text>
     <button class="empty-btn" bindtap="goHome">立即进行一次诊断</button>
+    <button class="empty-btn secondary-btn" bindtap="viewSavedResults">查看已保存结果</button>
+    <button class="empty-btn secondary-btn" bindtap="viewPublicHistory">查看公共历史</button>
+    <button class="empty-btn secondary-btn" bindtap="viewPersonalHistory">查看个人历史</button>
   </view>
 
   <!-- 加载状态 -->

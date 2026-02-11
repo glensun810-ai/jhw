@@ -107,5 +107,26 @@ Page({
     wx.reLaunch({
       url: '/pages/index/index'
     });
+  },
+
+  // 查看已保存的结果
+  viewSavedResults: function() {
+    wx.navigateTo({
+      url: '/pages/saved-results/saved-results'
+    });
+  },
+
+  // 查看公共历史记录
+  viewPublicHistory: function() {
+    wx.navigateTo({
+      url: '/pages/public-history/public-history'
+    });
+  },
+
+  // 查看个人历史记录
+  viewPersonalHistory: function() {
+    wx.navigateTo({
+      url: '/pages/personal-history/personal-history'
+    });
   }
 })

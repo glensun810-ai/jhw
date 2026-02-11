@@ -5,7 +5,7 @@
   <view class="content-wrapper">
     <!-- 标题 -->
     <view class="title-section">
-      <text class="main-title">进化湾GEO</text>
+      <text class="main-title">AI搜索品牌影响力监测</text>
       <text class="subtitle">驾驭AI，重塑品牌影响力</text>
     </view>
 
@@ -46,21 +46,32 @@
 
     <!-- 高级设置 -->
     <view class="advanced-settings-section {{showAdvancedSettings ? 'visible' : ''}}">
+      <!-- 保存配置按钮 -->
+      <view class="setting-block">
+        <button class="save-config-btn" bindtap="showSaveConfigModal">💾 保存当前配置</button>
+      </view>
+
       <!-- 自定义问题输入 -->
       <view class="setting-block">
         <view class="setting-title">
-          <text>📝 自定义诊断问题</text>
+          <text>自定义诊断问题</text>
           <text class="setting-subtitle">更精准地探测AI认知</text>
         </view>
         <view class="questions-container">
-          <view class="question-item" wx:for="{{customQuestions}}" wx:key="index">
-            <input
-              class="question-input"
-              placeholder="问题 {{index + 1}} (例如：我们的创始人是谁？)"
-              value="{{item}}"
-              bindinput="onCustomQuestionInput"
-              data-index="{{index}}"
-            />
+          <view class="question-item" wx:for="{{customQuestions}}" wx:key="index" wx:if="{{item.show !== false}}">
+            <view class="question-input-wrapper">
+              <input
+                class="question-input"
+                placeholder="问题 {{index + 1}} (例如：XX服务哪家好？)"
+                value="{{item.text}}"
+                bindinput="onCustomQuestionInput"
+                data-index="{{index}}"
+              />
+              <view class="remove-question-btn" bindtap="removeCustomQuestion" data-index="{{index}}">×</view>
+            </view>
+          </view>
+          <view class="add-question-btn" bindtap="addCustomQuestion">
+            <text>+ 添加问题</text>
           </view>
         </view>
       </view>
@@ -68,7 +79,7 @@
       <!-- AI模型选择 -->
       <view class="setting-block">
         <view class="setting-title">
-          <text>🧠 AI平台矩阵</text>
+          <text>AI平台矩阵</text>
           <text class="setting-subtitle">选择您想诊断的AI平台</text>
         </view>
         <view class="ai-model-selection">
@@ -110,6 +121,23 @@
       </view>
     </view>
 
+    <!-- 保存配置模态框 -->
+    <view class="modal-overlay" wx:if="{{showSaveModal}}">
+      <view class="modal-content">
+        <view class="modal-header">
+          <text>保存当前配置</text>
+          <text class="close-btn" bindtap="hideSaveConfigModal">✕</text>
+        </view>
+        <view class="modal-body">
+          <input class="config-name-input" placeholder="请输入配置名称" value="{{configName}}" bindinput="onConfigNameInput"/>
+        </view>
+        <view class="modal-footer">
+          <button class="modal-cancel-btn" bindtap="hideSaveConfigModal">取消</button>
+          <button class="modal-confirm-btn" bindtap="saveCurrentConfig">保存</button>
+        </view>
+      </view>
+    </view>
+
     <!-- 主操作按钮 -->
     <view class="main-action-section">
       <button class="scan-button" bindtap="startBrandTest" disabled="{{isTesting}}">
@@ -124,6 +152,38 @@
         <view class="progress-bar" style="width: {{testProgress}}%;"></view>
       </view>
       <text class="progress-text">{{progressText}}</text>
+    </view>
+
+    <!-- 配置管理入口 -->
+    <view class="config-manager-link-section" wx:if="{{!isTesting}}">
+      <view class="config-manager-link" bindtap="viewConfigManager">
+        <text>管理保存的配置</text>
+        <text class="arrow-right">›</text>
+      </view>
+    </view>
+
+    <!-- 权限管理入口 -->
+    <view class="permission-manager-link-section" wx:if="{{!isTesting}}">
+      <view class="permission-manager-link" bindtap="viewPermissionManager">
+        <text>权限管理</text>
+        <text class="arrow-right">›</text>
+      </view>
+    </view>
+
+    <!-- 数据管理入口 -->
+    <view class="data-manager-link-section" wx:if="{{!isTesting}}">
+      <view class="data-manager-link" bindtap="viewDataManager">
+        <text>数据管理</text>
+        <text class="arrow-right">›</text>
+      </view>
+    </view>
+
+    <!-- 使用指南入口 -->
+    <view class="user-guide-link-section" wx:if="{{!isTesting}}">
+      <view class="user-guide-link" bindtap="viewUserGuide">
+        <text>使用指南</text>
+        <text class="arrow-right">›</text>
+      </view>
     </view>
 
     <!-- 历史记录入口 -->

@@ -1,0 +1,68 @@
+2026-02-11 20:50:32,508 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 20:50:32,508 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 20:50:32,544 - wechat_backend.api - ERROR - gemini_adapter.py:11 - <module>() - Failed to import google.generativeai: Metaclasses with custom tp_new are not supported.. Gemini adapter will be disabled.
+2026-02-11 20:50:32,544 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for deepseek
+2026-02-11 20:50:32,545 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for qwen
+2026-02-11 20:50:32,545 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for doubao
+2026-02-11 20:50:32,545 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for chatgpt
+2026-02-11 20:50:32,545 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for gemini
+Logging initialized with level: INFO, file: /Users/sgl/PycharmProjects/PythonProject/logs/app.log
+ * Serving Flask app 'wechat_backend.app' (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: on
+2026-02-11 20:50:33,570 - werkzeug - INFO - _internal.py:187 - _log() - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2026-02-11 20:50:33,570 - werkzeug - INFO - _internal.py:187 - _log() - [33mPress CTRL+C to quit[0m
+2026-02-11 20:50:33,571 - werkzeug - INFO - _internal.py:187 - _log() -  * Restarting with stat
+2026-02-11 20:50:33,697 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 20:50:33,697 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 20:50:33,712 - wechat_backend.api - ERROR - gemini_adapter.py:11 - <module>() - Failed to import google.generativeai: Metaclasses with custom tp_new are not supported.. Gemini adapter will be disabled.
+2026-02-11 20:50:33,712 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for deepseek
+2026-02-11 20:50:33,712 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for qwen
+2026-02-11 20:50:33,712 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for doubao
+2026-02-11 20:50:33,712 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for chatgpt
+2026-02-11 20:50:33,712 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for gemini
+2026-02-11 20:50:34,733 - werkzeug - WARNING - _internal.py:187 - _log() -  * Debugger is active!
+2026-02-11 20:50:34,752 - werkzeug - INFO - _internal.py:187 - _log() -  * Debugger PIN: 111-721-574
+2026-02-11 20:50:46,725 - wechat_backend - INFO - app.py:76 - index() - Index endpoint accessed
+2026-02-11 20:50:46,726 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:50:46] "HEAD / HTTP/1.1" 200 -
+2026-02-11 20:51:22,270 - wechat_backend - INFO - app.py:76 - index() - Index endpoint accessed
+2026-02-11 20:51:22,270 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:51:22] "GET / HTTP/1.1" 200 -
+2026-02-11 20:51:56,165 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:51:56] "GET /health HTTP/1.1" 200 -
+2026-02-11 20:52:41,433 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:52:41] "[33mGET /wechat HTTP/1.1[0m" 404 -
+2026-02-11 20:54:37,830 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:54:37] "[33mGET /wechat?signature=testsig&timestamp=1234567890&nonce=testnonce&echostr=hello HTTP/1.1[0m" 404 -
+2026-02-11 20:56:22,814 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:56:22] "[31m[1mGET /wechat/verify?signature=testsig&timestamp=1234567890&nonce=testnonce&echostr=hello HTTP/1.1[0m" 403 -
+2026-02-11 20:56:56,300 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:56:56] "[31m[1mPOST /api/login HTTP/1.1[0m" 400 -
+2026-02-11 20:57:26,900 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:57:26] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 20:57:59,012 - wechat_backend.api - INFO - views.py:93 - perform_brand_test() - Brand test endpoint accessed
+2026-02-11 20:57:59,013 - wechat_backend.api - INFO - views.py:113 - perform_brand_test() - Starting async brand test 'cf28f590-48d6-4f3e-8f3d-b7ef08b41cdd' for brands: ['测试品牌'] (User Level: Free)
+2026-02-11 20:57:59,013 - wechat_backend.database - INFO - question_templates.py:159 - _load_standard_templates() - Loaded 14 standard question templates
+2026-02-11 20:57:59,013 - wechat_backend.api - INFO - test_case_generator.py:64 - __init__() - Initialized TestCaseGenerator
+2026-02-11 20:57:59,013 - wechat_backend.api - INFO - test_case_generator.py:97 - generate_test_cases() - Generated 1 test cases for brand '测试品牌' across 1 models with 1 questions
+2026-02-11 20:57:59,013 - wechat_backend.api - INFO - scheduler.py:46 - __init__() - Initialized TestScheduler with strategy concurrent, max_workers 10
+2026-02-11 20:57:59,013 - werkzeug - INFO - _internal.py:187 - _log() - 127.0.0.1 - - [11/Feb/2026 20:57:59] "POST /api/perform-brand-test HTTP/1.1" 200 -
+2026-02-11 20:57:59,013 - wechat_backend.api - INFO - progress_tracker.py:54 - __init__() - Initialized ProgressTracker
+2026-02-11 20:57:59,014 - wechat_backend.api - INFO - executor.py:30 - __init__() - Initialized TestExecutor with strategy concurrent, max_workers 10
+2026-02-11 20:57:59,014 - wechat_backend.api - INFO - executor.py:52 - execute_tests() - Starting execution 92fc4e48-74a8-4ac1-babc-8c05bbfe0067 for 1 test cases
+2026-02-11 20:57:59,014 - wechat_backend.api - INFO - progress_tracker.py:65 - create_execution() - Created execution tracking for 92fc4e48-74a8-4ac1-babc-8c05bbfe0067 with 1 tests
+2026-02-11 20:57:59,014 - wechat_backend.api - INFO - qwen_adapter.py:19 - __init__() - QwenAdapter initialized for model: qwen
+2026-02-11 20:58:01,733 - wechat_backend.api - ERROR - qwen_adapter.py:72 - send_prompt() - Qwen API request failed: 400 Client Error: Bad Request for url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+2026-02-11 20:58:01,734 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task b2997189-23bb-4bd4-adec-5eaf9ba4e3c4 failed on attempt 1: Qwen API request failed: 400 Client Error: Bad Request for url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+2026-02-11 20:58:02,739 - wechat_backend.api - INFO - qwen_adapter.py:19 - __init__() - QwenAdapter initialized for model: qwen
+2026-02-11 20:58:06,081 - wechat_backend.api - ERROR - qwen_adapter.py:72 - send_prompt() - Qwen API request failed: 400 Client Error: Bad Request for url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+2026-02-11 20:58:06,082 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task b2997189-23bb-4bd4-adec-5eaf9ba4e3c4 failed on attempt 2: Qwen API request failed: 400 Client Error: Bad Request for url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+2026-02-11 20:58:08,087 - wechat_backend.api - INFO - qwen_adapter.py:19 - __init__() - QwenAdapter initialized for model: qwen
+2026-02-11 20:58:11,362 - wechat_backend.api - ERROR - qwen_adapter.py:72 - send_prompt() - Qwen API request failed: 400 Client Error: Bad Request for url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+2026-02-11 20:58:11,362 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task b2997189-23bb-4bd4-adec-5eaf9ba4e3c4 failed on attempt 3: Qwen API request failed: 400 Client Error: Bad Request for url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+2026-02-11 20:58:15,366 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task b2997189-23bb-4bd4-adec-5eaf9ba4e3c4. Last error: Qwen API request failed: 400 Client Error: Bad Request for url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+2026-02-11 20:58:15,367 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 92fc4e48-74a8-4ac1-babc-8c05bbfe0067: 1 failed, 100.0% complete
+2026-02-11 20:58:15,367 - wechat_backend.api - INFO - scheduler.py:71 - schedule_tests() - Test execution completed. Success: 0, Failed: 1, Time: 16.35s
+2026-02-11 20:58:15,367 - wechat_backend.api - INFO - executor.py:99 - execute_tests() - Execution 92fc4e48-74a8-4ac1-babc-8c05bbfe0067 completed. Success: 0, Failed: 1, Time: 16.35s
+2026-02-11 20:58:15,367 - wechat_backend.api - INFO - scheduler.py:216 - shutdown() - TestScheduler shut down successfully
+2026-02-11 20:58:15,367 - wechat_backend.api - INFO - executor.py:132 - shutdown() - TestExecutor shut down successfully
+2026-02-11 20:58:15,367 - wechat_backend.api - INFO - deepseek_adapter.py:19 - __init__() - DeepSeekAdapter initialized for model: deepseek-chat
+2026-02-11 20:58:15,367 - wechat_backend.api - INFO - ai_judge_module.py:126 - __init__() - AIJudgeClient initialized with model: deepseek-chat on platform: deepseek
+2026-02-11 20:58:15,368 - wechat_backend.database - INFO - database.py:85 - save_test_record() - Saving test record for user: anonymous, brand: 测试品牌
+2026-02-11 20:58:15,370 - wechat_backend.database - INFO - database.py:117 - save_test_record() - Test record saved successfully with ID: 35
