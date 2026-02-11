@@ -5,11 +5,11 @@ Includes providers for domestic models like DeepSeek, Doubao, Qwen, etc.
 import requests
 import time
 from typing import List, Dict, Any
-from .base_adapter import AIClient, AIResponse, AIPlatformType
+from .enhanced_base import EnhancedAIClient, AIResponse, AIPlatformType
 from ..logging_config import api_logger
 
 
-class DeepSeekProvider(AIClient):
+class DeepSeekProvider(EnhancedAIClient):
     """AI Provider for DeepSeek API"""
 
     def __init__(self, api_key: str, model_name: str = "deepseek-chat", **kwargs):
@@ -24,7 +24,7 @@ class DeepSeekProvider(AIClient):
             'Content-Type': 'application/json'
         }
 
-    def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
+    def _send_actual_request(self, prompt: str, **kwargs) -> AIResponse:
         """Send a prompt to the DeepSeek API"""
         start_time = time.time()
 
@@ -99,7 +99,7 @@ class DeepSeekProvider(AIClient):
             )
 
 
-class DoubaoProvider(AIClient):
+class DoubaoProvider(EnhancedAIClient):
     """AI Provider for Doubao (ByteDance) API"""
 
     def __init__(self, api_key: str, model_name: str = "doubao-pro-128k", **kwargs):
@@ -115,7 +115,7 @@ class DoubaoProvider(AIClient):
             'Content-Type': 'application/json'
         }
 
-    def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
+    def _send_actual_request(self, prompt: str, **kwargs) -> AIResponse:
         """Send a prompt to the Doubao API"""
         start_time = time.time()
 
@@ -190,7 +190,7 @@ class DoubaoProvider(AIClient):
             )
 
 
-class QwenProvider(AIClient):
+class QwenProvider(EnhancedAIClient):
     """AI Provider for Qwen (Alibaba Tongyi) API"""
 
     def __init__(self, api_key: str, model_name: str = "qwen-max", **kwargs):
@@ -205,7 +205,7 @@ class QwenProvider(AIClient):
             'Content-Type': 'application/json'
         }
 
-    def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
+    def _send_actual_request(self, prompt: str, **kwargs) -> AIResponse:
         """Send a prompt to the Qwen API"""
         start_time = time.time()
 
@@ -283,7 +283,7 @@ class QwenProvider(AIClient):
             )
 
 
-class YuanbaoProvider(AIClient):
+class YuanbaoProvider(EnhancedAIClient):
     """AI Provider for Yuanbao (Tencent HunYuan) API"""
 
     def __init__(self, api_key: str, model_name: str = "hunyuan-pro", **kwargs):
@@ -299,7 +299,7 @@ class YuanbaoProvider(AIClient):
             'Content-Type': 'application/json'
         }
 
-    def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
+    def _send_actual_request(self, prompt: str, **kwargs) -> AIResponse:
         """Send a prompt to the Yuanbao API"""
         start_time = time.time()
 
@@ -374,7 +374,7 @@ class YuanbaoProvider(AIClient):
             )
 
 
-class ErnieProvider(AIClient):
+class ErnieProvider(EnhancedAIClient):
     """AI Provider for Ernie (Baidu) API"""
 
     def __init__(self, api_key: str, model_name: str = "ernie-bot-4.5", **kwargs):
@@ -389,7 +389,7 @@ class ErnieProvider(AIClient):
             'Content-Type': 'application/json'
         }
 
-    def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
+    def _send_actual_request(self, prompt: str, **kwargs) -> AIResponse:
         """Send a prompt to the Ernie API"""
         start_time = time.time()
 
@@ -479,7 +479,7 @@ class ErnieProvider(AIClient):
         return "fake_access_token"  # Placeholder
 
 
-class KimiProvider(AIClient):
+class KimiProvider(EnhancedAIClient):
     """AI Provider for Kimi (Moonshot AI) API"""
 
     def __init__(self, api_key: str, model_name: str = "moonshot-v1-8k", **kwargs):
@@ -494,7 +494,7 @@ class KimiProvider(AIClient):
             'Content-Type': 'application/json'
         }
 
-    def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
+    def _send_actual_request(self, prompt: str, **kwargs) -> AIResponse:
         """Send a prompt to the Kimi API"""
         start_time = time.time()
 

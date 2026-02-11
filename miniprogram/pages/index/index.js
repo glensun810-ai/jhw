@@ -47,6 +47,9 @@ Page({
     // 存储后端返回的最终结果
     latestTestResults: null,
     latestCompetitiveAnalysis: null,
+    
+    // 动画
+    particleAnimateId: null
   },
 
   onLoad: function () {
@@ -54,6 +57,75 @@ Page({
     this.checkServerConnection();
     this.updateSelectedModelCount();
     this.updateSelectedQuestionCount();
+  },
+
+  onReady: function () {
+    this.initParticleCanvas();
+  },
+
+  onUnload: function () {
+    if (this.data.particleAnimateId) {
+      cancelAnimationFrame(this.data.particleAnimateId);
+    }
+  },
+
+  initParticleCanvas: function() {
+    const query = wx.createSelectorQuery();
+    query.select('#particle-canvas')
+      .fields({ node: true, size: true })
+      .exec((res) => {
+        if (!res[0] || !res[0].node) {
+          console.error("Cannot get canvas node.");
+          return;
+        }
+        const canvas = res[0].node;
+        const ctx = canvas.getContext('2d');
+        const dpr = wx.getSystemInfoSync().pixelRatio;
+        canvas.width = res[0].width * dpr;
+        canvas.height = res[0].height * dpr;
+        ctx.scale(dpr, dpr);
+
+        const particles = [];
+        const particleCount = 50;
+
+        for (let i = 0; i < particleCount; i++) {
+          particles.push({
+            x: Math.random() * res[0].width,
+            y: Math.random() * res[0].height,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: (Math.random() - 0.5) * 0.3,
+            radius: Math.random() * 1.5 + 0.5
+          });
+        }
+
+        const animate = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0 || p.x > res[0].width) p.vx *= -1;
+            if (p.y < 0 || p.y > res[0].height) p.vy *= -1;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.fill();
+          });
+          for (let i = 0; i < particleCount; i++) {
+            for (let j = i + 1; j < particleCount; j++) {
+              const dist = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
+              if (dist < 100) {
+                ctx.beginPath();
+                ctx.moveTo(particles[i].x, particles[i].y);
+                ctx.lineTo(particles[j].x, particles[j].y);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.5 - dist / 200})`;
+                ctx.stroke();
+              }
+            }
+          }
+          this.data.particleAnimateId = canvas.requestAnimationFrame(animate);
+        };
+        animate();
+      });
   },
 
   checkServerConnection: function() {
@@ -283,73 +355,23 @@ Page({
 
   viewDetailedResults: function() {
     if (this.data.latestTestResults) {
-      // 保存最新结果到本地存储，以便后续访问
-      wx.setStorageSync('latestTestResults', this.data.latestTestResults);
-      wx.setStorageSync('latestCompetitiveAnalysis', this.data.latestCompetitiveAnalysis || {});
-      wx.setStorageSync('latestTargetBrand', this.data.brandName);
-
       const params = {
         results: JSON.stringify(this.data.latestTestResults),
         competitiveAnalysis: encodeURIComponent(JSON.stringify(this.data.latestCompetitiveAnalysis || {})),
         targetBrand: this.data.brandName
       };
-
+      
       const queryString = Object.keys(params)
         .map(key => `${key}=${params[key]}`)
         .join('&');
 
       wx.navigateTo({ url: `/pages/results/results?${queryString}` });
     } else {
-      // 尝試從本地存儲獲取結果
-      const cachedResults = wx.getStorageSync('latestTestResults');
-      const cachedAnalysis = wx.getStorageSync('latestCompetitiveAnalysis');
-      const cachedBrand = wx.getStorageSync('latestTargetBrand');
-
-      if (cachedResults && cachedAnalysis && cachedBrand) {
-        const params = {
-          results: JSON.stringify(cachedResults),
-          competitiveAnalysis: encodeURIComponent(JSON.stringify(cachedAnalysis)),
-          targetBrand: cachedBrand
-        };
-
-        const queryString = Object.keys(params)
-          .map(key => `${key}=${params[key]}`)
-          .join('&');
-
-        wx.navigateTo({ url: `/pages/results/results?${queryString}` });
-      } else {
-        wx.showToast({ title: '暂无诊断结果', icon: 'none' });
-      }
+      wx.showToast({ title: '暂无诊断结果', icon: 'none' });
     }
   },
 
   viewHistory: function() {
     wx.navigateTo({ url: '/pages/history/history' });
-  },
-
-  // 查看最近一次的诊断结果
-  viewLatestResult: function() {
-    const cachedResults = wx.getStorageSync('latestTestResults');
-    const cachedAnalysis = wx.getStorageSync('latestCompetitiveAnalysis');
-    const cachedBrand = wx.getStorageSync('latestTargetBrand');
-
-    if (cachedResults && cachedAnalysis && cachedBrand) {
-      const params = {
-        results: JSON.stringify(cachedResults),
-        competitiveAnalysis: encodeURIComponent(JSON.stringify(cachedAnalysis)),
-        targetBrand: cachedBrand
-      };
-
-      const queryString = Object.keys(params)
-        .map(key => `${key}=${params[key]}`)
-        .join('&');
-
-      wx.navigateTo({ url: `/pages/results/results?${queryString}` });
-    } else {
-      wx.showToast({
-        title: '暂无最近的诊断结果',
-        icon: 'none'
-      });
-    }
   }
 });

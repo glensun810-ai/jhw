@@ -23,7 +23,11 @@ from scoring_engine import ScoringEngine
 from ai_judge_module import AIJudgeClient, JudgeResult, ConfidenceLevel
 from .analytics.interception_analyst import InterceptionAnalyst
 from .analytics.monetization_service import MonetizationService, UserLevel
-from .analytics.source_intelligence_processor import SourceIntelligenceProcessor # 引入信源情报处理器
+try:
+    from .analytics.source_intelligence_processor import SourceIntelligenceProcessor # 引入信源情报处理器
+except ImportError:
+    SourceIntelligenceProcessor = None
+    print("Warning: SourceIntelligenceProcessor not available due to missing dependencies")
 
 # Create a blueprint
 wechat_bp = Blueprint('wechat', __name__)
@@ -161,23 +165,29 @@ def perform_brand_test():
             processed_results = process_and_aggregate_results_with_ai_judge(results, brand_list, main_brand)
             
             # 使用真实的信源情报处理器
-            source_processor = SourceIntelligenceProcessor()
-            source_intelligence_map = source_processor.process(main_brand, processed_results['detailed_results'])
-            
+            if SourceIntelligenceProcessor:
+                source_processor = SourceIntelligenceProcessor()
+                source_intelligence_map = source_processor.process(main_brand, processed_results['detailed_results'])
+            else:
+                # 如果模块不可用，使用模拟数据
+                source_intelligence_map = generate_mock_source_intelligence_map(main_brand)
+
             semantic_contrast_data = generate_mock_semantic_contrast_data(main_brand)
 
             monetization_service = MonetizationService(user_level)
+            # 安全地获取main_brand数据，使用默认值防止KeyError
+            main_brand_data = processed_results['main_brand']
             final_data = {
                 'results': processed_results['detailed_results'],
                 'competitiveAnalysis': processed_results['competitiveAnalysis'],
-                'overallScore': processed_results['main_brand']['overallScore'],
-                'overallAuthority': processed_results['main_brand']['overallAuthority'],
-                'overallVisibility': processed_results['main_brand']['overallVisibility'],
-                'overallSentiment': processed_results['main_brand']['overallSentiment'],
-                'overallPurity': processed_results['main_brand']['overallPurity'],
-                'overallConsistency': processed_results['main_brand']['overallConsistency'],
-                'overallGrade': processed_results['main_brand']['overallGrade'],
-                'overallSummary': processed_results['main_brand']['overallSummary'],
+                'overallScore': main_brand_data.get('overallScore', 0),
+                'overallAuthority': main_brand_data.get('overallAuthority', 0),
+                'overallVisibility': main_brand_data.get('overallVisibility', 0),
+                'overallSentiment': main_brand_data.get('overallSentiment', 0),
+                'overallPurity': main_brand_data.get('overallPurity', 0),
+                'overallConsistency': main_brand_data.get('overallConsistency', 0),
+                'overallGrade': main_brand_data.get('overallGrade', 'D'),
+                'overallSummary': main_brand_data.get('overallSummary', 'No data available'),
                 'sourceIntelligenceMap': source_intelligence_map,
                 'semanticContrastData': semantic_contrast_data,
             }
@@ -270,20 +280,43 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
 
     brand_scores = {}
     for brand, judge_results in brand_results_map.items():
-        if judge_results:
-            final_score = scoring_engine.calculate(judge_results)
-            brand_scores[brand] = {
-                'overallScore': final_score.geo_score,
-                'overallAuthority': final_score.authority_score,
-                'overallVisibility': final_score.visibility_score,
-                'overallSentiment': final_score.sentiment_score,
-                'overallPurity': final_score.purity_score,
-                'overallConsistency': final_score.consistency_score,
-                'overallGrade': final_score.grade,
-                'overallSummary': final_score.summary
-            }
+        if judge_results and len(judge_results) > 0:  # 确保列表非空
+            try:
+                final_score = scoring_engine.calculate(judge_results)
+                brand_scores[brand] = {
+                    'overallScore': final_score.geo_score,
+                    'overallAuthority': final_score.authority_score,
+                    'overallVisibility': final_score.visibility_score,
+                    'overallSentiment': final_score.sentiment_score,
+                    'overallPurity': final_score.purity_score,
+                    'overallConsistency': final_score.consistency_score,
+                    'overallGrade': final_score.grade,
+                    'overallSummary': final_score.summary
+                }
+            except Exception as e:
+                # 如果计算失败，使用默认值
+                api_logger.error(f"Scoring calculation failed for brand {brand}: {str(e)}")
+                brand_scores[brand] = {
+                    'overallScore': 0,
+                    'overallGrade': 'D',
+                    'overallAuthority': 0,
+                    'overallVisibility': 0,
+                    'overallSentiment': 0,
+                    'overallPurity': 0,
+                    'overallConsistency': 0,
+                    'overallSummary': 'Calculation error occurred'
+                }
         else:
-            brand_scores[brand] = {'overallScore': 0, 'overallGrade': 'D'}
+            brand_scores[brand] = {
+                'overallScore': 0,
+                'overallGrade': 'D',
+                'overallAuthority': 0,
+                'overallVisibility': 0,
+                'overallSentiment': 0,
+                'overallPurity': 0,
+                'overallConsistency': 0,
+                'overallSummary': 'No data available'
+            }
 
     first_mention_by_platform = {platform: interception_analyst.calculate_first_mention_rate(results) for platform, results in platform_results_map.items()}
     
@@ -332,6 +365,57 @@ def get_source_intelligence():
     brand_name = request.args.get('brandName', '默认品牌')
     data = generate_mock_source_intelligence_map(brand_name)
     return jsonify({'status': 'success', 'data': data})
+
+
+@wechat_bp.route('/api/platform-status', methods=['GET'])
+def get_platform_status():
+    """获取所有AI平台的状态信息"""
+    try:
+        # 从配置管理器获取平台状态
+        from config_manager import Config as PlatformConfigManager
+        config_manager = PlatformConfigManager()
+
+        status_info = {}
+
+        # 预定义支持的平台
+        supported_platforms = [
+            'deepseek', 'doubao', 'qwen', 'wenxin',
+            'kimi', 'chatgpt', 'claude', 'gemini'
+        ]
+
+        for platform in supported_platforms:
+            config = config_manager.get_platform_config(platform)
+            if config and config.api_key:
+                # 检查配额和状态
+                quota_info = getattr(config, 'quota_info', None)
+                status = getattr(config, 'api_status', None)
+
+                status_info[platform] = {
+                    'status': status.value if status else 'active',
+                    'has_api_key': bool(config.api_key),
+                    'quota': {
+                        'daily_limit': quota_info.daily_limit if quota_info else None,
+                        'used_today': quota_info.used_today if quota_info else 0,
+                        'remaining': quota_info.remaining if quota_info else None
+                    } if quota_info else None,
+                    'cost_per_request': getattr(config, 'cost_per_token', 0) * 1000,  # per 1k tokens
+                    'rate_limit': getattr(config, 'rate_limit_per_minute', None)
+                }
+            else:
+                status_info[platform] = {
+                    'status': 'inactive',
+                    'has_api_key': False,
+                    'quota': None,
+                    'cost_per_request': 0,
+                    'rate_limit': None
+                }
+
+        return jsonify({'status': 'success', 'platforms': status_info})
+
+    except Exception as e:
+        api_logger.error(f"Error getting platform status: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 @wechat_bp.route('/api/test-progress', methods=['GET'])
 def get_test_progress():

@@ -1,144 +1,137 @@
 <view class="container">
-  <!-- 标题 -->
-  <view class="title-section">
-    <text class="main-title">你的品牌，AI如何定义？</text>
-    <text class="subtitle">一键洞察全网AI认知，抢占心智高地。</text>
-  </view>
+  <!-- 动态背景 -->
+  <canvas type="2d" id="particle-canvas" class="particle-canvas" disable-scroll="true"></canvas>
 
-  <!-- 战术布局区 -->
-  <view class="battlefield-section">
-    <!-- 我方阵营 -->
-    <view class="camp-section my-brand-camp">
-      <view class="camp-title">我方品牌</view>
-      <input class="brand-input main-brand-input" placeholder="输入您的品牌" value="{{brandName}}" bindinput="onBrandNameInput"/>
+  <view class="content-wrapper">
+    <!-- 标题 -->
+    <view class="title-section">
+      <text class="main-title">进化湾GEO</text>
+      <text class="subtitle">驾驭AI，重塑品牌影响力</text>
     </view>
 
-    <view class="vs-icon">VS</view>
-
-    <!-- 敌方阵营 -->
-    <view class="camp-section competitor-camp">
-      <view class="camp-title">竞争品牌</view>
-      <view class="competitor-input-wrapper">
-        <input
-          class="competitor-input"
-          placeholder="添加竞品"
-          value="{{currentCompetitor}}"
-          bindinput="onCompetitorInput"
-          bindconfirm="addCompetitor"
-        />
-        <view class="add-icon-btn" bindtap="addCompetitor">+</view>
-      </view>
-      <view class="competitor-list">
-        <view class="competitor-card" wx:for="{{competitorBrands}}" wx:key="index">
-          <text class="competitor-name">{{item}}</text>
-          <view class="remove-icon" bindtap="removeCompetitor" data-index="{{index}}">×</view>
+    <!-- 战术布局区 -->
+    <view class="battlefield-section">
+      <!-- 我方阵营 -->
+      <view class="camp-section my-brand-camp">
+        <view class="camp-title">我方品牌</view>
+        <view class="brand-input-wrapper">
+          <input class="brand-input" placeholder="输入品牌名称" value="{{brandName}}" bindinput="onBrandNameInput"/>
         </view>
       </view>
-    </view>
-  </view>
 
-  <!-- 高级设置开关 -->
-  <view class="advanced-toggle" bindtap="toggleAdvancedSettings">
-    <text class="setting-icon">⚙️</text>
-    <text>高级设置</text>
-    <view class="arrow {{showAdvancedSettings ? 'expanded' : ''}}">›</view>
-  </view>
+      <view class="vs-icon">VS</view>
 
-  <!-- 高级设置 (默认折叠) -->
-  <view class="advanced-settings-section {{showAdvancedSettings ? 'visible' : ''}}">
-    <!-- 自定义问题输入 -->
-    <view class="setting-block">
-      <view class="setting-title">
-        <text>📝 自定义诊断问题</text>
-        <text class="setting-subtitle">更精准地探测AI认知</text>
-      </view>
-      <view class="questions-container">
-        <view class="question-item" wx:for="{{customQuestions}}" wx:key="index">
-          <input
-            class="question-input"
-            placeholder="问题 {{index + 1}} (例如：我们的创始人是谁？)"
-            value="{{item}}"
-            bindinput="onCustomQuestionInput"
-            data-index="{{index}}"
-          />
+      <!-- 敌方阵营 -->
+      <view class="camp-section competitor-camp">
+        <view class="camp-title">竞争品牌</view>
+        <view class="brand-input-wrapper">
+          <input class="brand-input" placeholder="添加竞品" value="{{currentCompetitor}}" bindinput="onCompetitorInput" bindconfirm="addCompetitor"/>
+          <view class="add-icon-btn" bindtap="addCompetitor">+</view>
         </view>
-      </view>
-    </view>
-
-    <!-- AI模型选择 -->
-    <view class="setting-block">
-      <view class="setting-title">
-        <text>🧠 AI平台矩阵</text>
-        <text class="setting-subtitle">选择您想诊断的AI平台</text>
-      </view>
-      <view class="ai-model-selection">
-        <!-- 国内AI模型 -->
-        <view class="ai-category">
-          <view class="category-header">
-            <text class="category-title">国内AI平台</text>
-            <button class="select-all-btn" bindtap="selectAllModels" data-type="domestic">全选</button>
+        <view class="competitor-list">
+          <view class="competitor-card" wx:for="{{competitorBrands}}" wx:key="index">
+            <text class="competitor-name">{{item}}</text>
+            <view class="remove-icon" bindtap="removeCompetitor" data-index="{{index}}">×</view>
           </view>
-          <view class="model-grid">
-            <view class="model-chip-pro {{item.checked ? 'checked' : ''}} {{item.disabled ? 'disabled' : ''}}" wx:for="{{domesticAiModels}}" wx:key="name" bindtap="toggleModelSelection" data-type="domestic" data-index="{{index}}">
-              <view class="logo-placeholder">{{item.logo}}</view>
-              <text class="model-name">{{item.name}}</text>
-              <view class="tag-list">
-                <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 高级设置开关 -->
+    <view class="advanced-toggle" bindtap="toggleAdvancedSettings">
+      <text class="setting-icon icon-settings"></text>
+      <text>高级设置</text>
+      <view class="arrow {{showAdvancedSettings ? 'expanded' : ''}}">›</view>
+    </view>
+
+    <!-- 高级设置 -->
+    <view class="advanced-settings-section {{showAdvancedSettings ? 'visible' : ''}}">
+      <!-- 自定义问题输入 -->
+      <view class="setting-block">
+        <view class="setting-title">
+          <text>📝 自定义诊断问题</text>
+          <text class="setting-subtitle">更精准地探测AI认知</text>
+        </view>
+        <view class="questions-container">
+          <view class="question-item" wx:for="{{customQuestions}}" wx:key="index">
+            <input
+              class="question-input"
+              placeholder="问题 {{index + 1}} (例如：我们的创始人是谁？)"
+              value="{{item}}"
+              bindinput="onCustomQuestionInput"
+              data-index="{{index}}"
+            />
+          </view>
+        </view>
+      </view>
+
+      <!-- AI模型选择 -->
+      <view class="setting-block">
+        <view class="setting-title">
+          <text>🧠 AI平台矩阵</text>
+          <text class="setting-subtitle">选择您想诊断的AI平台</text>
+        </view>
+        <view class="ai-model-selection">
+          <!-- 国内AI模型 -->
+          <view class="ai-category">
+            <view class="category-header">
+              <text class="category-title">国内AI平台</text>
+              <button class="select-all-btn" bindtap="selectAllModels" data-type="domestic">全选</button>
+            </view>
+            <view class="model-grid">
+              <view class="model-chip-pro {{item.checked ? 'checked' : ''}} {{item.disabled ? 'disabled' : ''}}" wx:for="{{domesticAiModels}}" wx:key="name" bindtap="toggleModelSelection" data-type="domestic" data-index="{{index}}">
+                <view class="logo-placeholder">{{item.logo || item.name.substring(0,2)}}</view>
+                <text class="model-name">{{item.name}}</text>
+                <view class="tag-list">
+                  <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+                </view>
+                <view class="check-icon">✓</view>
               </view>
-              <view class="check-icon">✓</view>
+            </view>
+          </view>
+          <!-- 海外AI模型 -->
+          <view class="ai-category">
+            <view class="category-header">
+              <text class="category-title">海外AI平台</text>
+              <button class="select-all-btn" bindtap="selectAllModels" data-type="overseas">全选</button>
+            </view>
+            <view class="model-grid">
+              <view class="model-chip-pro {{item.checked ? 'checked' : ''}}" wx:for="{{overseasAiModels}}" wx:key="name" bindtap="toggleModelSelection" data-type="overseas" data-index="{{index}}">
+                <view class="logo-placeholder">{{item.logo || item.name.substring(0,2)}}</view>
+                <text class="model-name">{{item.name}}</text>
+                <view class="tag-list">
+                  <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+                </view>
+                <view class="check-icon">✓</view>
+              </view>
             </view>
           </view>
         </view>
-        <!-- 海外AI模型 -->
-        <view class="ai-category">
-          <view class="category-header">
-            <text class="category-title">海外AI平台</text>
-            <button class="select-all-btn" bindtap="selectAllModels" data-type="overseas">全选</button>
-          </view>
-          <view class="model-grid">
-            <view class="model-chip-pro {{item.checked ? 'checked' : ''}}" wx:for="{{overseasAiModels}}" wx:key="name" bindtap="toggleModelSelection" data-type="overseas" data-index="{{index}}">
-              <view class="logo-placeholder">{{item.logo}}</view>
-              <text class="model-name">{{item.name}}</text>
-              <view class="tag-list">
-                <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
-              </view>
-              <view class="check-icon">✓</view>
-            </view>
-          </view>
-        </view>
       </view>
     </view>
-  </view>
 
-  <!-- 主操作按钮 -->
-  <view class="main-action-section">
-    <button class="scan-button" bindtap="startBrandTest" disabled="{{isTesting}}">
-      <text wx:if="{{!isTesting}}">发起诊断</text>
-      <text wx:else>诊断中...</text>
-    </button>
-  </view>
-
-  <!-- 测试进度显示 -->
-  <view class="progress-section" wx:if="{{isTesting}}">
-    <view class="progress-bar-container">
-      <view class="progress-bar" style="width: {{testProgress}}%;"></view>
+    <!-- 主操作按钮 -->
+    <view class="main-action-section">
+      <button class="scan-button" bindtap="startBrandTest" disabled="{{isTesting}}">
+        <text wx:if="{{!isTesting}}">AI品牌战略诊断</text>
+        <text wx:else>诊断中...</text>
+      </button>
     </view>
-    <text class="progress-text">{{progressText}}</text>
-  </view>
 
-  <!-- 快速访问入口 -->
-  <view class="quick-access-section" wx:if="{{!isTesting}}">
-    <!-- 查看最近结果 -->
-    <view class="quick-link" bindtap="viewLatestResult">
-      <text>查看最近诊断结果</text>
-      <text class="arrow-right">›</text>
+    <!-- 测试进度显示 -->
+    <view class="progress-section" wx:if="{{isTesting}}">
+      <view class="progress-bar-container">
+        <view class="progress-bar" style="width: {{testProgress}}%;"></view>
+      </view>
+      <text class="progress-text">{{progressText}}</text>
     </view>
 
     <!-- 历史记录入口 -->
-    <view class="history-link" bindtap="viewHistory">
-      <text>查看历史诊断报告</text>
-      <text class="arrow-right">›</text>
+    <view class="history-link-section" wx:if="{{!isTesting}}">
+      <view class="history-link" bindtap="viewHistory">
+        <text>查看历史诊断报告</text>
+        <text class="arrow-right">›</text>
+      </view>
     </view>
   </view>
-
 </view>
