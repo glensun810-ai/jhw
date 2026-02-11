@@ -1,0 +1,16 @@
+2026-02-11 22:33:46,950 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 22:33:46,951 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 22:33:47,025 - wechat_backend.api - ERROR - gemini_adapter.py:11 - <module>() - Failed to import google.generativeai: Metaclasses with custom tp_new are not supported.. Gemini adapter will be disabled.
+2026-02-11 22:33:47,026 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for deepseek
+2026-02-11 22:33:47,026 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for qwen
+2026-02-11 22:33:47,026 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for doubao
+2026-02-11 22:33:47,026 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for chatgpt
+2026-02-11 22:33:47,026 - wechat_backend.api - INFO - factory.py:54 - register() - Registered adapter for gemini
+Logging initialized with level: INFO, file: /Users/sgl/PycharmProjects/PythonProject/logs/app.log
+ * Serving Flask app 'wechat_backend.app' (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: on
+Address already in use
+Port 5001 is in use by another program. Either identify and stop that program, or start the server with a different port.

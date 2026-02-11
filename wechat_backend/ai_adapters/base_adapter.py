@@ -15,6 +15,7 @@ class AIPlatformType(Enum):
     KIMI = "kimi"
     YUANBAO = "yuanbao"
     SPARK = "spark"
+    ZHIPU = "zhipu"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"

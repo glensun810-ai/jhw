@@ -30,7 +30,9 @@ def get_ai_client(platform_name: str, api_key: str, model_name: str, **kwargs) -
         'chatgpt': AIPlatformType.CHATGPT,
         'claude': AIPlatformType.CLAUDE,
         'gemini': AIPlatformType.GEMINI,
-        'spark': AIPlatformType.SPARK
+        'spark': AIPlatformType.SPARK,
+        'zhipu': AIPlatformType.ZHIPU,
+        '智谱ai': AIPlatformType.ZHIPU
     }
 
     platform_type = platform_map.get(platform_name.lower())

@@ -29,7 +29,7 @@ class Config:
         # 支持的平台列表
         supported_platforms = [
             'openai', 'qwen', 'anthropic', 'google', 'chatgpt', 'deepseek', 'doubao',
-            'gemini', 'wenxin', 'kimi', 'yuanbao', 'spark'
+            'gemini', 'wenxin', 'kimi', 'yuanbao', 'spark', 'zhipu'
         ]  # 添加更多平台
 
         for platform in supported_platforms:

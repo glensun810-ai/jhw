@@ -11,6 +11,7 @@ Page({
       { name: '豆包', checked: false },
       { name: '元宝', checked: false },
       { name: '通义千问', checked: true },
+      { name: '智谱AI', checked: false },
       { name: '文心一言', checked: false },
       { name: 'Kimi', checked: true },
       { name: '讯飞星火', checked: false }
