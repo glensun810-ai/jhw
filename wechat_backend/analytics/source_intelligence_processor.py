@@ -1,5 +1,4 @@
 import re
-import spacy
 from urllib.parse import urlparse
 from collections import defaultdict
 from typing import List, Dict, Any
@@ -39,22 +38,17 @@ class SourceWeightLibrary:
 
 class SourceIntelligenceProcessor:
     """
-    信源情报解析引擎 (v2.1 - Robust)
+    信源情报解析引擎 (v2.1 - Robust) - 移除了spacy依赖
     """
     def __init__(self):
         self.weight_library = SourceWeightLibrary()
-        self.nlp = None
-        try:
-            self.nlp = spacy.load("zh_core_web_sm")
-            api_logger.info("spaCy model 'zh_core_web_sm' loaded successfully.")
-        except OSError:
-            api_logger.warning("spaCy Chinese model 'zh_core_web_sm' not found. NER features will be disabled.")
-            api_logger.warning("Please run: python -m spacy download zh_core_web_sm")
+        # 移除spacy依赖，仅使用基础的文本处理功能
 
     def extract_sources(self, text: str, ai_response: Dict[str, Any]) -> List[Dict[str, Any]]:
         sources = []
         url_pattern = r'\[[^\]]*\]\((https?:\/\/[^\s\)]+)\)|https?:\/\/[^\s<>"]+'
         found_urls = re.findall(url_pattern, text)
+
         for match in found_urls:
             url = match[0] if isinstance(match, tuple) and match[0] else match
             if url:
@@ -66,13 +60,9 @@ class SourceIntelligenceProcessor:
         for cit in citations:
             sources.append({'name': urlparse(cit).netloc.replace('www.', ''), 'url': cit, 'type': 'citation'})
 
-        if self.nlp:
-            doc = self.nlp(text)
-            for ent in doc.ents:
-                if ent.label_ in ["ORG", "WORK_OF_ART"]:
-                    if not any(ent.text in s['name'] for s in sources):
-                        sources.append({'name': ent.text, 'url': None, 'type': 'ner'})
-        
+        # 移除NER部分（不再使用spacy提取实体）
+        # 现在只基于URL和引用进行信源提取
+
         unique_sources = []
         seen_names = set()
         for source in sources:
@@ -86,39 +76,34 @@ class SourceIntelligenceProcessor:
         return self.weight_library.get_weight(source_name)
 
     def analyze_sentiment_from_context(self, text: str, source_name: str) -> float:
-        if not self.nlp:
-            return 0.5 
+        # 使用简单的方法代替spacy的句子分割
+        # 按句号、感叹号、问号分割文本
+        sentences = re.split(r'[。！？.!?]', text)
 
-        doc = self.nlp(text)
         target_sentence = None
-        for sent in doc.sents:
-            if source_name.lower() in sent.text.lower():
-                target_sentence = sent.text
+        for sentence in sentences:
+            if source_name.lower() in sentence.lower():
+                target_sentence = sentence.strip()
                 break
-        
+
         if target_sentence:
             s = SnowNLP(target_sentence)
             return (s.sentiments - 0.5) * 2
-        
+
         return 0.0
 
     def process(self, brand_name: str, ai_responses: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         处理多平台AI文本数据流，生成信源情报图JSON
         """
-        # 守护条款：如果NLP模型未加载，则优雅降级
-        if not self.nlp:
-            api_logger.warning("Skipping SourceIntelligenceProcessor due to missing spaCy model.")
-            return {'nodes': [{'id': brand_name, 'name': brand_name, 'level': 0, 'symbolSize': 60, 'category': 'brand'}], 'links': []}
-
         all_sources = defaultdict(lambda: {'count': 0, 'weights': [], 'sentiments': [], 'source_type': 'unknown', 'urls': []})
 
         for resp in ai_responses:
             if not resp.get('success'):
                 continue
-            
+
             text = resp.get('response', '')
-            
+
             found_sources = self.extract_sources(text, resp)
 
             for source in found_sources:
@@ -126,17 +111,17 @@ class SourceIntelligenceProcessor:
                 all_sources[source_name]['count'] += 1
                 all_sources[source_name]['weights'].append(self.match_source_weight(source_name))
                 all_sources[source_name]['sentiments'].append(self.analyze_sentiment_from_context(text, source_name))
-                if source['url']:
+                if source.get('url'):
                     all_sources[source_name]['urls'].append(source['url'])
 
         nodes = [{'id': brand_name, 'name': brand_name, 'level': 0, 'symbolSize': 60, 'category': 'brand'}]
         links = []
 
         for source_name, data in all_sources.items():
-            avg_weight = sum(data['weights']) / len(data['weights'])
-            avg_sentiment = sum(data['sentiments']) / len(data['sentiments'])
+            avg_weight = sum(data['weights']) / len(data['weights']) if data['weights'] else 0.3
+            avg_sentiment = sum(data['sentiments']) / len(data['sentiments']) if data['sentiments'] else 0.0
             mention_frequency = data['count']
-            
+
             level = 1 if avg_weight > 0.7 else 2
             symbol_size = 30 + avg_weight * 30
 
@@ -151,7 +136,7 @@ class SourceIntelligenceProcessor:
             })
 
             line_weight = avg_weight * (1 + (mention_frequency - 1) * 0.5)
-            
+
             links.append({
                 'source': brand_name,
                 'target': source_name,
@@ -160,3 +145,12 @@ class SourceIntelligenceProcessor:
             })
 
         return {'nodes': nodes, 'links': links}
+
+async def process_brand_source_intelligence(brand_name: str, ai_responses: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    异步处理信源情报的辅助函数
+    """
+    processor = SourceIntelligenceProcessor()
+    # 由于process方法目前是同步的，我们直接调用它
+    # 如果process方法未来变成异步的，这里需要await
+    return processor.process(brand_name, ai_responses)

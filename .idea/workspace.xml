@@ -5,7 +5,32 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/diagnose_startup.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test_startup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai_judge_module.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai_judge_module.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database.db" beforeDir="false" afterPath="$PROJECT_DIR$/database.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-11_11_28产品与设计优化方案.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/2026-02-11_11_28产品与设计优化方案.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/history-detail/history-detail.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/history-detail/history-detail.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/history-detail/history-detail.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/history-detail/history-detail.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/history-detail/history-detail.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/history-detail/history-detail.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/history/history.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/history/history.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/history/history.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/history/history.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/history/history.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/history/history.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.json" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/results/results.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/results/results.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/results/results.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/results/results.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/results/results.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/results/results.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/gemini_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/gemini_adapter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/analytics/monetization_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/analytics/monetization_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/analytics/source_intelligence_processor.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/analytics/source_intelligence_processor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -18,7 +43,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="148" />
+    <option name="cachedIndexableFilesCount" value="215" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -45,6 +70,9 @@
     <commands />
     <urls />
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -64,6 +92,7 @@
     "RunOnceActivity.MCP Project settings loaded": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "git-widget-placeholder": "main",
     "node.js.detected.package.eslint": "true",
@@ -238,6 +267,7 @@
       <workItem from="1770748585658" duration="1886000" />
       <workItem from="1770750756157" duration="14275000" />
       <workItem from="1770769357592" duration="20816000" />
+      <workItem from="1770811059393" duration="3791000" />
     </task>
     <servers />
   </component>
@@ -245,7 +275,7 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770780366946" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770814846684" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$demo_main.coverage" NAME="demo_main 覆盖结果" MODIFIED="1770745116755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/PythonProject$window_tiler.coverage" NAME="window_tiler 覆盖结果" MODIFIED="1770295290564" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$main_demo.coverage" NAME="main_demo 覆盖结果" MODIFIED="1770745135752" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />

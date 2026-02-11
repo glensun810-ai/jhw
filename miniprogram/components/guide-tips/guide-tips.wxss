@@ -1,0 +1,62 @@
+/* components/guide-tips/guide-tips.wxss */
+
+.guide-tip-container {
+  margin: 20rpx 0;
+}
+
+.guide-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 30rpx;
+  border-radius: 16rpx;
+  position: relative;
+  animation: slideIn 0.3s ease;
+}
+
+.guide-tip.info {
+  background-color: #1A202C;
+  border: 1rpx solid #303030;
+}
+
+.guide-tip.warning {
+  background-color: #FFFBE6;
+  border: 1rpx solid #FFE58F;
+  color: #FAAD14;
+}
+
+.guide-tip.success {
+  background-color: #F6FFED;
+  border: 1rpx solid #B7EB8F;
+  color: #52C41A;
+}
+
+.guide-tip.error {
+  background-color: #FFF2F0;
+  border: 1rpx solid #FFCCC7;
+  color: #FF4D4F;
+}
+
+.tip-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #e8e8e8;
+}
+
+.close-btn {
+  font-size: 32rpx;
+  color: #8c8c8c;
+  margin-left: 20rpx;
+  padding: 10rpx;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

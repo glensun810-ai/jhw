@@ -111,33 +111,41 @@ class AIJudgeClient:
         self.judge_platform = os.getenv("JUDGE_LLM_PLATFORM", "deepseek")
         self.judge_model = os.getenv("JUDGE_LLM_MODEL", "deepseek-chat")
         self.api_key = os.getenv("JUDGE_LLM_API_KEY")
-        
+
+        # 如果没有配置API密钥，记录警告但不抛出异常，使应用可以启动
         if not self.api_key:
-            raise ValueError("JUDGE_LLM_API_KEY is not configured in environment variables.")
-            
+            api_logger.warning("JUDGE_LLM_API_KEY is not configured in environment variables. AI Judge functionality will be disabled.")
+            self.ai_client = None
+            return
+
         self.prompt_builder = JudgePromptBuilder()
         self.parser = JudgeResultParser()
-        
+
         try:
             self.ai_client = AIAdapterFactory.create(self.judge_platform, self.api_key, self.judge_model)
             api_logger.info(f"AIJudgeClient initialized with model: {self.judge_model} on platform: {self.judge_platform}")
         except Exception as e:
             api_logger.error(f"Failed to initialize AIJudgeClient: {e}")
-            raise
+            self.ai_client = None  # 即使初始化失败也不抛出异常，只是禁用功能
 
     def evaluate_response(self, brand_name: str, question: str, ai_answer: str) -> Optional[JudgeResult]:
         """
         调用裁判LLM评估一个AI回答
         """
+        # 如果AI客户端未初始化，返回None
+        if not self.ai_client:
+            api_logger.warning("AI Judge is not initialized due to missing API key. Skipping evaluation.")
+            return None
+
         if not ai_answer or not ai_answer.strip():
             api_logger.warning("AI answer is empty, skipping evaluation.")
             return None
 
         prompt = self.prompt_builder.build_judge_prompt(brand_name, question, ai_answer)
-        
+
         try:
             ai_response = self.ai_client.send_prompt(prompt)
-            
+
             if ai_response.success:
                 parsed_result = self.parser.parse(ai_response.content)
                 if parsed_result:

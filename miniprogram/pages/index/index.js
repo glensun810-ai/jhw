@@ -15,7 +15,7 @@ Page({
     currentCompetitor: '',
 
     // 问题设置
-    customQuestions: ['', '', '', '', ''],
+    customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}],
     selectedQuestionCount: 0,
 
     // AI模型选择
@@ -47,16 +47,77 @@ Page({
     // 存储后端返回的最终结果
     latestTestResults: null,
     latestCompetitiveAnalysis: null,
-    
+
+    // 保存配置相关
+    showSaveModal: false,
+    configName: '',
+
     // 动画
     particleAnimateId: null
   },
 
-  onLoad: function () {
+  onLoad: function (options) {
     console.log('品牌AI雷达 - 页面加载完成');
     this.checkServerConnection();
     this.updateSelectedModelCount();
     this.updateSelectedQuestionCount();
+
+    // 检查是否需要立即启动快速搜索
+    if (options && options.quickSearch === 'true') {
+      // 延迟执行，确保页面已完全加载
+      setTimeout(() => {
+        this.startBrandTest();
+      }, 1000); // 延迟稍长一些，确保配置已完全加载
+    }
+  },
+
+  onShow: function() {
+    // 检查是否有从配置管理页面传回的临时配置
+    const app = getApp();
+    if (app.globalData && app.globalData.tempConfig) {
+      this.applyConfig(app.globalData.tempConfig);
+      // 清除临时配置
+      app.globalData.tempConfig = null;
+    }
+  },
+
+  // 应用配置
+  applyConfig: function(config) {
+    // 确保自定义问题格式正确（每个问题都应该有text和show属性）
+    const formattedQuestions = config.customQuestions.map(q => ({
+      text: q.text || '',
+      show: q.show !== undefined ? q.show : true
+    }));
+
+    this.setData({
+      brandName: config.brandName || '',
+      competitorBrands: Array.isArray(config.competitorBrands) ? config.competitorBrands : [],
+      customQuestions: formattedQuestions,
+      // 仅更新选中状态，保留模型的其他属性，处理可能不存在的模型
+      domesticAiModels: this.data.domesticAiModels.map(model => {
+        const savedModel = Array.isArray(config.domesticAiModels)
+          ? config.domesticAiModels.find(saved => saved.name === model.name)
+          : null;
+        return {
+          ...model,
+          checked: savedModel ? savedModel.checked : false
+        };
+      }),
+      overseasAiModels: this.data.overseasAiModels.map(model => {
+        const savedModel = Array.isArray(config.overseasAiModels)
+          ? config.overseasAiModels.find(saved => saved.name === model.name)
+          : null;
+        return {
+          ...model,
+          checked: savedModel ? savedModel.checked : false
+        };
+      })
+    });
+
+    wx.showToast({
+      title: '配置已加载',
+      icon: 'success'
+    });
   },
 
   onReady: function () {
@@ -190,17 +251,43 @@ Page({
     const index = e.currentTarget.dataset.index;
     const value = e.detail.value;
     let customQuestions = this.data.customQuestions;
-    customQuestions[index] = value;
+    customQuestions[index].text = value;
     this.setData({ customQuestions: customQuestions });
     this.updateSelectedQuestionCount();
   },
 
+  addCustomQuestion: function() {
+    let customQuestions = this.data.customQuestions;
+    customQuestions.push({text: '', show: true});
+    this.setData({ customQuestions: customQuestions });
+    this.updateSelectedQuestionCount();
+  },
+
+  removeCustomQuestion: function(e) {
+    const index = e.currentTarget.dataset.index;
+    let customQuestions = this.data.customQuestions;
+
+    // 如果只有一个问题，则清空内容而不是删除
+    if (customQuestions.length === 1) {
+      customQuestions[0].text = '';
+      this.setData({ customQuestions: customQuestions });
+    } else {
+      customQuestions.splice(index, 1);
+      this.setData({ customQuestions: customQuestions });
+    }
+
+    this.updateSelectedQuestionCount();
+  },
+
   getValidQuestions: function() {
-    return this.data.customQuestions.filter(question => question.trim() !== '');
+    return this.data.customQuestions
+      .filter(questionObj => questionObj.show !== false && questionObj.text && questionObj.text.trim() !== '')
+      .map(questionObj => questionObj.text.trim());
   },
 
   updateSelectedQuestionCount: function() {
-    const validQuestions = this.data.customQuestions.filter(question => question.trim() !== '');
+    const validQuestions = this.data.customQuestions
+      .filter(questionObj => questionObj.show !== false && questionObj.text && questionObj.text.trim() !== '');
     this.setData({ selectedQuestionCount: validQuestions.length });
   },
 
@@ -355,23 +442,162 @@ Page({
 
   viewDetailedResults: function() {
     if (this.data.latestTestResults) {
-      const params = {
-        results: JSON.stringify(this.data.latestTestResults),
-        competitiveAnalysis: encodeURIComponent(JSON.stringify(this.data.latestCompetitiveAnalysis || {})),
-        targetBrand: this.data.brandName
-      };
-      
-      const queryString = Object.keys(params)
-        .map(key => `${key}=${params[key]}`)
-        .join('&');
-
-      wx.navigateTo({ url: `/pages/results/results?${queryString}` });
+      // 直接传递对象，让微信小程序处理URL编码
+      wx.navigateTo({
+        url: `/pages/results/results?results=${encodeURIComponent(JSON.stringify(this.data.latestTestResults))}&competitiveAnalysis=${encodeURIComponent(JSON.stringify(this.data.latestCompetitiveAnalysis || {}))}&targetBrand=${encodeURIComponent(this.data.brandName)}`
+      });
     } else {
       wx.showToast({ title: '暂无诊断结果', icon: 'none' });
     }
   },
 
+  viewConfigManager: function() {
+    wx.navigateTo({ url: '/pages/config-manager/config-manager' });
+  },
+
+  viewPermissionManager: function() {
+    wx.navigateTo({ url: '/pages/permission-manager/permission-manager' });
+  },
+
+  viewDataManager: function() {
+    wx.navigateTo({ url: '/pages/data-manager/data-manager' });
+  },
+
+  viewUserGuide: function() {
+    wx.navigateTo({ url: '/pages/user-guide/user-guide' });
+  },
+
   viewHistory: function() {
     wx.navigateTo({ url: '/pages/history/history' });
+  },
+
+  // 显示保存配置模态框
+  showSaveConfigModal: function() {
+    this.setData({
+      showSaveModal: true,
+      configName: ''
+    });
+  },
+
+  // 隐藏保存配置模态框
+  hideSaveConfigModal: function() {
+    this.setData({
+      showSaveModal: false,
+      configName: ''
+    });
+  },
+
+  // 处理配置名称输入
+  onConfigNameInput: function(e) {
+    this.setData({
+      configName: e.detail.value
+    });
+  },
+
+  // 保存当前配置
+  saveCurrentConfig: function() {
+    const configName = this.data.configName.trim();
+
+    if (!configName) {
+      wx.showToast({
+        title: '请输入配置名称',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 获取当前配置，只保存有效的自定义问题（show为true且有内容）
+    const validQuestions = this.data.customQuestions
+      .filter(questionObj => questionObj.show !== false && questionObj.text && questionObj.text.trim() !== '')
+      .map(questionObj => ({ ...questionObj })); // 创建副本以避免引用问题
+
+    const currentConfig = {
+      name: configName,
+      brandName: this.data.brandName,
+      competitorBrands: this.data.competitorBrands,
+      customQuestions: validQuestions,
+      domesticAiModels: this.data.domesticAiModels.map(model => ({
+        name: model.name,
+        checked: model.checked
+      })),
+      overseasAiModels: this.data.overseasAiModels.map(model => ({
+        name: model.name,
+        checked: model.checked
+      }))
+    };
+
+    // 读取现有的配置列表
+    let savedConfigs = wx.getStorageSync('savedSearchConfigs') || [];
+
+    // 检查是否已存在同名配置
+    const existingIndex = savedConfigs.findIndex(config => config.name === configName);
+    if (existingIndex !== -1) {
+      // 如果存在，询问用户是否覆盖
+      wx.showModal({
+        title: '配置已存在',
+        content: `配置 "${configName}" 已存在，是否覆盖？`,
+        success: (res) => {
+          if (res.confirm) {
+            savedConfigs[existingIndex] = currentConfig;
+            wx.setStorageSync('savedSearchConfigs', savedConfigs);
+            wx.showToast({
+              title: '配置已更新',
+              icon: 'success'
+            });
+            this.hideSaveConfigModal();
+          }
+        }
+      });
+    } else {
+      // 添加新配置
+      savedConfigs.push(currentConfig);
+      wx.setStorageSync('savedSearchConfigs', savedConfigs);
+      wx.showToast({
+        title: '配置已保存',
+        icon: 'success'
+      });
+      this.hideSaveConfigModal();
+    }
+  },
+
+  // 加载保存的配置
+  loadSavedConfig: function(configName) {
+    const savedConfigs = wx.getStorageSync('savedSearchConfigs') || [];
+    const configToLoad = savedConfigs.find(config => config.name === configName);
+
+    if (!configToLoad) {
+      wx.showToast({
+        title: '配置不存在',
+        icon: 'none'
+      });
+      return;
+    }
+
+    // 更新页面数据
+    this.setData({
+      brandName: configToLoad.brandName,
+      competitorBrands: configToLoad.competitorBrands,
+      customQuestions: configToLoad.customQuestions,
+      // 仅更新选中状态，保留模型的其他属性
+      domesticAiModels: this.data.domesticAiModels.map(model => {
+        const savedModel = configToLoad.domesticAiModels.find(saved => saved.name === model.name);
+        return {
+          ...model,
+          checked: savedModel ? savedModel.checked : false
+        };
+      }),
+      overseasAiModels: this.data.overseasAiModels.map(model => {
+        const savedModel = configToLoad.overseasAiModels.find(saved => saved.name === model.name);
+        return {
+          ...model,
+          checked: savedModel ? savedModel.checked : false
+        };
+      })
+    });
+
+    wx.showToast({
+      title: '配置已加载',
+      icon: 'success'
+    });
   }
 });

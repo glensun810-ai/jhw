@@ -5,5 +5,296 @@
     <text class="page-subtitle">“{{targetBrand}}”：AI认知与市场格局分析</text>
   </view>
 
-  <!-- ... (其他内容保持不变) ... -->
+  <!-- 品牌概览区 -->
+  <view class="brand-overview-section">
+    <view class="overview-card">
+      <view class="score-display">
+        <text class="score-number">{{competitiveAnalysis.brandScores[targetBrand].overallScore || 0}}</text>
+        <text class="score-grade">{{competitiveAnalysis.brandScores[targetBrand].overallGrade || 'D'}}</text>
+      </view>
+      <view class="score-summary">
+        <text class="score-desc">{{competitiveAnalysis.brandScores[targetBrand].overallSummary || '暂无评价'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 核心洞察摘要区 -->
+  <view class="insights-summary-section">
+    <text class="section-title">🎯 核心洞察</text>
+    <view class="insights-grid">
+      <view class="insight-card advantage-card">
+        <view class="card-icon">🏆</view>
+        <view class="card-title">优势领域</view>
+        <view class="card-content">{{advantageInsight}}</view>
+      </view>
+      <view class="insight-card risk-card">
+        <view class="card-icon">⚠️</view>
+        <view class="card-title">风险提示</view>
+        <view class="card-content">{{riskInsight}}</view>
+      </view>
+      <view class="insight-card opportunity-card">
+        <view class="card-icon">💡</view>
+        <view class="card-title">机会点</view>
+        <view class="card-content">{{opportunityInsight}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 多维度分析区 -->
+  <view class="multi-dimension-section">
+    <text class="section-title">📊 多维度分析</text>
+    <view class="dimensions-grid">
+      <view class="dimension-card">
+        <view class="dimension-header">
+          <text class="dimension-name">权威度</text>
+          <text class="dimension-score">{{competitiveAnalysis.brandScores[targetBrand].overallAuthority || 0}}分</text>
+        </view>
+        <view class="dimension-progress">
+          <view class="progress-bar">
+            <view class="progress-fill" style="width: {{competitiveAnalysis.brandScores[targetBrand].overallAuthority || 0}}%;"></view>
+          </view>
+        </view>
+        <view class="dimension-status">{{getDimensionStatus(competitiveAnalysis.brandScores[targetBrand].overallAuthority || 0, 'authority')}}</view>
+      </view>
+      <view class="dimension-card">
+        <view class="dimension-header">
+          <text class="dimension-name">可见度</text>
+          <text class="dimension-score">{{competitiveAnalysis.brandScores[targetBrand].overallVisibility || 0}}分</text>
+        </view>
+        <view class="dimension-progress">
+          <view class="progress-bar">
+            <view class="progress-fill" style="width: {{competitiveAnalysis.brandScores[targetBrand].overallVisibility || 0}}%;"></view>
+          </view>
+        </view>
+        <view class="dimension-status">{{getDimensionStatus(competitiveAnalysis.brandScores[targetBrand].overallVisibility || 0, 'visibility')}}</view>
+      </view>
+      <view class="dimension-card">
+        <view class="dimension-header">
+          <text class="dimension-name">纯净度</text>
+          <text class="dimension-score">{{competitiveAnalysis.brandScores[targetBrand].overallPurity || 0}}分</text>
+        </view>
+        <view class="dimension-progress">
+          <view class="progress-bar">
+            <view class="progress-fill" style="width: {{competitiveAnalysis.brandScores[targetBrand].overallPurity || 0}}%;"></view>
+          </view>
+        </view>
+        <view class="dimension-status">{{getDimensionStatus(competitiveAnalysis.brandScores[targetBrand].overallPurity || 0, 'purity')}}</view>
+      </view>
+      <view class="dimension-card">
+        <view class="dimension-header">
+          <text class="dimension-name">一致性</text>
+          <text class="dimension-score">{{competitiveAnalysis.brandScores[targetBrand].overallConsistency || 0}}分</text>
+        </view>
+        <view class="dimension-progress">
+          <view class="progress-bar">
+            <view class="progress-fill" style="width: {{competitiveAnalysis.brandScores[targetBrand].overallConsistency || 0}}%;"></view>
+          </view>
+        </view>
+        <view class="dimension-status">{{getDimensionStatus(competitiveAnalysis.brandScores[targetBrand].overallConsistency || 0, 'consistency')}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- AI平台对比区 -->
+  <view class="platform-comparison-section">
+    <text class="section-title">🤖 AI平台认知对比</text>
+    <view class="platform-tabs">
+      <scroll-view scroll-x="true" class="tabs-scroll">
+        <view class="tab-item {{currentPlatform === item ? 'active' : ''}}" 
+              wx:for="{{platforms}}" wx:key="platform" 
+              bindtap="switchPlatform" 
+              data-platform="{{item}}">
+          {{platformDisplayNames[item]}}
+        </view>
+      </scroll-view>
+    </view>
+    <view class="platform-content">
+      <view class="radar-chart-container">
+        <!-- 雷达图占位 -->
+        <view class="radar-placeholder">
+          <text>雷达图展示平台认知对比</text>
+        </view>
+      </view>
+      <view class="platform-details">
+        <view class="detail-item" wx:for="{{pkDataByPlatform[currentPlatform]}}" wx:key="index">
+          <text class="detail-brand">{{item.myBrandData.brand}}</text>
+          <text class="detail-score">{{item.myBrandData.overallScore}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 信源情报展示 -->
+  <view class="source-intelligence-section" wx:if="{{showSourceIntelligence}}">
+    <text class="section-title">🔍 信源情报分析</text>
+    <view class="intelligence-graph">
+      <view class="graph-node" wx:for="{{sourceIntelligenceMap.nodes}}" wx:key="id" bindtap="viewSourceDetails" data-id="{{item.id}}">
+        <view class="node-content {{item.category}}">
+          <text class="node-name">{{item.name}}</text>
+          <text class="node-weight" wx:if="{{item.value}}">权重: {{item.value}}</text>
+          <text class="node-sentiment" wx:if="{{item.sentiment}}">情感: {{item.sentiment}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 详细结果列表 -->
+  <view class="detailed-results-section">
+    <view class="results-controls">
+      <text class="section-title">📋 详细测试结果</text>
+      <view class="view-toggle">
+        <view class="toggle-btn {{currentViewMode === 'brand' ? 'active' : ''}}" bindtap="switchViewMode" data-mode="brand">品牌对比</view>
+        <view class="toggle-btn {{currentViewMode === 'dimension' ? 'active' : ''}}" bindtap="switchViewMode" data-mode="dimension">维度对比</view>
+        <view class="toggle-btn {{currentViewMode === 'detailed' ? 'active' : ''}}" bindtap="switchViewMode" data-mode="detailed">详细视图</view>
+      </view>
+    </view>
+
+    <!-- 品牌对比视图 -->
+    <view wx:if="{{currentViewMode === 'brand'}}">
+      <view class="brand-comparison-card" wx:for="{{groupedResultsByBrand}}" wx:key="brand">
+        <view class="brand-header">
+          <text class="brand-name {{item.isMainBrand ? 'main-brand' : 'competitor-brand'}}">
+            {{item.isMainBrand ? '🏢' : '🚗'}} {{item.brand}}
+          </text>
+          <text class="brand-score">📊 综合: {{item.overallScore}}分</text>
+        </view>
+        <view class="brand-dimensions">
+          <view class="dimension-item">
+            <text class="dimension-label">🏆 权威度</text>
+            <text class="dimension-score">{{item.scores.authority_score || 0}}</text>
+          </view>
+          <view class="dimension-item">
+            <text class="dimension-label">👁️ 可见度</text>
+            <text class="dimension-score">{{item.scores.visibility_score || 0}}</text>
+          </view>
+          <view class="dimension-item">
+            <text class="dimension-label">✨ 纯净度</text>
+            <text class="dimension-score">{{item.scores.purity_score || 0}}</text>
+          </view>
+          <view class="dimension-item">
+            <text class="dimension-label">🔗 一致性</text>
+            <text class="dimension-score">{{item.scores.consistency_score || 0}}</text>
+          </view>
+        </view>
+        <view class="brand-questions" bindtap="toggleBrandQuestions" data-brand="{{item.brand}}">
+          <text class="questions-toggle">📋 {{item.questions.length}} 个问题 ></text>
+        </view>
+        <view class="brand-question-details" wx:if="{{expandedBrands[item.brand]}}">
+          <view class="question-item" wx:for="{{item.questions}}" wx:key="index">
+            <text class="question-text">❓ {{item.question}}</text>
+            <text class="answer-text">💬 {{item.response}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 维度对比视图 -->
+    <view wx:elif="{{currentViewMode === 'dimension'}}">
+      <view class="dimension-comparison-section">
+        <view class="dimension-card" wx:for="{{dimensionComparisonData}}" wx:key="dimension">
+          <view class="dimension-header">
+            <text class="dimension-name">{{item.icon}} {{item.name}}</text>
+            <text class="dimension-average">平均: {{item.averageScore}}分</text>
+          </view>
+          <view class="dimension-bars">
+            <view class="bar-item" wx:for="{{item.brands}}" wx:key="brand">
+              <text class="bar-label {{item.isMainBrand ? 'main-brand' : 'competitor-brand'}}">{{item.brand}}</text>
+              <view class="bar-container">
+                <view class="bar-fill" style="width: {{item.score}}%; background-color: {{item.isMainBrand ? '#00F5A0' : '#00A9FF'}};"></view>
+                <text class="bar-score">{{item.score}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 详细视图 -->
+    <view wx:elif="{{currentViewMode === 'detailed'}}">
+      <view class="detailed-result-item" wx:for="{{latestTestResults}}" wx:key="index">
+        <view class="detailed-header">
+          <text class="detailed-brand {{item.brand === targetBrand ? 'main-brand' : 'competitor-brand'}}">
+            {{item.brand === targetBrand ? '🏢' : '🚗'}} {{item.brand}}
+          </text>
+          <text class="detailed-model">🤖 {{item.aiModel}}</text>
+        </view>
+        <view class="detailed-question">❓ {{item.question}}</view>
+        <view class="detailed-response">💬 {{item.response}}</view>
+        <view class="detailed-scores-grid">
+          <view class="score-cell">
+            <text class="score-label">🏆 权威度</text>
+            <text class="score-value">{{item.authority_score || 0}}</text>
+          </view>
+          <view class="score-cell">
+            <text class="score-label">👁️ 可见度</text>
+            <text class="score-value">{{item.visibility_score || 0}}</text>
+          </view>
+          <view class="score-cell">
+            <text class="score-label">✨ 纯净度</text>
+            <text class="score-value">{{item.purity_score || 0}}</text>
+          </view>
+          <view class="score-cell">
+            <text class="score-label">🔗 一致性</text>
+            <text class="score-value">{{item.consistency_score || 0}}</text>
+          </view>
+        </view>
+        <view class="detailed-total-score">📈 总分: {{item.score}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-actions">
+    <button class="action-btn save-btn" bindtap="saveResult">💾 保存结果</button>
+    <button class="action-btn home-btn" bindtap="goHome">🏠 返回首页</button>
+    <button class="action-btn history-btn" bindtap="viewHistory">📚 查看历史</button>
+    <button class="action-btn report-btn" bindtap="generateReport">📊 生成战报</button>
+  </view>
+
+  <!-- 保存结果模态框 -->
+  <view class="modal-overlay" wx:if="{{showSaveResultModal}}">
+    <view class="modal-content">
+      <view class="modal-header">
+        <text>保存搜索结果</text>
+        <text class="close-btn" bindtap="hideSaveResultModal">✕</text>
+      </view>
+      <view class="modal-body">
+        <view class="form-group">
+          <text class="label">品牌名称</text>
+          <input class="input" value="{{saveBrandName}}" bindinput="onSaveBrandNameInput" placeholder="请输入品牌名称" />
+        </view>
+        <view class="form-group">
+          <text class="label">标签</text>
+          <view class="tags-container">
+            <view class="tag-item" wx:for="{{saveTags}}" wx:key="tag" wx:if="{{item}}">
+              <text>{{item}}</text>
+              <text class="remove-tag" bindtap="removeSaveTag" data-index="{{index}}">×</text>
+            </view>
+            <view class="add-tag-container">
+              <input class="tag-input" value="{{newSaveTag}}" bindinput="onNewSaveTagInput" placeholder="添加标签" />
+              <button class="add-tag-btn" bindtap="addSaveTag">添加</button>
+            </view>
+          </view>
+        </view>
+        <view class="form-group">
+          <text class="label">分类</text>
+          <picker class="picker" range="{{saveCategories}}" value="{{saveCategoryIndex}}" bindchange="onSaveCategoryChange">
+            <view class="picker-view">{{selectedSaveCategory}}</view>
+          </picker>
+        </view>
+        <view class="form-group">
+          <text class="label">备注</text>
+          <textarea class="textarea" value="{{saveNotes}}" bindinput="onSaveNotesInput" placeholder="请输入备注信息" />
+        </view>
+        <view class="form-group">
+          <text class="label">收藏</text>
+          <switch class="switch" checked="{{saveAsFavorite}}" bindchange="onSaveFavoriteChange" />
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="modal-cancel-btn" bindtap="hideSaveResultModal">取消</button>
+        <button class="modal-confirm-btn" bindtap="confirmSaveResult">保存</button>
+      </view>
+    </view>
+  </view>
 </view>

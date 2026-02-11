@@ -3,7 +3,17 @@
     "pages/index/index",
     "pages/results/results",
     "pages/history/history",
-    "pages/history-detail/history-detail"
+    "pages/history-detail/history-detail",
+    "pages/config-manager/config-manager",
+    "pages/saved-results/saved-results",
+    "pages/edit-saved-result/edit-saved-result",
+    "pages/login/login",
+    "pages/register/register",
+    "pages/public-history/public-history",
+    "pages/personal-history/personal-history",
+    "pages/permission-manager/permission-manager",
+    "pages/data-manager/data-manager",
+    "pages/user-guide/user-guide"
   ],
   "window": {
     "backgroundTextStyle": "light",

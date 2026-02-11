@@ -12,6 +12,8 @@ import uuid
 import re
 import random
 from collections import defaultdict
+import concurrent.futures
+import asyncio
 
 from config import Config
 from .database import save_test_record, get_user_test_history, get_test_record_by_id
@@ -23,11 +25,7 @@ from scoring_engine import ScoringEngine
 from ai_judge_module import AIJudgeClient, JudgeResult, ConfidenceLevel
 from .analytics.interception_analyst import InterceptionAnalyst
 from .analytics.monetization_service import MonetizationService, UserLevel
-try:
-    from .analytics.source_intelligence_processor import SourceIntelligenceProcessor # 引入信源情报处理器
-except ImportError:
-    SourceIntelligenceProcessor = None
-    print("Warning: SourceIntelligenceProcessor not available due to missing dependencies")
+from .analytics.source_intelligence_processor import SourceIntelligenceProcessor, process_brand_source_intelligence
 
 # Create a blueprint
 wechat_bp = Blueprint('wechat', __name__)
@@ -149,7 +147,7 @@ def perform_brand_test():
     def run_async_test():
         try:
             executor = TestExecutor(max_workers=10, strategy=ExecutionStrategy.CONCURRENT)
-            
+
             def progress_callback(exec_id, progress):
                 if execution_id in execution_store:
                     execution_store[execution_id].update({
@@ -163,13 +161,26 @@ def perform_brand_test():
             executor.shutdown()
 
             processed_results = process_and_aggregate_results_with_ai_judge(results, brand_list, main_brand)
-            
+
             # 使用真实的信源情报处理器
-            if SourceIntelligenceProcessor:
-                source_processor = SourceIntelligenceProcessor()
-                source_intelligence_map = source_processor.process(main_brand, processed_results['detailed_results'])
-            else:
-                # 如果模块不可用，使用模拟数据
+            try:
+                # 使用线程池执行器来运行异步函数
+                def run_async_processing():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        return loop.run_until_complete(
+                            process_brand_source_intelligence(main_brand, processed_results['detailed_results'])
+                        )
+                    finally:
+                        loop.close()
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(run_async_processing)
+                    source_intelligence_map = future.result(timeout=30)  # 设置超时时间
+            except Exception as e:
+                api_logger.error(f"信源情报处理失败: {e}")
+                # 如果异步处理失败，使用模拟数据
                 source_intelligence_map = generate_mock_source_intelligence_map(main_brand)
 
             semantic_contrast_data = generate_mock_semantic_contrast_data(main_brand)
@@ -213,7 +224,7 @@ def perform_brand_test():
                 stripped_data['progress'] = 100
                 stripped_data['recordId'] = record_id
                 execution_store[execution_id].update(stripped_data)
-                
+
         except Exception as e:
             api_logger.error(f"Async test execution failed: {e}")
             if execution_id in execution_store:
@@ -231,52 +242,94 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
     ai_judge = AIJudgeClient()
     scoring_engine = ScoringEngine()
     interception_analyst = InterceptionAnalyst(all_brands, main_brand)
-    
+
     detailed_results = []
     brand_results_map = defaultdict(list)
     platform_results_map = defaultdict(list)
-    
-    for result in raw_results['results']:
-        current_brand = result.get('brand_name', 'unknown')
-        
-        if result.get('success'):
-            ai_response_content = result['result'].get('content', '')
-            judge_result = ai_judge.evaluate_response(current_brand, result.get('question', ''), ai_response_content)
-            
-            if judge_result:
-                individual_score = scoring_engine.calculate([judge_result]).geo_score
-                
-                detailed_result = {
-                    'success': True,
-                    'brand': current_brand,
-                    'aiModel': result.get('model', 'unknown'),
-                    'question': result.get('question', ''),
-                    'response': ai_response_content,
-                    'authority_score': judge_result.accuracy_score,
-                    'visibility_score': judge_result.completeness_score,
-                    'sentiment_score': judge_result.sentiment_score,
-                    'purity_score': judge_result.purity_score,
-                    'consistency_score': judge_result.consistency_score,
-                    'score': individual_score,
-                    'category': '国内' if result.get('model', '') in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
-                }
-                brand_results_map[current_brand].append(judge_result)
-                platform_results_map[detailed_result['aiModel']].append(detailed_result)
+
+    # 检查raw_results的结构，如果是executor返回的完整结果，则提取实际的测试结果
+    actual_results = []
+    if isinstance(raw_results, dict) and 'tasks_results' in raw_results:
+        # 如果raw_results包含tasks_results键，则使用它
+        actual_results = raw_results.get('tasks_results', [])
+    elif isinstance(raw_results, dict) and 'results' in raw_results:
+        # 如果raw_results包含results键，则使用它
+        actual_results = raw_results.get('results', [])
+    elif isinstance(raw_results, list):
+        # 如果raw_results本身就是列表，则直接使用
+        actual_results = raw_results
+    else:
+        # 默认行为：假设raw_results有results键
+        actual_results = raw_results.get('results', [])
+
+    for result in actual_results:
+        # 检查result的结构，确保兼容不同的数据格式
+        if isinstance(result, dict):
+            # 如果result已经是处理过的格式
+            current_brand = result.get('brand_name', result.get('brand', 'unknown'))
+
+            # 检查是否成功获取了AI响应
+            if result.get('success', False):
+                # 根据不同数据格式获取响应内容
+                ai_response_content = ""
+                if 'result' in result and isinstance(result['result'], dict):
+                    ai_response_content = result['result'].get('content', '')
+                elif 'response' in result:
+                    ai_response_content = result['response']
+                elif 'content' in result:
+                    ai_response_content = result['content']
+
+                question = result.get('question', result.get('original_question', ''))
+
+                judge_result = ai_judge.evaluate_response(current_brand, question, ai_response_content)
+
+                if judge_result:
+                    individual_score = scoring_engine.calculate([judge_result]).geo_score
+
+                    detailed_result = {
+                        'success': True,
+                        'brand': current_brand,
+                        'aiModel': result.get('model', result.get('ai_model', 'unknown')),
+                        'question': question,
+                        'response': ai_response_content,
+                        'authority_score': judge_result.accuracy_score,
+                        'visibility_score': judge_result.completeness_score,
+                        'sentiment_score': judge_result.sentiment_score,
+                        'purity_score': judge_result.purity_score,
+                        'consistency_score': judge_result.consistency_score,
+                        'score': individual_score,
+                        'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
+                    }
+                    brand_results_map[current_brand].append(judge_result)
+                    platform_results_map[detailed_result['aiModel']].append(detailed_result)
+                else:
+                    detailed_result = {
+                        'success': False,
+                        'brand': current_brand,
+                        'aiModel': result.get('model', result.get('ai_model', 'unknown')),
+                        'question': question,
+                        'response': "Evaluation Failed by AI Judge",
+                        'score': 0,
+                        'error_type': 'EvaluationFailed'
+                    }
             else:
-                detailed_result = {'success': False, 'brand': current_brand, 'aiModel': result.get('model', 'unknown'), 'question': result.get('question', ''), 'response': "Evaluation Failed by AI Judge", 'score': 0, 'error_type': 'EvaluationFailed'}
+                # 处理失败的结果
+                detailed_result = {
+                    'success': False,
+                    'brand': current_brand,
+                    'aiModel': result.get('model', result.get('ai_model', 'unknown')),
+                    'question': result.get('question', result.get('original_question', '')),
+                    'response': f"Error: {result.get('error', result.get('error_message', 'Unknown error'))}",
+                    'score': 0,
+                    'error_message': result.get('error', result.get('error_message', 'Unknown error')),
+                    'error_type': result.get('error_type', 'GeneralError')
+                }
+
+            detailed_results.append(detailed_result)
         else:
-            detailed_result = {
-                'success': False,
-                'brand': current_brand,
-                'aiModel': result.get('model', 'unknown'),
-                'question': result.get('question', ''),
-                'response': f"Error: {result.get('error', 'Unknown error')}",
-                'score': 0,
-                'error_message': result.get('error'),
-                'error_type': result.get('error_type')
-            }
-        
-        detailed_results.append(detailed_result)
+            # 如果result不是字典格式，跳过
+            api_logger.warning(f"Unexpected result format: {result}")
+            continue
 
     brand_scores = {}
     for brand, judge_results in brand_results_map.items():

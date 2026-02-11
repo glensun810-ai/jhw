@@ -1,0 +1,60 @@
+<view class="container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">权限管理</text>
+    <text class="page-subtitle">管理您的账户权限</text>
+  </view>
+
+  <!-- 用户信息 -->
+  <view class="user-info-section">
+    <view class="user-card">
+      <view class="user-avatar">
+        <text class="avatar-text">{{userInitial}}</text>
+      </view>
+      <view class="user-details">
+        <text class="user-name">{{userName || '未登录用户'}}</text>
+        <text class="user-id">ID: {{userId || 'N/A'}}</text>
+        <text class="user-permission">权限: {{userRole || '访客'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 权限列表 -->
+  <view class="permission-list-section">
+    <text class="section-title">可用权限</text>
+    <view class="permission-item" wx:for="{{permissions}}" wx:key="id">
+      <view class="permission-info">
+        <text class="permission-name">{{item.name}}</text>
+        <text class="permission-desc">{{item.description}}</text>
+      </view>
+      <switch class="permission-switch" checked="{{item.granted}}" bindchange="togglePermission" data-permission="{{item.id}}" />
+    </view>
+  </view>
+
+  <!-- 权限说明 -->
+  <view class="permission-explanation-section">
+    <text class="section-title">权限说明</text>
+    <view class="explanation-item">
+      <text class="explanation-title">基础权限</text>
+      <text class="explanation-desc">所有用户默认拥有，包括查看公共数据、基础搜索功能等。</text>
+    </view>
+    <view class="explanation-item">
+      <text class="explanation-title">历史记录权限</text>
+      <text class="explanation-desc">登录用户拥有，可查看和管理个人历史记录。</text>
+    </view>
+    <view class="explanation-item">
+      <text class="explanation-title">保存结果权限</text>
+      <text class="explanation-desc">登录用户拥有，可保存和管理搜索结果。</text>
+    </view>
+    <view class="explanation-item">
+      <text class="explanation-title">高级分析权限</text>
+      <text class="explanation-desc">VIP用户拥有，可使用高级分析功能。</text>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-buttons">
+    <button class="action-btn logout-btn" bindtap="logout">退出登录</button>
+    <button class="action-btn upgrade-btn" bindtap="upgradeAccount">升级账户</button>
+  </view>
+</view>
