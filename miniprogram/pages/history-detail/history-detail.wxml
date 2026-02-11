@@ -1,0 +1,235 @@
+<view class="container" wx:if="{{!isLoading}}">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">品牌AI洞察报告</text>
+    <text class="page-subtitle">针对“{{targetBrand}}”的AI认知与市场格局分析</text>
+  </view>
+
+  <!-- 第一层：高管摘要 (Executive Summary) -->
+  <view class="section executive-summary-section">
+    <view class="section-header">
+      <text class="section-title">战况大盘</text>
+      <view class="overall-grade-display" wx:if="{{competitiveAnalysis.brandScores[targetBrand]}}">
+        <text class="grade-label">综合评级</text>
+        <text class="grade-value {{competitiveAnalysis.brandScores[targetBrand].overallGrade}}">{{competitiveAnalysis.brandScores[targetBrand].overallGrade}}</text>
+      </view>
+    </view>
+
+    <!-- 竞争格局热力图 -->
+    <view class="score-matrix">
+      <view class="matrix-row matrix-header-row">
+        <view class="matrix-cell brand-header"></view>
+        <view class="matrix-cell ai-header" wx:for="{{matrixHeaders}}" wx:key="*this">{{item}}</view>
+      </view>
+      <view class="matrix-row" wx:for="{{scoreMatrix}}" wx:for-item="row" wx:key="brand">
+        <view class="matrix-cell brand-name {{row.brand === targetBrand ? 'is-target-brand' : ''}}">{{row.brand}}</view>
+        <view class="matrix-cell score-cell"
+              wx:for="{{matrixHeaders}}"
+              wx:for-item="aiModel"
+              wx:key="*this"
+              style="background-color: {{tools.getHeatmapColor(row.scores[aiModel])}};">
+          {{row.scores[aiModel] || '-'}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 核心洞察摘要 -->
+    <view class="insight-summary">
+      <view class="insight-item" wx:if="{{executiveSummary.mainThreat}}">
+        <text class="insight-icon">🚨</text>
+        <text class="insight-text">主要威胁：{{executiveSummary.mainThreat}}</text>
+      </view>
+      <view class="insight-item" wx:if="{{executiveSummary.mainOpportunity}}">
+        <text class="insight-icon">🚀</text>
+        <text class="insight-text">增长机会：{{executiveSummary.mainOpportunity}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 第二层：多维分析 (Multi-dimensional Analysis) -->
+  <view class="section analysis-section">
+    <view class="section-header">
+      <text class="section-title">多维分析</text>
+    </view>
+
+    <!-- Tab 导航 -->
+    <view class="tabs-nav">
+      <view class="tab-item {{activeTab === 'byPlatform' ? 'active' : ''}}" data-tab="byPlatform" bindtap="switchTab">按平台分析</view>
+      <view class="tab-item {{activeTab === 'byBrand' ? 'active' : ''}}" data-tab="byBrand" bindtap="switchTab">按品牌分析</view>
+      <view class="tab-item {{activeTab === 'byProblem' ? 'active' : ''}}" data-tab="byProblem" bindtap="switchTab">问题诊断</view>
+    </view>
+
+    <!-- Tab 内容 -->
+    <view class="tab-content">
+      <!-- 按平台分析 -->
+      <view class="tab-pane" wx:if="{{activeTab === 'byPlatform'}}">
+        <view wx:for="{{dataByPlatform}}" wx:for-item="platformResults" wx:for-index="platformName" wx:key="platformName">
+          <view class="platform-group-title">{{platformName}}</view>
+          <view class="result-card {{item.brand === targetBrand ? 'brand-card' : 'competitor-card'}}" wx:for="{{platformResults}}" wx:key="index" wx:for-item="item" wx:for-index="index">
+            <template is="resultCardTemplate" data="{{item, targetBrand, type: 'platform', platform: platformName, index}}"/>
+          </view>
+        </view>
+      </view>
+
+      <!-- 按品牌分析 -->
+      <view class="tab-pane" wx:if="{{activeTab === 'byBrand'}}">
+        <view wx:for="{{dataByBrand}}" wx:for-item="brandResults" wx:for-index="brandName" wx:key="brandName">
+          <view class="brand-group-title {{brandName === targetBrand ? 'is-target-brand' : ''}}">{{brandName}}</view>
+          <view class="result-card {{item.brand === targetBrand ? 'brand-card' : 'competitor-card'}}" wx:for="{{brandResults}}" wx:key="index" wx:for-item="item" wx:for-index="index">
+            <template is="resultCardTemplate" data="{{item, targetBrand, type: 'brand', brand: brandName, index}}"/>
+          </view>
+        </view>
+      </view>
+
+      <!-- 问题诊断 -->
+      <view class="tab-pane" wx:if="{{activeTab === 'byProblem'}}">
+        <view wx:if="{{problemList.length === 0}}" class="no-problems">
+          <text>🎉 恭喜！未检测到重大问题。</text>
+        </view>
+        <view class="result-card {{problem.item.brand === targetBrand ? 'brand-card' : 'competitor-card'}}" wx:for="{{problemList}}" wx:key="index" wx:for-item="problem" wx:for-index="index">
+          <template is="resultCardTemplate" data="{{item: problem.item, targetBrand, type: 'problem', index}}"/>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部操作区 -->
+  <view class="footer-actions">
+    <button class="btn-primary" bindtap="goHome">返回首页</button>
+  </view>
+</view>
+
+<!-- 加载状态 -->
+<view class="loading-state" wx:if="{{isLoading}}">
+  <text>正在加载历史报告...</text>
+</view>
+
+<!-- WXS 模块，用于在 WXML 中调用函数 -->
+<wxs module="tools">
+  var getHeatmapColor = function(score) {
+    if (score === undefined || score === null) return 'rgba(255, 255, 255, 0.05)';
+    if (score >= 85) return 'rgba(0, 245, 160, 0.8)'; // 优
+    if (score >= 70) return 'rgba(0, 245, 160, 0.5)'; // 良
+    if (score >= 50) return 'rgba(255, 140, 0, 0.6)'; // 中
+    return 'rgba(255, 77, 79, 0.6)'; // 差
+  }
+  module.exports.getHeatmapColor = getHeatmapColor;
+</wxs>
+
+<!-- 模板：GEO 智能洞察卡片 -->
+<template name="resultCardTemplate">
+  <view class="card-header" bindtap="toggleExpand" data-type="{{type}}" data-platform="{{platform}}" data-brand="{{brand}}" data-index="{{index}}">
+    <view class="header-left">
+      <view class="brand-tag {{item.brand === targetBrand ? 'tag-primary' : 'tag-secondary'}}">
+        {{item.brand}}
+      </view>
+      <view class="model-info">
+        <text class="model-name">{{item.aiModel}}</text>
+        <view class="source-dot {{item.category === '国内' ? 'dot-red' : 'dot-blue'}}"></view>
+      </view>
+    </view>
+
+    <view class="header-right">
+      <view class="score-display">
+        <text class="score-num {{item.score >= 80 ? 'text-green' : (item.score >= 60 ? 'text-orange' : 'text-red')}}">{{item.score}}</text>
+        <text class="score-label">分</text>
+      </view>
+      <view class="grade-badge-small {{item.score >= 85 ? 'grade-A' : (item.score >= 70 ? 'grade-B' : (item.score >= 50 ? 'grade-C' : 'grade-D'))}}">
+        {{item.score >= 85 ? 'A' : (item.score >= 70 ? 'B' : (item.score >= 50 ? 'C' : 'D'))}}
+      </view>
+      <view class="expand-arrow {{item.expanded ? 'expanded' : ''}}">⌄</view>
+    </view>
+  </view>
+
+  <!-- 卡片摘要 (始终显示) -->
+  <view class="card-summary" bindtap="toggleExpand" data-type="{{type}}" data-platform="{{platform}}" data-brand="{{brand}}" data-index="{{index}}">
+    <view class="mini-progress-group">
+      <view class="mini-progress-item">
+        <text class="mp-label">权威</text>
+        <progress percent="{{item.authority_score}}" stroke-width="4" color="#00A9FF" border-radius="2" class="mp-bar"/>
+        <text class="mp-val">{{item.authority_score}}</text>
+      </view>
+      <view class="mini-progress-item">
+        <text class="mp-label">可见</text>
+        <progress percent="{{item.visibility_score}}" stroke-width="4" color="#00F5A0" border-radius="2" class="mp-bar"/>
+        <text class="mp-val">{{item.visibility_score}}</text>
+      </view>
+      <view class="mini-progress-item">
+        <text class="mp-label">好感</text>
+        <progress percent="{{item.sentiment_score}}" stroke-width="4" color="#FF8C00" border-radius="2" class="mp-bar"/>
+        <text class="mp-val">{{item.sentiment_score}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 卡片详情 (展开显示) -->
+  <view class="card-details" wx:if="{{item.expanded}}">
+
+    <!-- 板块 A: AI 原声 -->
+    <view class="detail-section ai-voice-section">
+      <view class="section-label">🤖 AI 原声</view>
+      <view class="ai-quote">
+        <text class="quote-content">{{item.response}}</text>
+      </view>
+    </view>
+
+    <!-- 板块 B: 深度诊断 -->
+    <view class="detail-section diagnostic-section">
+      <view class="section-label">🩺 深度诊断</view>
+
+      <!-- 5维得分网格 -->
+      <view class="score-grid">
+        <view class="score-grid-item">
+          <text class="sg-label">纯净度</text>
+          <text class="sg-val">{{item.purity_score}}</text>
+        </view>
+        <view class="score-grid-item">
+          <text class="sg-label">一致性</text>
+          <text class="sg-val">{{item.consistency_score}}</text>
+        </view>
+      </view>
+
+      <!-- 预警模块 -->
+      <view class="alerts-container">
+        <!-- 语义偏移 -->
+        <view class="alert-item alert-warning" wx:if="{{item.authority_score < 60 && item.visibility_score > 60}}">
+          <view class="alert-icon">⚠️</view>
+          <view class="alert-content">
+            <text class="alert-title">语义偏移预警</text>
+            <text class="alert-desc">AI 认知存在偏差，高可见度但低权威度，可能源于错误信源。</text>
+          </view>
+        </view>
+
+        <!-- 负面情感 -->
+        <view class="alert-item alert-danger" wx:if="{{item.sentiment_score < 50}}">
+          <view class="alert-icon">⛔</view>
+          <view class="alert-content">
+            <text class="alert-title">负面情感预警</text>
+            <text class="alert-desc">检测到明显的负面评价倾向，建议立即排查舆情。</text>
+          </view>
+        </view>
+
+        <!-- 竞品干扰 -->
+        <view class="alert-item alert-info" wx:if="{{item.purity_score < 70}}">
+          <view class="alert-icon">🔍</view>
+          <view class="alert-content">
+            <text class="alert-title">竞品干扰检测</text>
+            <text class="alert-desc">回答中包含竞品信息，品牌纯净度受损。</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 板块 C: 优化建议 -->
+    <view class="detail-section action-section" wx:if="{{item.suggestions && item.suggestions.length > 0}}">
+      <view class="section-label">💡 优化策略</view>
+      <view class="action-list">
+        <view class="action-item" wx:for="{{item.suggestions}}" wx:key="s_idx" wx:for-item="sug">
+          <view class="action-icon">✓</view>
+          <text class="action-text">{{sug.content}}</text>
+        </view>
+      </view>
+    </view>
+
+  </view>
+</template>

@@ -1,0 +1,6 @@
+{
+  "usingComponents": {
+    "base-chart": "../../components/BaseChart/index"
+  },
+  "navigationBarTitleText": "诊断报告详情"
+}
