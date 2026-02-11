@@ -5020,3 +5020,496 @@
 2026-02-11 10:57:23,404 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
 2026-02-11 10:57:23,610 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
 2026-02-11 10:57:23,610 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:26:07,223 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:26:07,228 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:50:06,466 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:50:06,470 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:51:32,650 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:51:32,652 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:52:16,274 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:52:16,277 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:53:34,983 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:53:34,985 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:53:46,707 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:53:46,710 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:53:46,739 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:53:46,740 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:53:46,776 - werkzeug - INFO - _internal.py:97 - _log() - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2026-02-11 11:53:46,776 - werkzeug - INFO - _internal.py:97 - _log() - [33mPress CTRL+C to quit[0m
+2026-02-11 11:53:46,777 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
+2026-02-11 11:53:46,890 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:53:46,891 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:53:46,908 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:53:46,908 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:53:46,928 - werkzeug - WARNING - _internal.py:97 - _log() -  * Debugger is active!
+2026-02-11 11:53:46,941 - werkzeug - INFO - _internal.py:97 - _log() -  * Debugger PIN: 111-721-574
+2026-02-11 11:54:06,352 - wechat_backend.api - INFO - views.py:95 - perform_brand_test() - Brand test endpoint accessed
+2026-02-11 11:54:06,352 - wechat_backend.api - INFO - views.py:115 - perform_brand_test() - Starting async brand test 'f6b32331-3e7e-404d-bc5d-32c3030ccd20' for brands: ['测试品牌'] (User Level: Free)
+2026-02-11 11:54:06,352 - wechat_backend.database - INFO - question_templates.py:159 - _load_standard_templates() - Loaded 14 standard question templates
+2026-02-11 11:54:06,352 - wechat_backend.api - INFO - test_case_generator.py:64 - __init__() - Initialized TestCaseGenerator
+2026-02-11 11:54:06,352 - wechat_backend.api - INFO - test_case_generator.py:97 - generate_test_cases() - Generated 6 test cases for brand '测试品牌' across 3 models with 2 questions
+2026-02-11 11:54:06,353 - wechat_backend.api - INFO - scheduler.py:46 - __init__() - Initialized TestScheduler with strategy concurrent, max_workers 10
+2026-02-11 11:54:06,353 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:54:06] "POST /api/perform-brand-test HTTP/1.1" 200 -
+2026-02-11 11:54:06,353 - wechat_backend.api - INFO - progress_tracker.py:54 - __init__() - Initialized ProgressTracker
+2026-02-11 11:54:06,354 - wechat_backend.api - INFO - executor.py:30 - __init__() - Initialized TestExecutor with strategy concurrent, max_workers 10
+2026-02-11 11:54:06,354 - wechat_backend.api - INFO - executor.py:52 - execute_tests() - Starting execution 1a579175-f78f-4d26-bad7-74ed203d7924 for 6 test cases
+2026-02-11 11:54:06,354 - wechat_backend.api - INFO - progress_tracker.py:65 - create_execution() - Created execution tracking for 1a579175-f78f-4d26-bad7-74ed203d7924 with 6 tests
+2026-02-11 11:54:08,056 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:54:08,058 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1a49a15a-f732-4e9f-a2d1-843fa01da4f7 failed on attempt 1: Model Not Exist
+2026-02-11 11:54:08,126 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:54:08,126 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 5c481413-ff0f-4f5c-8c73-4f6732dd68b0 failed on attempt 1: Model Not Exist
+2026-02-11 11:54:08,594 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078204947487baed5f4f5afe28d98e4b551391fd705c1b6d
+2026-02-11 11:54:08,597 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task f450e403-4bc2-4c90-a497-254d975e1165 failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078204947487baed5f4f5afe28d98e4b551391fd705c1b6d
+2026-02-11 11:54:08,800 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782049623d3e54ebf5d2343d2942f37ab047ca4886a484a
+2026-02-11 11:54:08,801 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c81f33b8-56e3-4c40-8582-a8fff396e9d5 failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782049623d3e54ebf5d2343d2942f37ab047ca4886a484a
+2026-02-11 11:54:09,040 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:54:09,042 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task bc21b8ca-bac0-4231-8a9b-eab6c3f83499 failed on attempt 1: HTTP 400
+2026-02-11 11:54:09,159 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:54:09,160 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 976a12a2-1211-46ae-a9de-4e29c2060a1d failed on attempt 1: HTTP 400
+2026-02-11 11:54:10,564 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:54:10,565 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 5c481413-ff0f-4f5c-8c73-4f6732dd68b0 failed on attempt 2: Model Not Exist
+2026-02-11 11:54:10,867 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:54:10,869 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1a49a15a-f732-4e9f-a2d1-843fa01da4f7 failed on attempt 2: Model Not Exist
+2026-02-11 11:54:11,620 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782052528d1fe9146833e301f6be5de30142daa1078d3b4
+2026-02-11 11:54:11,621 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task f450e403-4bc2-4c90-a497-254d975e1165 failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782052528d1fe9146833e301f6be5de30142daa1078d3b4
+2026-02-11 11:54:11,643 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078205255234ff21c68f0a8c5663b658af0105755482bda0
+2026-02-11 11:54:11,645 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c81f33b8-56e3-4c40-8582-a8fff396e9d5 failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078205255234ff21c68f0a8c5663b658af0105755482bda0
+2026-02-11 11:54:12,110 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:54:12,112 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task bc21b8ca-bac0-4231-8a9b-eab6c3f83499 failed on attempt 2: HTTP 400
+2026-02-11 11:54:12,232 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:54:12,234 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 976a12a2-1211-46ae-a9de-4e29c2060a1d failed on attempt 2: HTTP 400
+2026-02-11 11:54:13,628 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:54:13] "GET /api/test-progress?executionId=f6b32331-3e7e-404d-bc5d-32c3030ccd20 HTTP/1.1" 200 -
+2026-02-11 11:54:13,968 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:54:13,969 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 5c481413-ff0f-4f5c-8c73-4f6732dd68b0 failed on attempt 3: Model Not Exist
+2026-02-11 11:54:14,346 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:54:14,347 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1a49a15a-f732-4e9f-a2d1-843fa01da4f7 failed on attempt 3: Model Not Exist
+2026-02-11 11:54:15,526 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782056423ece62a2a9ee0b66b847022a5a61c5985f9a7a3
+2026-02-11 11:54:15,531 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c81f33b8-56e3-4c40-8582-a8fff396e9d5 failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782056423ece62a2a9ee0b66b847022a5a61c5985f9a7a3
+2026-02-11 11:54:15,601 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782056485c85c17782ebc45169ced08d4429f63da3a7051
+2026-02-11 11:54:15,604 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task f450e403-4bc2-4c90-a497-254d975e1165 failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782056485c85c17782ebc45169ced08d4429f63da3a7051
+2026-02-11 11:54:16,396 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:54:16,399 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task bc21b8ca-bac0-4231-8a9b-eab6c3f83499 failed on attempt 3: HTTP 400
+2026-02-11 11:54:16,848 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:54:16,853 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 976a12a2-1211-46ae-a9de-4e29c2060a1d failed on attempt 3: HTTP 400
+2026-02-11 11:54:17,969 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 5c481413-ff0f-4f5c-8c73-4f6732dd68b0. Last error: Model Not Exist
+2026-02-11 11:54:17,971 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 1a579175-f78f-4d26-bad7-74ed203d7924: 1 failed, 16.7% complete
+2026-02-11 11:54:18,353 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 1a49a15a-f732-4e9f-a2d1-843fa01da4f7. Last error: Model Not Exist
+2026-02-11 11:54:18,354 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 1a579175-f78f-4d26-bad7-74ed203d7924: 2 failed, 33.3% complete
+2026-02-11 11:54:19,533 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task c81f33b8-56e3-4c40-8582-a8fff396e9d5. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782056423ece62a2a9ee0b66b847022a5a61c5985f9a7a3
+2026-02-11 11:54:19,533 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 1a579175-f78f-4d26-bad7-74ed203d7924: 3 failed, 50.0% complete
+2026-02-11 11:54:19,610 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task f450e403-4bc2-4c90-a497-254d975e1165. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782056485c85c17782ebc45169ced08d4429f63da3a7051
+2026-02-11 11:54:19,611 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 1a579175-f78f-4d26-bad7-74ed203d7924: 4 failed, 66.7% complete
+2026-02-11 11:54:20,399 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task bc21b8ca-bac0-4231-8a9b-eab6c3f83499. Last error: HTTP 400
+2026-02-11 11:54:20,401 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 1a579175-f78f-4d26-bad7-74ed203d7924: 5 failed, 83.3% complete
+2026-02-11 11:54:20,856 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 976a12a2-1211-46ae-a9de-4e29c2060a1d. Last error: HTTP 400
+2026-02-11 11:54:20,856 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 1a579175-f78f-4d26-bad7-74ed203d7924: 6 failed, 100.0% complete
+2026-02-11 11:54:20,856 - wechat_backend.api - INFO - scheduler.py:71 - schedule_tests() - Test execution completed. Success: 0, Failed: 6, Time: 14.50s
+2026-02-11 11:54:20,857 - wechat_backend.api - INFO - executor.py:99 - execute_tests() - Execution 1a579175-f78f-4d26-bad7-74ed203d7924 completed. Success: 0, Failed: 6, Time: 14.50s
+2026-02-11 11:54:20,857 - wechat_backend.api - INFO - scheduler.py:216 - shutdown() - TestScheduler shut down successfully
+2026-02-11 11:54:20,857 - wechat_backend.api - INFO - executor.py:132 - shutdown() - TestExecutor shut down successfully
+2026-02-11 11:54:20,857 - wechat_backend.api - INFO - ai_judge_module.py:123 - __init__() - AIJudgeClient initialized with model: deepseek-chat on platform: deepseek
+2026-02-11 11:54:20,858 - wechat_backend.api - ERROR - views.py:216 - run_async_test() - Async test execution failed: 'overallAuthority'
+2026-02-11 11:54:36,442 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:54:36] "GET /api/test-progress?executionId=f6b32331-3e7e-404d-bc5d-32c3030ccd20 HTTP/1.1" 200 -
+2026-02-11 11:55:32,914 - werkzeug - INFO - _internal.py:97 - _log() -  * Detected change in '/Users/sgl/PycharmProjects/PythonProject/wechat_backend/views.py', reloading
+2026-02-11 11:55:32,973 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
+2026-02-11 11:55:33,138 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:55:33,138 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:55:33,170 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:55:33,171 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:55:33,203 - werkzeug - WARNING - _internal.py:97 - _log() -  * Debugger is active!
+2026-02-11 11:55:33,213 - werkzeug - INFO - _internal.py:97 - _log() -  * Debugger PIN: 111-721-574
+2026-02-11 11:55:45,925 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:55:45,925 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:55:45,945 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:55:45,945 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:55:53,502 - wechat_backend.api - INFO - views.py:95 - perform_brand_test() - Brand test endpoint accessed
+2026-02-11 11:55:53,502 - wechat_backend.api - INFO - views.py:115 - perform_brand_test() - Starting async brand test '1a1bf51d-a513-4e72-b9d8-ed2563b04c26' for brands: ['测试品牌'] (User Level: Free)
+2026-02-11 11:55:53,502 - wechat_backend.database - INFO - question_templates.py:159 - _load_standard_templates() - Loaded 14 standard question templates
+2026-02-11 11:55:53,502 - wechat_backend.api - INFO - test_case_generator.py:64 - __init__() - Initialized TestCaseGenerator
+2026-02-11 11:55:53,503 - wechat_backend.api - INFO - test_case_generator.py:97 - generate_test_cases() - Generated 6 test cases for brand '测试品牌' across 3 models with 2 questions
+2026-02-11 11:55:53,503 - wechat_backend.api - INFO - scheduler.py:46 - __init__() - Initialized TestScheduler with strategy concurrent, max_workers 10
+2026-02-11 11:55:53,503 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:55:53] "POST /api/perform-brand-test HTTP/1.1" 200 -
+2026-02-11 11:55:53,503 - wechat_backend.api - INFO - progress_tracker.py:54 - __init__() - Initialized ProgressTracker
+2026-02-11 11:55:53,503 - wechat_backend.api - INFO - executor.py:30 - __init__() - Initialized TestExecutor with strategy concurrent, max_workers 10
+2026-02-11 11:55:53,503 - wechat_backend.api - INFO - executor.py:52 - execute_tests() - Starting execution 8f725e2f-57e8-4989-8818-65c2d0cef62a for 6 test cases
+2026-02-11 11:55:53,504 - wechat_backend.api - INFO - progress_tracker.py:65 - create_execution() - Created execution tracking for 8f725e2f-57e8-4989-8818-65c2d0cef62a with 6 tests
+2026-02-11 11:55:55,028 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:55:55,030 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ae05e73e-f9c2-4d45-8c75-ff52a0ca1189 failed on attempt 1: Model Not Exist
+2026-02-11 11:55:55,109 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:55:55,111 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c1f9218a-ad91-42f6-8327-a2047cdb93f8 failed on attempt 1: Model Not Exist
+2026-02-11 11:55:55,423 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782156337348ccf9b97a642ecef910664c66f727c1d3e3e
+2026-02-11 11:55:55,424 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 4aadbb8f-805c-45af-8616-48a5832540e2 failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782156337348ccf9b97a642ecef910664c66f727c1d3e3e
+2026-02-11 11:55:55,832 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:55:55,834 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 84a2b9ad-9974-4646-82d1-d0c49c2bdf35 failed on attempt 1: HTTP 400
+2026-02-11 11:55:55,946 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782156579c4dc4b915535437ad03877d2dfc54a033398c7
+2026-02-11 11:55:55,949 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task aee728f1-b0ee-4916-9e18-c21f1bb627e9 failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782156579c4dc4b915535437ad03877d2dfc54a033398c7
+2026-02-11 11:55:56,082 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:55:56,082 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 0b8583d9-9130-4a30-b4e0-8c1f26d71144 failed on attempt 1: HTTP 400
+2026-02-11 11:55:57,622 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:55:57,623 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ae05e73e-f9c2-4d45-8c75-ff52a0ca1189 failed on attempt 2: Model Not Exist
+2026-02-11 11:55:57,886 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:55:57,889 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c1f9218a-ad91-42f6-8327-a2047cdb93f8 failed on attempt 2: Model Not Exist
+2026-02-11 11:55:58,436 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707821593402d63eac1fb1ea62df44fceb4e78e820aa35ad4
+2026-02-11 11:55:58,437 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 4aadbb8f-805c-45af-8616-48a5832540e2 failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707821593402d63eac1fb1ea62df44fceb4e78e820aa35ad4
+2026-02-11 11:55:58,997 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:55:58,999 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 84a2b9ad-9974-4646-82d1-d0c49c2bdf35 failed on attempt 2: HTTP 400
+2026-02-11 11:55:59,112 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078216002799133bc9568969fe2bce52869d519de2b6cf2a
+2026-02-11 11:55:59,113 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task aee728f1-b0ee-4916-9e18-c21f1bb627e9 failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078216002799133bc9568969fe2bce52869d519de2b6cf2a
+2026-02-11 11:55:59,227 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:55:59,229 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 0b8583d9-9130-4a30-b4e0-8c1f26d71144 failed on attempt 2: HTTP 400
+2026-02-11 11:56:01,095 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:56:01,096 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ae05e73e-f9c2-4d45-8c75-ff52a0ca1189 failed on attempt 3: Model Not Exist
+2026-02-11 11:56:01,914 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:56:01,916 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c1f9218a-ad91-42f6-8327-a2047cdb93f8 failed on attempt 3: Model Not Exist
+2026-02-11 11:56:02,264 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782163177474f70d1995dfb4f017267c950669b0a4242fe
+2026-02-11 11:56:02,265 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 4aadbb8f-805c-45af-8616-48a5832540e2 failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782163177474f70d1995dfb4f017267c950669b0a4242fe
+2026-02-11 11:56:03,315 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782164176d45a4978a30a8e2955b6a7513cc3df34e83415
+2026-02-11 11:56:03,317 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task aee728f1-b0ee-4916-9e18-c21f1bb627e9 failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782164176d45a4978a30a8e2955b6a7513cc3df34e83415
+2026-02-11 11:56:03,554 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:56:03,555 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 0b8583d9-9130-4a30-b4e0-8c1f26d71144 failed on attempt 3: HTTP 400
+2026-02-11 11:56:05,101 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task ae05e73e-f9c2-4d45-8c75-ff52a0ca1189. Last error: Model Not Exist
+2026-02-11 11:56:05,105 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 8f725e2f-57e8-4989-8818-65c2d0cef62a: 1 failed, 16.7% complete
+2026-02-11 11:56:05,920 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task c1f9218a-ad91-42f6-8327-a2047cdb93f8. Last error: Model Not Exist
+2026-02-11 11:56:05,921 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 8f725e2f-57e8-4989-8818-65c2d0cef62a: 2 failed, 33.3% complete
+2026-02-11 11:56:06,266 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 4aadbb8f-805c-45af-8616-48a5832540e2. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782163177474f70d1995dfb4f017267c950669b0a4242fe
+2026-02-11 11:56:06,266 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 8f725e2f-57e8-4989-8818-65c2d0cef62a: 3 failed, 50.0% complete
+2026-02-11 11:56:07,319 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task aee728f1-b0ee-4916-9e18-c21f1bb627e9. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782164176d45a4978a30a8e2955b6a7513cc3df34e83415
+2026-02-11 11:56:07,320 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 8f725e2f-57e8-4989-8818-65c2d0cef62a: 4 failed, 66.7% complete
+2026-02-11 11:56:07,560 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 0b8583d9-9130-4a30-b4e0-8c1f26d71144. Last error: HTTP 400
+2026-02-11 11:56:07,560 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 8f725e2f-57e8-4989-8818-65c2d0cef62a: 5 failed, 83.3% complete
+2026-02-11 11:56:08,470 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:56:08,473 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 84a2b9ad-9974-4646-82d1-d0c49c2bdf35 failed on attempt 3: HTTP 400
+2026-02-11 11:56:12,477 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 84a2b9ad-9974-4646-82d1-d0c49c2bdf35. Last error: HTTP 400
+2026-02-11 11:56:12,478 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 8f725e2f-57e8-4989-8818-65c2d0cef62a: 6 failed, 100.0% complete
+2026-02-11 11:56:12,479 - wechat_backend.api - INFO - scheduler.py:71 - schedule_tests() - Test execution completed. Success: 0, Failed: 6, Time: 18.97s
+2026-02-11 11:56:12,479 - wechat_backend.api - INFO - executor.py:99 - execute_tests() - Execution 8f725e2f-57e8-4989-8818-65c2d0cef62a completed. Success: 0, Failed: 6, Time: 18.97s
+2026-02-11 11:56:12,480 - wechat_backend.api - INFO - scheduler.py:216 - shutdown() - TestScheduler shut down successfully
+2026-02-11 11:56:12,480 - wechat_backend.api - INFO - executor.py:132 - shutdown() - TestExecutor shut down successfully
+2026-02-11 11:56:12,480 - wechat_backend.api - INFO - ai_judge_module.py:123 - __init__() - AIJudgeClient initialized with model: deepseek-chat on platform: deepseek
+2026-02-11 11:56:12,481 - wechat_backend.api - ERROR - views.py:216 - run_async_test() - Async test execution failed: 'overallAuthority'
+2026-02-11 11:56:17,106 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:56:17] "GET /api/test-progress?executionId=1a1bf51d-a513-4e72-b9d8-ed2563b04c26 HTTP/1.1" 200 -
+2026-02-11 11:57:27,094 - werkzeug - INFO - _internal.py:97 - _log() -  * Detected change in '/Users/sgl/PycharmProjects/PythonProject/wechat_backend/analytics/monetization_service.py', reloading
+2026-02-11 11:57:27,137 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
+2026-02-11 11:57:27,360 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:57:27,360 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:57:27,398 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:57:27,399 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:57:27,431 - werkzeug - WARNING - _internal.py:97 - _log() -  * Debugger is active!
+2026-02-11 11:57:27,446 - werkzeug - INFO - _internal.py:97 - _log() -  * Debugger PIN: 111-721-574
+2026-02-11 11:57:43,960 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:57:43,961 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:57:43,996 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:57:43,997 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:57:51,421 - wechat_backend.api - INFO - views.py:95 - perform_brand_test() - Brand test endpoint accessed
+2026-02-11 11:57:51,421 - wechat_backend.api - INFO - views.py:115 - perform_brand_test() - Starting async brand test '0434b671-c9d8-4ecd-b3fe-bf092b08ad07' for brands: ['测试品牌'] (User Level: Free)
+2026-02-11 11:57:51,421 - wechat_backend.database - INFO - question_templates.py:159 - _load_standard_templates() - Loaded 14 standard question templates
+2026-02-11 11:57:51,421 - wechat_backend.api - INFO - test_case_generator.py:64 - __init__() - Initialized TestCaseGenerator
+2026-02-11 11:57:51,421 - wechat_backend.api - INFO - test_case_generator.py:97 - generate_test_cases() - Generated 6 test cases for brand '测试品牌' across 3 models with 2 questions
+2026-02-11 11:57:51,422 - wechat_backend.api - INFO - scheduler.py:46 - __init__() - Initialized TestScheduler with strategy concurrent, max_workers 10
+2026-02-11 11:57:51,422 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:57:51] "POST /api/perform-brand-test HTTP/1.1" 200 -
+2026-02-11 11:57:51,422 - wechat_backend.api - INFO - progress_tracker.py:54 - __init__() - Initialized ProgressTracker
+2026-02-11 11:57:51,422 - wechat_backend.api - INFO - executor.py:30 - __init__() - Initialized TestExecutor with strategy concurrent, max_workers 10
+2026-02-11 11:57:51,423 - wechat_backend.api - INFO - executor.py:52 - execute_tests() - Starting execution af722f37-75ad-4ad9-a00d-343b6bad603d for 6 test cases
+2026-02-11 11:57:51,423 - wechat_backend.api - INFO - progress_tracker.py:65 - create_execution() - Created execution tracking for af722f37-75ad-4ad9-a00d-343b6bad603d with 6 tests
+2026-02-11 11:57:53,174 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:57:53,175 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task f9aedf4f-f987-427d-b630-796b2ce67056 failed on attempt 1: Model Not Exist
+2026-02-11 11:57:53,305 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:57:53,305 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 331f2678-021b-4c80-b0d7-18991e9d4987 failed on attempt 1: Model Not Exist
+2026-02-11 11:57:53,636 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782274547116ee5ccf1c0347bb504080b47063eab438d7d
+2026-02-11 11:57:53,637 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 16083d37-81da-44f2-a5cb-a7377f47ccd1 failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782274547116ee5ccf1c0347bb504080b47063eab438d7d
+2026-02-11 11:57:53,673 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707822745758b66449b687c949eb4a95d05286f1714111c25
+2026-02-11 11:57:53,674 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ce480e1e-ccb4-4f5f-8d12-9441d80e555b failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707822745758b66449b687c949eb4a95d05286f1714111c25
+2026-02-11 11:57:53,926 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:57:53,927 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c85afbd3-ea75-4b6a-b818-8321146eb7dd failed on attempt 1: HTTP 400
+2026-02-11 11:57:54,221 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:57:54,222 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c252d323-44b5-4c5f-8d23-ab4d265a06bd failed on attempt 1: HTTP 400
+2026-02-11 11:57:55,581 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:57:55,581 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task f9aedf4f-f987-427d-b630-796b2ce67056 failed on attempt 2: Model Not Exist
+2026-02-11 11:57:55,784 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:57:55,784 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 331f2678-021b-4c80-b0d7-18991e9d4987 failed on attempt 2: Model Not Exist
+2026-02-11 11:57:56,380 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782277300ece62a2a9ee0b66b847022a5a61c59859eb9aa
+2026-02-11 11:57:56,380 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 16083d37-81da-44f2-a5cb-a7377f47ccd1 failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782277300ece62a2a9ee0b66b847022a5a61c59859eb9aa
+2026-02-11 11:57:56,582 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078227748728a04e35a69bbadd2802274f74f3d7f0a86982
+2026-02-11 11:57:56,583 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ce480e1e-ccb4-4f5f-8d12-9441d80e555b failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078227748728a04e35a69bbadd2802274f74f3d7f0a86982
+2026-02-11 11:57:57,360 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:57:57,360 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:57:57,361 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c85afbd3-ea75-4b6a-b818-8321146eb7dd failed on attempt 2: HTTP 400
+2026-02-11 11:57:57,362 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c252d323-44b5-4c5f-8d23-ab4d265a06bd failed on attempt 2: HTTP 400
+2026-02-11 11:57:59,017 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:57:59,018 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task f9aedf4f-f987-427d-b630-796b2ce67056 failed on attempt 3: Model Not Exist
+2026-02-11 11:57:59,124 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:57:59,125 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 331f2678-021b-4c80-b0d7-18991e9d4987 failed on attempt 3: Model Not Exist
+2026-02-11 11:58:00,256 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782281158cd45e03a0f5c0860319e8d4c90d2cf9c98b2d3
+2026-02-11 11:58:00,256 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 16083d37-81da-44f2-a5cb-a7377f47ccd1 failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782281158cd45e03a0f5c0860319e8d4c90d2cf9c98b2d3
+2026-02-11 11:58:00,336 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078228125166d4fff57f472cc97f9dc7178d7aa5267a6900
+2026-02-11 11:58:00,336 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ce480e1e-ccb4-4f5f-8d12-9441d80e555b failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078228125166d4fff57f472cc97f9dc7178d7aa5267a6900
+2026-02-11 11:58:01,764 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:58:01,769 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c252d323-44b5-4c5f-8d23-ab4d265a06bd failed on attempt 3: HTTP 400
+2026-02-11 11:58:01,837 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:58:01,840 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c85afbd3-ea75-4b6a-b818-8321146eb7dd failed on attempt 3: HTTP 400
+2026-02-11 11:58:03,023 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task f9aedf4f-f987-427d-b630-796b2ce67056. Last error: Model Not Exist
+2026-02-11 11:58:03,025 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for af722f37-75ad-4ad9-a00d-343b6bad603d: 1 failed, 16.7% complete
+2026-02-11 11:58:03,130 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 331f2678-021b-4c80-b0d7-18991e9d4987. Last error: Model Not Exist
+2026-02-11 11:58:03,132 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for af722f37-75ad-4ad9-a00d-343b6bad603d: 2 failed, 33.3% complete
+2026-02-11 11:58:04,262 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 16083d37-81da-44f2-a5cb-a7377f47ccd1. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782281158cd45e03a0f5c0860319e8d4c90d2cf9c98b2d3
+2026-02-11 11:58:04,263 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for af722f37-75ad-4ad9-a00d-343b6bad603d: 3 failed, 50.0% complete
+2026-02-11 11:58:04,342 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task ce480e1e-ccb4-4f5f-8d12-9441d80e555b. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078228125166d4fff57f472cc97f9dc7178d7aa5267a6900
+2026-02-11 11:58:04,342 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for af722f37-75ad-4ad9-a00d-343b6bad603d: 4 failed, 66.7% complete
+2026-02-11 11:58:05,773 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task c252d323-44b5-4c5f-8d23-ab4d265a06bd. Last error: HTTP 400
+2026-02-11 11:58:05,774 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for af722f37-75ad-4ad9-a00d-343b6bad603d: 5 failed, 83.3% complete
+2026-02-11 11:58:05,841 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task c85afbd3-ea75-4b6a-b818-8321146eb7dd. Last error: HTTP 400
+2026-02-11 11:58:05,841 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for af722f37-75ad-4ad9-a00d-343b6bad603d: 6 failed, 100.0% complete
+2026-02-11 11:58:05,842 - wechat_backend.api - INFO - scheduler.py:71 - schedule_tests() - Test execution completed. Success: 0, Failed: 6, Time: 14.42s
+2026-02-11 11:58:05,842 - wechat_backend.api - INFO - executor.py:99 - execute_tests() - Execution af722f37-75ad-4ad9-a00d-343b6bad603d completed. Success: 0, Failed: 6, Time: 14.42s
+2026-02-11 11:58:05,843 - wechat_backend.api - INFO - scheduler.py:216 - shutdown() - TestScheduler shut down successfully
+2026-02-11 11:58:05,843 - wechat_backend.api - INFO - executor.py:132 - shutdown() - TestExecutor shut down successfully
+2026-02-11 11:58:05,843 - wechat_backend.api - INFO - ai_judge_module.py:123 - __init__() - AIJudgeClient initialized with model: deepseek-chat on platform: deepseek
+2026-02-11 11:58:05,844 - wechat_backend.api - ERROR - views.py:216 - run_async_test() - Async test execution failed: 'overallAuthority'
+2026-02-11 11:58:14,199 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:58:14] "GET /api/test-progress?executionId=0434b671-c9d8-4ecd-b3fe-bf092b08ad07 HTTP/1.1" 200 -
+2026-02-11 11:58:37,951 - werkzeug - INFO - _internal.py:97 - _log() -  * Detected change in '/Users/sgl/PycharmProjects/PythonProject/wechat_backend/analytics/monetization_service.py', reloading
+2026-02-11 11:58:37,998 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
+2026-02-11 11:58:38,182 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:58:38,183 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:58:38,215 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:58:38,215 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:58:38,242 - werkzeug - WARNING - _internal.py:97 - _log() -  * Debugger is active!
+2026-02-11 11:58:38,253 - werkzeug - INFO - _internal.py:97 - _log() -  * Debugger PIN: 111-721-574
+2026-02-11 11:58:52,414 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:58:52,415 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:58:52,450 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 11:58:52,450 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 11:59:00,326 - wechat_backend.api - INFO - views.py:95 - perform_brand_test() - Brand test endpoint accessed
+2026-02-11 11:59:00,327 - wechat_backend.api - INFO - views.py:115 - perform_brand_test() - Starting async brand test 'fe66087d-e84b-44a0-9631-43a6b79d2243' for brands: ['测试品牌'] (User Level: Free)
+2026-02-11 11:59:00,327 - wechat_backend.database - INFO - question_templates.py:159 - _load_standard_templates() - Loaded 14 standard question templates
+2026-02-11 11:59:00,327 - wechat_backend.api - INFO - test_case_generator.py:64 - __init__() - Initialized TestCaseGenerator
+2026-02-11 11:59:00,327 - wechat_backend.api - INFO - test_case_generator.py:97 - generate_test_cases() - Generated 6 test cases for brand '测试品牌' across 3 models with 2 questions
+2026-02-11 11:59:00,327 - wechat_backend.api - INFO - scheduler.py:46 - __init__() - Initialized TestScheduler with strategy concurrent, max_workers 10
+2026-02-11 11:59:00,328 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:59:00] "POST /api/perform-brand-test HTTP/1.1" 200 -
+2026-02-11 11:59:00,328 - wechat_backend.api - INFO - progress_tracker.py:54 - __init__() - Initialized ProgressTracker
+2026-02-11 11:59:00,328 - wechat_backend.api - INFO - executor.py:30 - __init__() - Initialized TestExecutor with strategy concurrent, max_workers 10
+2026-02-11 11:59:00,329 - wechat_backend.api - INFO - executor.py:52 - execute_tests() - Starting execution 47069dbe-e925-456b-a463-5ce53c97c0db for 6 test cases
+2026-02-11 11:59:00,329 - wechat_backend.api - INFO - progress_tracker.py:65 - create_execution() - Created execution tracking for 47069dbe-e925-456b-a463-5ce53c97c0db with 6 tests
+2026-02-11 11:59:01,753 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:59:01,753 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 17408e0d-0998-476d-b15d-ca5eb4014f86 failed on attempt 1: Model Not Exist
+2026-02-11 11:59:01,834 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:59:01,834 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 108d77ec-0d7b-4076-ad0b-3b26513be913 failed on attempt 1: Model Not Exist
+2026-02-11 11:59:02,195 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707823430983bc9a923998b9a9cbb323528a1d3e323f06b20
+2026-02-11 11:59:02,196 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ec92eff3-c051-4b8d-8f9c-996a9c79dd19 failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707823430983bc9a923998b9a9cbb323528a1d3e323f06b20
+2026-02-11 11:59:02,244 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707823431553b744fffeb88c418a31726ba8a0f731c570bc1
+2026-02-11 11:59:02,244 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 2d47666d-9fad-4b30-8631-1c61eddf1bad failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707823431553b744fffeb88c418a31726ba8a0f731c570bc1
+2026-02-11 11:59:02,590 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:59:02,591 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 79ba2e48-0e3b-4b5b-9f5a-2de65872e8ac failed on attempt 1: HTTP 400
+2026-02-11 11:59:02,653 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:59:02,654 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1b132825-917f-41d3-b538-e3b167f07177 failed on attempt 1: HTTP 400
+2026-02-11 11:59:04,127 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:59:04,128 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 17408e0d-0998-476d-b15d-ca5eb4014f86 failed on attempt 2: Model Not Exist
+2026-02-11 11:59:04,241 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:59:04,242 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 108d77ec-0d7b-4076-ad0b-3b26513be913 failed on attempt 2: Model Not Exist
+2026-02-11 11:59:05,039 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707823459507dfffa33f66a2a60812cb82e4fcd44e5fe5625
+2026-02-11 11:59:05,040 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ec92eff3-c051-4b8d-8f9c-996a9c79dd19 failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707823459507dfffa33f66a2a60812cb82e4fcd44e5fe5625
+2026-02-11 11:59:05,120 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707823460175bab3eccb0e59942edbe17ea88d60bc690273e
+2026-02-11 11:59:05,121 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 2d47666d-9fad-4b30-8631-1c61eddf1bad failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707823460175bab3eccb0e59942edbe17ea88d60bc690273e
+2026-02-11 11:59:05,830 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:59:05,831 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1b132825-917f-41d3-b538-e3b167f07177 failed on attempt 2: HTTP 400
+2026-02-11 11:59:05,962 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:59:05,962 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 79ba2e48-0e3b-4b5b-9f5a-2de65872e8ac failed on attempt 2: HTTP 400
+2026-02-11 11:59:07,549 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:59:07,549 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 17408e0d-0998-476d-b15d-ca5eb4014f86 failed on attempt 3: Model Not Exist
+2026-02-11 11:59:07,670 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 11:59:07,670 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 108d77ec-0d7b-4076-ad0b-3b26513be913 failed on attempt 3: Model Not Exist
+2026-02-11 11:59:08,851 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782349763d3dee51610d80a13248c0f1080a0915ff035b2
+2026-02-11 11:59:08,852 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task ec92eff3-c051-4b8d-8f9c-996a9c79dd19 failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782349763d3dee51610d80a13248c0f1080a0915ff035b2
+2026-02-11 11:59:09,018 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782349897b2d574b8a133720ef9fae8eba78adee96709fd
+2026-02-11 11:59:09,019 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 2d47666d-9fad-4b30-8631-1c61eddf1bad failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782349897b2d574b8a133720ef9fae8eba78adee96709fd
+2026-02-11 11:59:09,890 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:59:09,891 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1b132825-917f-41d3-b538-e3b167f07177 failed on attempt 3: HTTP 400
+2026-02-11 11:59:10,297 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 11:59:10,297 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 79ba2e48-0e3b-4b5b-9f5a-2de65872e8ac failed on attempt 3: HTTP 400
+2026-02-11 11:59:11,555 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 17408e0d-0998-476d-b15d-ca5eb4014f86. Last error: Model Not Exist
+2026-02-11 11:59:11,555 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 47069dbe-e925-456b-a463-5ce53c97c0db: 1 failed, 16.7% complete
+2026-02-11 11:59:11,675 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 108d77ec-0d7b-4076-ad0b-3b26513be913. Last error: Model Not Exist
+2026-02-11 11:59:11,675 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 47069dbe-e925-456b-a463-5ce53c97c0db: 2 failed, 33.3% complete
+2026-02-11 11:59:12,852 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task ec92eff3-c051-4b8d-8f9c-996a9c79dd19. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782349763d3dee51610d80a13248c0f1080a0915ff035b2
+2026-02-11 11:59:12,853 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 47069dbe-e925-456b-a463-5ce53c97c0db: 3 failed, 50.0% complete
+2026-02-11 11:59:13,024 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 2d47666d-9fad-4b30-8631-1c61eddf1bad. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782349897b2d574b8a133720ef9fae8eba78adee96709fd
+2026-02-11 11:59:13,024 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 47069dbe-e925-456b-a463-5ce53c97c0db: 4 failed, 66.7% complete
+2026-02-11 11:59:13,893 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 1b132825-917f-41d3-b538-e3b167f07177. Last error: HTTP 400
+2026-02-11 11:59:13,893 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 47069dbe-e925-456b-a463-5ce53c97c0db: 5 failed, 83.3% complete
+2026-02-11 11:59:14,303 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 79ba2e48-0e3b-4b5b-9f5a-2de65872e8ac. Last error: HTTP 400
+2026-02-11 11:59:14,303 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 47069dbe-e925-456b-a463-5ce53c97c0db: 6 failed, 100.0% complete
+2026-02-11 11:59:14,303 - wechat_backend.api - INFO - scheduler.py:71 - schedule_tests() - Test execution completed. Success: 0, Failed: 6, Time: 13.97s
+2026-02-11 11:59:14,303 - wechat_backend.api - INFO - executor.py:99 - execute_tests() - Execution 47069dbe-e925-456b-a463-5ce53c97c0db completed. Success: 0, Failed: 6, Time: 13.97s
+2026-02-11 11:59:14,303 - wechat_backend.api - INFO - scheduler.py:216 - shutdown() - TestScheduler shut down successfully
+2026-02-11 11:59:14,304 - wechat_backend.api - INFO - executor.py:132 - shutdown() - TestExecutor shut down successfully
+2026-02-11 11:59:14,304 - wechat_backend.api - INFO - ai_judge_module.py:123 - __init__() - AIJudgeClient initialized with model: deepseek-chat on platform: deepseek
+2026-02-11 11:59:14,304 - wechat_backend.api - ERROR - views.py:216 - run_async_test() - Async test execution failed: 'overallAuthority'
+2026-02-11 11:59:21,351 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 11:59:21] "GET /api/test-progress?executionId=fe66087d-e84b-44a0-9631-43a6b79d2243 HTTP/1.1" 200 -
+2026-02-11 12:00:27,871 - werkzeug - INFO - _internal.py:97 - _log() -  * Detected change in '/Users/sgl/PycharmProjects/PythonProject/wechat_backend/views.py', reloading
+2026-02-11 12:00:27,924 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
+2026-02-11 12:00:28,112 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:00:28,113 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:00:28,151 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:00:28,152 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:00:28,178 - werkzeug - WARNING - _internal.py:97 - _log() -  * Debugger is active!
+2026-02-11 12:00:28,206 - werkzeug - INFO - _internal.py:97 - _log() -  * Debugger PIN: 111-721-574
+2026-02-11 12:00:38,411 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:00:38,412 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:00:38,442 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:00:38,443 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:00:45,647 - wechat_backend.api - INFO - views.py:95 - perform_brand_test() - Brand test endpoint accessed
+2026-02-11 12:00:45,647 - wechat_backend.api - INFO - views.py:115 - perform_brand_test() - Starting async brand test '0fa69577-04e8-405b-b8d6-f26611dadcb3' for brands: ['测试品牌'] (User Level: Free)
+2026-02-11 12:00:45,647 - wechat_backend.database - INFO - question_templates.py:159 - _load_standard_templates() - Loaded 14 standard question templates
+2026-02-11 12:00:45,647 - wechat_backend.api - INFO - test_case_generator.py:64 - __init__() - Initialized TestCaseGenerator
+2026-02-11 12:00:45,647 - wechat_backend.api - INFO - test_case_generator.py:97 - generate_test_cases() - Generated 6 test cases for brand '测试品牌' across 3 models with 2 questions
+2026-02-11 12:00:45,647 - wechat_backend.api - INFO - scheduler.py:46 - __init__() - Initialized TestScheduler with strategy concurrent, max_workers 10
+2026-02-11 12:00:45,648 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 12:00:45] "POST /api/perform-brand-test HTTP/1.1" 200 -
+2026-02-11 12:00:45,648 - wechat_backend.api - INFO - progress_tracker.py:54 - __init__() - Initialized ProgressTracker
+2026-02-11 12:00:45,648 - wechat_backend.api - INFO - executor.py:30 - __init__() - Initialized TestExecutor with strategy concurrent, max_workers 10
+2026-02-11 12:00:45,648 - wechat_backend.api - INFO - executor.py:52 - execute_tests() - Starting execution e6d94b52-4d33-4672-9de6-b0646573758d for 6 test cases
+2026-02-11 12:00:45,648 - wechat_backend.api - INFO - progress_tracker.py:65 - create_execution() - Created execution tracking for e6d94b52-4d33-4672-9de6-b0646573758d with 6 tests
+2026-02-11 12:00:47,475 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 12:00:47,475 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 5ffe86a0-b308-42bc-a698-a4f996207973 failed on attempt 1: Model Not Exist
+2026-02-11 12:00:47,555 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 12:00:47,556 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task a80daf4a-4384-483d-9ddc-d22dd64be905 failed on attempt 1: Model Not Exist
+2026-02-11 12:00:48,101 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078244900234ff21c68f0a8c5663b658af0105755429fdd2
+2026-02-11 12:00:48,102 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 329821aa-549a-4eac-afdd-1a7a67765479 failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078244900234ff21c68f0a8c5663b658af0105755429fdd2
+2026-02-11 12:00:48,125 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782449032df6479734761ee7b3ca927c635915b31824280
+2026-02-11 12:00:48,125 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task a8558417-3df1-4dd4-9fe5-b1430efafd61 failed on attempt 1: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782449032df6479734761ee7b3ca927c635915b31824280
+2026-02-11 12:00:48,353 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 12:00:48,354 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1910a7c8-0d62-4f9e-ab30-2b1c62076d2a failed on attempt 1: HTTP 400
+2026-02-11 12:00:48,497 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 12:00:48,498 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 12468edf-8e4a-4e14-b349-b15c5d6d2f8a failed on attempt 1: HTTP 400
+2026-02-11 12:00:49,882 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 12:00:49,883 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 5ffe86a0-b308-42bc-a698-a4f996207973 failed on attempt 2: Model Not Exist
+2026-02-11 12:00:49,946 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 12:00:49,946 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task a80daf4a-4384-483d-9ddc-d22dd64be905 failed on attempt 2: Model Not Exist
+2026-02-11 12:00:50,883 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707824517884acec6226078eafffb431763a23ccdf0bb03fa
+2026-02-11 12:00:50,884 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 329821aa-549a-4eac-afdd-1a7a67765479 failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 0217707824517884acec6226078eafffb431763a23ccdf0bb03fa
+2026-02-11 12:00:50,925 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782451829d3dee51610d80a13248c0f1080a0915f5e3e78
+2026-02-11 12:00:50,926 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task a8558417-3df1-4dd4-9fe5-b1430efafd61 failed on attempt 2: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 021770782451829d3dee51610d80a13248c0f1080a0915f5e3e78
+2026-02-11 12:00:51,591 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 12:00:51,592 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 12468edf-8e4a-4e14-b349-b15c5d6d2f8a failed on attempt 2: HTTP 400
+2026-02-11 12:00:51,933 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 12:00:51,933 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1910a7c8-0d62-4f9e-ab30-2b1c62076d2a failed on attempt 2: HTTP 400
+2026-02-11 12:00:53,335 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 12:00:53,336 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task a80daf4a-4384-483d-9ddc-d22dd64be905 failed on attempt 3: Model Not Exist
+2026-02-11 12:00:53,351 - wechat_backend.api - ERROR - sync_providers.py:72 - send_prompt() - DeepSeek API error for model DeepSeek: Model Not Exist
+2026-02-11 12:00:53,352 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 5ffe86a0-b308-42bc-a698-a4f996207973 failed on attempt 3: Model Not Exist
+2026-02-11 12:00:54,723 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078245561197a332f3b50a0c4ced447fdabc183cc8976c1e
+2026-02-11 12:00:54,724 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 329821aa-549a-4eac-afdd-1a7a67765479 failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078245561197a332f3b50a0c4ced447fdabc183cc8976c1e
+2026-02-11 12:00:54,840 - wechat_backend.api - ERROR - sync_providers.py:163 - send_prompt() - Doubao API error for model: 豆包: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078245575318757d23ae5a46643227b35b69a60fe46b90d9
+2026-02-11 12:00:54,840 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task a8558417-3df1-4dd4-9fe5-b1430efafd61 failed on attempt 3: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078245575318757d23ae5a46643227b35b69a60fe46b90d9
+2026-02-11 12:00:55,747 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 12:00:55,747 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 12468edf-8e4a-4e14-b349-b15c5d6d2f8a failed on attempt 3: HTTP 400
+2026-02-11 12:00:56,221 - wechat_backend.api - ERROR - sync_providers.py:256 - send_prompt() - Qwen API error for model: 通义千问: HTTP 400
+2026-02-11 12:00:56,222 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 1910a7c8-0d62-4f9e-ab30-2b1c62076d2a failed on attempt 3: HTTP 400
+2026-02-11 12:00:57,340 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task a80daf4a-4384-483d-9ddc-d22dd64be905. Last error: Model Not Exist
+2026-02-11 12:00:57,340 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for e6d94b52-4d33-4672-9de6-b0646573758d: 1 failed, 16.7% complete
+2026-02-11 12:00:57,357 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 5ffe86a0-b308-42bc-a698-a4f996207973. Last error: Model Not Exist
+2026-02-11 12:00:57,357 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for e6d94b52-4d33-4672-9de6-b0646573758d: 2 failed, 33.3% complete
+2026-02-11 12:00:58,725 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 329821aa-549a-4eac-afdd-1a7a67765479. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078245561197a332f3b50a0c4ced447fdabc183cc8976c1e
+2026-02-11 12:00:58,726 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for e6d94b52-4d33-4672-9de6-b0646573758d: 3 failed, 50.0% complete
+2026-02-11 12:00:58,846 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task a8558417-3df1-4dd4-9fe5-b1430efafd61. Last error: The model or endpoint 豆包 does not exist or you do not have access to it. Request id: 02177078245575318757d23ae5a46643227b35b69a60fe46b90d9
+2026-02-11 12:00:58,846 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for e6d94b52-4d33-4672-9de6-b0646573758d: 4 failed, 66.7% complete
+2026-02-11 12:00:59,749 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 12468edf-8e4a-4e14-b349-b15c5d6d2f8a. Last error: HTTP 400
+2026-02-11 12:00:59,749 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for e6d94b52-4d33-4672-9de6-b0646573758d: 5 failed, 83.3% complete
+2026-02-11 12:01:00,227 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 1910a7c8-0d62-4f9e-ab30-2b1c62076d2a. Last error: HTTP 400
+2026-02-11 12:01:00,228 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for e6d94b52-4d33-4672-9de6-b0646573758d: 6 failed, 100.0% complete
+2026-02-11 12:01:00,228 - wechat_backend.api - INFO - scheduler.py:71 - schedule_tests() - Test execution completed. Success: 0, Failed: 6, Time: 14.58s
+2026-02-11 12:01:00,228 - wechat_backend.api - INFO - executor.py:99 - execute_tests() - Execution e6d94b52-4d33-4672-9de6-b0646573758d completed. Success: 0, Failed: 6, Time: 14.58s
+2026-02-11 12:01:00,229 - wechat_backend.api - INFO - scheduler.py:216 - shutdown() - TestScheduler shut down successfully
+2026-02-11 12:01:00,229 - wechat_backend.api - INFO - executor.py:132 - shutdown() - TestExecutor shut down successfully
+2026-02-11 12:01:00,229 - wechat_backend.api - INFO - ai_judge_module.py:123 - __init__() - AIJudgeClient initialized with model: deepseek-chat on platform: deepseek
+2026-02-11 12:01:00,229 - wechat_backend.database - INFO - database.py:85 - save_test_record() - Saving test record for user: anonymous, brand: 测试品牌
+2026-02-11 12:01:00,231 - wechat_backend.database - INFO - database.py:117 - save_test_record() - Test record saved successfully with ID: 26
+2026-02-11 12:01:09,400 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 12:01:09] "GET /api/test-progress?executionId=0fa69577-04e8-405b-b8d6-f26611dadcb3 HTTP/1.1" 200 -
+2026-02-11 12:14:26,316 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 12:14:26] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 12:18:15,153 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 12:18:15] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 12:29:48,162 - werkzeug - INFO - _internal.py:97 - _log() -  * Detected change in '/Users/sgl/PycharmProjects/PythonProject/wechat_backend/ai_adapters/sync_providers.py', reloading
+2026-02-11 12:29:48,234 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
+2026-02-11 12:29:48,466 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:29:48,467 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:37:40,552 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:37:40,555 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:39:23,390 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:39:23,393 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:40:29,468 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:40:29,471 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:41:40,542 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:41:40,546 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:42:12,691 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:42:12,694 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:42:12,724 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:42:12,724 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:42:12,759 - werkzeug - INFO - _internal.py:97 - _log() - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2026-02-11 12:42:12,760 - werkzeug - INFO - _internal.py:97 - _log() - [33mPress CTRL+C to quit[0m
+2026-02-11 12:42:12,760 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
+2026-02-11 12:42:12,878 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:42:12,878 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:42:12,897 - wechat_backend.database - INFO - database.py:16 - init_db() - Initializing database at /Users/sgl/PycharmProjects/PythonProject/database.db
+2026-02-11 12:42:12,897 - wechat_backend.database - INFO - database.py:81 - init_db() - Database initialization completed
+2026-02-11 12:42:12,915 - werkzeug - WARNING - _internal.py:97 - _log() -  * Debugger is active!
+2026-02-11 12:42:12,927 - werkzeug - INFO - _internal.py:97 - _log() -  * Debugger PIN: 111-721-574
+2026-02-11 12:42:43,408 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 12:42:43] "GET /api/platform-status HTTP/1.1" 200 -
+2026-02-11 12:43:21,632 - wechat_backend.api - INFO - views.py:95 - perform_brand_test() - Brand test endpoint accessed
+2026-02-11 12:43:21,633 - wechat_backend.api - INFO - views.py:115 - perform_brand_test() - Starting async brand test '4c35231d-1c3c-4dea-ab2e-9d99cbf0caa7' for brands: ['测试品牌'] (User Level: Free)
+2026-02-11 12:43:21,634 - wechat_backend.database - INFO - question_templates.py:159 - _load_standard_templates() - Loaded 14 standard question templates
+2026-02-11 12:43:21,634 - wechat_backend.api - INFO - test_case_generator.py:64 - __init__() - Initialized TestCaseGenerator
+2026-02-11 12:43:21,634 - wechat_backend.api - INFO - test_case_generator.py:97 - generate_test_cases() - Generated 6 test cases for brand '测试品牌' across 3 models with 2 questions
+2026-02-11 12:43:21,634 - wechat_backend.api - INFO - scheduler.py:46 - __init__() - Initialized TestScheduler with strategy concurrent, max_workers 10
+2026-02-11 12:43:21,634 - wechat_backend.api - INFO - progress_tracker.py:54 - __init__() - Initialized ProgressTracker
+2026-02-11 12:43:21,634 - wechat_backend.api - INFO - executor.py:30 - __init__() - Initialized TestExecutor with strategy concurrent, max_workers 10
+2026-02-11 12:43:21,634 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 12:43:21] "POST /api/perform-brand-test HTTP/1.1" 200 -
+2026-02-11 12:43:21,634 - wechat_backend.api - INFO - executor.py:52 - execute_tests() - Starting execution 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e for 6 test cases
+2026-02-11 12:43:21,634 - wechat_backend.api - INFO - progress_tracker.py:65 - create_execution() - Created execution tracking for 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e with 6 tests
+2026-02-11 12:43:21,635 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 6644bb68-fce6-4470-ba30-a9e24f0def40 failed on attempt 1: Platform unavailable
+2026-02-11 12:43:21,635 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 8d8c89d2-d485-4132-a960-0982fedb5c72 failed on attempt 1: Platform unavailable
+2026-02-11 12:43:21,635 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c33a4a77-73e7-44f3-96fc-4c8637578080 failed on attempt 1: Platform unavailable
+2026-02-11 12:43:21,635 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 438a9a58-28cd-477f-830c-0fc181c5d10b failed on attempt 1: Platform unavailable
+2026-02-11 12:43:21,635 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 2d1d9604-70a7-406a-8e7d-86dc8d2fa333 failed on attempt 1: Platform unavailable
+2026-02-11 12:43:21,635 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task d9ef05f5-f0d8-4f89-90a6-03035977ce8d failed on attempt 1: Platform unavailable
+2026-02-11 12:43:22,635 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 8d8c89d2-d485-4132-a960-0982fedb5c72 failed on attempt 2: Platform unavailable
+2026-02-11 12:43:22,636 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 6644bb68-fce6-4470-ba30-a9e24f0def40 failed on attempt 2: Platform unavailable
+2026-02-11 12:43:22,637 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c33a4a77-73e7-44f3-96fc-4c8637578080 failed on attempt 2: Platform unavailable
+2026-02-11 12:43:22,640 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 438a9a58-28cd-477f-830c-0fc181c5d10b failed on attempt 2: Platform unavailable
+2026-02-11 12:43:22,640 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 2d1d9604-70a7-406a-8e7d-86dc8d2fa333 failed on attempt 2: Platform unavailable
+2026-02-11 12:43:22,641 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task d9ef05f5-f0d8-4f89-90a6-03035977ce8d failed on attempt 2: Platform unavailable
+2026-02-11 12:43:24,639 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 6644bb68-fce6-4470-ba30-a9e24f0def40 failed on attempt 3: Platform unavailable
+2026-02-11 12:43:24,640 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 8d8c89d2-d485-4132-a960-0982fedb5c72 failed on attempt 3: Platform unavailable
+2026-02-11 12:43:24,640 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task c33a4a77-73e7-44f3-96fc-4c8637578080 failed on attempt 3: Platform unavailable
+2026-02-11 12:43:24,642 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task d9ef05f5-f0d8-4f89-90a6-03035977ce8d failed on attempt 3: Platform unavailable
+2026-02-11 12:43:24,644 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 438a9a58-28cd-477f-830c-0fc181c5d10b failed on attempt 3: Platform unavailable
+2026-02-11 12:43:24,645 - wechat_backend.api - WARNING - scheduler.py:139 - _execute_single_task() - Task 2d1d9604-70a7-406a-8e7d-86dc8d2fa333 failed on attempt 3: Platform unavailable
+2026-02-11 12:43:28,642 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task c33a4a77-73e7-44f3-96fc-4c8637578080. Last error: Platform unavailable
+2026-02-11 12:43:28,643 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 8d8c89d2-d485-4132-a960-0982fedb5c72. Last error: Platform unavailable
+2026-02-11 12:43:28,643 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task d9ef05f5-f0d8-4f89-90a6-03035977ce8d. Last error: Platform unavailable
+2026-02-11 12:43:28,644 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e: 1 failed, 16.7% complete
+2026-02-11 12:43:28,644 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e: 2 failed, 33.3% complete
+2026-02-11 12:43:28,644 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 6644bb68-fce6-4470-ba30-a9e24f0def40. Last error: Platform unavailable
+2026-02-11 12:43:28,644 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e: 3 failed, 50.0% complete
+2026-02-11 12:43:28,645 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e: 4 failed, 66.7% complete
+2026-02-11 12:43:28,646 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 2d1d9604-70a7-406a-8e7d-86dc8d2fa333. Last error: Platform unavailable
+2026-02-11 12:43:28,646 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e: 5 failed, 83.3% complete
+2026-02-11 12:43:28,646 - wechat_backend.api - ERROR - scheduler.py:147 - _execute_single_task() - All 3 attempts failed for task 438a9a58-28cd-477f-830c-0fc181c5d10b. Last error: Platform unavailable
+2026-02-11 12:43:28,647 - wechat_backend.api - WARNING - progress_tracker.py:148 - update_failed() - Updated failed tests for 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e: 6 failed, 100.0% complete
+2026-02-11 12:43:28,647 - wechat_backend.api - INFO - scheduler.py:71 - schedule_tests() - Test execution completed. Success: 0, Failed: 6, Time: 7.01s
+2026-02-11 12:43:28,647 - wechat_backend.api - INFO - executor.py:99 - execute_tests() - Execution 05cb17c9-c209-4e9d-844e-9c69c1f2bf6e completed. Success: 0, Failed: 6, Time: 7.01s
+2026-02-11 12:43:28,648 - wechat_backend.api - INFO - scheduler.py:216 - shutdown() - TestScheduler shut down successfully
+2026-02-11 12:43:28,649 - wechat_backend.api - INFO - executor.py:132 - shutdown() - TestExecutor shut down successfully
+2026-02-11 12:43:28,649 - wechat_backend.api - INFO - ai_judge_module.py:123 - __init__() - AIJudgeClient initialized with model: deepseek-chat on platform: deepseek
+2026-02-11 12:43:28,650 - wechat_backend.database - INFO - database.py:85 - save_test_record() - Saving test record for user: anonymous, brand: 测试品牌
+2026-02-11 12:43:28,653 - wechat_backend.database - INFO - database.py:117 - save_test_record() - Test record saved successfully with ID: 27
+2026-02-11 12:44:05,641 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 12:44:05] "GET /api/test-progress?executionId=4c35231d-1c3c-4dea-ab2e-9d99cbf0caa7 HTTP/1.1" 200 -
+2026-02-11 12:49:37,880 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 12:49:37] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 13:10:14,400 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 13:10:14] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 13:10:54,275 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 13:10:54] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 13:16:42,771 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 13:16:42] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 13:25:42,364 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 13:25:42] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 13:26:25,955 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 13:26:25] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 13:48:35,957 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 13:48:35] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 13:49:24,918 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 13:49:24] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 13:49:49,679 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 13:49:49] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 14:02:59,785 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 14:02:59] "GET /api/test HTTP/1.1" 200 -
+2026-02-11 14:03:30,768 - werkzeug - INFO - _internal.py:97 - _log() - 127.0.0.1 - - [11/Feb/2026 14:03:30] "GET /api/test HTTP/1.1" 200 -

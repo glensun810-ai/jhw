@@ -36,14 +36,34 @@ class MonetizationService:
         根据用户等级，剥离或处理数据
         """
         if self.user_level == UserLevel.FREE:
-            # 剥离竞品分析中的深度指标
+            # 剥离竞品分析中的深度指标，但仍保留所有字段结构
             if "competitiveAnalysis" in data and "brandScores" in data["competitiveAnalysis"]:
                 for brand, scores in data["competitiveAnalysis"]["brandScores"].items():
-                    # 只保留总分和品牌名
-                    data["competitiveAnalysis"]["brandScores"][brand] = {
-                        "overallScore": scores.get("overallScore"),
-                        "brand": brand
-                    }
+                    # 确保 scores 是一个字典
+                    if isinstance(scores, dict):
+                        # 保留所有字段，但将付费用户的详细数据替换为基本数据
+                        data["competitiveAnalysis"]["brandScores"][brand] = {
+                            "overallScore": scores.get("overallScore", 0),
+                            "overallAuthority": scores.get("overallAuthority", 0),
+                            "overallVisibility": scores.get("overallVisibility", 0),
+                            "overallSentiment": scores.get("overallSentiment", 0),
+                            "overallPurity": scores.get("overallPurity", 0),
+                            "overallConsistency": scores.get("overallConsistency", 0),
+                            "overallGrade": scores.get("overallGrade", "D"),
+                            "overallSummary": scores.get("overallSummary", "免费版用户仅显示基础数据")
+                        }
+                    else:
+                        # 如果 scores 不是字典，使用默认值
+                        data["competitiveAnalysis"]["brandScores"][brand] = {
+                            "overallScore": 0,
+                            "overallAuthority": 0,
+                            "overallVisibility": 0,
+                            "overallSentiment": 0,
+                            "overallPurity": 0,
+                            "overallConsistency": 0,
+                            "overallGrade": "D",
+                            "overallSummary": "数据格式错误"
+                        }
             
             # 剥离信源情报图的深度信息
             if "sourceIntelligenceMap" in data:
