@@ -1,0 +1,9 @@
+Flask==2.0.1
+requests==2.25.1
+python-dotenv==0.19.2
+google-generativeai==0.3.2
+spacy==3.7.2
+snownlp==0.12.3
+
+# Please run the following command to download the Chinese model for spaCy:
+# python -m spacy download zh_core_web_sm

@@ -1,0 +1,188 @@
+.pk-container {
+  background-color: #1A202C;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  border: 1rpx solid #303030;
+}
+
+/* 巨幕式得分卡 */
+.header-scorecard {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: 30rpx;
+  border-bottom: 1rpx solid #303030;
+}
+
+.brand-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 10rpx;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
+}
+
+/* 呼吸灯效果 */
+.brand-score:not(.winner) {
+  animation: breathing-light 2s infinite ease-in-out;
+}
+
+@keyframes breathing-light {
+  0%, 100% { box-shadow: 0 0 10rpx rgba(255, 140, 0, 0.2); }
+  50% { box-shadow: 0 0 20rpx rgba(255, 140, 0, 0.5); }
+}
+
+/* 胜出动效 */
+.brand-score.winner {
+  border: 1rpx solid #00F5A0;
+  box-shadow: 0 0 20rpx rgba(0, 245, 160, 0.5);
+}
+
+.crown-wrapper {
+  position: absolute;
+  top: -40rpx;
+  font-size: 40rpx;
+  animation: crown-up 0.5s ease-out;
+}
+
+@keyframes crown-up {
+  from { transform: translateY(20rpx) scale(0.5); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.brand-name {
+  font-size: 28rpx;
+  color: #a6a6a6;
+  margin-bottom: 10rpx;
+}
+
+.my-brand .brand-name { color: #00F5A0; }
+.competitor-brand .brand-name { color: #00A9FF; }
+
+.score {
+  font-size: 80rpx;
+  font-weight: bold;
+}
+
+.vs-divider {
+  font-size: 40rpx;
+  color: #555;
+  font-weight: bold;
+}
+
+/* 雷达图 */
+.radar-chart-container {
+  height: 400rpx;
+  margin: 30rpx 0;
+}
+
+/* 指标差异列表 */
+.metrics-table-wrapper {
+  position: relative;
+}
+
+.metrics-table {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  border-top: 1rpx solid #303030;
+  padding-top: 30rpx;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 26rpx;
+}
+
+.metric-name {
+  width: 120rpx;
+  color: #a6a6a6;
+}
+
+.tug-of-war-bar {
+  flex: 1;
+  display: flex;
+  height: 24rpx;
+  background-color: #262626;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.tug-of-war-bar .bar {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.tug-of-war-bar .my-brand-bar {
+  background-color: #00F5A0;
+  border-radius: 12rpx 0 0 12rpx;
+}
+
+.tug-of-war-bar .competitor-bar {
+  background-color: #00A9FF;
+  border-radius: 0 12rpx 12rpx 0;
+}
+
+.delta-display {
+  font-weight: bold;
+  width: 100rpx;
+  text-align: right;
+}
+
+.delta-display.leading { color: #00F5A0; }
+.delta-display.lagging { color: #FF8C00; }
+
+/* 情报封锁 */
+.data-gating-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(26, 32, 44, 0.8);
+  backdrop-filter: blur(8rpx);
+  -webkit-backdrop-filter: blur(8rpx);
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.lock-icon {
+  font-size: 60rpx;
+  margin-bottom: 20rpx;
+}
+
+.gating-text {
+  font-size: 28rpx;
+  color: #e8e8e8;
+  margin-bottom: 30rpx;
+}
+
+.unlock-btn {
+  background-color: #00F5A0;
+  color: #141414;
+  font-weight: bold;
+  border-radius: 40rpx;
+  padding: 15rpx 40rpx;
+  font-size: 28rpx;
+}
+
+/* 落后警示 */
+.gap-alert {
+  margin-top: 30rpx;
+  padding: 20rpx;
+  background-color: rgba(255, 140, 0, 0.1);
+  border: 1rpx solid #FF8C00;
+  border-radius: 8rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #FF8C00;
+  font-weight: bold;
+}

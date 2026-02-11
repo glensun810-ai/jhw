@@ -1,0 +1,62 @@
+.chart-container {
+  width: 100%;
+  height: 400rpx; /* 默认高度，可根据需要调整 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.echart-wrap {
+  width: 100%;
+  height: 100%;
+}
+
+ec-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Skeleton Loading Styles */
+.skeleton-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f2f5;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-item {
+  width: 80%;
+  height: 80%;
+  background: linear-gradient(90deg, #f0f2f5 25%, #e6e8eb 50%, #f0f2f5 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: 50%; /* 模拟雷达图的圆形骨架 */
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Error State Styles */
+.error-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #fef0f0;
+  color: #f56c6c;
+  font-size: 28rpx;
+}

@@ -1,0 +1,30 @@
+<view class="container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">品牌对战报告</text>
+    <text class="page-subtitle">"{{targetBrand}}" 与竞品的AI认知对决</text>
+  </view>
+
+  <!-- PK 看板 Swiper -->
+  <swiper class="pk-swiper" current="{{currentSwiperIndex}}" bindchange="onSwiperChange">
+    <swiper-item wx:for="{{platforms}}" wx:for-item="platform" wx:key="platform">
+      <view class="swiper-item-container platform-bg-{{platform}}">
+        <view class="platform-title">{{platformDisplayNames[platform]}} 视角</view>
+        <competitive-intelligence-view
+          wx:for="{{pkDataByPlatform[platform]}}"
+          wx:key="item.competitorData.brand"
+          myBrandData="{{item.myBrandData}}"
+          competitorData="{{item.competitorData}}"
+          isPremium="{{isPremium}}">
+        </competitive-intelligence-view>
+      </view>
+    </swiper-item>
+  </swiper>
+
+  <!-- 底部操作区 -->
+  <view class="footer-actions">
+    <button class="btn-secondary" bindtap="goHome">首页</button>
+    <button class="btn-primary" bindtap="viewHistory">历史记录</button>
+    <button class="btn-secondary" bindtap="generateReport">生成报告</button>
+  </view>
+</view>

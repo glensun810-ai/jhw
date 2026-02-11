@@ -1,0 +1,89 @@
+import requests
+import time
+from typing import Optional
+from ..logging_config import api_logger
+from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
+from config_manager import Config as PlatformConfigManager
+
+class QwenAdapter(AIClient):
+    """
+    Qwen (Alibaba Tongyi) AI 平台的适配器
+    """
+    def __init__(self, api_key: str, model_name: str = "qwen-max", base_url: Optional[str] = None):
+        super().__init__(AIPlatformType.QWEN, model_name, api_key)
+        self.base_url = base_url or "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+        api_logger.info(f"QwenAdapter initialized for model: {model_name}")
+
+    def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
+        """
+        向 Qwen API 发送请求
+        """
+        messages = [{"role": "user", "content": prompt}]
+        
+        platform_config_manager = PlatformConfigManager()
+        qwen_config = platform_config_manager.get_platform_config('qwen')
+        
+        temperature = kwargs.get('temperature', qwen_config.default_temperature if qwen_config else 0.7)
+        
+        payload = {
+            "model": self.model_name,
+            "input": {
+                "messages": messages
+            },
+            "parameters": {
+                "temperature": temperature,
+            }
+        }
+
+        start_time = time.time()
+        try:
+            response = requests.post(self.base_url, headers=self.headers, json=payload, timeout=30)
+            response.raise_for_status()
+            response_data = response.json()
+            latency = time.time() - start_time
+            
+            if response_data and response_data.get("output"):
+                content = response_data["output"]["text"]
+                tokens_used = response_data["usage"]["total_tokens"]
+                api_logger.info(f"Qwen response success. Tokens: {tokens_used}, Latency: {latency:.2f}s")
+                return AIResponse(
+                    success=True,
+                    content=content,
+                    model=self.model_name,
+                    platform=self.platform_type.value,
+                    tokens_used=tokens_used,
+                    latency=latency,
+                    metadata=response_data
+                )
+            else:
+                error_code = response_data.get("code", "")
+                error_message = response_data.get("message", "Unknown Qwen API error")
+                error_type = self._map_error_code(error_code)
+                
+                api_logger.error(f"Qwen API returned no output: {error_code} - {error_message}")
+                return AIResponse(success=False, error_message=error_message, error_type=error_type, model=self.model_name, platform=self.platform_type.value, latency=latency)
+
+        except requests.exceptions.RequestException as e:
+            error_message = f"Qwen API request failed: {e}"
+            api_logger.error(error_message)
+            return AIResponse(success=False, error_message=error_message, error_type=AIErrorType.UNKNOWN_ERROR, model=self.model_name, platform=self.platform_type.value, latency=time.time() - start_time)
+        except Exception as e:
+            error_message = f"An unexpected error occurred with Qwen API: {e}"
+            api_logger.error(error_message)
+            return AIResponse(success=False, error_message=error_message, error_type=AIErrorType.UNKNOWN_ERROR, model=self.model_name, platform=self.platform_type.value, latency=time.time() - start_time)
+
+    def _map_error_code(self, error_code: str) -> AIErrorType:
+        """将Qwen的错误码映射到标准错误类型"""
+        if error_code == "InvalidAPIKey":
+            return AIErrorType.INVALID_API_KEY
+        if error_code == "QuotaExhausted":
+            return AIErrorType.INSUFFICIENT_QUOTA
+        if error_code == "OperationDenied.ContentRisk":
+            return AIErrorType.CONTENT_SAFETY
+        if "Throttling" in error_code:
+            return AIErrorType.RATE_LIMIT_EXCEEDED
+        return AIErrorType.UNKNOWN_ERROR

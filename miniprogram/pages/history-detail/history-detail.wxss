@@ -1,0 +1,8 @@
+@import "../results/results.wxss";
+
+.loading-state {
+  text-align: center;
+  padding-top: 300rpx;
+  color: #8c8c8c;
+  font-size: 30rpx;
+}

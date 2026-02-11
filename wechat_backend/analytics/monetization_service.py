@@ -1,0 +1,55 @@
+from enum import Enum
+from typing import Dict, Any
+
+class UserLevel(Enum):
+    FREE = "Free"
+    PRO = "Pro"
+    ENTERPRISE = "Enterprise"
+
+class FeatureGate:
+    """
+    功能门禁，根据用户等级判断功能是否可用
+    """
+    def __init__(self, user_level: UserLevel):
+        self.user_level = user_level
+        self.feature_permissions = {
+            "view_deep_dive_metrics": [UserLevel.PRO, UserLevel.ENTERPRISE],
+            "export_report": [UserLevel.ENTERPRISE],
+            "view_competitor_source_path": [UserLevel.PRO, UserLevel.ENTERPRISE],
+        }
+
+    def can_access(self, feature_name: str) -> bool:
+        """检查用户是否有权限访问某个功能"""
+        required_levels = self.feature_permissions.get(feature_name, [])
+        return self.user_level in required_levels
+
+class MonetizationService:
+    """
+    商业化服务，负责根据用户等级剥离数据
+    """
+    def __init__(self, user_level: UserLevel):
+        self.user_level = user_level
+        self.gate = FeatureGate(user_level)
+
+    def strip_data_for_user(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        根据用户等级，剥离或处理数据
+        """
+        if self.user_level == UserLevel.FREE:
+            # 剥离竞品分析中的深度指标
+            if "competitiveAnalysis" in data and "brandScores" in data["competitiveAnalysis"]:
+                for brand, scores in data["competitiveAnalysis"]["brandScores"].items():
+                    # 只保留总分和品牌名
+                    data["competitiveAnalysis"]["brandScores"][brand] = {
+                        "overallScore": scores.get("overallScore"),
+                        "brand": brand
+                    }
+            
+            # 剥离信源情报图的深度信息
+            if "sourceIntelligenceMap" in data:
+                data["sourceIntelligenceMap"] = {
+                    "nodes": [{"id": "brand", "name": "品牌核心", "level": 0}],
+                    "links": []
+                } # 只显示核心节点
+
+        return data
