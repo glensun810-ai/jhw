@@ -23,15 +23,19 @@ Page({
       { name: 'DeepSeek', checked: true, logo: 'DS', tags: ['综合', '代码'] },
       { name: '豆包', checked: true, logo: 'DB', tags: ['综合', '创意'] },
       { name: '通义千问', checked: true, logo: 'QW', tags: ['综合', '长文本'] },
+      { name: '元宝', checked: false, logo: 'YB', tags: ['综合']},
       { name: 'Kimi', checked: false, logo: 'KM', tags: ['长文本'] },
       { name: '文心一言', checked: false, logo: 'WX', tags: ['综合', '创意'] },
       { name: '讯飞星火', checked: false, logo: 'XF', tags: ['综合', '语音'] },
-      { name: '元宝', checked: false, logo: 'YB', tags: ['综合'], disabled: true },
+      { name: '智谱AI', checked: false, logo: 'ZP', tags: ['综合', 'GLM'] },      
     ],
     overseasAiModels: [
       { name: 'ChatGPT', checked: true, logo: 'GPT', tags: ['综合', '代码'] },
-      { name: 'Claude', checked: false, logo: 'CD', tags: ['长文本', '创意'] },
       { name: 'Gemini', checked: false, logo: 'GM', tags: ['综合', '多模态'] },
+      { name: 'Claude', checked: false, logo: 'CD', tags: ['长文本', '创意'] },
+      { name: 'Perplexity', checked: false, logo: 'PE', tags: ['综合', '长文本'] },
+      { name: 'Grok', checked: false, logo: 'GR', tags: ['推理', '多模态'] },
+      
     ],
     selectedModelCount: 0,
 

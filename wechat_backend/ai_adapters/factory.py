@@ -36,6 +36,12 @@ except ImportError as e:
     api_logger.warning(f"Failed to import GeminiAdapter: {e}")
     GeminiAdapter = None
 
+try:
+    from .zhipu_adapter import ZhipuAdapter
+except ImportError as e:
+    api_logger.warning(f"Failed to import ZhipuAdapter: {e}")
+    ZhipuAdapter = None
+
 
 class AIAdapterFactory:
     """
@@ -83,3 +89,5 @@ if ChatGPTAdapter:
     AIAdapterFactory.register(AIPlatformType.CHATGPT, ChatGPTAdapter)
 if GeminiAdapter:
     AIAdapterFactory.register(AIPlatformType.GEMINI, GeminiAdapter)
+if ZhipuAdapter:
+    AIAdapterFactory.register(AIPlatformType.ZHIPU, ZhipuAdapter)

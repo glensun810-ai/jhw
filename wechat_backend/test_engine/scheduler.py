@@ -167,6 +167,9 @@ class TestScheduler:
             'hunyuan': 'yuanbao',
             '通义千问': 'qwen',
             'TongyiQianwen': 'qwen',
+            '智谱AI': 'zhipu',
+            'zhipu': 'zhipu',
+            'glm': 'zhipu',
             '文心一言': 'wenxin',
             'ernie': 'wenxin',
             'Kimi': 'kimi',
@@ -202,6 +205,8 @@ class TestScheduler:
             return 'doubao'
         if 'yuanbao' in model_name_lower:
             return 'yuanbao'
+        if '智谱' in model_name or 'zhipu' in model_name_lower or 'glm' in model_name_lower:
+            return 'zhipu'
         if 'gpt' in model_name_lower:
             return 'openai'
         if 'claude' in model_name_lower:
