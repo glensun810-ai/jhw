@@ -109,7 +109,7 @@ class TestScheduler:
         """Maps display model name to actual model ID for the platform."""
         # Map display names to actual model IDs
         model_id_map = {
-            'doubao': os.getenv('DOUBAO_MODEL_ID', 'ep-20260212000000-gd5tq'),  # Use configured model ID
+            'doubao': os.getenv('DOUBAO_MODEL_ID', 'Doubao-pro'),  # Use configured model ID
             'deepseek': 'deepseek-chat',
             'qwen': 'qwen-turbo',  # or whatever the correct model ID is
             'wenxin': 'ernie-bot-4.5',  # or whatever the correct model ID is
@@ -182,6 +182,7 @@ class TestScheduler:
             'DeepSeek': 'deepseek',
             '豆包': 'doubao',
             'doubao': 'doubao',
+            'Doubao': 'doubao',
             '元宝': 'yuanbao',
             'yuanbao': 'yuanbao',
             'hunyuan': 'yuanbao',
@@ -207,7 +208,7 @@ class TestScheduler:
         model_name_lower = model_name.lower()
         if 'deepseek' in model_name_lower:
             return 'deepseek'
-        if '豆包' in model_name:
+        if '豆包' in model_name or 'doubao' in model_name_lower:
             return 'doubao'
         if '元宝' in model_name or 'hunyuan' in model_name_lower:
             return 'yuanbao'

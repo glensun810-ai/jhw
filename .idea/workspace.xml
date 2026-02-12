@@ -6,14 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ai_judge_module.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai_judge_module.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database.db" beforeDir="false" afterPath="$PROJECT_DIR$/database.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/doubao_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/doubao_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/security/sql_protection.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/security/sql_protection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/test_engine/executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/test_engine/executor.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/wechat_backend/test_engine/scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/test_engine/scheduler.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,7 +22,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="309" />
+    <option name="cachedIndexableFilesCount" value="342" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -68,7 +64,7 @@
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "Python.demo_main.executor": "Run",
-    "Python.main.executor": "Debug",
+    "Python.main.executor": "Run",
     "Python.main_demo.executor": "Run",
     "Python.qwen_adapter.executor": "Run",
     "Python.run.executor": "Debug",
@@ -232,7 +228,7 @@
       <workItem from="1770769357592" duration="20816000" />
       <workItem from="1770811059393" duration="3791000" />
       <workItem from="1770823417168" duration="6323000" />
-      <workItem from="1770864593057" duration="28729000" />
+      <workItem from="1770864593057" duration="33419000" />
     </task>
     <servers />
   </component>
@@ -240,7 +236,7 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770894802818" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770898052534" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$demo_main.coverage" NAME="demo_main 覆盖结果" MODIFIED="1770745116755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/PythonProject$qwen_adapter.coverage" NAME="qwen_adapter 覆盖结果" MODIFIED="1770828819857" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wechat_backend/ai_adapters" />
     <SUITE FILE_PATH="coverage/PythonProject$window_tiler.coverage" NAME="window_tiler 覆盖结果" MODIFIED="1770295290564" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
