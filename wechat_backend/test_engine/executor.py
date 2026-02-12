@@ -33,7 +33,8 @@ class TestExecutor:
         self,
         test_cases: List[TestCase],
         api_key: str = "",
-        on_progress_update: Callable[[str, TestProgress], None] = None
+        on_progress_update: Callable[[str, TestProgress], None] = None,
+        timeout: int = 300  # 5分钟默认超时
     ) -> Dict[str, Any]:
         """
         Execute a list of test cases with progress tracking
@@ -87,20 +88,37 @@ class TestExecutor:
             if on_progress_update:
                 on_progress_update(execution_id, current_progress)
         
-        # Execute the tests using the scheduler
-        results = self.scheduler.schedule_tests(test_tasks, progress_callback)
-        
+        import threading
+        import concurrent.futures
+        from functools import partial
+
+        # Execute the tests with timeout using ThreadPoolExecutor
+        if timeout > 0:
+            # Create a partial function with the arguments
+            execute_func = partial(self.scheduler.schedule_tests, test_tasks, progress_callback)
+
+            # Use ThreadPoolExecutor with timeout
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(execute_func)
+                try:
+                    results = future.result(timeout=timeout)
+                except concurrent.futures.TimeoutError:
+                    raise TimeoutError(f"Test execution timed out after {timeout} seconds")
+        else:
+            # Execute without timeout
+            results = self.scheduler.schedule_tests(test_tasks, progress_callback)
+
         # Get final progress
         final_progress = self.progress_tracker.get_progress(execution_id)
-        
+
         # Add execution ID to results
         results['execution_id'] = execution_id
-        
+
         api_logger.info(f"Execution {execution_id} completed. "
                        f"Success: {results['completed_tasks']}, "
                        f"Failed: {results['failed_tasks']}, "
                        f"Time: {results['execution_time']:.2f}s")
-        
+
         return results
     
     def get_execution_progress(self, execution_id: str) -> TestProgress:

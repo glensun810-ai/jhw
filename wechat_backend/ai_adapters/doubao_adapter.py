@@ -48,8 +48,9 @@ class DoubaoAdapter(AIClient):
         max_tokens = kwargs.get('max_tokens', doubao_config.default_max_tokens if doubao_config else 1000)
         timeout = kwargs.get('timeout', doubao_config.timeout if doubao_config else 30)
 
+        # Ensure proper encoding for all string values
         payload = {
-            "model": self.model_name,
+            "model": self.model_name.encode('utf-8').decode('utf-8') if self.model_name else "",
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens

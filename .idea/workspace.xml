@@ -7,26 +7,12 @@
     <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ai_judge_module.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai_judge_module.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database.db" beforeDir="false" afterPath="$PROJECT_DIR$/database.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scoring_engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/scoring_engine.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_api_keys.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_api_keys.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/chatgpt_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/chatgpt_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/deepseek_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/deepseek_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/domestic_providers.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/domestic_providers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/doubao_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/doubao_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/gemini_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/gemini_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/qwen_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/qwen_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/zhipu_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/zhipu_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/analytics/monetization_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/analytics/monetization_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/security/sql_protection.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/security/sql_protection.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/test_engine/executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/test_engine/executor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/test_engine/scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/test_engine/scheduler.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -78,31 +64,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.demo_main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main_demo.executor&quot;: &quot;Run&quot;,
-    &quot;Python.qwen_adapter.executor&quot;: &quot;Run&quot;,
-    &quot;Python.run.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.window_tiler.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;,
-    &quot;wxn.project&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.demo_main.executor": "Run",
+    "Python.main.executor": "Debug",
+    "Python.main_demo.executor": "Run",
+    "Python.qwen_adapter.executor": "Run",
+    "Python.run.executor": "Debug",
+    "Python.window_tiler.executor": "Run",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "main",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true",
+    "wxn.project": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Python.main">
     <configuration name="app.js" type="NodeJSConfigurationType" temporary="true" nameIsGenerated="true" path-to-js-file="$PROJECT_DIR$/miniprogram/app.js" working-dir="$PROJECT_DIR$/miniprogram">
       <method v="2" />
@@ -246,7 +232,7 @@
       <workItem from="1770769357592" duration="20816000" />
       <workItem from="1770811059393" duration="3791000" />
       <workItem from="1770823417168" duration="6323000" />
-      <workItem from="1770864593057" duration="19592000" />
+      <workItem from="1770864593057" duration="28729000" />
     </task>
     <servers />
   </component>
@@ -254,7 +240,7 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770883476962" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770894802818" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$demo_main.coverage" NAME="demo_main 覆盖结果" MODIFIED="1770745116755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/PythonProject$qwen_adapter.coverage" NAME="qwen_adapter 覆盖结果" MODIFIED="1770828819857" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wechat_backend/ai_adapters" />
     <SUITE FILE_PATH="coverage/PythonProject$window_tiler.coverage" NAME="window_tiler 覆盖结果" MODIFIED="1770295290564" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
