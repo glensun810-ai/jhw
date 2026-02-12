@@ -118,6 +118,47 @@ app.register_blueprint(wechat_bp)
 from wechat_backend.monitoring.monitoring_config import initialize_monitoring
 initialize_monitoring()
 
+def warm_up_adapters():
+    """预热所有已注册的API适配器"""
+    from .logging_config import api_logger
+    from .ai_adapters.factory import AIAdapterFactory
+
+    api_logger.info("Starting adapter warm-up...")
+
+    # List of adapters to warm up
+    adapters_to_warm = ['doubao', 'deepseek', 'qwen', 'chatgpt', 'gemini', 'zhipu', 'wenxin']
+
+    for adapter_name in adapters_to_warm:
+        try:
+            # Try to create a minimal instance for health check
+            # We'll use a dummy API key for the warm-up, as the actual key will be validated later
+            from config_manager import Config as PlatformConfigManager
+            config_manager = PlatformConfigManager()
+            platform_config = config_manager.get_platform_config(adapter_name)
+
+            if platform_config and platform_config.api_key:
+                # Create adapter with actual API key if available
+                adapter = AIAdapterFactory.create(adapter_name, platform_config.api_key, platform_config.default_model or f"test-{adapter_name}")
+
+                # If the adapter has a health check method, call it
+                if hasattr(adapter, '_health_check'):
+                    adapter._health_check()
+                    api_logger.info(f"Adapter {adapter_name} health check completed")
+                else:
+                    api_logger.info(f"Adapter {adapter_name} created successfully (no health check method)")
+            else:
+                api_logger.warning(f"Adapter {adapter_name} has no API key configured, skipping warm-up")
+
+        except Exception as e:
+            api_logger.warning(f"Adapter {adapter_name} warm-up failed: {e}")
+
+    api_logger.info("Adapter warm-up completed")
+
+
+# Warm up adapters in a background thread after app initialization
+import threading
+threading.Thread(target=warm_up_adapters, daemon=True).start()
+
 @app.route('/')
 @rate_limit(limit=100, window=60, per='ip')  # 限制每个IP每分钟最多100个请求
 def index():

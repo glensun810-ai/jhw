@@ -232,7 +232,7 @@ def perform_brand_test():
 
             api_logger.info(f"Starting async brand test '{execution_id}' for brands: {brand_list} (User: {user_id}, Level: {user_level.value}) - Total test cases: {len(all_test_cases)}")
 
-            executor = TestExecutor(max_workers=10, strategy=ExecutionStrategy.CONCURRENT)
+            executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)  # Reduced from 10 to 3 to prevent API timeouts
 
             def progress_callback(exec_id, progress):
                 if execution_id in execution_store:

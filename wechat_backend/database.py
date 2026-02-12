@@ -114,18 +114,18 @@ def save_test_record(user_openid, brand_name, ai_models_used, questions_used, ov
     results_summary_json = json.dumps(results_summary)
     detailed_results_json = json.dumps(detailed_results)
 
-    # Insert test record
-    safe_query.execute_query('''
+    # Insert test record and get the inserted record ID in one connection
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute('''
         INSERT INTO test_records
         (user_id, brand_name, ai_models_used, questions_used, overall_score, total_tests, results_summary, detailed_results)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (user_id, brand_name, ai_models_json, questions_json, overall_score, total_tests, results_summary_json, detailed_results_json))
 
-    # Get the inserted record ID
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT last_insert_rowid()")
-    record_id = cursor.fetchone()[0]
+    record_id = cursor.lastrowid  # Get the auto-generated ID
+    conn.commit()
     conn.close()
 
     db_logger.info(f"Test record saved successfully with ID: {record_id}")

@@ -185,7 +185,7 @@ def perform_brand_test():
 
     def run_async_test():
         try:
-            executor = TestExecutor(max_workers=10, strategy=ExecutionStrategy.CONCURRENT)
+            executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)  # Reduced from 10 to 3 to prevent API timeouts
 
             def progress_callback(exec_id, progress):
                 if execution_id in execution_store:
