@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 import hashlib
 import hmac
 import json
@@ -22,10 +22,19 @@ from .ai_utils import get_ai_client, run_brand_test_with_ai
 from .question_system import QuestionManager, TestCaseGenerator
 from .test_engine import TestExecutor, ExecutionStrategy
 from scoring_engine import ScoringEngine
+from enhanced_scoring_engine import EnhancedScoringEngine, calculate_enhanced_scores
 from ai_judge_module import AIJudgeClient, JudgeResult, ConfidenceLevel
 from .analytics.interception_analyst import InterceptionAnalyst
 from .analytics.monetization_service import MonetizationService, UserLevel
 from .analytics.source_intelligence_processor import SourceIntelligenceProcessor, process_brand_source_intelligence
+
+# Security imports
+from .security.auth import require_auth, require_auth_optional, get_current_user_id
+from .security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer, validate_safe_text
+from .security.rate_limiting import rate_limit, CombinedRateLimiter
+
+# Monitoring imports
+from .monitoring.monitoring_decorator import monitored_endpoint
 
 # Create a blueprint
 wechat_bp = Blueprint('wechat', __name__)
@@ -57,60 +66,120 @@ def wechat_verify():
         return 'success'
 
 @wechat_bp.route('/api/login', methods=['POST'])
+@rate_limit(limit=10, window=60, per='ip')  # 限制每个IP每分钟最多10次登录尝试
+@monitored_endpoint('/api/login', require_auth=False, validate_inputs=True)
 def wechat_login():
     """Handle login with WeChat Mini Program code"""
     from wechat_backend.app import APP_ID, APP_SECRET
+    from .security.auth import jwt_manager
+
     data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
     js_code = data.get('code')
-    if not js_code:
-        return jsonify({'error': 'Code is required'}), 400
+    if not js_code or not InputValidator.validate_alphanumeric(js_code, min_length=1, max_length=50):
+        return jsonify({'error': 'Valid code is required'}), 400
+
     params = {
         'appid': APP_ID,
         'secret': APP_SECRET,
         'js_code': js_code,
         'grant_type': 'authorization_code'
     }
-    response = requests.get(Config.WECHAT_CODE_TO_SESSION_URL, params=params)
-    result = response.json()
-    if 'openid' in result:
-        session_data = {
-            'openid': result['openid'],
-            'session_key': result['session_key'],
-            'unionid': result.get('unionid'),
-            'login_time': datetime.now().isoformat()
-        }
-        return jsonify({'status': 'success', 'data': session_data})
-    else:
-        return jsonify({'error': 'Failed to login', 'details': result}), 400
+
+    try:
+        response = requests.get(Config.WECHAT_CODE_TO_SESSION_URL, params=params)
+        result = response.json()
+
+        if 'openid' in result:
+            session_data = {
+                'openid': result['openid'],
+                'session_key': result['session_key'],
+                'unionid': result.get('unionid'),
+                'login_time': datetime.now().isoformat()
+            }
+
+            # 生成JWT令牌
+            if jwt_manager:
+                token = jwt_manager.generate_token(result['openid'], additional_claims={
+                    'role': 'user',
+                    'permissions': ['read', 'write']
+                })
+            else:
+                # 如果JWT不可用，返回错误
+                api_logger.error("JWT manager is not available")
+                return jsonify({'error': 'Authentication service temporarily unavailable'}), 500
+
+            return jsonify({
+                'status': 'success',
+                'data': session_data,
+                'token': token  # 返回JWT令牌
+            })
+        else:
+            api_logger.warning(f"WeChat login failed for code: {js_code[:10]}...")
+            return jsonify({'error': 'Failed to login', 'details': result}), 400
+    except Exception as e:
+        api_logger.error(f"WeChat login error: {str(e)}")
+        return jsonify({'error': 'Login service temporarily unavailable'}), 500
 
 @wechat_bp.route('/api/test', methods=['GET'])
+@rate_limit(limit=50, window=60, per='ip')
+@monitored_endpoint('/api/test', require_auth=False, validate_inputs=False)
 def test_api():
     return jsonify({'message': 'Backend is working correctly!', 'status': 'success'})
 
 @wechat_bp.route('/api/perform-brand-test', methods=['POST'])
+@require_auth_optional  # 可选身份验证，支持微信会话
+@rate_limit(limit=5, window=60, per='endpoint')  # 限制每个端点每分钟最多5个请求
+@monitored_endpoint('/api/perform-brand-test', require_auth=False, validate_inputs=True)
 def perform_brand_test():
     """Perform brand cognition test across multiple AI platforms (Async) with Multi-Brand Support"""
-    api_logger.info("Brand test endpoint accessed")
-    data = request.get_json()
-    
-    brand_list = data.get('brand_list', [])
-    if not brand_list:
-        return jsonify({'error': 'brand_list is required'}), 400
-    
-    main_brand = brand_list[0]
-    
-    selected_models = data.get('selectedModels', [])
-    custom_questions = data.get('customQuestions', [])
-    user_openid = data.get('userOpenid', 'anonymous')
-    api_key = data.get('apiKey', '')
-    
-    user_level = UserLevel(data.get('userLevel', 'Free'))
+    # 获取当前用户ID
+    user_id = get_current_user_id()
+    api_logger.info(f"Brand test endpoint accessed by user: {user_id}")
 
-    if not selected_models:
-        return jsonify({'error': 'At least one AI model must be selected'}), 400
+    # 获取并验证请求数据
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    # 输入验证和净化
+    try:
+        # 验证品牌列表
+        brand_list = data.get('brand_list', [])
+        if not brand_list:
+            return jsonify({'error': 'brand_list is required'}), 400
+
+        # 验证品牌名称的安全性
+        for brand in brand_list:
+            if not validate_safe_text(brand, max_length=100):
+                return jsonify({'error': f'Invalid brand name: {brand}'}), 400
+
+        main_brand = brand_list[0]
+
+        # 验证其他参数
+        selected_models = data.get('selectedModels', [])
+        custom_questions = data.get('customQuestions', [])
+        user_openid = data.get('userOpenid', user_id or 'anonymous')  # 使用认证的用户ID
+        api_key = data.get('apiKey', '')  # 在实际应用中，不应通过前端传递API密钥
+
+        user_level = UserLevel(data.get('userLevel', 'Free'))
+
+        if not selected_models:
+            return jsonify({'error': 'At least one AI model must be selected'}), 400
+
+        # 验证自定义问题的安全性
+        for question in custom_questions:
+            if not validate_safe_text(question, max_length=500):
+                return jsonify({'error': f'Unsafe question content: {question}'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
 
     execution_id = str(uuid.uuid4())
-    api_logger.info(f"Starting async brand test '{execution_id}' for brands: {brand_list} (User Level: {user_level.value})")
+    api_logger.info(f"Starting async brand test '{execution_id}' for brands: {brand_list} (User: {user_id}, Level: {user_level.value})")
 
     question_manager = QuestionManager()
     test_case_generator = TestCaseGenerator()
@@ -241,6 +310,7 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
     """
     ai_judge = AIJudgeClient()
     scoring_engine = ScoringEngine()
+    enhanced_scoring_engine = EnhancedScoringEngine()
     interception_analyst = InterceptionAnalyst(all_brands, main_brand)
 
     detailed_results = []
@@ -284,7 +354,11 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                 judge_result = ai_judge.evaluate_response(current_brand, question, ai_response_content)
 
                 if judge_result:
-                    individual_score = scoring_engine.calculate([judge_result]).geo_score
+                    # 使用基础评分引擎计算基础分数
+                    basic_score = scoring_engine.calculate([judge_result])
+
+                    # 使用增强评分引擎计算增强分数（用于内部分析）
+                    enhanced_result = calculate_enhanced_scores([judge_result], brand_name=current_brand)
 
                     detailed_result = {
                         'success': True,
@@ -297,7 +371,14 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                         'sentiment_score': judge_result.sentiment_score,
                         'purity_score': judge_result.purity_score,
                         'consistency_score': judge_result.consistency_score,
-                        'score': individual_score,
+                        'score': basic_score.geo_score,  # 保持原有分数以确保兼容性
+                        'enhanced_scores': {
+                            'geo_score': enhanced_result.geo_score,
+                            'cognitive_confidence': enhanced_result.cognitive_confidence,
+                            'bias_indicators': enhanced_result.bias_indicators,
+                            'detailed_analysis': enhanced_result.detailed_analysis,
+                            'recommendations': enhanced_result.recommendations
+                        },
                         'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
                     }
                     brand_results_map[current_brand].append(judge_result)
@@ -335,16 +416,28 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
     for brand, judge_results in brand_results_map.items():
         if judge_results and len(judge_results) > 0:  # 确保列表非空
             try:
-                final_score = scoring_engine.calculate(judge_results)
+                # 使用基础评分引擎计算基础分数
+                basic_score = scoring_engine.calculate(judge_results)
+
+                # 使用增强评分引擎计算增强分数
+                enhanced_result = calculate_enhanced_scores(judge_results, brand_name=brand)
+
                 brand_scores[brand] = {
-                    'overallScore': final_score.geo_score,
-                    'overallAuthority': final_score.authority_score,
-                    'overallVisibility': final_score.visibility_score,
-                    'overallSentiment': final_score.sentiment_score,
-                    'overallPurity': final_score.purity_score,
-                    'overallConsistency': final_score.consistency_score,
-                    'overallGrade': final_score.grade,
-                    'overallSummary': final_score.summary
+                    'overallScore': basic_score.geo_score,  # 保持原有分数以确保兼容性
+                    'overallAuthority': basic_score.authority_score,
+                    'overallVisibility': basic_score.visibility_score,
+                    'overallSentiment': basic_score.sentiment_score,
+                    'overallPurity': basic_score.purity_score,
+                    'overallConsistency': basic_score.consistency_score,
+                    'overallGrade': basic_score.grade,
+                    'overallSummary': basic_score.summary,
+                    # 增加增强版数据
+                    'enhanced_data': {
+                        'cognitive_confidence': enhanced_result.cognitive_confidence,
+                        'bias_indicators': enhanced_result.bias_indicators,
+                        'detailed_analysis': enhanced_result.detailed_analysis,
+                        'recommendations': enhanced_result.recommendations
+                    }
                 }
             except Exception as e:
                 # 如果计算失败，使用默认值
@@ -357,7 +450,13 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                     'overallSentiment': 0,
                     'overallPurity': 0,
                     'overallConsistency': 0,
-                    'overallSummary': 'Calculation error occurred'
+                    'overallSummary': 'Calculation error occurred',
+                    'enhanced_data': {
+                        'cognitive_confidence': 0.0,
+                        'bias_indicators': [],
+                        'detailed_analysis': {},
+                        'recommendations': []
+                    }
                 }
         else:
             brand_scores[brand] = {
@@ -368,11 +467,17 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                 'overallSentiment': 0,
                 'overallPurity': 0,
                 'overallConsistency': 0,
-                'overallSummary': 'No data available'
+                'overallSummary': 'No data available',
+                'enhanced_data': {
+                    'cognitive_confidence': 0.0,
+                    'bias_indicators': [],
+                    'detailed_analysis': {},
+                    'recommendations': []
+                }
             }
 
     first_mention_by_platform = {platform: interception_analyst.calculate_first_mention_rate(results) for platform, results in platform_results_map.items()}
-    
+
     main_brand_source = generate_mock_source_intelligence_map(main_brand)
     competitor_sources = {brand: generate_mock_source_intelligence_map(brand) for brand in all_brands if brand != main_brand}
     interception_risks = interception_analyst.analyze_interception_risk(main_brand_source, competitor_sources)
@@ -385,7 +490,16 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
 
     return {
         'detailed_results': detailed_results,
-        'main_brand': brand_scores.get(main_brand, {'overallScore': 0, 'overallGrade': 'D'}),
+        'main_brand': brand_scores.get(main_brand, {
+            'overallScore': 0,
+            'overallGrade': 'D',
+            'enhanced_data': {
+                'cognitive_confidence': 0.0,
+                'bias_indicators': [],
+                'detailed_analysis': {},
+                'recommendations': []
+            }
+        }),
         'competitiveAnalysis': competitive_analysis,
         'summary': {'total_tests': len(detailed_results), 'brands_tested': len(all_brands)}
     }
@@ -421,6 +535,9 @@ def get_source_intelligence():
 
 
 @wechat_bp.route('/api/platform-status', methods=['GET'])
+@require_auth_optional  # 可选身份验证，支持微信会话
+@rate_limit(limit=20, window=60, per='endpoint')  # 限制每分钟20次请求
+@monitored_endpoint('/api/platform-status', require_auth=False, validate_inputs=False)
 def get_platform_status():
     """获取所有AI平台的状态信息"""
     try:

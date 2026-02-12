@@ -12,6 +12,7 @@ class PlatformConfig:
     default_max_tokens: int = 1000
     timeout: int = 30  # 请求超时时间（秒）
     retry_times: int = 3  # 重试次数
+    default_model: Optional[str] = None  # 默认模型ID
 
 
 class Config:
@@ -40,6 +41,7 @@ class Config:
                 max_tokens = int(os.getenv(f'{platform.upper()}_MAX_TOKENS', 1000))
                 timeout = int(os.getenv(f'{platform.upper()}_TIMEOUT', 30))
                 retry_times = int(os.getenv(f'{platform.upper()}_RETRY_TIMES', 3))
+                default_model = os.getenv(f'{platform.upper()}_MODEL_ID')
 
                 self.platforms[platform] = PlatformConfig(
                     api_key=api_key,
@@ -47,7 +49,8 @@ class Config:
                     default_temperature=temperature,
                     default_max_tokens=max_tokens,
                     timeout=timeout,
-                    retry_times=retry_times
+                    retry_times=retry_times,
+                    default_model=default_model
                 )
 
     def get_platform_config(self, platform_name: str) -> Optional[PlatformConfig]:

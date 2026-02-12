@@ -1,5 +1,5 @@
 const appid = 'wx8876348e089bc261'; // 您的 AppID
-const serverUrl = 'http://127.0.0.1:5001'; // 后端服务器地址
+const serverUrl = 'http://127.0.0.1:5002'; // 后端服务器地址
 
 Page({
   data: {

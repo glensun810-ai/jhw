@@ -5,8 +5,9 @@ from typing import Optional
 from enum import Enum
 import os
 
-from wechat_backend.ai_adapters.factory import AIAdapterFactory
-from wechat_backend.logging_config import api_logger
+# Delay import to avoid circular dependencies
+AIAdapterFactory = None
+api_logger = None
 
 class ConfidenceLevel(Enum):
     """置信度等级枚举"""
@@ -105,18 +106,47 @@ class JudgeResultParser:
 
 class AIJudgeClient:
     """
-    用于调用“裁判LLM”的客户端
+    用于调用"裁判LLM"的客户端
     """
     def __init__(self):
+        # Lazy load imports to avoid circular dependencies
+        global AIAdapterFactory, api_logger
+        if AIAdapterFactory is None or api_logger is None:
+            from wechat_backend.ai_adapters.factory import AIAdapterFactory as AF
+            from wechat_backend.logging_config import api_logger as al
+            AIAdapterFactory = AF
+            api_logger = al
+
         self.judge_platform = os.getenv("JUDGE_LLM_PLATFORM", "deepseek")
         self.judge_model = os.getenv("JUDGE_LLM_MODEL", "deepseek-chat")
         self.api_key = os.getenv("JUDGE_LLM_API_KEY")
 
-        # 如果没有配置API密钥，记录警告但不抛出异常，使应用可以启动
+        # 如果没有配置专用的裁判API密钥，尝试使用现有的API密钥
         if not self.api_key:
-            api_logger.warning("JUDGE_LLM_API_KEY is not configured in environment variables. AI Judge functionality will be disabled.")
-            self.ai_client = None
-            return
+            # 尝试从配置管理器获取可用的API密钥
+            try:
+                from config_manager import Config as PlatformConfigManager
+                config_manager = PlatformConfigManager()
+
+                # 按优先级顺序尝试获取API密钥
+                platforms_to_try = [self.judge_platform, 'deepseek', 'qwen', 'zhipu', 'doubao']
+
+                for platform in platforms_to_try:
+                    config = config_manager.get_platform_config(platform)
+                    if config and config.api_key:
+                        self.api_key = config.api_key
+                        api_logger.info(f"Using {platform} API key for AI Judge")
+                        break
+
+                if not self.api_key:
+                    api_logger.warning("No API key available for AI Judge. AI Judge functionality will be disabled.")
+                    self.ai_client = None
+                    return
+            except Exception as e:
+                api_logger.error(f"Error getting API key for AI Judge: {e}")
+                api_logger.warning("AI Judge functionality will be disabled.")
+                self.ai_client = None
+                return
 
         self.prompt_builder = JudgePromptBuilder()
         self.parser = JudgeResultParser()
@@ -132,6 +162,14 @@ class AIJudgeClient:
         """
         调用裁判LLM评估一个AI回答
         """
+        # Lazy load imports to avoid circular dependencies
+        global AIAdapterFactory, api_logger
+        if AIAdapterFactory is None or api_logger is None:
+            from wechat_backend.ai_adapters.factory import AIAdapterFactory as AF
+            from wechat_backend.logging_config import api_logger as al
+            AIAdapterFactory = AF
+            api_logger = al
+
         # 如果AI客户端未初始化，返回None
         if not self.ai_client:
             api_logger.warning("AI Judge is not initialized due to missing API key. Skipping evaluation.")
