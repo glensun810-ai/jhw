@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .logging_config import db_logger
+from .security.sql_protection import SafeDatabaseQuery, sql_protector
 
 DB_PATH = Path(__file__).parent.parent / 'database.db'
 
@@ -82,20 +83,29 @@ def init_db():
 
 def save_test_record(user_openid, brand_name, ai_models_used, questions_used, overall_score, total_tests, results_summary, detailed_results):
     """Save a test record to the database"""
+    # Validate inputs to prevent SQL injection
+    if not sql_protector.validate_input(user_openid):
+        raise ValueError("Invalid user_openid")
+    if not sql_protector.validate_input(brand_name):
+        raise ValueError("Invalid brand_name")
+
     db_logger.info(f"Saving test record for user: {user_openid}, brand: {brand_name}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+
+    # Use safe database query
+    safe_query = SafeDatabaseQuery(DB_PATH)
 
     # Get user ID or create new user
-    cursor.execute('SELECT id FROM users WHERE openid = ?', (user_openid,))
-    user_row = cursor.fetchone()
+    user_rows = safe_query.execute_query('SELECT id FROM users WHERE openid = ?', (user_openid,))
 
-    if user_row:
-        user_id = user_row[0]
+    if user_rows:
+        user_id = user_rows[0][0]
         db_logger.debug(f"Found existing user with ID: {user_id}")
     else:
-        cursor.execute('INSERT INTO users (openid) VALUES (?)', (user_openid,))
-        user_id = cursor.lastrowid
+        # Create new user
+        safe_query.execute_query('INSERT INTO users (openid) VALUES (?)', (user_openid,))
+        # Get the new user ID
+        user_rows = safe_query.execute_query('SELECT id FROM users WHERE openid = ?', (user_openid,))
+        user_id = user_rows[0][0]
         db_logger.debug(f"Created new user with ID: {user_id}")
 
     # Convert lists/dicts to JSON strings
@@ -105,39 +115,51 @@ def save_test_record(user_openid, brand_name, ai_models_used, questions_used, ov
     detailed_results_json = json.dumps(detailed_results)
 
     # Insert test record
-    cursor.execute('''
+    safe_query.execute_query('''
         INSERT INTO test_records
         (user_id, brand_name, ai_models_used, questions_used, overall_score, total_tests, results_summary, detailed_results)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (user_id, brand_name, ai_models_json, questions_json, overall_score, total_tests, results_summary_json, detailed_results_json))
 
-    record_id = cursor.lastrowid
-    conn.commit()
+    # Get the inserted record ID
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT last_insert_rowid()")
+    record_id = cursor.fetchone()[0]
     conn.close()
+
     db_logger.info(f"Test record saved successfully with ID: {record_id}")
 
     return record_id
 
 def get_user_test_history(user_openid, limit=20, offset=0):
     """Get test history for a specific user"""
+    # Validate inputs to prevent SQL injection
+    if not sql_protector.validate_input(user_openid):
+        raise ValueError("Invalid user_openid")
+
+    # Validate numeric inputs
+    if not isinstance(limit, int) or not isinstance(offset, int) or limit < 0 or offset < 0:
+        raise ValueError("Limit and offset must be non-negative integers")
+
     db_logger.info(f"Retrieving test history for user: {user_openid}, limit: {limit}, offset: {offset}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+
+    # Use safe database query
+    safe_query = SafeDatabaseQuery(DB_PATH)
 
     # Get user ID
-    cursor.execute('SELECT id FROM users WHERE openid = ?', (user_openid,))
-    user_row = cursor.fetchone()
+    user_rows = safe_query.execute_query('SELECT id FROM users WHERE openid = ?', (user_openid,))
 
-    if not user_row:
+    if not user_rows:
         db_logger.debug(f"No user found with openid: {user_openid}")
-        conn.close()
         return []
 
-    user_id = user_row[0]
+    user_id = user_rows[0][0]
     db_logger.debug(f"Found user with ID: {user_id}")
 
     # Get test records for this user
-    cursor.execute('''
+    # Using safe parameterized query with validated integer inputs
+    records_data = safe_query.execute_query('''
         SELECT id, brand_name, test_date, ai_models_used, questions_used,
                overall_score, total_tests, results_summary
         FROM test_records
@@ -147,7 +169,7 @@ def get_user_test_history(user_openid, limit=20, offset=0):
     ''', (user_id, limit, offset))
 
     records = []
-    for row in cursor.fetchall():
+    for row in records_data:
         record = {
             'id': row[0],
             'brand_name': row[1],
@@ -161,24 +183,28 @@ def get_user_test_history(user_openid, limit=20, offset=0):
         records.append(record)
 
     db_logger.info(f"Retrieved {len(records)} test records for user: {user_openid}")
-    conn.close()
     return records
 
 def get_test_record_by_id(record_id):
     """Get a specific test record by ID"""
-    db_logger.info(f"Retrieving test record with ID: {record_id}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    # Validate inputs to prevent SQL injection
+    if not isinstance(record_id, int) or record_id < 0:
+        raise ValueError("Record ID must be a non-negative integer")
 
-    cursor.execute('''
+    db_logger.info(f"Retrieving test record with ID: {record_id}")
+
+    # Use safe database query
+    safe_query = SafeDatabaseQuery(DB_PATH)
+
+    rows = safe_query.execute_query('''
         SELECT id, brand_name, test_date, ai_models_used, questions_used,
                overall_score, total_tests, results_summary, detailed_results
         FROM test_records
         WHERE id = ?
     ''', (record_id,))
 
-    row = cursor.fetchone()
-    if row:
+    if rows:
+        row = rows[0]  # Get first row
         record = {
             'id': row[0],
             'brand_name': row[1],
@@ -195,26 +221,33 @@ def get_test_record_by_id(record_id):
         record = None
         db_logger.warning(f"No test record found with ID: {record_id}")
 
-    conn.close()
     return record
 
 
 def save_user_preference(user_openid, preference_key, preference_value):
     """Save a user preference"""
+    # Validate inputs to prevent SQL injection
+    if not sql_protector.validate_input(user_openid):
+        raise ValueError("Invalid user_openid")
+    if not sql_protector.validate_input(preference_key):
+        raise ValueError("Invalid preference_key")
+
     db_logger.info(f"Saving user preference for user {user_openid}, key: {preference_key}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+
+    # Use safe database query
+    safe_query = SafeDatabaseQuery(DB_PATH)
 
     # First, get or create user ID based on openid
-    cursor.execute('SELECT id FROM users WHERE openid = ?', (user_openid,))
-    user_row = cursor.fetchone()
+    user_rows = safe_query.execute_query('SELECT id FROM users WHERE openid = ?', (user_openid,))
 
-    if user_row:
-        user_id = user_row[0]
+    if user_rows:
+        user_id = user_rows[0][0]
     else:
         # Create new user if not exists
-        cursor.execute('INSERT INTO users (openid) VALUES (?)', (user_openid,))
-        user_id = cursor.lastrowid
+        safe_query.execute_query('INSERT INTO users (openid) VALUES (?)', (user_openid,))
+        # Get the new user ID
+        user_rows = safe_query.execute_query('SELECT id FROM users WHERE openid = ?', (user_openid,))
+        user_id = user_rows[0][0]
 
     # Convert preference value to JSON string if it's a dict/list
     if isinstance(preference_value, (dict, list)):
@@ -223,47 +256,47 @@ def save_user_preference(user_openid, preference_key, preference_value):
         pref_value_str = str(preference_value)
 
     try:
-        cursor.execute('''
+        safe_query.execute_query('''
             INSERT OR REPLACE INTO user_preferences
             (user_id, preference_key, preference_value, updated_at)
             VALUES (?, ?, ?, CURRENT_TIMESTAMP)
         ''', (user_id, preference_key, pref_value_str))
 
-        conn.commit()
         db_logger.info(f"User preference saved successfully: {preference_key}")
     except Exception as e:
         db_logger.error(f"Error saving user preference: {e}")
         raise
-    finally:
-        conn.close()
 
 
 def get_user_preference(user_openid, preference_key, default_value=None):
     """Get a user preference"""
+    # Validate inputs to prevent SQL injection
+    if not sql_protector.validate_input(user_openid):
+        raise ValueError("Invalid user_openid")
+    if not sql_protector.validate_input(preference_key):
+        raise ValueError("Invalid preference_key")
+
     db_logger.info(f"Retrieving user preference for user {user_openid}, key: {preference_key}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+
+    # Use safe database query
+    safe_query = SafeDatabaseQuery(DB_PATH)
 
     # Get user ID based on openid
-    cursor.execute('SELECT id FROM users WHERE openid = ?', (user_openid,))
-    user_row = cursor.fetchone()
+    user_rows = safe_query.execute_query('SELECT id FROM users WHERE openid = ?', (user_openid,))
 
-    if not user_row:
+    if not user_rows:
         return default_value
 
-    user_id = user_row[0]
+    user_id = user_rows[0][0]
 
-    cursor.execute('''
+    rows = safe_query.execute_query('''
         SELECT preference_value
         FROM user_preferences
         WHERE user_id = ? AND preference_key = ?
     ''', (user_id, preference_key))
 
-    row = cursor.fetchone()
-    conn.close()
-
-    if row:
-        pref_value_str = row[0]
+    if rows:
+        pref_value_str = rows[0][0]
         # Try to parse as JSON, if it fails return as string
         try:
             return json.loads(pref_value_str)
@@ -275,27 +308,28 @@ def get_user_preference(user_openid, preference_key, default_value=None):
 
 def get_all_user_preferences(user_openid):
     """Get all preferences for a user"""
+    # Validate inputs to prevent SQL injection
+    if not sql_protector.validate_input(user_openid):
+        raise ValueError("Invalid user_openid")
+
     db_logger.info(f"Retrieving all preferences for user {user_openid}")
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+
+    # Use safe database query
+    safe_query = SafeDatabaseQuery(DB_PATH)
 
     # Get user ID based on openid
-    cursor.execute('SELECT id FROM users WHERE openid = ?', (user_openid,))
-    user_row = cursor.fetchone()
+    user_rows = safe_query.execute_query('SELECT id FROM users WHERE openid = ?', (user_openid,))
 
-    if not user_row:
+    if not user_rows:
         return {}
 
-    user_id = user_row[0]
+    user_id = user_rows[0][0]
 
-    cursor.execute('''
+    rows = safe_query.execute_query('''
         SELECT preference_key, preference_value
         FROM user_preferences
         WHERE user_id = ?
     ''', (user_id,))
-
-    rows = cursor.fetchall()
-    conn.close()
 
     preferences = {}
     for row in rows:

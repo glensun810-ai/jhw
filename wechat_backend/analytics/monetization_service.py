@@ -42,7 +42,7 @@ class MonetizationService:
                     # 确保 scores 是一个字典
                     if isinstance(scores, dict):
                         # 保留所有字段，但将付费用户的详细数据替换为基本数据
-                        data["competitiveAnalysis"]["brandScores"][brand] = {
+                        stripped_scores = {
                             "overallScore": scores.get("overallScore", 0),
                             "overallAuthority": scores.get("overallAuthority", 0),
                             "overallVisibility": scores.get("overallVisibility", 0),
@@ -52,6 +52,24 @@ class MonetizationService:
                             "overallGrade": scores.get("overallGrade", "D"),
                             "overallSummary": scores.get("overallSummary", "免费版用户仅显示基础数据")
                         }
+
+                        # 剥离增强数据（仅付费用户可用）
+                        if "enhanced_data" in scores:
+                            stripped_scores["enhanced_data"] = {
+                                "cognitive_confidence": 0.0,
+                                "bias_indicators": [],
+                                "detailed_analysis": {},
+                                "recommendations": ["升级到付费版以查看详细分析和建议"]
+                            }
+                        else:
+                            stripped_scores["enhanced_data"] = {
+                                "cognitive_confidence": 0.0,
+                                "bias_indicators": [],
+                                "detailed_analysis": {},
+                                "recommendations": []
+                            }
+
+                        data["competitiveAnalysis"]["brandScores"][brand] = stripped_scores
                     else:
                         # 如果 scores 不是字典，使用默认值
                         data["competitiveAnalysis"]["brandScores"][brand] = {
@@ -62,9 +80,15 @@ class MonetizationService:
                             "overallPurity": 0,
                             "overallConsistency": 0,
                             "overallGrade": "D",
-                            "overallSummary": "数据格式错误"
+                            "overallSummary": "数据格式错误",
+                            "enhanced_data": {
+                                "cognitive_confidence": 0.0,
+                                "bias_indicators": [],
+                                "detailed_analysis": {},
+                                "recommendations": []
+                            }
                         }
-            
+
             # 剥离信源情报图的深度信息
             if "sourceIntelligenceMap" in data:
                 data["sourceIntelligenceMap"] = {

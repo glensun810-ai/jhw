@@ -42,6 +42,12 @@ except ImportError as e:
     api_logger.warning(f"Failed to import ZhipuAdapter: {e}")
     ZhipuAdapter = None
 
+try:
+    from .erniebot_adapter import ErnieBotAdapter
+except ImportError as e:
+    api_logger.warning(f"Failed to import ErnieBotAdapter: {e}")
+    ErnieBotAdapter = None
+
 
 class AIAdapterFactory:
     """
@@ -91,3 +97,5 @@ if GeminiAdapter:
     AIAdapterFactory.register(AIPlatformType.GEMINI, GeminiAdapter)
 if ZhipuAdapter:
     AIAdapterFactory.register(AIPlatformType.ZHIPU, ZhipuAdapter)
+if ErnieBotAdapter:
+    AIAdapterFactory.register(AIPlatformType.WENXIN, ErnieBotAdapter)

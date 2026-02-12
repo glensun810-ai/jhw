@@ -106,9 +106,9 @@ def main():
     print("Testing AI Platform API Keys\n")
     
     # 从环境变量读取API密钥
-    deepseek_key = os.getenv('DEEPSEEK_API_KEY', 'sk-13908093890f46fb82c52a01c8dfc464')
-    qwen_key = os.getenv('QWEN_API_KEY', 'sk-5261a4dfdf964a5c9a6364128cc4c653')
-    doubao_key = os.getenv('DOUBAO_API_KEY', '2a376e32-8877-4df8-9865-7eb3e99c9f92')
+    deepseek_key = os.getenv('DEEPSEEK_API_KEY', 'YOUR_DEEPSEEK_API_KEY')
+    qwen_key = os.getenv('QWEN_API_KEY', 'YOUR_QWEN_API_KEY')
+    doubao_key = os.getenv('DOUBAO_API_KEY', 'YOUR_DOUBAO_API_KEY')
     
     print(f"Testing with keys:")
     print(f"- DeepSeek: {deepseek_key[:6]}..." if len(deepseek_key) > 6 else "- DeepSeek: {deepseek_key}")

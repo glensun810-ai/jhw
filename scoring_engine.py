@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 from typing import List
-from ai_judge_module import JudgeResult
+# Note: We avoid importing JudgeResult here to prevent circular imports
+# Instead, we use forward references and type hints
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ai_judge_module import JudgeResult
 
 
 @dataclass
@@ -37,7 +42,7 @@ class ScoringEngine:
     
     def calculate(
         self,
-        judge_results: List[JudgeResult],
+        judge_results: List['JudgeResult'],
         authority_weight: float = 0.25,
         visibility_weight: float = 0.2,
         sentiment_weight: float = 0.2,
