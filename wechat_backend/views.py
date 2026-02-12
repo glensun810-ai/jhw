@@ -178,43 +178,55 @@ def perform_brand_test():
         api_logger.error(f"Input validation failed: {str(e)}")
         return jsonify({'error': 'Invalid input data'}), 400
 
+    # 立即生成执行ID和基础存储，不等待测试用例生成
     execution_id = str(uuid.uuid4())
-    api_logger.info(f"Starting async brand test '{execution_id}' for brands: {brand_list} (User: {user_id}, Level: {user_level.value})")
-
-    question_manager = QuestionManager()
-    test_case_generator = TestCaseGenerator()
-
-    cleaned_custom_questions_for_validation = [q.strip() for q in custom_questions if q.strip()]
-
-    if cleaned_custom_questions_for_validation:
-        validation_result = question_manager.validate_custom_questions(cleaned_custom_questions_for_validation)
-        if not validation_result['valid']:
-            return jsonify({'error': f"Invalid questions: {'; '.join(validation_result['errors'])}"}), 400
-        raw_questions = validation_result['cleaned_questions']
-    else:
-        raw_questions = [
-            "介绍一下{brandName}",
-            "{brandName}的主要产品是什么",
-            "{brandName}和竞品有什么区别"
-        ]
-
-    all_test_cases = []
-    for brand in brand_list:
-        brand_questions = [q.replace('{brandName}', brand) for q in raw_questions]
-        cases = test_case_generator.generate_test_cases(brand, selected_models, brand_questions)
-        all_test_cases.extend(cases)
-
+    # 先设置一个初始状态，稍后再更新总数
     execution_store[execution_id] = {
         'progress': 0,
         'completed': 0,
-        'total': len(all_test_cases),
-        'status': 'pending',
+        'total': 0,  # 会在异步线程中更新
+        'status': 'initializing',
         'results': [],
         'start_time': datetime.now().isoformat()
     }
 
     def run_async_test():
         try:
+            # 在异步线程中进行所有耗时的操作
+            question_manager = QuestionManager()
+            test_case_generator = TestCaseGenerator()
+
+            cleaned_custom_questions_for_validation = [q.strip() for q in custom_questions if q.strip()]
+
+            if cleaned_custom_questions_for_validation:
+                validation_result = question_manager.validate_custom_questions(cleaned_custom_questions_for_validation)
+                if not validation_result['valid']:
+                    if execution_id in execution_store:
+                        execution_store[execution_id].update({'status': 'failed', 'error': f"Invalid questions: {'; '.join(validation_result['errors'])}"})
+                    return
+                raw_questions = validation_result['cleaned_questions']
+            else:
+                raw_questions = [
+                    "介绍一下{brandName}",
+                    "{brandName}的主要产品是什么",
+                    "{brandName}和竞品有什么区别"
+                ]
+
+            all_test_cases = []
+            for brand in brand_list:
+                brand_questions = [q.replace('{brandName}', brand) for q in raw_questions]
+                cases = test_case_generator.generate_test_cases(brand, selected_models, brand_questions)
+                all_test_cases.extend(cases)
+
+            # 更新总数
+            if execution_id in execution_store:
+                execution_store[execution_id].update({
+                    'total': len(all_test_cases),
+                    'status': 'processing'
+                })
+
+            api_logger.info(f"Starting async brand test '{execution_id}' for brands: {brand_list} (User: {user_id}, Level: {user_level.value}) - Total test cases: {len(all_test_cases)}")
+
             executor = TestExecutor(max_workers=10, strategy=ExecutionStrategy.CONCURRENT)
 
             def progress_callback(exec_id, progress):
@@ -226,7 +238,7 @@ def perform_brand_test():
                         'status': progress.status.value
                     })
 
-            results = executor.execute_tests(all_test_cases, api_key, lambda eid, p: progress_callback(execution_id, p))
+            results = executor.execute_tests(all_test_cases, api_key, lambda eid, p: progress_callback(execution_id, p), timeout=600)  # 10分钟超时
             executor.shutdown()
 
             processed_results = process_and_aggregate_results_with_ai_judge(results, brand_list, main_brand)
@@ -592,6 +604,11 @@ def get_test_progress():
     execution_id = request.args.get('executionId')
     if execution_id and execution_id in execution_store:
         progress_data = execution_store[execution_id]
+
+        # 如果任务已完成，添加一个标志来通知前端停止轮询
+        if progress_data.get('status') in ['completed', 'failed']:
+            progress_data['should_stop_polling'] = True
+
         return jsonify(progress_data)
     else:
         return jsonify({'error': 'Execution ID not found'}), 404

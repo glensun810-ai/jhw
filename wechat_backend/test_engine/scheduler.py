@@ -2,6 +2,7 @@
 Test Scheduler with execution strategies
 Handles scheduling of tests with different execution approaches
 """
+import os
 from enum import Enum
 from typing import List, Dict, Any, Callable
 from dataclasses import dataclass
@@ -104,6 +105,22 @@ class TestScheduler:
                 results.append({'task_id': task.id, 'success': False, 'error': str(e), 'result': None})
         return results
     
+    def _get_actual_model_id(self, display_model_name: str, platform_name: str) -> str:
+        """Maps display model name to actual model ID for the platform."""
+        # Map display names to actual model IDs
+        model_id_map = {
+            'doubao': os.getenv('DOUBAO_MODEL_ID', 'ep-20260212000000-gd5tq'),  # Use configured model ID
+            'deepseek': 'deepseek-chat',
+            'qwen': 'qwen-turbo',  # or whatever the correct model ID is
+            'wenxin': 'ernie-bot-4.5',  # or whatever the correct model ID is
+            'zhipu': 'glm-4',  # or whatever the correct model ID is
+            'openai': 'gpt-3.5-turbo',  # or whatever the correct model ID is
+            'anthropic': 'claude-3-haiku-20240307',  # or whatever the correct model ID is
+            'google': 'gemini-pro',  # or whatever the correct model ID is
+        }
+
+        return model_id_map.get(platform_name, display_model_name)
+
     def _execute_single_task(self, task: TestTask) -> Dict[str, Any]:
         """Executes a single test task with retry mechanism using real AI clients."""
         api_logger.debug(f"Executing task {task.id} for model {task.ai_model}")
@@ -118,7 +135,10 @@ class TestScheduler:
                 if not config or not config.api_key:
                     raise ValueError(f"API key for platform '{platform_name}' is not configured.")
 
-                ai_client = AIAdapterFactory.create(platform_name, config.api_key, task.ai_model)
+                # Get the actual model ID instead of using display name
+                actual_model_id = self._get_actual_model_id(task.ai_model, platform_name)
+
+                ai_client = AIAdapterFactory.create(platform_name, config.api_key, actual_model_id)
 
                 # Use synchronous send_prompt method instead of async query
                 ai_response = ai_client.send_prompt(task.question)

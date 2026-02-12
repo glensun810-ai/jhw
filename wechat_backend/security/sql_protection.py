@@ -13,30 +13,45 @@ logger = logging.getLogger(__name__)
 
 class SQLInjectionProtector:
     """SQL注入防护器"""
-    
+
     def __init__(self):
-        # 常见的SQL注入模式
+        # 更精确的SQL注入模式 - 遾免误判合法SQL语句
+        # 专注于真正的恶意模式, 而不是基本的SQL关键字
         self.sql_injection_patterns = [
-            r"(?i)(union\s+select)",  # UNION SELECT
-            r"(?i)(drop\s+\w+)",      # DROP TABLE/DB
-            r"(?i)(insert\s+into)",   # INSERT INTO
-            r"(?i)(update\s+\w+\s+set)", # UPDATE
-            r"(?i)(delete\s+from)",   # DELETE FROM
-            r"(?i)(exec\s*\()",       # EXEC
-            r"(?i)(sp_\w+)",          # Stored procedure
-            r"(?i)(waitfor\s+delay)", # WAITFOR DELAY
-            r"(?i)(shutdown\s*\(\s*\))", # SHUTDOWN
-            r"'(?:--|#|/\*.*?\*/|--\s+.*|\s+OR\s+\d+=\d+)", # 注释和OR注入
-            r"(?i)(\b\w+\s*[=<>]\s*\w+\s*(?:and|or)\s*\w+\s*[=<>]\s*\w+)" # AND/OR条件
+            # 1. 危接的数据库操作 (在用户输入中不应该出现)
+            r"(?i)\b(drop\s+(table|database|schema|view|procedure|function|trigger|event|index))\b",  # DROP操作
+            r"(?i)\b(alter\s+(table|database|schema|view))\b",  # ALTER操作
+            r"(?i)\b(create\s+(database|schema|procedure|function|trigger|event))\b",  # CREATE操作
+            r"(?i)\b(delete\s+from\s+information_schema)",  # 危接删除系统表
+            r"(?i)\b(update\s+\w+\s+set\s+.+where\s+.+and\s+.+\s*[=<>]\s*.+)",  # 复杂UPDATE
+            r"(?i)(exec\s*\()",       # EXEC执行
+            r"(?i)(sp_\w+)",          # 存储过程
+            r"(?i)(xp_\w+)",          # 扩展存储过程 (如 xp_cmdshell)
+            r"(?i)(waitfor\s+delay)", # 延迟等待
+            r"(?i)(shutdown\s*\(\s*\))", # 关机
+            r"(?i)(backup\s+database)", # 备份数据库
+            # 2. 注释和绕过技术
+            r"'(?:--|#|/\*.*?\*/|--\s+.*|\s+OR\s+\d+=\d+)", # SQL注释和OR注入
+            # 3. 布尔型注入
+            r"(?i)(\b\w+\s*[=<>]\s*\w+\s*(?:and|or)\s*\w+\s*[=<>]\s*\w+)", # AND/OR条件
+            # 4. 时间型注入
+            r"(?i)(sleep\s*\(|pg_sleep\s*\(|waitfor\s+delay\s*\(|benchmark\s*\()", # 睡眠函数
+            # 5. 联合查询注入 (更具体)
+            r"(?i)(union\s+(all\s+)?select)", # UNION SELECT (any form)
+            # 6. 危接函数注入
+            r"(?i)(char\s*\(|ascii\s*\(|ord\s*\(|concat\s*\(|group_concat\s*\(|load_file\s*\(|into\s+outfile)", # 危接函数
+            # 7. 嵌套查询注入
+            r"(?i)(select\s+.+\s+from\s+.+\s+where\s+.+\s+and\s+.+\s*=\s*\(select)", # 嵌套SELECT
         ]
     
     def contains_sql_injection(self, input_str: str) -> bool:
         """检查输入是否包含SQL注入模式"""
         if not input_str:
             return False
-        
+
+        # Check for dangerous patterns regardless of input type
         for pattern in self.sql_injection_patterns:
-            if re.search(pattern, input_str):
+            if re.search(pattern, input_str, re.IGNORECASE):
                 logger.warning(f"Detected potential SQL injection: {input_str[:50]}...")
                 return True
         return False
@@ -71,16 +86,20 @@ class SafeDatabaseQuery:
     
     def execute_query(self, query: str, params: Tuple = ()) -> List[Tuple]:
         """执行安全的数据库查询"""
-        # 验证查询语句
-        if self.protector.contains_sql_injection(query):
-            raise ValueError("Potential SQL injection detected in query")
-        
-        # 验证参数
+        # 对于SQL查询语句，我们信任应用程序生成的查询（因为它们是预定义的）
+        # 只检查是否存在明显的恶意模式，但不过度限制基本SQL语法
+        # 验证参数（用户输入）更严格
+
+        # 检查参数（用户输入）是否有SQL注入
         for param in params:
             if isinstance(param, str) and self.protector.contains_sql_injection(param):
                 raise ValueError(f"Potential SQL injection detected in parameter: {param}")
-        
-        # 使用参数化查询执行
+
+        # 对于查询语句本身，我们信任应用程序生成的查询
+        # 因为这些查询是由应用程序代码生成的，而不是用户输入
+        # 只检查参数（用户输入）是否有SQL注入
+
+        # 使用参数化查询执行（这是防SQL注入的主要手段）
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
