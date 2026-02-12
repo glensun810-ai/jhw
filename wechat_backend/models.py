@@ -58,14 +58,43 @@ class TaskStatus:
         )
 
 
+class BrandTestResult:
+    """品牌测试结果数据模型，包含深度情报分析结果"""
+
+    def __init__(self, task_id, brand_name, ai_models_used=None, questions_used=None,
+                 overall_score=0, total_tests=0, results_summary=None, detailed_results=None,
+                 deep_intelligence_result=None):
+        self.task_id = task_id
+        self.brand_name = brand_name
+        self.ai_models_used = ai_models_used or []
+        self.questions_used = questions_used or []
+        self.overall_score = overall_score
+        self.total_tests = total_tests
+        self.results_summary = results_summary or {}
+        self.detailed_results = detailed_results or []
+        self.deep_intelligence_result = deep_intelligence_result or DeepIntelligenceResult()
+
+
 class DeepIntelligenceResult:
-    """深度情报分析结果数据模型"""
-    
+    """深度情报分析结果数据模型，完全按照API契约定义"""
+
     def __init__(self, exposure_analysis=None, source_intelligence=None, evidence_chain=None):
-        self.exposure_analysis = exposure_analysis or {}
-        self.source_intelligence = source_intelligence or {}
+        # 露出与排位分析
+        self.exposure_analysis = exposure_analysis or {
+            'ranking_list': [],
+            'brand_details': {},
+            'unlisted_competitors': []
+        }
+
+        # 深度信源归因
+        self.source_intelligence = source_intelligence or {
+            'source_pool': [],
+            'citation_rank': []
+        }
+
+        # 证据链穿透
         self.evidence_chain = evidence_chain or []
-        
+
     def to_dict(self):
         """转换为字典格式"""
         return {
@@ -73,13 +102,20 @@ class DeepIntelligenceResult:
             'source_intelligence': self.source_intelligence,
             'evidence_chain': self.evidence_chain
         }
-    
+
     @classmethod
     def from_dict(cls, data):
         """从字典创建实例"""
         return cls(
-            exposure_analysis=data.get('exposure_analysis', {}),
-            source_intelligence=data.get('source_intelligence', {}),
+            exposure_analysis=data.get('exposure_analysis', {
+                'ranking_list': [],
+                'brand_details': {},
+                'unlisted_competitors': []
+            }),
+            source_intelligence=data.get('source_intelligence', {
+                'source_pool': [],
+                'citation_rank': []
+            }),
             evidence_chain=data.get('evidence_chain', [])
         )
 
@@ -119,6 +155,26 @@ def init_task_status_db():
         )
     ''')
     db_logger.debug("Deep intelligence results table created or verified")
+
+    # 创建品牌测试结果表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS brand_test_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT UNIQUE NOT NULL,
+            brand_name TEXT NOT NULL,
+            ai_models_used TEXT, -- JSON string
+            questions_used TEXT, -- JSON string
+            overall_score REAL,
+            total_tests INTEGER,
+            results_summary TEXT, -- JSON string
+            detailed_results TEXT, -- JSON string
+            deep_intelligence_result TEXT, -- JSON string
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (task_id) REFERENCES task_statuses (task_id)
+        )
+    ''')
+    db_logger.debug("Brand test results table created or verified")
 
     conn.commit()
     conn.close()
@@ -278,25 +334,25 @@ def update_task_stage(task_id, stage, progress=None, status_text=None):
     """更新任务阶段"""
     if not sql_protector.validate_input(task_id):
         raise ValueError("Invalid task_id")
-    
+
     db_logger.info(f"Updating task {task_id} to stage: {stage.value}")
-    
+
     # 获取当前任务状态
     current_status = get_task_status(task_id)
-    
+
     if not current_status:
         # 如果任务不存在，创建新的任务状态
         current_status = TaskStatus(task_id=task_id, stage=stage)
-    
+
     # 更新状态属性
     current_status.stage = stage
-    
+
     if progress is not None:
         current_status.progress = progress
-        
+
     if status_text is not None:
         current_status.status_text = status_text
-    
+
     # 如果阶段是完成状态，则标记为完成
     if stage == TaskStage.COMPLETED:
         current_status.is_completed = True
@@ -304,8 +360,115 @@ def update_task_stage(task_id, stage, progress=None, status_text=None):
             current_status.progress = 100
         if status_text is None:
             current_status.status_text = "任务已完成"
-    
+
     # 保存更新后的状态
     save_task_status(current_status)
-    
+
     db_logger.info(f"Task {task_id} updated to stage: {stage.value}, progress: {current_status.progress}%")
+
+
+def save_brand_test_result(brand_test_result):
+    """保存品牌测试结果"""
+    if not sql_protector.validate_input(brand_test_result.task_id):
+        raise ValueError("Invalid task_id")
+
+    db_logger.info(f"Saving brand test result for task: {brand_test_result.task_id}")
+
+    safe_query = SafeDatabaseQuery(DB_PATH)
+
+    # 转换数据为JSON字符串
+    ai_models_json = json.dumps(brand_test_result.ai_models_used)
+    questions_json = json.dumps(brand_test_result.questions_used)
+    results_summary_json = json.dumps(brand_test_result.results_summary)
+    detailed_results_json = json.dumps(brand_test_result.detailed_results)
+    deep_intelligence_result_json = json.dumps(brand_test_result.deep_intelligence_result.to_dict())
+
+    # 检查记录是否存在
+    existing_record = safe_query.execute_query('SELECT task_id FROM brand_test_results WHERE task_id = ?', (brand_test_result.task_id,))
+
+    if existing_record:
+        # 更新现有记录
+        safe_query.execute_query('''
+            UPDATE brand_test_results
+            SET brand_name = ?, ai_models_used = ?, questions_used = ?, overall_score = ?,
+                total_tests = ?, results_summary = ?, detailed_results = ?,
+                deep_intelligence_result = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE task_id = ?
+        ''', (
+            brand_test_result.brand_name,
+            ai_models_json,
+            questions_json,
+            brand_test_result.overall_score,
+            brand_test_result.total_tests,
+            results_summary_json,
+            detailed_results_json,
+            deep_intelligence_result_json,
+            brand_test_result.task_id
+        ))
+    else:
+        # 插入新记录
+        safe_query.execute_query('''
+            INSERT INTO brand_test_results
+            (task_id, brand_name, ai_models_used, questions_used, overall_score,
+             total_tests, results_summary, detailed_results, deep_intelligence_result)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            brand_test_result.task_id,
+            brand_test_result.brand_name,
+            ai_models_json,
+            questions_json,
+            brand_test_result.overall_score,
+            brand_test_result.total_tests,
+            results_summary_json,
+            detailed_results_json,
+            deep_intelligence_result_json
+        ))
+
+    db_logger.info(f"Brand test result saved successfully for task: {brand_test_result.task_id}")
+
+
+def get_brand_test_result(task_id):
+    """获取品牌测试结果"""
+    if not sql_protector.validate_input(task_id):
+        raise ValueError("Invalid task_id")
+
+    db_logger.info(f"Retrieving brand test result for task: {task_id}")
+
+    safe_query = SafeDatabaseQuery(DB_PATH)
+
+    rows = safe_query.execute_query('''
+        SELECT task_id, brand_name, ai_models_used, questions_used, overall_score,
+               total_tests, results_summary, detailed_results, deep_intelligence_result, created_at
+        FROM brand_test_results
+        WHERE task_id = ?
+    ''', (task_id,))
+
+    if rows:
+        row = rows[0]
+        # 解析JSON数据
+        ai_models_used = json.loads(row[2]) if row[2] else []
+        questions_used = json.loads(row[3]) if row[3] else []
+        results_summary = json.loads(row[6]) if row[6] else {}
+        detailed_results = json.loads(row[7]) if row[7] else []
+        deep_intelligence_result_data = json.loads(row[8]) if row[8] else {}
+
+        # 创建DeepIntelligenceResult对象
+        deep_intelligence_result = DeepIntelligenceResult.from_dict(deep_intelligence_result_data)
+
+        brand_test_result = BrandTestResult(
+            task_id=row[0],
+            brand_name=row[1],
+            ai_models_used=ai_models_used,
+            questions_used=questions_used,
+            overall_score=row[4],
+            total_tests=row[5],
+            results_summary=results_summary,
+            detailed_results=detailed_results,
+            deep_intelligence_result=deep_intelligence_result
+        )
+
+        db_logger.info(f"Successfully retrieved brand test result for task: {task_id}")
+        return brand_test_result
+    else:
+        db_logger.warning(f"No brand test result found for task: {task_id}")
+        return None

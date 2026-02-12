@@ -874,7 +874,7 @@ def submit_brand_test():
                         break  # 找到一个就够了，避免重复
 
             # 构建深度情报结果
-            deep_intelligence_result = {
+            deep_intelligence_result_data = {
                 'exposure_analysis': {
                     'ranking_list': ranking_list,
                     'brand_details': brand_details,
@@ -887,14 +887,31 @@ def submit_brand_test():
                 'evidence_chain': evidence_chain
             }
 
-            # 保存深度情报结果
-            from .models import DeepIntelligenceResult
+            # 创建DeepIntelligenceResult对象
+            from .models import DeepIntelligenceResult, BrandTestResult, save_brand_test_result
             deep_result_obj = DeepIntelligenceResult(
-                exposure_analysis=deep_intelligence_result['exposure_analysis'],
-                source_intelligence=deep_intelligence_result['source_intelligence'],
-                evidence_chain=deep_intelligence_result['evidence_chain']
+                exposure_analysis=deep_intelligence_result_data['exposure_analysis'],
+                source_intelligence=deep_intelligence_result_data['source_intelligence'],
+                evidence_chain=deep_intelligence_result_data['evidence_chain']
             )
+
+            # 保存深度情报结果
             save_deep_intelligence_result(task_id, deep_result_obj)
+
+            # 创建并保存品牌测试结果
+            brand_test_result = BrandTestResult(
+                task_id=task_id,
+                brand_name=brand_list[0],
+                ai_models_used=selected_models,
+                questions_used=raw_questions,
+                overall_score=processed_results.get('main_brand', {}).get('overallScore', 0),
+                total_tests=len(all_test_cases),
+                results_summary=processed_results.get('summary', {}),
+                detailed_results=processed_results.get('detailed_results', []),
+                deep_intelligence_result=deep_result_obj
+            )
+
+            save_brand_test_result(brand_test_result)
 
             # 最终更新为完成状态
             update_task_stage(task_id, TaskStage.COMPLETED, 100, "任务已完成")
@@ -926,8 +943,18 @@ def get_task_status(task_id):
     if not task_status:
         return jsonify({'error': 'Task not found'}), 404
 
+    # 按照API契约返回任务状态信息
+    response_data = {
+        'task_id': task_status.task_id,
+        'progress': task_status.progress,
+        'stage': task_status.stage.value,
+        'status_text': task_status.status_text,
+        'is_completed': task_status.is_completed,
+        'created_at': task_status.created_at
+    }
+
     # 返回任务状态信息
-    return jsonify(task_status.to_dict()), 200
+    return jsonify(response_data), 200
 
 
 @wechat_bp.route('/test/result/<task_id>', methods=['GET'])
