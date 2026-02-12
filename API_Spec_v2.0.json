@@ -1,0 +1,217 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "进化湾GEO品牌AI雷达 API",
+    "description": "v2.0 国际顶级架构师重构版。专注于生成式引擎优化(GEO)的深度归因分析，支持异步任务流、多维排位分析及证据链穿透。",
+    "version": "2.0.0",
+    "contact": {
+      "name": "进化湾技术团队",
+      "url": "https://evobay-geo.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api/v2",
+      "description": "API v2 基础路径"
+    }
+  ],
+  "paths": {
+    "/test/submit": {
+      "post": {
+        "tags": ["核心诊断"],
+        "summary": "提交品牌AI诊断任务",
+        "description": "接收品牌及模型配置，启动异步分析任务。系统将进入 AI数据调取 -> 物理排位解析 -> 信源穿透 的流水线。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["brand_list", "selectedModels"],
+                "properties": {
+                  "brand_list": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "监控品牌列表。第一个元素默认为主品牌。",
+                    "example": ["德施曼", "小米", "凯迪仕"]
+                  },
+                  "selectedModels": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "启用的AI模型ID。",
+                    "example": ["doubao", "deepseek_v3", "gemini_pro"]
+                  },
+                  "customQuestions": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "自定义测试问题集合。",
+                    "example": ["高端智能锁哪个品牌好？", "德施曼的指纹锁安全性如何？"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "任务已接收并加入队列",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "task_id": { "type": "string", "format": "uuid" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/status/{task_id}": {
+      "get": {
+        "tags": ["核心诊断"],
+        "summary": "轮询任务进度与分阶段状态",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回当前任务状态机信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "task_id": { "type": "string" },
+                    "progress": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100,
+                      "description": "总体完成百分比"
+                    },
+                    "stage": {
+                      "type": "string",
+                      "enum": ["init", "ai_fetching", "ranking_analysis", "source_tracing", "completed"],
+                      "description": "当前执行阶段：初始化、数据调取、排位分析、信源溯源、已完成"
+                    },
+                    "status_text": { "type": "string", "description": "当前阶段的可读描述" },
+                    "is_completed": { "type": "boolean" },
+                    "created_at": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/result/{task_id}": {
+      "get": {
+        "tags": ["核心诊断"],
+        "summary": "获取诊断任务的完整情报深度结果",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "深度情报分析结果",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeepIntelligenceResult" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DeepIntelligenceResult": {
+        "type": "object",
+        "required": ["exposure_analysis", "source_intelligence"],
+        "properties": {
+          "exposure_analysis": {
+            "type": "object",
+            "description": "露出与排位分析：解决‘谁排第一，谁被拦截’的问题",
+            "properties": {
+              "ranking_list": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "AI回复中品牌的绝对物理出现顺序列表"
+              },
+              "brand_details": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "rank": { "type": "integer", "description": "物理排名次序" },
+                    "word_count": { "type": "integer", "description": "AI对该品牌的描述文字长度" },
+                    "sov_share": { "type": "number", "format": "float", "description": "篇幅占声量比(0.0-1.0)" },
+                    "sentiment_score": { "type": "number", "description": "情感极性得分(0-100)" }
+                  }
+                },
+                "description": "各品牌的露出详情统计"
+              },
+              "unlisted_competitors": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "AI自动提及但未在监控列表中的竞品品牌"
+              }
+            }
+          },
+          "source_intelligence": {
+            "type": "object",
+            "description": "深度信源归因：解决‘AI听谁说的’问题",
+            "properties": {
+              "source_pool": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "url": { "type": "string" },
+                    "site_name": { "type": "string", "example": "知乎" },
+                    "citation_count": { "type": "integer", "description": "被引用总频次" },
+                    "domain_authority": { "type": "string", "description": "信源权威度评价" }
+                  }
+                }
+              },
+              "citation_rank": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "按引用频次降序排列的信源ID列表"
+              }
+            }
+          },
+          "evidence_chain": {
+            "type": "array",
+            "description": "证据链穿透：定点追溯风险内容源头",
+            "items": {
+              "type": "object",
+              "properties": {
+                "negative_fragment": { "type": "string", "description": "识别出的负面或偏差语料片段" },
+                "associated_url": { "type": "string", "description": "该评价对应的原始网页链接" },
+                "source_name": { "type": "string", "description": "信源平台名称" },
+                "risk_level": { "type": "string", "enum": ["Low", "Medium", "High"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

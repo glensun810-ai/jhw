@@ -77,6 +77,36 @@ def init_db():
     ''')
     db_logger.debug("User preferences table created or verified")
 
+    # Create task statuses table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS task_statuses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT UNIQUE NOT NULL,
+            progress INTEGER DEFAULT 0,
+            stage TEXT NOT NULL,
+            status_text TEXT,
+            is_completed BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    db_logger.debug("Task statuses table created or verified")
+
+    # Create deep intelligence results table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS deep_intelligence_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT UNIQUE NOT NULL,
+            exposure_analysis TEXT, -- JSON string
+            source_intelligence TEXT, -- JSON string
+            evidence_chain TEXT, -- JSON string
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (task_id) REFERENCES task_statuses (task_id)
+        )
+    ''')
+    db_logger.debug("Deep intelligence results table created or verified")
+
     conn.commit()
     conn.close()
     db_logger.info("Database initialization completed")

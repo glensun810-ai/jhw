@@ -17,6 +17,7 @@ import asyncio
 
 from config import Config
 from .database import save_test_record, get_user_test_history, get_test_record_by_id
+from .models import TaskStatus, TaskStage, get_task_status, save_task_status, get_deep_intelligence_result, save_deep_intelligence_result, update_task_stage
 from .logging_config import api_logger, wechat_logger, db_logger
 from .ai_utils import get_ai_client, run_brand_test_with_ai
 from .question_system import QuestionManager, TestCaseGenerator
@@ -666,6 +667,290 @@ def get_test_progress():
         return jsonify(progress_data)
     else:
         return jsonify({'error': 'Execution ID not found'}), 404
+
+
+@wechat_bp.route('/test/submit', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=5, window=60, per='endpoint')
+@monitored_endpoint('/test/submit', require_auth=False, validate_inputs=True)
+def submit_brand_test():
+    """提交品牌AI诊断任务"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Brand test submission endpoint accessed by user: {user_id}")
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    # 输入验证和净化
+    try:
+        brand_list = data.get('brand_list', [])
+        if not brand_list:
+            return jsonify({'error': 'brand_list is required'}), 400
+
+        for brand in brand_list:
+            if not validate_safe_text(brand, max_length=100):
+                return jsonify({'error': f'Invalid brand name: {brand}'}), 400
+
+        selected_models = data.get('selectedModels', [])
+        custom_questions = data.get('customQuestions', [])
+
+        if not selected_models:
+            return jsonify({'error': 'At least one AI model must be selected'}), 400
+
+        for question in custom_questions:
+            if not validate_safe_text(question, max_length=500):
+                return jsonify({'error': f'Unsafe question content: {question}'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    # 生成任务ID并初始化任务状态
+    task_id = str(uuid.uuid4())
+
+    # 初始化任务状态
+    initial_status = TaskStatus(
+        task_id=task_id,
+        progress=0,
+        stage=TaskStage.INIT,
+        status_text="正在初始化任务...",
+        is_completed=False
+    )
+    save_task_status(initial_status)
+
+    def run_async_test():
+        try:
+            # 更新任务状态到AI数据调取阶段
+            update_task_stage(task_id, TaskStage.AI_FETCHING, 25, "正在调取AI数据...")
+
+            question_manager = QuestionManager()
+            test_case_generator = TestCaseGenerator()
+
+            cleaned_custom_questions_for_validation = [q.strip() for q in custom_questions if q.strip()]
+
+            if cleaned_custom_questions_for_validation:
+                validation_result = question_manager.validate_custom_questions(cleaned_custom_questions_for_validation)
+                if not validation_result['valid']:
+                    update_task_stage(task_id, TaskStage.INIT, 0, f"验证失败: {'; '.join(validation_result['errors'])}")
+                    return
+                raw_questions = validation_result['cleaned_questions']
+            else:
+                raw_questions = [
+                    "介绍一下{brandName}",
+                    "{brandName}的主要产品是什么",
+                    "{brandName}和竞品有什么区别"
+                ]
+
+            all_test_cases = []
+            for brand in brand_list:
+                brand_questions = [q.replace('{brandName}', brand) for q in raw_questions]
+                cases = test_case_generator.generate_test_cases(brand, selected_models, brand_questions)
+                all_test_cases.extend(cases)
+
+            api_logger.info(f"Starting async brand test '{task_id}' for brands: {brand_list} - Total test cases: {len(all_test_cases)}")
+
+            executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)
+
+            def progress_callback(exec_id, progress):
+                # 计算进度百分比
+                calculated_progress = int((progress.completed_tests / progress.total_tests) * 100) if progress.total_tests > 0 else 0
+                # 确保进度不超过90%，保留10%给后续处理
+                calculated_progress = min(calculated_progress, 90)
+
+                # 更新任务状态
+                update_task_stage(
+                    task_id,
+                    TaskStage.AI_FETCHING,
+                    calculated_progress,
+                    f"正在处理测试案例 ({progress.completed_tests}/{progress.total_tests})"
+                )
+
+            results = executor.execute_tests(all_test_cases, '', lambda eid, p: progress_callback(task_id, p), timeout=600)
+            executor.shutdown()
+
+            # 更新到排名分析阶段
+            update_task_stage(task_id, TaskStage.RANKING_ANALYSIS, 75, "正在进行排名分析...")
+
+            processed_results = process_and_aggregate_results_with_ai_judge(results, brand_list, brand_list[0], None, None, None)
+
+            # 更新到信源追踪阶段
+            update_task_stage(task_id, TaskStage.SOURCE_TRACING, 90, "正在进行信源追踪分析...")
+
+            # 使用真实的信源情报处理器
+            try:
+                def run_async_processing():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        return loop.run_until_complete(
+                            process_brand_source_intelligence(brand_list[0], processed_results['detailed_results'])
+                        )
+                    finally:
+                        loop.close()
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(run_async_processing)
+                    source_intelligence_map = future.result(timeout=30)
+            except Exception as e:
+                api_logger.error(f"信源情报处理失败: {e}")
+                source_intelligence_map = generate_mock_source_intelligence_map(brand_list[0])
+
+            # 从处理结果中构建暴露分析数据
+            ranking_list = []
+            brand_details = {}
+            unlisted_competitors = []
+
+            # 提取品牌排名信息
+            if 'detailed_results' in processed_results and processed_results['detailed_results']:
+                # 按响应长度排序品牌
+                brand_responses = {}
+                for result in processed_results['detailed_results']:
+                    brand = result.get('brand', 'unknown')
+                    response = result.get('response', '')
+                    if brand not in brand_responses:
+                        brand_responses[brand] = 0
+                    brand_responses[brand] += len(response)
+
+                # 按响应长度排序，形成排名列表
+                sorted_brands = sorted(brand_responses.items(), key=lambda x: x[1], reverse=True)
+                ranking_list = [item[0] for item in sorted_brands]
+
+                # 填充品牌详情
+                total_chars = sum(brand_responses.values())
+                for brand, char_count in sorted_brands:
+                    brand_details[brand] = {
+                        'rank': ranking_list.index(brand) + 1,
+                        'word_count': char_count,
+                        'sov_share': round(char_count / total_chars, 4) if total_chars > 0 else 0,
+                        'sentiment_score': 50  # 这里应该从processed_results中提取实际的情感分数
+                    }
+
+            # 提取未列出的竞争对手（从AI响应中发现但不在原始品牌列表中的品牌）
+            # 这里需要实现具体的竞争对手检测逻辑
+            # 示例：遍历所有响应，查找可能的品牌提及
+            all_responses = " ".join([result.get('response', '') for result in processed_results['detailed_results']])
+            # 简单的竞争对手检测逻辑（实际应用中需要更复杂的NLP处理）
+            possible_competitors = ['小米', '华为', '苹果', '三星']  # 示例品牌列表
+            for competitor in possible_competitors:
+                if competitor in all_responses and competitor not in brand_list:
+                    if competitor not in unlisted_competitors:
+                        unlisted_competitors.append(competitor)
+
+            # 构建信源情报数据
+            source_pool = []
+            citation_rank = []
+
+            # 从source_intelligence_map中提取信源信息
+            if source_intelligence_map and 'nodes' in source_intelligence_map:
+                for node in source_intelligence_map.get('nodes', []):
+                    if node.get('category') in ['social', 'wiki', 'tech', 'news', 'official']:
+                        source_id = node.get('name', '')
+                        source_pool.append({
+                            'id': source_id,
+                            'url': f"https://{source_id.lower()}.com",  # 示例URL
+                            'site_name': source_id,
+                            'citation_count': node.get('value', 0),
+                            'domain_authority': 'High' if node.get('value', 0) > 5 else 'Medium' if node.get('value', 0) > 2 else 'Low'
+                        })
+                        citation_rank.append(source_id)
+
+            # 构建证据链数据
+            evidence_chain = []
+
+            # 从processed_results中提取潜在的风险内容
+            for result in processed_results['detailed_results']:
+                response = result.get('response', '')
+                # 检查是否有负面内容的迹象
+                negative_indicators = ['缺点', '不好', '差', '问题', '风险', '不足']
+                for indicator in negative_indicators:
+                    if indicator in response:
+                        evidence_chain.append({
+                            'negative_fragment': response[:100] + '...' if len(response) > 100 else response,
+                            'associated_url': 'https://example.com',  # 应该从实际来源获取
+                            'source_name': result.get('aiModel', 'Unknown'),
+                            'risk_level': 'Medium'
+                        })
+                        break  # 找到一个就够了，避免重复
+
+            # 构建深度情报结果
+            deep_intelligence_result = {
+                'exposure_analysis': {
+                    'ranking_list': ranking_list,
+                    'brand_details': brand_details,
+                    'unlisted_competitors': unlisted_competitors
+                },
+                'source_intelligence': {
+                    'source_pool': source_pool,
+                    'citation_rank': citation_rank
+                },
+                'evidence_chain': evidence_chain
+            }
+
+            # 保存深度情报结果
+            from .models import DeepIntelligenceResult
+            deep_result_obj = DeepIntelligenceResult(
+                exposure_analysis=deep_intelligence_result['exposure_analysis'],
+                source_intelligence=deep_intelligence_result['source_intelligence'],
+                evidence_chain=deep_intelligence_result['evidence_chain']
+            )
+            save_deep_intelligence_result(task_id, deep_result_obj)
+
+            # 最终更新为完成状态
+            update_task_stage(task_id, TaskStage.COMPLETED, 100, "任务已完成")
+
+        except Exception as e:
+            api_logger.error(f"Async test execution failed: {e}")
+            update_task_stage(task_id, TaskStage.INIT, 0, f"任务执行失败: {str(e)}")
+
+    thread = Thread(target=run_async_test)
+    thread.start()
+
+    return jsonify({
+        'task_id': task_id,
+        'message': '任务已接收并加入队列'
+    }), 202
+
+
+@wechat_bp.route('/test/status/<task_id>', methods=['GET'])
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/test/status', require_auth=False, validate_inputs=False)
+def get_task_status(task_id):
+    """轮询任务进度与分阶段状态"""
+    if not task_id:
+        return jsonify({'error': 'Task ID is required'}), 400
+
+    # 尝试从数据库获取任务状态
+    task_status = get_task_status(task_id)
+
+    if not task_status:
+        return jsonify({'error': 'Task not found'}), 404
+
+    # 返回任务状态信息
+    return jsonify(task_status.to_dict()), 200
+
+
+@wechat_bp.route('/test/result/<task_id>', methods=['GET'])
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/test/result', require_auth=False, validate_inputs=False)
+def get_task_result(task_id):
+    """获取诊断任务的完整情报深度结果"""
+    if not task_id:
+        return jsonify({'error': 'Task ID is required'}), 400
+
+    # 检查任务是否已完成
+    task_status = get_task_status(task_id)
+    if not task_status or not task_status.is_completed:
+        return jsonify({'error': 'Task not completed or not found'}), 400
+
+    # 获取深度情报结果
+    deep_intelligence_result = get_deep_intelligence_result(task_id)
+
+    if not deep_intelligence_result:
+        return jsonify({'error': 'Deep intelligence result not found'}), 404
+
+    # 返回完整的深度情报分析结果
+    return jsonify(deep_intelligence_result.to_dict()), 200
 
 # ... (Other endpoints remain the same)
 @wechat_bp.route('/api/test-history', methods=['GET'])

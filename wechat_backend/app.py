@@ -24,6 +24,10 @@ from .logging_config import app_logger
 from .database import init_db
 init_db()
 
+# Initialize task status database
+from .models import init_task_status_db
+init_task_status_db()
+
 # Security imports
 from .security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer
 from .security.rate_limiting import rate_limit, CombinedRateLimiter

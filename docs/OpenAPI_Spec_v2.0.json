@@ -1,0 +1,179 @@
+"""OpenAPI_Spec_v2.0.json 核心规划说明
+异步任务演进：将 /api/perform-brand-test 升级为任务提交模式，配合 /api/v2/test/status 实现分模块进度回传（如：抓取中、排位分析中、信源溯源中）。
+
+情报数据深度解耦：在测试结果中引入了 exposure_analysis（露出排位）、source_intelligence（信源聚合）和 evidence_chain（证据链锚点）三个核心对象。
+
+巡航与预警能力：新增了 /api/v2/cruise 接口族，支持设置自动化监测任务。
+"""
+
+
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "进化湾GEO品牌AI雷达 API",
+    "description": "国际顶级架构师重构版：支持多维排位分析、深度信源归因及自动化巡航监测。",
+    "version": "2.0.0"
+  },
+  "servers": [
+    { "url": "https://api.evobay-geo.com/api/v2" }
+  ],
+  "paths": {
+    "/login": {
+      "post": {
+        "summary": "微信登录及鉴权",
+        "tags": ["Auth"],
+        "responses": {
+          "200": { "description": "返回JWT Token及用户信息" }
+        }
+      }
+    },
+    "/test/submit": {
+      "post": {
+        "summary": "提交品牌AI诊断任务 (异步)",
+        "tags": ["Diagnostic"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brand_list": { "type": "array", "items": { "type": "string" } },
+                  "selectedModels": { "type": "array", "items": { "type": "object" } },
+                  "customQuestions": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "任务已接收，返回task_id" }
+        }
+      }
+    },
+    "/test/status/{task_id}": {
+      "get": {
+        "summary": "轮询诊断任务进度及各模块状态",
+        "tags": ["Diagnostic"],
+        "parameters": [
+          { "name": "task_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "progress": { "type": "integer" },
+                    "current_stage": { "type": "string", "example": "source_tracing" },
+                    "is_completed": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/result/{task_id}": {
+      "get": {
+        "summary": "获取深度穿透情报结果 (核心契约)",
+        "tags": ["Diagnostic"],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeepIntelligenceResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source/detail/{source_id}": {
+      "get": {
+        "summary": "信源深度画像及历史引用溯源",
+        "tags": ["Intelligence"],
+        "responses": {
+          "200": { "description": "返回该信源的权重、关联品牌及历史表现" }
+        }
+      }
+    },
+    "/cruise/config": {
+      "post": {
+        "summary": "配置自动化巡航监测任务",
+        "tags": ["Cruise"],
+        "responses": {
+          "200": { "description": "巡航配置成功" }
+        }
+      }
+    },
+    "/cruise/trends": {
+      "get": {
+        "summary": "获取品牌排名与SOV随时间变化的趋势数据",
+        "tags": ["Cruise"],
+        "responses": {
+          "200": { "description": "返回历史趋势图表数据" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DeepIntelligenceResult": {
+        "type": "object",
+        "properties": {
+          "exposure_analysis": {
+            "type": "object",
+            "properties": {
+              "ranking_list": { "type": "array", "items": { "type": "string" }, "description": "AI回复中品牌的绝对物理位次" },
+              "sov_share": { "type": "object", "additionalProperties": { "type": "number" }, "description": "品牌篇幅占比 (Share of Voice)" },
+              "unlisted_competitors": { "type": "array", "items": { "type": "string" }, "description": "AI自动提及但在监控列表外的对手" }
+            }
+          },
+          "source_intelligence": {
+            "type": "object",
+            "properties": {
+              "source_pool": { "type": "array", "items": { "$ref": "#/components/schemas/SourceNode" } },
+              "citation_rank": { "type": "array", "items": { "type": "string" }, "description": "高频核心参考源ID排序" }
+            }
+          },
+          "evidence_chain": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "negative_text": { "type": "string", "description": "负面语料片段" },
+                "source_url": { "type": "string", "description": "穿透后的原始信源链接" }
+              }
+            }
+          }
+        }
+      },
+      "SourceNode": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "url": { "type": "string" },
+          "site_name": { "type": "string" },
+          "citation_count": { "type": "integer" },
+          "sentiment_impact": { "type": "number", "description": "该信源对品牌的平均好感度贡献" }
+        }
+      }
+    }
+  }
+}
+
+
+        """
+🚀 后续开发计划建议
+接口先行：将此 JSON 文件喂给 AI Coding 工具（如 Cursor），作为其生成的“根协议”。
+
+分批实现：
+
+第一步：重构 test/submit 与 test/status 逻辑，实现异步任务状态机。
+
+第二步：开发 DeepIntelligenceResult 中的 exposure_analysis 算法逻辑。
+
+第三步：前端基于 source_intelligence 渲染真实的信源拓扑图，取代目前的模拟数据。
+"""
