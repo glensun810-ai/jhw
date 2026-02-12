@@ -26,13 +26,12 @@ class DoubaoAdapter(AIClient):
         super().__init__(AIPlatformType.DOUBAO, model_name, api_key)
 
         # 使用统一请求封装器 - 使用正确的Doubao API base URL
-        # 根据公开文档，豆包API的正确格式应该是这样的
         self.request_wrapper = get_ai_request_wrapper(
             platform_name="doubao",
-            base_url=base_url or "https://ark.cn-beijing.volces.com",  # 正确的基础URL
+            base_url=base_url or "https://ark.cn-beijing.volces.com/api/v3",  # Correct Doubao API base URL
             api_key=api_key,
             timeout=30,
-            max_retries=1  # 减少重试次数，因为404错误重试不会解决问题
+            max_retries=3
         )
 
         api_logger.info(f"DoubaoAdapter initialized for model: {model_name} with unified request wrapper")
@@ -60,9 +59,9 @@ class DoubaoAdapter(AIClient):
 
         start_time = time.time()
         try:
-            # 使用统一请求封装器发送请求 - 修正端点为正确的API路径
+            # 使用统一请求封装器发送请求
             response = self.request_wrapper.make_ai_request(
-                endpoint="/api/v3/chat/completions",  # 修正API端点路径
+                endpoint="/chat/completions",  # Standard endpoint
                 prompt=prompt,
                 model=self.model_name,
                 json=payload,
@@ -129,17 +128,11 @@ class DoubaoAdapter(AIClient):
                 status_code = e.response.status_code
                 if status_code == 401:
                     error_type = AIErrorType.INVALID_API_KEY
-                elif status_code == 404:
-                    # 404错误通常表示API端点不存在或API密钥错误
-                    error_type = AIErrorType.INVALID_API_KEY
-                    error_message = f"Doubao API endpoint not found (404). Check API endpoint and credentials: {e.response.text}"
-                    api_logger.error(f"Doubao 404 Error - This usually indicates an incorrect API key or endpoint: {e.response.text}")
                 elif status_code == 429:
                     error_type = AIErrorType.RATE_LIMIT_EXCEEDED
                 elif status_code >= 500:
                     error_type = AIErrorType.SERVER_ERROR
-                else:
-                    error_message = f"Doubao API HTTP {status_code}: {e.response.text}"
+                error_message = f"Doubao API HTTP {status_code}: {e.response.text}"
 
             record_error("doubao", error_type.value, str(e))
             return AIResponse(
@@ -181,7 +174,7 @@ class DoubaoAdapter(AIClient):
     def _map_error_message(self, error_message: str) -> AIErrorType:
         """将Doubao的错误信息映射到标准错误类型"""
         error_message_lower = error_message.lower()
-        if "invalid api" in error_message_lower or "authentication" in error_message_lower or "unauthorized" in error_message_lower or "api key" in error_message_lower:
+        if "invalid api" in error_message_lower or "authentication" in error_message_lower or "unauthorized" in error_message_lower:
             return AIErrorType.INVALID_API_KEY
         if "quota" in error_message_lower or "credit" in error_message_lower or "exceeded" in error_message_lower:
             return AIErrorType.INSUFFICIENT_QUOTA
@@ -191,6 +184,4 @@ class DoubaoAdapter(AIClient):
             return AIErrorType.CONTENT_SAFETY
         if "rate limit" in error_message_lower or "too many requests" in error_message_lower:
             return AIErrorType.RATE_LIMIT_EXCEEDED
-        if "not found" in error_message_lower or "404" in error_message_lower:
-            return AIErrorType.INVALID_API_KEY  # 404通常意味着API密钥或端点错误
         return AIErrorType.UNKNOWN_ERROR
