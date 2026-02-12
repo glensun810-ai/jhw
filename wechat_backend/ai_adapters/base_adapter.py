@@ -27,6 +27,7 @@ class AIErrorType(Enum):
     CONTENT_SAFETY = "内容安全审查不通过"
     RATE_LIMIT_EXCEEDED = "请求频率超限"
     SERVER_ERROR = "平台服务器错误"
+    SERVICE_UNAVAILABLE = "服务不可用（熔断中）"
     UNKNOWN_ERROR = "未知错误"
 
 @dataclass

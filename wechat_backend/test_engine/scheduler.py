@@ -3,6 +3,7 @@ Test Scheduler with execution strategies
 Handles scheduling of tests with different execution approaches
 """
 import os
+import queue
 from enum import Enum
 from typing import List, Dict, Any, Callable
 from dataclasses import dataclass
@@ -38,13 +39,14 @@ class TestTask:
 
 class TestScheduler:
     """Manages scheduling and execution of test tasks"""
-    
-    def __init__(self, max_workers: int = 10, strategy: ExecutionStrategy = ExecutionStrategy.CONCURRENT):
+
+    def __init__(self, max_workers: int = 3, strategy: ExecutionStrategy = ExecutionStrategy.CONCURRENT):
         self.max_workers = max_workers
         self.strategy = strategy
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.platform_config_manager = PlatformConfigManager()
-        api_logger.info(f"Initialized TestScheduler with strategy {strategy.value}, max_workers {max_workers}")
+        self.task_queue = queue.Queue()  # Add task queue for controlled execution
+        api_logger.warning(f"TestScheduler initialized with strategy {strategy.value}, max_workers {max_workers} - REDUCED CONCURRENCY TO PREVENT TIMEOUT")
     
     def schedule_tests(
         self, 
@@ -86,24 +88,114 @@ class TestScheduler:
         return results
     
     def _execute_concurrent(
-        self, 
-        test_tasks: List[TestTask], 
+        self,
+        test_tasks: List[TestTask],
         callback: Callable[[TestTask, Dict[str, Any]], None] = None
     ) -> List[Dict[str, Any]]:
         results = []
-        future_to_task = {self.executor.submit(self._execute_single_task, task): task for task in test_tasks}
-        
-        for future in as_completed(future_to_task):
-            task = future_to_task[future]
-            try:
-                result = future.result()
-                results.append(result)
-                if callback:
-                    callback(task, result)
-            except Exception as e:
-                api_logger.error(f"Error executing task {task.id}: {str(e)}")
-                results.append({'task_id': task.id, 'success': False, 'error': str(e), 'result': None})
+
+        # Add tasks to queue for controlled execution
+        for task in test_tasks:
+            self.task_queue.put(task)
+
+        api_logger.info(f"Queued {len(test_tasks)} test cases for execution with max_workers={self.max_workers}")
+
+        # Submit tasks to executor with controlled concurrency
+        futures = []
+        for i in range(min(len(test_tasks), self.max_workers)):  # Only submit up to max_workers initially
+            if not self.task_queue.empty():
+                task = self.task_queue.get()
+                future = self.executor.submit(self._execute_single_task_with_queue, task)
+                futures.append((future, task))
+
+        # Process completed tasks and submit new ones as they finish
+        while futures:
+            # Wait for at least one task to complete
+            completed_futures = []
+            for future, task in futures:
+                if future.done():
+                    completed_futures.append((future, task))
+
+            # Process completed tasks
+            for future, task in completed_futures:
+                futures.remove((future, task))
+                try:
+                    result = future.result()
+                    results.append(result)
+                    if callback:
+                        callback(task, result)
+                except Exception as e:
+                    api_logger.error(f"Error executing task {task.id}: {str(e)}")
+                    results.append({'task_id': task.id, 'success': False, 'error': str(e), 'result': None})
+
+            # Submit new tasks if available and we have capacity
+            while len(futures) < self.max_workers and not self.task_queue.empty():
+                task = self.task_queue.get()
+                future = self.executor.submit(self._execute_single_task_with_queue, task)
+                futures.append((future, task))
+
         return results
+
+    def _execute_single_task_with_queue(self, task: TestTask) -> Dict[str, Any]:
+        """Executes a single test task with retry mechanism using real AI clients."""
+        api_logger.debug(f"Executing task {task.id} for model {task.ai_model}")
+
+        last_error = "Max retries reached"
+
+        for attempt in range(task.max_retries):
+            try:
+                platform_name = self._map_model_to_platform(task.ai_model)
+                config = self.platform_config_manager.get_platform_config(platform_name)
+
+                if not config or not config.api_key:
+                    raise ValueError(f"API key for platform '{platform_name}' is not configured.")
+
+                # Get the actual model ID instead of using display name
+                actual_model_id = self._get_actual_model_id(task.ai_model, platform_name)
+
+                ai_client = AIAdapterFactory.create(platform_name, config.api_key, actual_model_id)
+
+                # Use synchronous send_prompt method instead of async query
+                start_time = time.time()
+                ai_response = ai_client.send_prompt(task.question)
+                latency = time.time() - start_time
+
+                # Log response time for monitoring
+                api_logger.info(f"Task {task.id} for model {task.ai_model} completed in {latency:.2f}s")
+
+                if ai_response.success:
+                    api_logger.info(f"Task {task.id} completed successfully on attempt {attempt + 1}")
+                    return {
+                        'task_id': task.id,
+                        'success': True,
+                        'result': ai_response.to_dict(),  # AIResponse has to_dict method
+                        'attempt': attempt + 1,
+                        'model': task.ai_model,
+                        'question': task.question,
+                        'brand_name': task.brand_name,
+                        'latency': latency
+                    }
+                else:
+                    last_error = ai_response.error_message
+                    api_logger.warning(f"Task {task.id} failed on attempt {attempt + 1}: {last_error}")
+
+            except Exception as e:
+                last_error = str(e)
+                api_logger.error(f"Task {task.id} failed on attempt {attempt + 1} with exception: {last_error}")
+
+            time.sleep(2 ** attempt) # Exponential backoff
+
+        api_logger.error(f"All {task.max_retries} attempts failed for task {task.id}. Last error: {last_error}")
+        return {
+            'task_id': task.id,
+            'success': False,
+            'error': last_error,
+            'attempt': task.max_retries,
+            'model': task.ai_model,
+            'question': task.question,
+            'brand_name': task.brand_name,
+            'latency': -1  # Indicates failure
+        }
     
     def _get_actual_model_id(self, display_model_name: str, platform_name: str) -> str:
         """Maps display model name to actual model ID for the platform."""

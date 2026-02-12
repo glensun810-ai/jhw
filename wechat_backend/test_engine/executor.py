@@ -14,20 +14,20 @@ from ..logging_config import api_logger
 
 class TestExecutor:
     """Main executor that coordinates test execution with progress tracking"""
-    
-    def __init__(self, max_workers: int = 10, strategy: ExecutionStrategy = ExecutionStrategy.CONCURRENT):
+
+    def __init__(self, max_workers: int = 3, strategy: ExecutionStrategy = ExecutionStrategy.CONCURRENT):
         """
         Initialize the test executor
-        
+
         Args:
-            max_workers: Maximum number of concurrent workers
+            max_workers: Maximum number of concurrent workers (reduced to 3 to prevent API timeouts)
             strategy: Execution strategy to use
         """
         self.scheduler = TestScheduler(max_workers=max_workers, strategy=strategy)
         self.progress_tracker = ProgressTracker()
         self.ai_adapter_factory = AIAdapterFactory
-        
-        api_logger.info(f"Initialized TestExecutor with strategy {strategy.value}, max_workers {max_workers}")
+
+        api_logger.warning(f"Initialized TestExecutor with strategy {strategy.value}, max_workers {max_workers} - REDUCED CONCURRENCY TO PREVENT TIMEOUT")
     
     def execute_tests(
         self,
@@ -156,36 +156,36 @@ def run_brand_cognition_test(
     ai_models: List[Dict[str, str]],
     questions: List[str],
     api_key: str = "",
-    max_workers: int = 10
+    max_workers: int = 3  # Reduced from 10 to 3 to prevent API timeouts
 ) -> Dict[str, Any]:
     """
     Convenience function to run a complete brand cognition test
-    
+
     Args:
         brand_name: Name of the brand to test
         ai_models: List of AI model configurations
         questions: List of questions to ask
         api_key: API key for AI platforms
-        max_workers: Maximum number of concurrent workers
-        
+        max_workers: Maximum number of concurrent workers (reduced to 3 to prevent API timeouts)
+
     Returns:
         Dict with test results
     """
     from ..question_system import TestCaseGenerator
-    
+
     # Generate test cases
     generator = TestCaseGenerator()
     test_cases = generator.generate_test_cases(brand_name, ai_models, questions)
-    
+
     # Create executor and run tests
     executor = TestExecutor(max_workers=max_workers)
-    
+
     def progress_callback(execution_id, progress):
         api_logger.info(f"Execution {execution_id} progress: {progress.progress_percentage:.1f}%")
-    
+
     results = executor.execute_tests(test_cases, api_key, progress_callback)
-    
+
     # Shutdown executor
     executor.shutdown()
-    
+
     return results
