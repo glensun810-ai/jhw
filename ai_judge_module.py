@@ -108,7 +108,7 @@ class AIJudgeClient:
     """
     用于调用"裁判LLM"的客户端
     """
-    def __init__(self):
+    def __init__(self, judge_platform=None, judge_model=None, api_key=None):
         # Lazy load imports to avoid circular dependencies
         global AIAdapterFactory, api_logger
         if AIAdapterFactory is None or api_logger is None:
@@ -117,11 +117,12 @@ class AIJudgeClient:
             AIAdapterFactory = AF
             api_logger = al
 
-        self.judge_platform = os.getenv("JUDGE_LLM_PLATFORM", "deepseek")
-        self.judge_model = os.getenv("JUDGE_LLM_MODEL", "deepseek-chat")
-        self.api_key = os.getenv("JUDGE_LLM_API_KEY")
+        # Use provided parameters or fall back to environment variables or defaults
+        self.judge_platform = judge_platform or os.getenv("JUDGE_LLM_PLATFORM", "deepseek")
+        self.judge_model = judge_model or os.getenv("JUDGE_LLM_MODEL", "deepseek-chat")
+        self.api_key = api_key or os.getenv("JUDGE_LLM_API_KEY")
 
-        # 如果没有配置专用的裁判API密钥，尝试使用现有的API密钥
+        # 如果没有提供API密钥，尝试从环境变量或配置管理器获取
         if not self.api_key:
             # 尝试从配置管理器获取可用的API密钥
             try:

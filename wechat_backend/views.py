@@ -166,6 +166,11 @@ def perform_brand_test():
 
         user_level = UserLevel(data.get('userLevel', 'Free'))
 
+        # 提取AI评判参数
+        judge_platform = data.get('judgePlatform')  # 前端传入的评判平台
+        judge_model = data.get('judgeModel')  # 前端传入的评判模型
+        judge_api_key = data.get('judgeApiKey')  # 前端传入的评判API密钥
+
         if not selected_models:
             return jsonify({'error': 'At least one AI model must be selected'}), 400
 
@@ -241,7 +246,7 @@ def perform_brand_test():
             results = executor.execute_tests(all_test_cases, api_key, lambda eid, p: progress_callback(execution_id, p), timeout=600)  # 10分钟超时
             executor.shutdown()
 
-            processed_results = process_and_aggregate_results_with_ai_judge(results, brand_list, main_brand)
+            processed_results = process_and_aggregate_results_with_ai_judge(results, brand_list, main_brand, judge_platform, judge_model, judge_api_key)
 
             # 使用真实的信源情报处理器
             try:
@@ -316,11 +321,23 @@ def perform_brand_test():
 
     return jsonify({'status': 'success', 'executionId': execution_id, 'message': 'Test started successfully'})
 
-def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_brand):
+def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_brand, judge_platform=None, judge_model=None, judge_api_key=None):
     """
     结果聚合引擎 (CompetitorDataAggregator)
     """
-    ai_judge = AIJudgeClient()
+    # Only create AIJudgeClient if judge parameters are provided
+    ai_judge = None
+    if judge_platform and judge_model and judge_api_key:
+        ai_judge = AIJudgeClient(judge_platform=judge_platform, judge_model=judge_model, api_key=judge_api_key)
+    else:
+        # Check if any judge parameters are provided (even partially)
+        if judge_platform or judge_model or judge_api_key:
+            # If any parameter is provided but not all, try to fill in missing ones
+            ai_judge = AIJudgeClient(judge_platform=judge_platform, judge_model=judge_model, api_key=judge_api_key)
+        else:
+            # No judge parameters provided, skip AI judging
+            api_logger.info("No judge parameters provided, skipping AI evaluation")
+
     scoring_engine = ScoringEngine()
     enhanced_scoring_engine = EnhancedScoringEngine()
     interception_analyst = InterceptionAnalyst(all_brands, main_brand)
@@ -363,48 +380,85 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
 
                 question = result.get('question', result.get('original_question', ''))
 
-                judge_result = ai_judge.evaluate_response(current_brand, question, ai_response_content)
+                # Only evaluate with AI judge if it's available
+                if ai_judge:
+                    judge_result = ai_judge.evaluate_response(current_brand, question, ai_response_content)
 
-                if judge_result:
-                    # 使用基础评分引擎计算基础分数
-                    basic_score = scoring_engine.calculate([judge_result])
+                    if judge_result:
+                        # 使用基础评分引擎计算基础分数
+                        basic_score = scoring_engine.calculate([judge_result])
 
-                    # 使用增强评分引擎计算增强分数（用于内部分析）
-                    enhanced_result = calculate_enhanced_scores([judge_result], brand_name=current_brand)
+                        # 使用增强评分引擎计算增强分数（用于内部分析）
+                        enhanced_result = calculate_enhanced_scores([judge_result], brand_name=current_brand)
 
+                        detailed_result = {
+                            'success': True,
+                            'brand': current_brand,
+                            'aiModel': result.get('model', result.get('ai_model', 'unknown')),
+                            'question': question,
+                            'response': ai_response_content,
+                            'authority_score': judge_result.accuracy_score,
+                            'visibility_score': judge_result.completeness_score,
+                            'sentiment_score': judge_result.sentiment_score,
+                            'purity_score': judge_result.purity_score,
+                            'consistency_score': judge_result.consistency_score,
+                            'score': basic_score.geo_score,  # 保持原有分数以确保兼容性
+                            'enhanced_scores': {
+                                'geo_score': enhanced_result.geo_score,
+                                'cognitive_confidence': enhanced_result.cognitive_confidence,
+                                'bias_indicators': enhanced_result.bias_indicators,
+                                'detailed_analysis': enhanced_result.detailed_analysis,
+                                'recommendations': enhanced_result.recommendations
+                            },
+                            'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
+                        }
+                        brand_results_map[current_brand].append(judge_result)
+                        platform_results_map[detailed_result['aiModel']].append(detailed_result)
+                    else:
+                        detailed_result = {
+                            'success': False,
+                            'brand': current_brand,
+                            'aiModel': result.get('model', result.get('ai_model', 'unknown')),
+                            'question': question,
+                            'response': "Evaluation Failed by AI Judge",
+                            'score': 0,
+                            'error_type': 'EvaluationFailed'
+                        }
+                else:
+                    # Skip AI evaluation, use basic result structure
                     detailed_result = {
                         'success': True,
                         'brand': current_brand,
                         'aiModel': result.get('model', result.get('ai_model', 'unknown')),
                         'question': question,
                         'response': ai_response_content,
-                        'authority_score': judge_result.accuracy_score,
-                        'visibility_score': judge_result.completeness_score,
-                        'sentiment_score': judge_result.sentiment_score,
-                        'purity_score': judge_result.purity_score,
-                        'consistency_score': judge_result.consistency_score,
-                        'score': basic_score.geo_score,  # 保持原有分数以确保兼容性
+                        'authority_score': 0,  # Default score when no AI judge
+                        'visibility_score': 0,
+                        'sentiment_score': 0,
+                        'purity_score': 0,
+                        'consistency_score': 0,
+                        'score': 0,  # Default score when no AI judge
                         'enhanced_scores': {
-                            'geo_score': enhanced_result.geo_score,
-                            'cognitive_confidence': enhanced_result.cognitive_confidence,
-                            'bias_indicators': enhanced_result.bias_indicators,
-                            'detailed_analysis': enhanced_result.detailed_analysis,
-                            'recommendations': enhanced_result.recommendations
+                            'geo_score': 0,
+                            'cognitive_confidence': 0.0,
+                            'bias_indicators': [],
+                            'detailed_analysis': {},
+                            'recommendations': []
                         },
                         'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
                     }
-                    brand_results_map[current_brand].append(judge_result)
+                    # Add a basic judge result with default scores for scoring calculations
+                    basic_judge_result = JudgeResult(
+                        accuracy_score=0,
+                        completeness_score=0,
+                        sentiment_score=50,  # Neutral sentiment
+                        purity_score=0,
+                        consistency_score=0,
+                        judgement="AI evaluation skipped",
+                        confidence_level=ConfidenceLevel.MEDIUM
+                    )
+                    brand_results_map[current_brand].append(basic_judge_result)
                     platform_results_map[detailed_result['aiModel']].append(detailed_result)
-                else:
-                    detailed_result = {
-                        'success': False,
-                        'brand': current_brand,
-                        'aiModel': result.get('model', result.get('ai_model', 'unknown')),
-                        'question': question,
-                        'response': "Evaluation Failed by AI Judge",
-                        'score': 0,
-                        'error_type': 'EvaluationFailed'
-                    }
             else:
                 # 处理失败的结果
                 detailed_result = {
