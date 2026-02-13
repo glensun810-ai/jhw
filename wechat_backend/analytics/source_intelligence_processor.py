@@ -4,6 +4,8 @@ from collections import defaultdict
 from typing import List, Dict, Any
 from snownlp import SnowNLP
 from ..logging_config import api_logger
+from .source_aggregator import SourceAggregator
+from .impact_calculator import ImpactCalculator
 
 class SourceWeightLibrary:
     """
@@ -42,6 +44,8 @@ class SourceIntelligenceProcessor:
     """
     def __init__(self):
         self.weight_library = SourceWeightLibrary()
+        self.source_aggregator = SourceAggregator()
+        self.impact_calculator = ImpactCalculator()
         # 移除spacy依赖，仅使用基础的文本处理功能
 
     def extract_sources(self, text: str, ai_response: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -96,7 +100,104 @@ class SourceIntelligenceProcessor:
         """
         处理多平台AI文本数据流，生成信源情报图JSON
         """
-        all_sources = defaultdict(lambda: {'count': 0, 'weights': [], 'sentiments': [], 'source_type': 'unknown', 'urls': []})
+        # 准备模型响应数据用于聚合
+        model_responses = []
+        for resp in ai_responses:
+            if not resp.get('success'):
+                continue
+
+            # 提取模型名称，如果不存在则使用默认值
+            model_name = resp.get('aiModel', resp.get('model', 'default'))
+
+            # 提取问题，如果存在的话
+            question = resp.get('question', '')
+
+            # 提取响应文本
+            text = resp.get('response', '')
+
+            # 提取引用信息，如果存在的话
+            citations = resp.get('citations', [])
+
+            model_responses.append({
+                'model_name': model_name,
+                'ai_response': text,
+                'citations': citations,
+                'question': question
+            })
+
+        # 使用增强的SourceAggregator聚合多模型数据
+        aggregation_result = self.source_aggregator.aggregate_multiple_models(model_responses)
+
+        # 提取聚合后的信源池
+        source_pool = aggregation_result['source_pool']
+
+        # 为每个信源计算影响力指数
+        enhanced_source_pool = []
+        for source in source_pool:
+            # 估算情感偏向得分（这里使用简化的计算方式）
+            # 实际应用中可能需要更复杂的情感分析
+            sentiment_score = self._estimate_sentiment_for_source(source, ai_responses)
+
+            # 计算影响力指数
+            impact_index = self.impact_calculator.calculate_impact_index(
+                citation_count=source['citation_count'],
+                model_coverage=source['cross_model_coverage'],
+                sentiment_score=sentiment_score,
+                domain_authority=source['domain_authority']
+            )
+
+            # 添加影响力指数到信源数据
+            enhanced_source = source.copy()
+            enhanced_source['impact_index'] = impact_index
+            enhanced_source_pool.append(enhanced_source)
+
+        # 构建节点和链接数据
+        nodes = [{'id': brand_name, 'name': brand_name, 'level': 0, 'symbolSize': 60, 'category': 'brand'}]
+        links = []
+
+        for source in enhanced_source_pool:
+            # 使用影响力指数作为节点大小的基础
+            symbol_size = 30 + (source['impact_index'] / 100.0) * 50  # 映射到30-80的范围
+
+            nodes.append({
+                'id': source['id'],
+                'name': source['site_name'],
+                'level': 1,  # 所有信源都在同一层级
+                'symbolSize': symbol_size,
+                'category': 'source',
+                'value': source['impact_index'],  # 使用影响力指数作为值
+                'urls': [source['url']],  # 简化处理，只包含主要URL
+                'cross_model_coverage': source['cross_model_coverage'],
+                'citation_count': source['citation_count'],
+                'impact_index': source['impact_index']
+            })
+
+            # 创建从品牌到信源的链接
+            links.append({
+                'source': brand_name,
+                'target': source['id'],
+                'contribution_score': source['citation_count'] / max(len(ai_responses), 1),  # 标准化贡献度
+                'sentiment_bias': self._estimate_sentiment_for_source(source, ai_responses)  # 估算情感偏向
+            })
+
+        return {'nodes': nodes, 'links': links}
+
+    def _estimate_sentiment_for_source(self, source: Dict, ai_responses: List[Dict[str, Any]]) -> float:
+        """
+        估算特定信源的情感偏向得分
+
+        Args:
+            source: 信源信息
+            ai_responses: AI响应列表
+
+        Returns:
+            情感偏向得分 (-1.0 到 1.0)
+        """
+        # 简化的实现：基于信源在AI响应中出现的上下文进行情感分析
+        total_sentiment = 0.0
+        sentiment_count = 0
+
+        source_url = source['url']
 
         for resp in ai_responses:
             if not resp.get('success'):
@@ -104,47 +205,20 @@ class SourceIntelligenceProcessor:
 
             text = resp.get('response', '')
 
-            found_sources = self.extract_sources(text, resp)
+            # 检查响应中是否包含该信源的URL
+            if source_url in text:
+                # 使用SnowNLP进行简单的情感分析
+                s = SnowNLP(text)
+                # 将0-1的情感得分映射到-1到1的范围
+                sentiment = (s.sentiments - 0.5) * 2
+                total_sentiment += sentiment
+                sentiment_count += 1
 
-            for source in found_sources:
-                source_name = source['name']
-                all_sources[source_name]['count'] += 1
-                all_sources[source_name]['weights'].append(self.match_source_weight(source_name))
-                all_sources[source_name]['sentiments'].append(self.analyze_sentiment_from_context(text, source_name))
-                if source.get('url'):
-                    all_sources[source_name]['urls'].append(source['url'])
-
-        nodes = [{'id': brand_name, 'name': brand_name, 'level': 0, 'symbolSize': 60, 'category': 'brand'}]
-        links = []
-
-        for source_name, data in all_sources.items():
-            avg_weight = sum(data['weights']) / len(data['weights']) if data['weights'] else 0.3
-            avg_sentiment = sum(data['sentiments']) / len(data['sentiments']) if data['sentiments'] else 0.0
-            mention_frequency = data['count']
-
-            level = 1 if avg_weight > 0.7 else 2
-            symbol_size = 30 + avg_weight * 30
-
-            nodes.append({
-                'id': source_name,
-                'name': source_name,
-                'level': level,
-                'symbolSize': symbol_size,
-                'category': 'source',
-                'value': avg_weight,
-                'urls': list(set(data['urls']))
-            })
-
-            line_weight = avg_weight * (1 + (mention_frequency - 1) * 0.5)
-
-            links.append({
-                'source': brand_name,
-                'target': source_name,
-                'contribution_score': line_weight,
-                'sentiment_bias': avg_sentiment
-            })
-
-        return {'nodes': nodes, 'links': links}
+        # 返回平均情感得分，如果没有找到相关文本则返回中性值
+        if sentiment_count > 0:
+            return total_sentiment / sentiment_count
+        else:
+            return 0.0
 
 async def process_brand_source_intelligence(brand_name: str, ai_responses: List[Dict[str, Any]]) -> Dict[str, Any]:
     """

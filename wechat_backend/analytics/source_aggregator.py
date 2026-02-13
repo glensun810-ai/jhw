@@ -18,7 +18,7 @@ class SourceAggregator:
         # URL匹配的正则表达式模式
         self.url_pattern = re.compile(
             r'https?://'  # http:// or https://
-            r'(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',  # URL字符
+            r'(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+?(?=\s|[^\w/.%-]|$)',  # URL字符，非贪婪匹配直到空白或特殊字符
             re.IGNORECASE
         )
 
@@ -35,13 +35,14 @@ class SourceAggregator:
         )
 
     
-    def aggregate(self, ai_response: str, citations: Optional[List[Dict]] = None) -> Dict:
+    def aggregate(self, ai_response: str, citations: Optional[List[Dict]] = None, model_name: str = "default") -> Dict:
         """
         聚合信源信息，提取URL、生成引用排行并建立证据链
 
         Args:
             ai_response: AI原始回复文本
             citations: AI返回的引用信息列表（可选）
+            model_name: AI模型名称，用于计算模型覆盖度
 
         Returns:
             符合source_intelligence结构的字典
@@ -50,7 +51,7 @@ class SourceAggregator:
         extracted_urls = self._extract_urls(ai_response, citations)
 
         # 2. 生成信源池和引用排行
-        source_pool, citation_rank = self._generate_source_statistics(extracted_urls)
+        source_pool, citation_rank = self._generate_source_statistics(extracted_urls, model_name=model_name)
 
         # 3. 生成证据链（暂时为空，将在证据链模块中实现）
         evidence_chain = []
@@ -122,10 +123,10 @@ class SourceAggregator:
     def _extract_site_name(self, url: str) -> str:
         """
         从URL中提取站点名称
-        
+
         Args:
             url: URL字符串
-            
+
         Returns:
             站点名称
         """
@@ -151,40 +152,48 @@ class SourceAggregator:
     def _normalize_url(self, url: str) -> str:
         """
         规范化URL（移除参数、片段等）
-        
+
         Args:
             url: 原始URL
-            
+
         Returns:
             规范化后的URL
         """
         try:
             parsed = urllib.parse.urlparse(url)
             # 重建URL，只保留协议、域名和路径
-            normalized = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            # 确保路径至少有一个斜杠
+            path = parsed.path if parsed.path else '/'
+            normalized = f"{parsed.scheme}://{parsed.netloc}{path}"
             return normalized
         except Exception:
             return url  # 如果解析失败，返回原始URL
     
-    def _generate_source_statistics(self, urls: List[Dict]) -> Tuple[List[Dict], List[str]]:
+    def _generate_source_statistics(self, urls: List[Dict], model_name: str = "default") -> Tuple[List[Dict], List[str]]:
         """
         生成信源统计数据和引用排行
-        
+
         Args:
             urls: URL列表
-            
+            model_name: AI模型名称，用于计算模型覆盖度
+
         Returns:
             (source_pool, citation_rank) 元组
         """
-        # 统计每个URL的出现次数
-        url_counter = Counter()
+        # 统计每个URL的出现次数和模型覆盖情况
+        url_stats = defaultdict(lambda: {
+            'citation_count': 0,
+            'models': set(),
+            'questions': set()  # 存储引用此URL的问题
+        })
         site_counter = Counter()
-        
+
         for url_info in urls:
             normalized_url = url_info['url']
-            url_counter[normalized_url] += 1
+            url_stats[normalized_url]['citation_count'] += 1
+            url_stats[normalized_url]['models'].add(model_name)
             site_counter[url_info['site_name']] += 1
-        
+
         # 生成信源池
         source_pool = []
         seen_urls = set()
@@ -193,7 +202,9 @@ class SourceAggregator:
             if normalized_url in seen_urls:
                 continue  # 避免重复添加
 
-            citation_count = url_counter[normalized_url]
+            stats = url_stats[normalized_url]
+            citation_count = stats['citation_count']
+            model_coverage = len(stats['models'])
             site_name = url_info['site_name']
             domain_authority = self._assess_domain_authority(site_name)
 
@@ -202,10 +213,11 @@ class SourceAggregator:
                 'url': normalized_url,
                 'site_name': site_name,
                 'citation_count': citation_count,
+                'cross_model_coverage': model_coverage,  # 新增：模型覆盖度
                 'domain_authority': domain_authority
             })
             seen_urls.add(normalized_url)
-        
+
         # 按引用次数降序排列
         source_pool.sort(key=lambda x: x['citation_count'], reverse=True)
 
@@ -213,6 +225,100 @@ class SourceAggregator:
         citation_rank = [item['id'] for item in source_pool]
 
         return source_pool, citation_rank
+
+    def aggregate_multiple_models(self, model_responses: List[Dict]) -> Dict:
+        """
+        聚合来自多个AI模型的信源信息
+
+        Args:
+            model_responses: 包含多个模型响应的列表，每个元素包含：
+                             {
+                               'model_name': '模型名称',
+                               'ai_response': 'AI回复文本',
+                               'citations': '引用信息列表',
+                               'question': '提问内容' (可选)
+                             }
+
+        Returns:
+            符合source_intelligence结构的字典，包含跨模型统计信息
+        """
+        # 统计每个URL的详细信息
+        url_stats = defaultdict(lambda: {
+            'citation_count': 0,
+            'models': set(),
+            'questions': set(),
+            'urls': set(),
+            'site_names': set(),
+            'domain_authorities': set()
+        })
+
+        all_extracted_urls = []
+
+        # 处理每个模型的响应
+        for response in model_responses:
+            model_name = response.get('model_name', 'default')
+            ai_response = response.get('ai_response', '')
+            citations = response.get('citations', [])
+            question = response.get('question', '')
+
+            # 提取URL
+            extracted_urls = self._extract_urls(ai_response, citations)
+            all_extracted_urls.extend(extracted_urls)
+
+            # 更新统计信息
+            for url_info in extracted_urls:
+                normalized_url = url_info['url']
+                url_stats[normalized_url]['citation_count'] += 1
+                url_stats[normalized_url]['models'].add(model_name)
+                if question:
+                    url_stats[normalized_url]['questions'].add(question)
+                url_stats[normalized_url]['urls'].add(url_info['url'])
+                url_stats[normalized_url]['site_names'].add(url_info['site_name'])
+                domain_authority = self._assess_domain_authority(url_info['site_name'])
+                url_stats[normalized_url]['domain_authorities'].add(domain_authority)
+
+        # 生成信源池
+        source_pool = []
+        seen_urls = set()
+
+        for url_info in all_extracted_urls:
+            normalized_url = url_info['url']
+            if normalized_url in seen_urls:
+                continue  # 避免重复添加
+
+            stats = url_stats[normalized_url]
+            citation_count = stats['citation_count']
+            model_coverage = len(stats['models'])
+            site_name = url_info['site_name']
+            domain_authority = list(stats['domain_authorities'])[0] if stats['domain_authorities'] else 'Medium'  # 取第一个权威度
+
+            source_item = {
+                'id': self._generate_url_id(normalized_url),  # 生成唯一ID
+                'url': normalized_url,
+                'site_name': site_name,
+                'citation_count': citation_count,
+                'cross_model_coverage': model_coverage,  # 模型覆盖度
+                'domain_authority': domain_authority,
+                'referenced_questions': list(stats['questions'])[:10]  # 限制显示的问题数量，避免数据过大
+            }
+
+            # 计算问题排名（根据引用该URL的问题数量）
+            source_item['question_reference_count'] = len(stats['questions'])
+
+            source_pool.append(source_item)
+            seen_urls.add(normalized_url)
+
+        # 按引用次数降序排列，其次按模型覆盖度排列
+        source_pool.sort(key=lambda x: (x['citation_count'], x['cross_model_coverage']), reverse=True)
+
+        # 生成引用排行（仅包含ID）
+        citation_rank = [item['id'] for item in source_pool]
+
+        return {
+            'source_pool': source_pool,
+            'citation_rank': citation_rank,
+            'evidence_chain': []  # 暂时空，将在证据链模块中实现
+        }
 
     def associate_evidence_chain(self, ai_response: str, source_pool: List[Dict], negative_fragments: List[str]) -> List[Dict]:
         """
