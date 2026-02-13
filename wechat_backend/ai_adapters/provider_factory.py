@@ -67,5 +67,6 @@ class ProviderFactory:
 # 注册默认提供者
 ProviderFactory.register('doubao', DoubaoProvider)
 ProviderFactory.register('deepseek', DeepSeekProvider)
+ProviderFactory.register('qwen', QwenProvider)  # Register Qwen provider
 
 api_logger.info("ProviderFactory initialized with default providers")
