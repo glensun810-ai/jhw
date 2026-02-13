@@ -1,16 +1,32 @@
 """
-工作流管理器 - 智能任务分发系统
+WorkflowManager - 智能任务分发系统
+处理负面证据的自动任务打包和分发
 """
 import json
-import requests
 import time
-import threading
+import requests
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-import logging
+import threading
+import queue
 from dataclasses import dataclass
 from ..logging_config import api_logger
+from ..database import DB_PATH
+from ..security.sql_protection import SafeDatabaseQuery, sql_protector
+from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+from ..ai_adapters.base_provider import BaseAIProvider
+from ..ai_adapters.doubao_provider import DoubaoProvider
+from ..ai_adapters.deepseek_provider import DeepSeekProvider
+from ..config_manager import config_manager
+
+
+class TaskPriority(Enum):
+    """任务优先级枚举"""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
 
 
 class TaskStatus(Enum):
@@ -39,24 +55,133 @@ class WorkflowTask:
     updated_at: datetime
     retry_count: int = 0
     max_retries: int = 3
+    error_message: Optional[str] = None
     next_retry_at: Optional[datetime] = None
 
 
-class WorkflowManager:
-    """工作流管理器 - 实现智能任务分发系统"""
-
+class WebhookManager:
+    """Webhook管理器 - 处理任务推送至第三方API"""
+    
     def __init__(self):
-        self.logger = api_logger
-        self.active_tasks = {}  # 存储活动任务
-        self.webhook_timeout = 30  # Webhook请求超时时间（秒）
-        self.retry_delay_base = 60  # 重试延迟基数（秒）
+        self.session = requests.Session()
+        # 设置默认请求头
+        self.session.headers.update({
+            'Content-Type': 'application/json',
+            'User-Agent': 'EvolutionBay-GEO-Workflow-Manager/1.0'
+        })
+        
+        # 初始化电路断路器
+        self.circuit_breaker = get_circuit_breaker(platform_name="webhook", model_name="dispatcher")
+    
+    def send_webhook(self, webhook_url: str, payload: Dict[str, Any], task_id: str, max_retries: int = 3) -> bool:
+        """
+        发送Webhook请求到目标URL，包含重试机制
 
+        Args:
+            webhook_url: 目标Webhook URL
+            payload: 要发送的载荷数据
+            task_id: 任务ID，用于日志记录
+            max_retries: 最大重试次数
+
+        Returns:
+            bool: 是否发送成功
+        """
+        retry_count = 0
+        
+        while retry_count <= max_retries:
+            try:
+                # 使用电路断路器保护Webhook调用
+                success = self.circuit_breaker.call(
+                    self._send_webhook_internal, 
+                    webhook_url, 
+                    payload, 
+                    task_id
+                )
+                
+                if success:
+                    return True
+                else:
+                    # 如果失败，检查是否需要重试
+                    if retry_count < max_retries:
+                        # 计算重试延迟时间（指数退避算法）
+                        delay_seconds = min(60 * (2 ** retry_count), 300)  # 最大5分钟延迟
+                        api_logger.info(f"Webhook failed for task {task_id}, retrying in {delay_seconds}s (attempt {retry_count + 1}/{max_retries})")
+                        time.sleep(delay_seconds)
+                        retry_count += 1
+                    else:
+                        api_logger.error(f"Webhook failed for task {task_id} after {max_retries} retries")
+                        return False
+                        
+            except CircuitBreakerOpenError:
+                api_logger.error(f"Webhook circuit breaker is open for task {task_id}, skipping webhook to {webhook_url}")
+                return False
+            except Exception as e:
+                api_logger.error(f"Error sending webhook for task {task_id}: {e}")
+                if retry_count < max_retries:
+                    delay_seconds = min(60 * (2 ** retry_count), 300)
+                    api_logger.info(f"Retrying webhook for task {task_id} in {delay_seconds}s (attempt {retry_count + 1}/{max_retries})")
+                    time.sleep(delay_seconds)
+                    retry_count += 1
+                else:
+                    return False
+        
+        return False
+    
+    def _send_webhook_internal(self, webhook_url: str, payload: Dict[str, Any], task_id: str) -> bool:
+        """
+        内部Webhook发送逻辑
+        """
+        try:
+            response = self.session.post(
+                webhook_url,
+                json=payload,
+                timeout=30  # 30秒超时
+            )
+            
+            if response.status_code in [200, 201, 202]:
+                api_logger.info(f"Webhook sent successfully to {webhook_url} for task {task_id}, status: {response.status_code}")
+                return True
+            else:
+                api_logger.warning(f"Webhook received non-success status {response.status_code} from {webhook_url} for task {task_id}")
+                return False
+                
+        except requests.exceptions.Timeout:
+            api_logger.error(f"Webhook request timed out for {webhook_url} (task {task_id})")
+            # 超时应该传播给断路器以触发熔断
+            raise requests.exceptions.Timeout(f"Webhook request to {webhook_url} timed out")
+        except requests.exceptions.RequestException as e:
+            api_logger.error(f"Webhook request failed for {webhook_url} (task {task_id}): {str(e)}")
+            # 其他请求异常也应传播给断路器
+            raise e
+        except Exception as e:
+            api_logger.error(f"Unexpected error sending webhook to {webhook_url} (task {task_id}): {str(e)}")
+            return False
+
+
+class WorkflowManager:
+    """工作流管理器 - 智能任务分发系统"""
+    
+    def __init__(self):
+        self.webhook_manager = WebhookManager()
+        self.db_path = DB_PATH
+        self.safe_query = SafeDatabaseQuery(self.db_path)
+        
+        # 任务队列
+        self.task_queue = queue.Queue()
+        
+        # 重试队列 - 存储需要重试的任务
+        self.retry_queue = queue.PriorityQueue()  # 使用优先级队列，按重试时间排序
+        
+        # 启动后台任务处理器
+        self._start_background_processor()
+        self._start_retry_processor()
+    
     def create_task_package(
-        self,
-        evidence_fragment: str,
-        associated_url: str,
-        source_name: str,
-        risk_level: str,
+        self, 
+        evidence_fragment: str, 
+        associated_url: str, 
+        source_name: str, 
+        risk_level: str, 
         brand_name: str,
         intervention_script: str,
         source_meta: Dict[str, Any],
@@ -71,42 +196,48 @@ class WorkflowManager:
             source_name: 信源名称
             risk_level: 风险等级
             brand_name: 品牌名称
-            intervention_script: 纠偏建议脚本
-            source_meta: 源元数据
+            intervention_script: 干预脚本
+            source_meta: 信源元数据
             webhook_url: Webhook URL
 
         Returns:
             Dict: 标准化任务包
         """
         task_package = {
-            "task_id": f"wf_{int(time.time())}_{hash(evidence_fragment) % 10000}",
-            "payload": {
+            "task_type": "negative_evidence_intervention",
+            "evidence_data": {
                 "evidence_fragment": evidence_fragment,
                 "associated_url": associated_url,
                 "source_name": source_name,
                 "risk_level": risk_level,
                 "brand_name": brand_name,
                 "intervention_script": intervention_script,
-                "source_meta": source_meta,
-                "created_at": datetime.utcnow().isoformat()
+                "source_meta": source_meta
             },
-            "webhook_url": webhook_url,
-            "delivery_attempts": 0,
-            "max_delivery_attempts": 3
+            "delivery_instructions": {
+                "webhook_url": webhook_url,
+                "delivery_format": "standard_payload",
+                "callback_required": True
+            },
+            "metadata": {
+                "created_at": datetime.utcnow().isoformat(),
+                "version": "1.0"
+            }
         }
-
+        
         return task_package
-
+    
     def dispatch_task(
-        self,
-        evidence_fragment: str,
-        associated_url: str,
-        source_name: str,
-        risk_level: str,
+        self, 
+        evidence_fragment: str, 
+        associated_url: str, 
+        source_name: str, 
+        risk_level: str, 
         brand_name: str,
         intervention_script: str,
         source_meta: Dict[str, Any],
-        webhook_url: str
+        webhook_url: str,
+        priority: TaskPriority = TaskPriority.MEDIUM
     ) -> str:
         """
         分发任务到指定的Webhook URL
@@ -117,257 +248,145 @@ class WorkflowManager:
             source_name: 信源名称
             risk_level: 风险等级
             brand_name: 品牌名称
-            intervention_script: 纠偏建议脚本
-            source_meta: 源元数据
+            intervention_script: 干预脚本
+            source_meta: 信源元数据
             webhook_url: Webhook URL
+            priority: 任务优先级
 
         Returns:
             str: 任务ID
         """
+        import uuid
+        
+        # 生成任务ID
+        task_id = f"wf_{int(time.time())}_{uuid.uuid4().hex[:8]}"
+        
         # 创建任务包
         task_package = self.create_task_package(
-            evidence_fragment, associated_url, source_name, risk_level,
-            brand_name, intervention_script, source_meta, webhook_url
+            evidence_fragment, associated_url, source_name, 
+            risk_level, brand_name, intervention_script, source_meta, webhook_url
         )
-
-        task_id = task_package["task_id"]
-
-        # 创建任务对象
-        task = WorkflowTask(
-            task_id=task_id,
-            evidence_fragment=evidence_fragment,
-            associated_url=associated_url,
-            source_name=source_name,
-            risk_level=risk_level,
-            brand_name=brand_name,
-            intervention_script=intervention_script,
-            source_meta=source_meta,
-            webhook_url=webhook_url,
-            status=TaskStatus.PENDING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-
-        # 存储任务
-        self.active_tasks[task_id] = task
-
-        # 异步发送Webhook请求
-        threading.Thread(
-            target=self._send_webhook_async,
-            args=(task_package, task),
-            daemon=True
-        ).start()
-
-        self.logger.info(f"Task {task_id} dispatched to {webhook_url}")
-
-        return task_id
-
-    def _send_webhook_async(self, task_package: Dict[str, Any], task: WorkflowTask):
-        """异步发送Webhook请求"""
-        task.status = TaskStatus.PROCESSING
-        task.updated_at = datetime.utcnow()
         
-        success = self._send_webhook_request(task_package, task)
-        
-        if success:
-            task.status = TaskStatus.COMPLETED
-            task.updated_at = datetime.utcnow()
-            self.logger.info(f"Task {task.task_id} completed successfully")
-        else:
-            # 如果失败，检查是否需要重试
-            if task.retry_count < task.max_retries:
-                self._schedule_retry(task_package, task)
-            else:
-                task.status = TaskStatus.FAILED
-                task.updated_at = datetime.utcnow()
-                self.logger.error(f"Task {task.task_id} failed after {task.max_retries} attempts")
-
-    def _send_webhook_request(self, task_package: Dict[str, Any], task: WorkflowTask) -> bool:
-        """
-        发送Webhook请求
-
-        Args:
-            task_package: 任务包
-            task: 任务对象
-
-        Returns:
-            bool: 是否成功
-        """
-        try:
-            headers = {
-                'Content-Type': 'application/json',
-                'User-Agent': 'EvolutionBay-Workflow-Manager/1.0'
-            }
-
-            response = requests.post(
-                task.webhook_url,
-                json=task_package,
-                headers=headers,
-                timeout=self.webhook_timeout
-            )
-
-            # 检查响应状态
-            if response.status_code in [200, 201, 202]:
-                self.logger.info(f"Webhook request to {task.webhook_url} succeeded with status {response.status_code}")
-                return True
-            else:
-                self.logger.warning(f"Webhook request to {task.webhook_url} failed with status {response.status_code}: {response.text}")
-                return False
-
-        except requests.exceptions.Timeout:
-            self.logger.error(f"Webhook request to {task.webhook_url} timed out after {self.webhook_timeout}s")
-            return False
-        except requests.exceptions.ConnectionError:
-            self.logger.error(f"Webhook request to {task.webhook_url} failed due to connection error")
-            return False
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Webhook request to {task.webhook_url} failed: {str(e)}")
-            return False
-        except Exception as e:
-            self.logger.error(f"Unexpected error sending webhook to {task.webhook_url}: {str(e)}")
-            return False
-
-    def _schedule_retry(self, task_package: Dict[str, Any], task: WorkflowTask):
-        """
-        安排重试
-
-        Args:
-            task_package: 任务包
-            task: 任务对象
-        """
-        task.retry_count += 1
-        task.status = TaskStatus.RETRYING
-        task.updated_at = datetime.utcnow()
-        
-        # 计算下次重试时间（指数退避）
-        delay_seconds = self.retry_delay_base * (2 ** (task.retry_count - 1))
-        task.next_retry_at = datetime.utcnow() + timedelta(seconds=delay_seconds)
-        
-        self.logger.info(f"Scheduling retry #{task.retry_count} for task {task.task_id} in {delay_seconds}s")
-        
-        # 在延迟后重试
-        def delayed_retry():
-            time.sleep(delay_seconds)
-            self._handle_retry(task_package, task)
-        
-        threading.Thread(target=delayed_retry, daemon=True).start()
-
-    def _handle_retry(self, task_package: Dict[str, Any], task: WorkflowTask):
-        """
-        处理重试逻辑
-
-        Args:
-            task_package: 任务包
-            task: 任务对象
-        """
-        self.logger.info(f"Retrying task {task.task_id}, attempt #{task.retry_count}")
-        
-        success = self._send_webhook_request(task_package, task)
-        
-        if success:
-            task.status = TaskStatus.COMPLETED
-            task.updated_at = datetime.utcnow()
-            self.logger.info(f"Task {task.task_id} completed successfully on retry #{task.retry_count}")
-        else:
-            if task.retry_count < task.max_retries:
-                self._schedule_retry(task_package, task)
-            else:
-                task.status = TaskStatus.FAILED
-                task.updated_at = datetime.utcnow()
-                self.logger.error(f"Task {task.task_id} failed after {task.max_retries} retry attempts")
-
-    def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
-        """
-        获取任务状态
-
-        Args:
-            task_id: 任务ID
-
-        Returns:
-            Optional[Dict]: 任务状态信息
-        """
-        if task_id not in self.active_tasks:
-            return None
-
-        task = self.active_tasks[task_id]
-        return {
-            "task_id": task.task_id,
-            "status": task.status.value,
-            "retry_count": task.retry_count,
-            "max_retries": task.max_retries,
-            "created_at": task.created_at.isoformat(),
-            "updated_at": task.updated_at.isoformat(),
-            "next_retry_at": task.next_retry_at.isoformat() if task.next_retry_at else None
+        # 创建任务数据
+        task_data = {
+            'task_id': task_id,
+            'task_package': task_package,
+            'webhook_url': webhook_url,
+            'priority': priority.value,
+            'created_at': datetime.utcnow(),
+            'retry_count': 0,
+            'max_retries': 3
         }
-
-    def get_all_active_tasks(self) -> List[Dict[str, Any]]:
-        """
-        获取所有活动任务
-
-        Returns:
-            List[Dict]: 活动任务列表
-        """
-        tasks = []
-        for task in self.active_tasks.values():
-            tasks.append({
-                "task_id": task.task_id,
-                "status": task.status.value,
-                "retry_count": task.retry_count,
-                "created_at": task.created_at.isoformat(),
-                "updated_at": task.updated_at.isoformat()
-            })
-        return tasks
-
-    def cancel_task(self, task_id: str) -> bool:
-        """
-        取消任务
-
-        Args:
-            task_id: 任务ID
-
-        Returns:
-            bool: 是否成功取消
-        """
-        if task_id not in self.active_tasks:
-            return False
-
-        task = self.active_tasks[task_id]
-        task.status = TaskStatus.FAILED  # 标记为失败以停止任何进一步的重试
-        del self.active_tasks[task_id]
         
-        self.logger.info(f"Task {task_id} cancelled")
-        return True
-
-
-# Example usage
-if __name__ == "__main__":
-    # Create workflow manager
-    wf_manager = WorkflowManager()
+        # 将任务添加到队列（优先级队列）
+        priority_num = self._priority_to_number(priority)
+        self.task_queue.put((priority_num, task_data))
+        
+        api_logger.info(f"Task {task_id} queued for dispatch to {webhook_url} with priority {priority.value}")
+        
+        return task_id
     
-    # Example evidence data
-    evidence_fragment = "该品牌智能锁存在安全隐患，容易被破解"
-    associated_url = "https://security-report.com/vulnerability"
-    source_name = "安全评测机构"
-    risk_level = "High"
-    brand_name = "TechBrand"
-    intervention_script = "我们非常重视产品的安全性，已立即组织技术团队核查该问题，将在48小时内发布安全补丁。"
-    source_meta = {
-        "platform": "security-report.com",
-        "category": "security",
-        "importance": "high",
-        "last_updated": "2023-01-01T10:00:00Z"
-    }
-    webhook_url = "https://hooks.example.com/webhook"
+    def _priority_to_number(self, priority: TaskPriority) -> int:
+        """将优先级转换为数字，用于队列排序"""
+        priority_map = {
+            TaskPriority.CRITICAL: 1,  # 最高优先级
+            TaskPriority.HIGH: 2,
+            TaskPriority.MEDIUM: 3,
+            TaskPriority.LOW: 4   # 最低优先级
+        }
+        return priority_map.get(priority, 3)  # 默认为MEDIUM
     
-    # Dispatch task
-    task_id = wf_manager.dispatch_task(
-        evidence_fragment, associated_url, source_name, risk_level,
-        brand_name, intervention_script, source_meta, webhook_url
-    )
+    def _process_task(self, task_tuple: tuple):
+        """处理单个任务"""
+        priority_num, task_data = task_tuple
+        task_id = task_data['task_id']
+        task_package = task_data['task_package']
+        webhook_url = task_data['webhook_url']
+        
+        api_logger.info(f"Processing workflow task {task_id}")
+        
+        # 发送Webhook
+        success = self.webhook_manager.send_webhook(webhook_url, task_package, task_id)
+        
+        if success:
+            api_logger.info(f"Task {task_id} completed successfully")
+            # 更新任务状态为完成
+            self._update_task_status(task_id, TaskStatus.COMPLETED)
+        else:
+            # 检查是否需要重试
+            retry_count = task_data.get('retry_count', 0)
+            max_retries = task_data.get('max_retries', 3)
+            
+            if retry_count < max_retries:
+                # 计算重试延迟时间（指数退避算法）
+                delay_seconds = min(60 * (2 ** retry_count), 300)  # 最大5分钟延迟
+                next_retry_time = datetime.now() + timedelta(seconds=delay_seconds)
+                
+                # 更新任务数据
+                task_data['retry_count'] = retry_count + 1
+                task_data['next_retry_at'] = next_retry_time
+                
+                # 添加到重试队列
+                self.retry_queue.put((next_retry_time.timestamp(), task_data))
+                
+                api_logger.info(f"Task {task_id} failed, scheduled for retry #{retry_count + 1} at {next_retry_time} (delay: {delay_seconds}s)")
+                self._update_task_status(task_id, TaskStatus.RETRYING)
+            else:
+                # 达到最大重试次数，标记为失败
+                api_logger.error(f"Task {task_id} failed after {max_retries} retries")
+                self._update_task_status(task_id, TaskStatus.FAILED)
     
-    print(f"Dispatched task with ID: {task_id}")
+    def _process_task_with_retry(self, task_data: Dict[str, Any]):
+        """处理重试任务"""
+        task_id = task_data['task_id']
+        task_package = task_data['task_package']
+        webhook_url = task_data['webhook_url']
+        
+        api_logger.info(f"Retrying workflow task {task_id}")
+        
+        # 发送Webhook
+        success = self.webhook_manager.send_webhook(webhook_url, task_package, task_id)
+        
+        if success:
+            api_logger.info(f"Task {task_id} completed successfully after retry")
+            # 更新任务状态为完成
+            self._update_task_status(task_id, TaskStatus.COMPLETED)
+        else:
+            # 检查是否需要继续重试
+            retry_count = task_data.get('retry_count', 0)
+            max_retries = task_data.get('max_retries', 3)
+            
+            if retry_count < max_retries:
+                # 计算重试延迟时间（指数退避算法）
+                delay_seconds = min(60 * (2 ** retry_count), 300)  # 最大5分钟延迟
+                next_retry_time = datetime.now() + timedelta(seconds=delay_seconds)
+                
+                # 更新任务数据
+                task_data['retry_count'] = retry_count + 1
+                task_data['next_retry_at'] = next_retry_time
+                
+                # 添加到重试队列
+                self.retry_queue.put((next_retry_time.timestamp(), task_data))
+                
+                api_logger.info(f"Task {task_id} retry failed, scheduled for retry #{retry_count + 1} at {next_retry_time} (delay: {delay_seconds}s)")
+                self._update_task_status(task_id, TaskStatus.RETRYING)
+            else:
+                # 达到最大重试次数，标记为失败
+                api_logger.error(f"Task {task_id} failed after {max_retries} retries")
+                self._update_task_status(task_id, TaskStatus.FAILED)
     
-    # Check task status
-    time.sleep(2)  # Wait a bit for processing
-    status = wf_manager.get_task_status(task_id)
-    print(f"Task status: {status}")
+    def _update_task_status(self, task_id: str, status: TaskStatus):
+        """更新任务状态"""
+        # 这里可以实现数据库更新逻辑
+        # 暂时只记录日志
+        api_logger.info(f"Task {task_id} status updated to {status.value}")
+    
+    def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """获取任务状态"""
+        # 这里可以实现从数据库获取任务状态的逻辑
+        # 暂时返回模拟数据
+        return {
+            'task_id': task_id,
+            'status': 'completed',  # 模拟状态
+            'completed_at': datetime.utcnow().isoformat()
+        }

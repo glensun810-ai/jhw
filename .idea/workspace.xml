@@ -5,17 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/模块4.1_执行闭环_智能任务分发_功能文档.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/模块4.1_执行闭环_智能任务分发_功能文档.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/base_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/base_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/base_provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/base_provider.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/deepseek_provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/deepseek_provider.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/doubao_provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/doubao_provider.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/analytics/workflow_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/analytics/workflow_manager.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -258,7 +253,7 @@
       <workItem from="1770823417168" duration="6323000" />
       <workItem from="1770864593057" duration="66435000" />
       <workItem from="1770944541119" duration="5376000" />
-      <workItem from="1770950349715" duration="15033000" />
+      <workItem from="1770950349715" duration="18307000" />
     </task>
     <servers />
   </component>
