@@ -60,6 +60,27 @@ class AIAdapterFactory:
     Factory class for creating AI adapters based on platform type.
     """
 
+    # 名称映射引擎：在类中注入或更新映射表
+    MODEL_NAME_MAP = {
+        "豆包": "doubao",
+        "qwen": "qwen",
+        "千问": "qwen",
+        "通义千问": "qwen",
+        "deepseek": "deepseek",
+        "文心一言": "wenxin",
+        "Kimi": "kimi",
+        "元宝": "yuanbao",
+        "讯飞星火": "spark",
+        "智谱AI": "zhipu",
+        "智谱": "zhipu",
+        "DeepSeek": "deepseek",
+        "ChatGPT": "chatgpt",
+        "Claude": "claude",
+        "Gemini": "gemini",
+        "Perplexity": "perplexity",
+        "Grok": "grok"
+    }
+
     _adapters: Dict[AIPlatformType, Type[AIClient]] = {}
 
     @classmethod
@@ -74,6 +95,22 @@ class AIAdapterFactory:
             api_logger.warning(f"Skipping registration for {platform_type.value}: Adapter class is None")
 
     @classmethod
+    def get_normalized_model_name(cls, model_name: str) -> str:
+        """
+        将输入名称通过 MODEL_NAME_MAP 转换
+        """
+        # 检查是否为中文名称，如果是则转换为英文标识符
+        if model_name in cls.MODEL_NAME_MAP:
+            return cls.MODEL_NAME_MAP[model_name]
+        elif model_name.title() in cls.MODEL_NAME_MAP:  # 检查首字母大写的版本
+            return cls.MODEL_NAME_MAP[model_name.title()]
+        elif model_name.lower() in cls.MODEL_NAME_MAP:  # 检查小写的版本
+            return cls.MODEL_NAME_MAP[model_name.lower()]
+        else:
+            # 如果没有找到映射，返回原始名称的小写版本
+            return model_name.lower()
+
+    @classmethod
     def create(cls, platform_type: Union[AIPlatformType, str], api_key: str = None, model_name: str = None, **kwargs) -> AIClient:
         """
         Create an instance of an AI adapter for the specified platform
@@ -81,10 +118,15 @@ class AIAdapterFactory:
         If model_name is not provided, uses platform-specific default
         """
         if isinstance(platform_type, str):
+            # 先将输入名称通过 MODEL_NAME_MAP 转换
+            normalized_platform_type = cls.get_normalized_model_name(platform_type)
             try:
-                platform_type = AIPlatformType(platform_type.lower())
+                platform_type = AIPlatformType(normalized_platform_type)
             except ValueError:
                 raise ValueError(f"Unknown platform type: {platform_type}")
+
+        # 注入核心调试日志
+        api_logger.error(f"REGISTERED_MODELS: {list(cls._adapters.keys())}")
 
         if platform_type not in cls._adapters:
             raise ValueError(f"No adapter registered for platform: {platform_type}")
@@ -121,3 +163,7 @@ if ZhipuAdapter:
     AIAdapterFactory.register(AIPlatformType.ZHIPU, ZhipuAdapter)
 if ErnieBotAdapter:
     AIAdapterFactory.register(AIPlatformType.WENXIN, ErnieBotAdapter)
+
+# 添加日志，显示当前注册的模型
+api_logger.info(f"Current Registered Models: {[pt.value for pt in AIAdapterFactory._adapters.keys()]}")
+print(f"Current Registered Models: {[pt.value for pt in AIAdapterFactory._adapters.keys()]}")

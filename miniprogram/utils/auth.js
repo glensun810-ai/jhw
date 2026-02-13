@@ -3,6 +3,9 @@
  * 负责用户登录状态管理、会话维护等功能
  */
 
+const { userLogin, validateToken, refreshToken } = require('../api/auth');
+const { API_ENDPOINTS } = require('../utils/config');
+
 class AuthManager {
   constructor() {
     this.userInfo = null;
@@ -36,39 +39,35 @@ class AuthManager {
     return new Promise((resolve, reject) => {
       // 模拟微信登录
       wx.login({
-        success: (res) => {
+        success: async (res) => {
           if (res.code) {
-            // 向后端发送登录请求
-            wx.request({
-              url: 'http://127.0.0.1:5001/api/login',
-              method: 'POST',
-              data: {
+            try {
+              // 向后端发送登录请求
+              const loginRes = await userLogin({
                 code: res.code,
                 ...loginData
-              },
-              success: (loginRes) => {
-                if (loginRes.data.status === 'success') {
-                  const userData = loginRes.data.data;
-                  
-                  // 保存用户信息
-                  this.userInfo = userData;
-                  this.token = userData.session_key; // 实际项目中应使用JWT token
-                  this.isLoggedIn = true;
-                  
-                  // 存储到本地
-                  wx.setStorageSync('userInfo', userData);
-                  wx.setStorageSync('userToken', this.token);
-                  wx.setStorageSync('isLoggedIn', true);
-                  
-                  resolve(userData);
-                } else {
-                  reject(new Error(loginRes.data.error || '登录失败'));
-                }
-              },
-              fail: (error) => {
-                reject(error);
+              });
+
+              if (loginRes.status === 'success') {
+                const userData = loginRes.data;
+
+                // 保存用户信息
+                this.userInfo = userData;
+                this.token = userData.session_key; // 实际项目中应使用JWT token
+                this.isLoggedIn = true;
+
+                // 存储到本地
+                wx.setStorageSync('userInfo', userData);
+                wx.setStorageSync('userToken', this.token);
+                wx.setStorageSync('isLoggedIn', true);
+
+                resolve(userData);
+              } else {
+                reject(new Error(loginRes.error || '登录失败'));
               }
-            });
+            } catch (error) {
+              reject(error);
+            }
           } else {
             reject(new Error('获取登录凭证失败'));
           }
@@ -87,7 +86,7 @@ class AuthManager {
     this.userInfo = null;
     this.token = null;
     this.isLoggedIn = false;
-    
+
     // 清除本地存储
     wx.removeStorageSync('userInfo');
     wx.removeStorageSync('userToken');
@@ -116,7 +115,7 @@ class AuthManager {
     if (!this.isLoggedIn) {
       return ['basic']; // 未登录用户只有基础权限
     }
-    
+
     // 从本地存储获取权限信息，或从服务器获取
     const permissions = wx.getStorageSync('userPermissions') || ['basic', 'history', 'save'];
     return permissions;
@@ -134,59 +133,43 @@ class AuthManager {
   /**
    * 刷新用户令牌
    */
-  refreshToken() {
+  async refreshToken() {
     // 模拟令牌刷新逻辑
     if (this.token) {
-      // 这后端请求刷新令牌
-      wx.request({
-        url: 'http://127.0.0.1:5001/api/refresh-token',
-        method: 'POST',
-        header: {
-          'Authorization': `Bearer ${this.token}`
-        },
-        data: {
-          refresh_token: wx.getStorageSync('refreshToken')
-        },
-        success: (res) => {
-          if (res.data.status === 'success') {
-            this.token = res.data.token;
-            wx.setStorageSync('userToken', this.token);
-          }
+      try {
+        const res = await refreshToken(wx.getStorageSync('refreshToken'));
+        if (res.status === 'success') {
+          this.token = res.token;
+          wx.setStorageSync('userToken', this.token);
         }
-      });
+      } catch (error) {
+        console.error('刷新令牌失败:', error);
+      }
     }
   }
 
   /**
    * 自动登录
    */
-  autoLogin() {
+  async autoLogin() {
     if (this.token && this.userInfo) {
-      // 验证令牌有效性
-      return new Promise((resolve, reject) => {
-        wx.request({
-          url: 'http://127.0.0.1:5001/api/validate-token',
-          method: 'POST',
-          header: {
-            'Authorization': `Bearer ${this.token}`
-          },
-          success: (res) => {
-            if (res.data.status === 'valid') {
-              resolve(this.userInfo);
-            } else {
-              // 令牌无效，清除登录状态
-              this.logout();
-              reject(new Error('令牌已失效'));
-            }
-          },
-          fail: () => {
-            // 请求失败，可能网络问题，暂时保持登录状态
-            resolve(this.userInfo);
-          }
-        });
-      });
+      try {
+        const res = await validateToken();
+        if (res.status === 'valid') {
+          return this.userInfo;
+        } else {
+          // 令牌无效，清除登录状态
+          this.logout();
+          throw new Error('令牌已失效');
+        }
+      } catch (error) {
+        // 请求失败，可能网络问题，暂时保持登录状态
+        // 令牌验证失败时，也要清除登录状态以确保安全
+        this.logout();
+        throw error;
+      }
     }
-    return Promise.reject(new Error('未找到登录信息'));
+    throw new Error('未找到登录信息');
   }
 }
 

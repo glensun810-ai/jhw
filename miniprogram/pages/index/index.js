@@ -1,5 +1,14 @@
+const { checkServerConnectionApi, startBrandTestApi, getTestProgressApi } = require('../../api/home');
+const {
+  processTestProgress,
+  getProgressTextByValue,
+  formatTestResults,
+  formatCompetitiveAnalysis,
+  isTestCompleted,
+  isTestFailed
+} = require('../../services/homeService.js');
+
 const appid = 'wx8876348e089bc261'; // 您的 AppID
-const serverUrl = 'http://127.0.0.1:5002'; // 后端服务器地址
 
 Page({
   data: {
@@ -145,7 +154,21 @@ Page({
         }
         const canvas = res[0].node;
         const ctx = canvas.getContext('2d');
-        const dpr = wx.getSystemInfoSync().pixelRatio;
+        const systemSetting = wx.getSystemSetting();
+        const appAuthorizeSetting = wx.getAppAuthorizeSetting();
+        const deviceInfo = wx.getDeviceInfo();
+        const windowInfo = wx.getWindowInfo();
+        const appBaseInfo = wx.getAppBaseInfo();
+
+        // 合并需要的字段
+        const systemInfo = {
+            ...deviceInfo,
+            ...windowInfo,
+            ...appBaseInfo,
+            system: appBaseInfo.system,
+            platform: appBaseInfo.platform,
+        };
+        const dpr = systemInfo.pixelRatio;
         canvas.width = res[0].width * dpr;
         canvas.height = res[0].height * dpr;
         ctx.scale(dpr, dpr);
@@ -193,18 +216,14 @@ Page({
       });
   },
 
-  checkServerConnection: function() {
-    wx.request({
-      url: `${serverUrl}/api/test`,
-      method: 'GET',
-      success: (res) => {
-        this.setData({ serverStatus: '已连接' });
-      },
-      fail: (err) => {
-        this.setData({ serverStatus: '连接失败' });
-        wx.showToast({ title: '后端服务未启动', icon: 'error' });
-      }
-    });
+  async checkServerConnection() {
+    try {
+      await checkServerConnectionApi();
+      this.setData({ serverStatus: '已连接' });
+    } catch (err) {
+      this.setData({ serverStatus: '连接失败' });
+      wx.showToast({ title: '后端服务未启动', icon: 'error' });
+    }
   },
 
   toggleAdvancedSettings: function() {
@@ -357,90 +376,117 @@ Page({
     this.callBackendBrandTest(brand_list, selectedModels, customQuestions);
   },
 
-  callBackendBrandTest: function(brand_list, selectedModels, customQuestions) {
+  async callBackendBrandTest(brand_list, selectedModels, customQuestions) {
     wx.showLoading({ title: '启动诊断...' });
 
-    wx.request({
-      url: `${serverUrl}/api/perform-brand-test`,
-      method: 'POST',
-      data: {
+    // 载荷标准化：将 selectedModels 对象数组平滑化为纯字符串 ID 数组
+    const processedSelectedModels = selectedModels.map(item => {
+      if (typeof item === 'object' && item !== null) {
+        // 如果 item 是对象，提取其 id 或 value
+        return item.id || item.value || item.name || item.label || '';
+      } else {
+        // 如果是字符串，直接保留
+        return item;
+      }
+    }).filter(id => id !== ''); // 过滤掉空字符串
+
+    // 类型降维处理：将问题数组转换为字符串
+    const custom_question = customQuestions.join(' ');
+
+    // 调试增强：打印请求数据
+    console.log('Request Payload:', {
+      brand_list: brand_list,
+      selectedModels: processedSelectedModels, // 确保格式正确并标准化模型名称
+      custom_question: custom_question  // 修正字段名和类型
+    });
+
+    try {
+      const res = await startBrandTestApi({
         brand_list: brand_list,
-        selectedModels: selectedModels,
-        customQuestions: customQuestions
-      },
-      header: { 'content-type': 'application/json' },
-      success: (res) => {
-        wx.hideLoading();
-        if (res.statusCode === 200 && res.data.status === 'success') {
-          const executionId = res.data.executionId;
-          this.pollTestProgress(executionId);
-        } else {
-          wx.showToast({ title: '启动诊断失败', icon: 'error' });
-          this.setData({ isTesting: false });
+        selectedModels: processedSelectedModels, // 确保格式正确并标准化模型名称
+        custom_question: custom_question  // 修正字段名和类型
+      });
+
+      if (res.statusCode === 200 && res.data.status === 'success') {
+        const executionId = res.data.executionId;
+        this.pollTestProgress(executionId);
+      } else {
+        // 防御性编程：安全地访问响应数据
+        let errorMessage = '启动诊断失败';
+        if (res.data && typeof res.data === 'object') {
+          errorMessage = res.data.message || res.data.error || res.data.details || '启动诊断失败';
         }
-      },
-      fail: (err) => {
         wx.hideLoading();
-        console.error('品牌诊断请求失败:', err);
-        wx.showToast({ title: '网络请求失败', icon: 'error' });
+        wx.showModal({
+          title: '诊断启动失败',
+          content: errorMessage,
+          showCancel: false
+        });
         this.setData({ isTesting: false });
       }
-    });
+    } catch (err) {
+      // 错误捕获防御：彻底重写 catch(err) 块
+      // 要求：第一时间执行 wx.hideLoading()
+      wx.hideLoading();
+
+      console.error("Diagnostic Error:", err);
+
+      // 要求：使用 err.data?.error || err.data?.message || err.errMsg 提取信息
+      const extractedError = err.data?.error || err.data?.message || err.errMsg || "任务创建失败";
+
+      // 要求：使用 wx.showModal 弹出提取到的真实错误信息
+      wx.showModal({
+        title: '启动失败',
+        content: String(extractedError),
+        showCancel: false
+      });
+
+      this.setData({ isTesting: false });
+    } finally {
+      // 交互修复：确保在所有情况下都隐藏加载提示
+      // 注意：这里不再重复调用 wx.hideLoading()，因为在 catch 块中已经调用了
+      // 避免重复调用可能引起的错误
+    }
   },
 
-  pollTestProgress: function(executionId) {
-    const progressSteps = [
-      '正在连接AI认知引擎...',
-      '正在生成诊断任务...',
-      '正在向AI平台发起请求...',
-      '正在分析AI回复...',
-      '正在进行语义一致性检测...',
-      '正在评估品牌纯净度...',
-      '正在聚合竞品数据...',
-      '正在生成深度洞察报告...'
-    ];
-    let currentStepIndex = 0;
+  pollTestProgress(executionId) {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await getTestProgressApi(executionId);
+        if (res.statusCode === 200) {
+          // 使用服务层处理进度数据
+          const processedData = processTestProgress(res, this.data.testProgress);
 
-    const pollInterval = setInterval(() => {
-      wx.request({
-        url: `${serverUrl}/api/test-progress?executionId=${executionId}`,
-        method: 'GET',
-        success: (res) => {
-          if (res.statusCode === 200) {
-            const data = res.data;
-            const newProgress = Math.round(data.progress);
+          if (processedData.shouldUpdateProgress) {
+            this.setData({ testProgress: processedData.newProgressValue });
 
-            if (newProgress > this.data.testProgress) {
-              this.setData({ testProgress: newProgress });
-              if (newProgress < 100) {
-                currentStepIndex = Math.min(Math.floor(newProgress / (100 / progressSteps.length)), progressSteps.length - 1);
-                this.setData({ progressText: progressSteps[currentStepIndex] });
-              }
-            }
-
-            if (data.status === 'completed') {
-              clearInterval(pollInterval);
-              this.setData({
-                latestTestResults: data.results,
-                latestCompetitiveAnalysis: data.competitiveAnalysis,
-                isTesting: false,
-                testCompleted: true,
-                progressText: '诊断完成，正在生成报告...',
-              });
-              wx.showToast({ title: '诊断完成', icon: 'success' });
-              this.viewDetailedResults();
-            } else if (data.status === 'failed') {
-              clearInterval(pollInterval);
-              this.setData({ isTesting: false, testCompleted: false, progressText: '诊断失败' });
-              wx.showToast({ title: '诊断失败: ' + (data.error || '未知错误'), icon: 'none' });
+            if (processedData.newProgressValue < 100) {
+              const progressText = getProgressTextByValue(processedData.newProgressValue);
+              this.setData({ progressText });
             }
           }
-        },
-        fail: (err) => {
-          console.error('获取诊断进度失败:', err);
-          this.setData({ progressText: '诊断连接异常...' });
+
+          if (isTestCompleted(processedData.status)) {
+            clearInterval(pollInterval);
+            this.setData({
+              latestTestResults: formatTestResults(processedData.results),
+              latestCompetitiveAnalysis: formatCompetitiveAnalysis(processedData.competitiveAnalysis),
+              isTesting: false,
+              testCompleted: true,
+              progressText: '诊断完成，正在生成报告...',
+            });
+            wx.showToast({ title: '诊断完成', icon: 'success' });
+            this.viewDetailedResults();
+          } else if (isTestFailed(processedData.status)) {
+            clearInterval(pollInterval);
+            this.setData({ isTesting: false, testCompleted: false, progressText: '诊断失败' });
+            wx.showToast({ title: '诊断失败: ' + (processedData.error || '未知错误'), icon: 'none' });
+          }
         }
-      });
+      } catch (err) {
+        console.error('获取诊断进度失败:', err);
+        this.setData({ progressText: '诊断连接异常...' });
+      }
     }, 1000);
   },
 

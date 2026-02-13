@@ -1,0 +1,63 @@
+{
+  "version": "2.0.0",
+  "contract_name": "GEO_Matrix_Diagnostic_Protocol",
+  "base_url": "/api",
+  "endpoints": {
+    "perform-brand-test": {
+      "path": "/perform-brand-test",
+      "method": "POST",
+      "description": "启动多品牌、多模型矩阵诊断任务",
+      "request": {
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer {token}"
+        },
+        "body": {
+          "brand_list": { "type": "array", "items": "string", "required": true },
+          "selectedModels": { "type": "array", "items": "string", "required": true, "note": "后端需自动处理对象数组到ID数组的转换" },
+          "custom_question": { "type": "string", "required": true }
+        }
+      },
+      "response": {
+        "success": {
+          "status": 200,
+          "structure": {
+            "status": "success",
+            "execution_id": "string",
+            "task_count": "number",
+            "message": "string"
+          }
+        },
+        "error": {
+          "status": [400, 401, 500],
+          "structure": {
+            "status": "error",
+            "error": "string",
+            "details": "object",
+            "code": "number"
+          }
+        }
+      }
+    },
+    "get-task-status": {
+      "path": "/test/status/<execution_id>",
+      "method": "GET",
+      "response": {
+        "structure": {
+          "status": "string",
+          "progress": "number",
+          "stage": "string",
+          "results": {
+            "type": "array",
+            "items": {
+              "model": "string",
+              "brand": "string",
+              "score": "object",
+              "competitors": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}
