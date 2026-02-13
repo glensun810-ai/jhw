@@ -175,7 +175,52 @@ class WorkflowManager:
         # 启动后台任务处理器
         self._start_background_processor()
         self._start_retry_processor()
-    
+
+    def _start_background_processor(self):
+        """启动后台任务处理器"""
+        def worker():
+            while True:
+                try:
+                    task_tuple = self.task_queue.get(timeout=1)
+                    if task_tuple is None:
+                        break
+                    self._process_task(task_tuple)
+                    self.task_queue.task_done()
+                except queue.Empty:
+                    continue
+                except Exception as e:
+                    api_logger.error(f"Error in background processor: {str(e)}")
+
+        # 启动后台线程
+        self.processor_thread = threading.Thread(target=worker, daemon=True)
+        self.processor_thread.start()
+
+    def _start_retry_processor(self):
+        """启动重试处理器"""
+        def retry_worker():
+            while True:
+                try:
+                    # 检查是否有需要重试的任务
+                    if not self.retry_queue.empty():
+                        next_retry_time, task_data = self.retry_queue.queue[0]
+                        current_time = datetime.now().timestamp()
+
+                        if next_retry_time <= current_time:
+                            # 从队列中取出任务
+                            self.retry_queue.get()
+                            # 处理重试任务
+                            self._process_task_with_retry(task_data)
+
+                    # 每秒检查一次
+                    time.sleep(1)
+                except Exception as e:
+                    api_logger.error(f"Error in retry processor: {str(e)}")
+                    time.sleep(1)
+
+        # 启动重试处理线程
+        self.retry_thread = threading.Thread(target=retry_worker, daemon=True)
+        self.retry_thread.start()
+
     def create_task_package(
         self, 
         evidence_fragment: str, 

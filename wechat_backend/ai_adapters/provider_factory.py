@@ -6,6 +6,7 @@ from typing import Dict, Type
 from .base_provider import BaseAIProvider
 from .doubao_provider import DoubaoProvider
 from .deepseek_provider import DeepSeekProvider
+from .qwen_provider import QwenProvider
 from ..logging_config import api_logger
 
 
