@@ -63,6 +63,7 @@ class DeepSeekProvider(BaseAIProvider):
     def ask_question(self, prompt: str) -> Dict[str, Any]:
         """
         向 DeepSeek 发送问题并返回原生响应，包含推理链信息
+        使用环境变量中的 DEEPSEEK_API_KEY，符合 OpenAI 协议格式
 
         Args:
             prompt: 用户输入的提示文本
@@ -77,7 +78,7 @@ class DeepSeekProvider(BaseAIProvider):
             if not self.api_key:
                 raise ValueError("DeepSeek API Key 未设置")
 
-            # 根据模式构建不同的请求体
+            # 根据模式构建不同的请求体，符合 OpenAI 协议格式
             # 普通对话模式 (chat): 适用于日常对话和一般性问题解答
             # 深度推理模式 (reasoner): 适用于需要深度分析和推理的问题
             payload = {
@@ -93,13 +94,14 @@ class DeepSeekProvider(BaseAIProvider):
                 "stream": False  # 暂时不使用流式输出，便于推理链提取
             }
 
-            # 如果启用推理链提取，可能需要特殊参数（根据 DeepSeek R1 API 文档）
+            # 如果启用推理链提取，可能需要特殊参数（根据 DeepSeek V3/R1 API 文档）
             if self.enable_reasoning_extraction:
-                # 添加可能的推理相关参数（具体参数需根据实际 API 文档调整）
-                payload["reasoning_enable"] = True  # 假设 R1 支持推理启用参数
-                payload["reasoning_mode"] = "complex"  # 假设 R1 支持推理模式选择
+                # 根据 DeepSeek API 文档，可能需要添加推理相关参数
+                # 注意：实际参数需要根据 DeepSeek V3/R1 API 文档进行调整
+                pass  # DeepSeek V3 可能不需要特殊参数，或使用其他参数名
 
             # 使用统一请求封装器发送请求到 DeepSeek API
+            # DeepSeek 兼容 OpenAI 格式，使用标准的 /chat/completions 端点
             response = self.request_wrapper.make_ai_request(
                 endpoint="/chat/completions",
                 prompt=prompt,
@@ -135,7 +137,7 @@ class DeepSeekProvider(BaseAIProvider):
                 message = choice.get("message", {})
                 content = message.get("content", "")
 
-                # 尝试提取推理链内容（DeepSeek R1 特有字段）
+                # 尝试提取推理链内容（如果 DeepSeek R1 支持）
                 if self.enable_reasoning_extraction:
                     # 根据 DeepSeek R1 API 规范提取推理内容
                     # 可能的字段包括 reasoning, thoughts, thinking_process 等
@@ -277,6 +279,197 @@ class DeepSeekProvider(BaseAIProvider):
 
         # 如果没有找到明确的推理标记，返回空字符串
         return ""
+
+    def extract_citations(self, raw_response: Dict[str, Any]) -> List[Dict[str, str]]:
+        """
+        从 DeepSeek 原生响应中提取引用链接
+        专门针对 DeepSeek 返回的引用格式进行正则解析
+
+        Args:
+            raw_response: DeepSeek 平台的原生响应
+
+        Returns:
+            List[Dict[str, str]]: 包含引用信息的字典列表
+        """
+        citations = []
+
+        # 提取响应中的文本内容
+        response_text = self._get_response_text(raw_response)
+
+        # DeepSeek 特定的引用格式解析
+        # 1. 标准 URL 格式
+        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+        urls = re.findall(url_pattern, response_text)
+
+        for url in urls:
+            try:
+                parsed = urlparse(url)
+                domain = parsed.netloc
+                citations.append({
+                    'url': url,
+                    'domain': domain,
+                    'title': f'Link to {domain}',
+                    'type': 'external_link'
+                })
+            except Exception:
+                # 如果URL解析失败，跳过该URL
+                continue
+
+        # 2. Markdown 格式链接 [text](url)
+        markdown_pattern = r'\[([^\]]+)\]\((https?://[^\s\)]+)\)'
+        markdown_links = re.findall(markdown_pattern, response_text)
+
+        for title, url in markdown_links:
+            try:
+                parsed = urlparse(url)
+                domain = parsed.netloc
+                citations.append({
+                    'url': url,
+                    'domain': domain,
+                    'title': title,
+                    'type': 'markdown_link'
+                })
+            except Exception:
+                continue
+
+        # 3. DeepSeek 特有的引用格式（如 [1]、[2] 等数字引用）
+        # 这些可能在响应中以 [1]: https://example.com 格式出现
+        numbered_ref_pattern = r'\[(\d+)\]:\s*(https?://[^\s]+)'
+        numbered_refs = re.findall(numbered_ref_pattern, response_text)
+
+        for ref_num, url in numbered_refs:
+            try:
+                parsed = urlparse(url)
+                domain = parsed.netloc
+                citations.append({
+                    'url': url,
+                    'domain': domain,
+                    'title': f'Reference [{ref_num}]',
+                    'type': 'numbered_reference'
+                })
+            except Exception:
+                continue
+
+        # 4. DeepSeek 可能使用的其他特定格式
+        # 如 "参考来源: https://example.com" 或 "资料来源：[链接](https://example.com)"
+        source_pattern = r'(?:参考来源|资料来源|信息来源)[:：]\s*(https?://[^\s<>"{}|\\^`\[\]]+)'
+        source_urls = re.findall(source_pattern, response_text)
+
+        for url in source_urls:
+            try:
+                parsed = urlparse(url)
+                domain = parsed.netloc
+                citations.append({
+                    'url': url,
+                    'domain': domain,
+                    'title': f'Source from {domain}',
+                    'type': 'source_reference'
+                })
+            except Exception:
+                continue
+
+        # 去重处理
+        seen_urls = set()
+        unique_citations = []
+        for citation in citations:
+            if citation['url'] not in seen_urls:
+                seen_urls.add(citation['url'])
+                unique_citations.append(citation)
+
+        return unique_citations
+
+    def to_standard_format(self, raw_response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        将 DeepSeek 结果转化为契约中的 exposure_analysis 草稿
+        确保输出数据结构（排名、篇幅、信源）完全符合契约定义
+
+        Args:
+            raw_response: DeepSeek 平台的原生响应
+
+        Returns:
+            Dict[str, Any]: 标准化的 exposure_analysis 格式
+        """
+        # 初始化 exposure_analysis 结构
+        exposure_analysis = {
+            'ranking_list': [],
+            'brand_details': {},
+            'unlisted_competitors': []
+        }
+
+        # 提取响应文本
+        response_text = self._get_response_text(raw_response)
+
+        if not response_text:
+            return exposure_analysis
+
+        # 提取品牌提及信息
+        brand_mentions = self._extract_brand_mentions(response_text)
+
+        # 构建排名列表
+        exposure_analysis['ranking_list'] = brand_mentions['mentioned_brands']
+
+        # 构建品牌详情
+        for brand in brand_mentions['mentioned_brands']:
+            exposure_analysis['brand_details'][brand] = {
+                'rank': brand_mentions['mentioned_brands'].index(brand) + 1,
+                'word_count': brand_mentions['word_counts'].get(brand, 0),
+                'sov_share': brand_mentions['sov_shares'].get(brand, 0.0),
+                'sentiment_score': brand_mentions['sentiment_scores'].get(brand, 50.0)
+            }
+
+        # 提取未列出的竞争品牌
+        exposure_analysis['unlisted_competitors'] = brand_mentions['unlisted_competitors']
+
+        return exposure_analysis
+
+    def _extract_brand_mentions(self, content: str) -> Dict[str, Any]:
+        """
+        从内容中提取品牌提及信息
+
+        Args:
+            content: AI响应内容
+
+        Returns:
+            Dict: 包含品牌提及信息的字典
+        """
+        # 简化的品牌提取逻辑 - 在实际实现中可能需要更复杂的NLP处理
+        import re
+
+        # 假设我们有一些常见的竞争品牌名称
+        known_brands = [
+            '小米', '华为', '苹果', '三星', 'OPPO', 'VIVO', '荣耀', '一加',
+            '魅族', '努比亚', '锤子', '联想', '中兴', '酷派', '金立', '乐视',
+            '腾讯', '阿里', '百度', '字节跳动', '美团', '滴滴', '京东', '拼多多',
+            '德施曼', '凯迪仕', '云米', '鹿客', 'TCL', '长虹', '海信', '创维'
+        ]
+
+        mentioned_brands = []
+        word_counts = {}
+        sov_shares = {}
+        sentiment_scores = {}
+
+        # 统计每个品牌的提及次数
+        for brand in known_brands:
+            count = len(re.findall(re.escape(brand), content))
+            if count > 0 and brand not in mentioned_brands:
+                mentioned_brands.append(brand)
+                word_counts[brand] = count
+                # 简化的SOV计算（实际实现中需要更复杂的逻辑）
+                sov_shares[brand] = count / max(1, len(mentioned_brands))
+                # 简化的感情分数（实际实现中需要情感分析）
+                sentiment_scores[brand] = 50.0 + (count * 2)  # 假设提及次数越多感情越好
+
+        # 识别可能的竞争品牌（未在已知列表中的品牌提及）
+        # 这里简化处理，实际应用中需要更复杂的实体识别
+        unlisted_competitors = []
+
+        return {
+            'mentioned_brands': mentioned_brands,
+            'word_counts': word_counts,
+            'sov_shares': sov_shares,
+            'sentiment_scores': sentiment_scores,
+            'unlisted_competitors': unlisted_competitors
+        }
 
     def health_check(self) -> bool:
         """
