@@ -209,6 +209,31 @@
                 "risk_level": { "type": "string", "enum": ["Low", "Medium", "High"] }
               }
             }
+          },
+          "comparative_analysis": {
+            "type": "object",
+            "description": "对比分析：解决‘认知差距’问题",
+            "properties": {
+              "common_keywords": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "双方共有的关键词"
+              },
+              "my_brand_unique_keywords": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "我方品牌独有的关键词"
+              },
+              "competitor_unique_keywords": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "竞品独有的关键词"
+              },
+              "differentiation_gap": {
+                "type": "string",
+                "description": "AI感知的核心差异总结"
+              }
+            }
           }
         }
       }
