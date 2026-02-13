@@ -1,67 +1,36 @@
-import requests
-import json
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Flask 应用启动文件
+使用方法: python run.py
+"""
 
-# Base URL for your backend server
-BASE_URL = 'http://127.0.0.1:5001'
+import os
+import sys
+from pathlib import Path
 
-def test_backend_connection():
-    """Test basic connection to the backend"""
-    try:
-        response = requests.get(f'{BASE_URL}/')
-        if response.status_code == 200:
-            print("✓ Backend connection successful!")
-            print(f"Response: {response.json()}")
-            return True
-        else:
-            print(f"✗ Backend connection failed with status {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"✗ Error connecting to backend: {e}")
-        return False
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def test_api_endpoints():
-    """Test various API endpoints"""
-    endpoints = [
-        '/api/config',
-        '/api/test',
-        '/api/access_token'
-    ]
+def create_app():
+    """创建应用实例 - 从 wechat_backend 导入现有的 app 实例"""
+    from wechat_backend import app
+    return app
 
-    for endpoint in endpoints:
-        try:
-            response = requests.get(f'{BASE_URL}{endpoint}')
-            print(f"Testing {endpoint}: Status {response.status_code}")
-            if response.status_code == 200:
-                print(f"  Response: {json.dumps(response.json(), indent=2)}")
-            else:
-                print(f"  Error: {response.text}")
-        except Exception as e:
-            print(f"✗ Error testing {endpoint}: {e}")
+# 创建应用实例
+app = create_app()
 
-def test_login_endpoint():
-    """Test the login endpoint (without actual code, just to check if it responds properly)"""
-    try:
-        response = requests.post(
-            f'{BASE_URL}/api/login',
-            json={'code': 'fake_code_for_test'},
-            headers={'Content-Type': 'application/json'}
-        )
-        print(f"Testing /api/login: Status {response.status_code}")
-        print(f"  Response: {json.dumps(response.json(), indent=2)}")
-    except Exception as e:
-        print(f"✗ Error testing login endpoint: {e}")
-
-if __name__ == "__main__":
-    print("Testing WeChat Mini Program Backend...")
-    print("="*50)
-
-    if test_backend_connection():
-        print("\nTesting API endpoints...")
-        test_api_endpoints()
-
-        print("\nTesting login endpoint...")
-        test_login_endpoint()
-
-        print("\nAll tests completed!")
-    else:
-        print("Cannot connect to backend. Make sure it's running on http://127.0.0.1:5001")
+if __name__ == '__main__':
+    # 直接运行时的配置
+    port = int(os.environ.get('PORT', 5002))
+    debug = os.environ.get('FLASK_DEBUG', '1').lower() in ('1', 'true', 'yes')
+    
+    print(f"🚀 Starting WeChat Backend API server on port {port}")
+    print(f"🔧 Debug mode: {'on' if debug else 'off'}")
+    print(f"📝 Log file: logs/app.log")
+    
+    app.run(
+        host='127.0.0.1',
+        port=port,
+        debug=debug
+    )

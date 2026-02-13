@@ -1,0 +1,3 @@
+FLASK_APP=wechat_backend
+FLASK_ENV=development
+FLASK_DEBUG=1

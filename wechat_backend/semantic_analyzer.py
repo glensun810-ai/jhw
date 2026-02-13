@@ -23,16 +23,16 @@ class SemanticAnalyzer:
         
         # Initialize Jieba with custom dictionary if available
         # Add common brand-related terms to improve segmentation
-        jieba.add_word("人工智能")
-        jieba.add_word("品牌认知")
-        jieba.add_word("品牌声誉")
-        jieba.add_word("品牌定位")
-        jieba.add_word("品牌价值")
-        jieba.add_word("品牌故事")
-        jieba.add_word("品牌理念")
-        jieba.add_word("品牌战略")
-        jieba.add_word("品牌传播")
-        jieba.add_word("品牌营销")
+        jieba.add_word("人工智能", freq=10000)
+        jieba.add_word("品牌认知", freq=10000)
+        jieba.add_word("品牌声誉", freq=10000)
+        jieba.add_word("品牌定位", freq=10000)
+        jieba.add_word("品牌价值", freq=10000)
+        jieba.add_word("品牌故事", freq=10000)
+        jieba.add_word("品牌理念", freq=10000)
+        jieba.add_word("品牌战略", freq=10000)
+        jieba.add_word("品牌传播", freq=10000)
+        jieba.add_word("品牌营销", freq=10000)
         
         # Common stop words for Chinese text
         self.stop_words = {
