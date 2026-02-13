@@ -8,5 +8,6 @@ from .impact_calculator import ImpactCalculator
 from .prediction_engine import PredictionEngine
 from .workflow_manager import WorkflowManager
 from .asset_intelligence_engine import AssetIntelligenceEngine
+from .report_generator import ReportGenerator
 
-__all__ = ['RankAnalyzer', 'SourceAggregator', 'SourceIntelligenceProcessor', 'process_brand_source_intelligence', 'ImpactCalculator', 'PredictionEngine', 'WorkflowManager', 'AssetIntelligenceEngine']
+__all__ = ['RankAnalyzer', 'SourceAggregator', 'SourceIntelligenceProcessor', 'process_brand_source_intelligence', 'ImpactCalculator', 'PredictionEngine', 'WorkflowManager', 'AssetIntelligenceEngine', 'ReportGenerator']
