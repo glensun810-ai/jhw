@@ -240,3 +240,45 @@
     }
   }
 }
+
+{
+  "paths": {
+    "/market/benchmark": {
+      "get": {
+        "summary": "获取行业基准对比数据",
+        "tags": ["行业洞察"],
+        "parameters": [
+          { "name": "category", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "market_avg_score": { "type": "number" },
+                    "brand_percentile": { "type": "number", "description": "品牌在行业中的百分比位次" },
+                    "top_performers": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ForecastResult": {
+        "type": "object",
+        "properties": {
+          "predicted_rank": { "type": "integer" },
+          "confidence_interval": { "type": "number" },
+          "risk_factors": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
