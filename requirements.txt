@@ -2,7 +2,6 @@ Flask==2.0.1
 requests==2.25.1
 python-dotenv==0.19.2
 google-generativeai==0.3.2
-spacy==3.7.2
 snownlp==0.12.3
 
 # Please run the following command to download the Chinese model for spaCy:
@@ -18,3 +17,7 @@ bleach>=6.0.0         # 用于HTML净化
 marshmallow>=3.19.0    # 用于数据验证
 flask-talisman>=1.0.0  # 用于安全头设置
 flask-wtf>=1.1.1      # 用于CSRF保护
+
+# 调度相关的依赖包
+APScheduler==3.10.4
+SQLAlchemy>=2.0.0
