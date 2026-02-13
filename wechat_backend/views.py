@@ -620,7 +620,7 @@ def get_platform_status():
 
         # 预定义支持的平台
         supported_platforms = [
-            'deepseek', 'doubao', 'qwen', 'wenxin',
+            'deepseek', 'deepseekr1', 'doubao', 'qwen', 'wenxin',
             'kimi', 'chatgpt', 'claude', 'gemini'
         ]
 
@@ -1870,3 +1870,128 @@ def get_workflow_task_status(task_id):
     except Exception as e:
         api_logger.error(f"Error getting workflow task status: {e}")
         return jsonify({'error': 'Failed to get task status', 'details': str(e)}), 500
+
+@wechat_bp.route('/workflow/tasks', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/workflow/tasks', require_auth=False, validate_inputs=True)
+def create_workflow_task():
+    """创建工作流任务 - 打包负面证据归因数据并推送至Webhook"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Workflow task creation endpoint accessed by user: {user_id}")
+
+    try:
+        # 获取请求数据
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+
+        # 验证必需字段
+        required_fields = [
+            'evidence_fragment', 'associated_url', 'source_name', 
+            'risk_level', 'brand_name', 'intervention_script', 
+            'source_meta', 'webhook_url'
+        ]
+        
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # 提取参数
+        evidence_fragment = data['evidence_fragment']
+        associated_url = data['associated_url']
+        source_name = data['source_name']
+        risk_level = data['risk_level']
+        brand_name = data['brand_name']
+        intervention_script = data['intervention_script']
+        source_meta = data['source_meta']
+        webhook_url = data['webhook_url']
+        priority = data.get('priority', 'medium')  # 默认中等优先级
+
+        # 验证输入参数
+        if not sql_protector.validate_input(evidence_fragment):
+            return jsonify({'error': 'Invalid evidence_fragment'}), 400
+        if not sql_protector.validate_input(associated_url):
+            return jsonify({'error': 'Invalid associated_url'}), 400
+        if not sql_protector.validate_input(source_name):
+            return jsonify({'error': 'Invalid source_name'}), 400
+        if not sql_protector.validate_input(brand_name):
+            return jsonify({'error': 'Invalid brand_name'}), 400
+        if not sql_protector.validate_input(webhook_url):
+            return jsonify({'error': 'Invalid webhook_url'}), 400
+
+        # 验证风险等级
+        valid_risk_levels = ['Low', 'Medium', 'High', 'Critical']
+        if risk_level not in valid_risk_levels:
+            return jsonify({'error': f'Invalid risk_level. Must be one of: {valid_risk_levels}'}), 400
+
+        # 验证优先级
+        valid_priorities = ['low', 'medium', 'high', 'critical']
+        if priority not in valid_priorities:
+            return jsonify({'error': f'Invalid priority. Must be one of: {valid_priorities}'}), 400
+
+        # 验证webhook_url格式
+        import re
+        url_pattern = re.compile(
+            r'^https?://'  # http:// or https://
+            r'(?:[a-zA-Z]|[0-9]|[hBc_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+        )
+        if not url_pattern.match(webhook_url):
+            return jsonify({'error': 'Invalid webhook_url format'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 创建任务包
+        task_package = {
+            'task_type': 'negative_evidence_intervention',
+            'evidence_data': {
+                'evidence_fragment': evidence_fragment,
+                'associated_url': associated_url,
+                'source_name': source_name,
+                'risk_level': risk_level,
+                'brand_name': brand_name,
+                'intervention_script': intervention_script,
+                'source_meta': source_meta
+            },
+            'delivery_instructions': {
+                'webhook_url': webhook_url,
+                'delivery_format': 'standard_payload',
+                'callback_required': True
+            },
+            'metadata': {
+                'created_at': datetime.utcnow().isoformat(),
+                'version': '1.0'
+            }
+        }
+
+        # 初始化Webhook管理器并发送任务
+        from .analytics.workflow_manager import WebhookManager
+        webhook_manager = WebhookManager()
+        
+        success = webhook_manager.send_webhook(
+            webhook_url=webhook_url,
+            payload=task_package,
+            task_id=f"wf_{int(time.time())}_{hash(evidence_fragment) % 10000}"
+        )
+
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'Workflow task created and dispatched successfully',
+                'webhook_url': webhook_url
+            })
+        else:
+            return jsonify({
+                'status': 'partial_success',  # 表示任务创建成功但推送失败
+                'message': 'Workflow task created but failed to dispatch via webhook',
+                'webhook_url': webhook_url,
+                'error': 'Failed to send webhook'
+            }), 500
+
+    except Exception as e:
+        api_logger.error(f"Error creating workflow task: {e}")
+        return jsonify({'error': 'Failed to create workflow task', 'details': str(e)}), 500
+

@@ -1,12 +1,11 @@
 """
-BaseAIProvider 抽象类 - AI平台提供者的基类
-定义标准化接口用于不同AI平台的适配
+BaseAIProvider - AI平台提供者的抽象基类
+定义标准化接口，包括发送请求、提取引用和转换为标准格式的方法
 """
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional
 import re
 from urllib.parse import urlparse
-from .base_adapter import AIResponse
 
 
 class BaseAIProvider(ABC):
@@ -27,7 +26,7 @@ class BaseAIProvider(ABC):
         self.model_name = model_name
     
     @abstractmethod
-    def ask_question(self, prompt: str) -> AIResponse:
+    def ask_question(self, prompt: str) -> Dict[str, Any]:
         """
         发送问题到AI平台
         
@@ -35,25 +34,28 @@ class BaseAIProvider(ABC):
             prompt: 问题提示词
             
         Returns:
-            AIResponse: AI平台的响应
+            AI平台的原始响应
         """
         pass
     
-    def extract_citations(self, response: str) -> List[Dict[str, str]]:
+    def extract_citations(self, raw_response: Dict[str, Any]) -> List[Dict[str, str]]:
         """
         从原生响应中提取引用链接
         
         Args:
-            response: AI平台的原始响应文本
+            raw_response: AI平台的原生响应
             
         Returns:
             List[Dict[str, str]]: 包含引用信息的字典列表
         """
         citations = []
         
+        # 提取响应中的URL链接
+        response_text = self._get_response_text(raw_response)
+        
         # 提取URL链接
         url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-        urls = re.findall(url_pattern, response)
+        urls = re.findall(url_pattern, response_text)
         
         for url in urls:
             try:
@@ -71,7 +73,7 @@ class BaseAIProvider(ABC):
         
         # 提取Markdown格式的链接
         markdown_pattern = r'\[([^\]]+)\]\((https?://[^\s\)]+)\)'
-        markdown_links = re.findall(markdown_pattern, response)
+        markdown_links = re.findall(markdown_pattern, response_text)
         
         for title, url in markdown_links:
             try:
@@ -86,28 +88,6 @@ class BaseAIProvider(ABC):
             except Exception:
                 continue
         
-        # 提取引用标记（如 [1], [2] 等）
-        citation_pattern = r'\[(\d+)\]'
-        citation_numbers = re.findall(citation_pattern, response)
-        
-        for num in citation_numbers:
-            # 在响应中查找引用标记前后的上下文
-            pattern = rf'\[{num}\][\s\S]*?((?:https?://[^\s<>"{{}}|\\\\^`\\[\\]]+)|[^.\n]*?\.?)'
-            matches = re.findall(pattern, response)
-            for match in matches:
-                if match.startswith('http'):
-                    try:
-                        parsed = urlparse(match)
-                        domain = parsed.netloc
-                        citations.append({
-                            'url': match,
-                            'domain': domain,
-                            'title': f'Citation [{num}]',
-                            'type': 'citation_reference'
-                        })
-                    except Exception:
-                        continue
-        
         # 去重
         seen_urls = set()
         unique_citations = []
@@ -118,13 +98,38 @@ class BaseAIProvider(ABC):
         
         return unique_citations
     
-    def to_standard_format(self, response: AIResponse, brand_name: str = None) -> Dict[str, Any]:
+    def _get_response_text(self, raw_response: Dict[str, Any]) -> str:
+        """
+        从原始响应中提取文本内容
+        
+        Args:
+            raw_response: 原始响应字典
+            
+        Returns:
+            str: 提取的文本内容
+        """
+        text_parts = []
+        
+        # 尝试从不同可能的字段中提取内容
+        if 'choices' in raw_response:
+            for choice in raw_response['choices']:
+                if 'message' in choice and 'content' in choice['message']:
+                    text_parts.append(choice['message']['content'])
+                elif 'text' in choice:
+                    text_parts.append(choice['text'])
+        elif 'content' in raw_response:
+            text_parts.append(raw_response['content'])
+        elif 'result' in raw_response:
+            text_parts.append(str(raw_response['result']))
+        
+        return ' '.join(text_parts)
+    
+    def to_standard_format(self, raw_response: Dict[str, Any]) -> Dict[str, Any]:
         """
         将结果转化为契约中的exposure_analysis草稿
         
         Args:
-            response: AIResponse对象
-            brand_name: 品牌名称（可选）
+            raw_response: AI平台的原生响应
             
         Returns:
             Dict[str, Any]: 标准化的exposure_analysis格式
@@ -136,13 +141,14 @@ class BaseAIProvider(ABC):
             'unlisted_competitors': []
         }
         
-        if not response.success or not response.content:
+        # 提取响应文本
+        response_text = self._get_response_text(raw_response)
+        
+        if not response_text:
             return exposure_analysis
         
-        content = response.content
-        
-        # 提取品牌提及和排名信息
-        brand_mentions = self._extract_brand_mentions(content, brand_name)
+        # 提取品牌提及信息（简化实现，实际应用中可能需要更复杂的NLP处理）
+        brand_mentions = self._extract_brand_mentions(response_text)
         
         # 构建排名列表
         exposure_analysis['ranking_list'] = brand_mentions['mentioned_brands']
@@ -161,13 +167,12 @@ class BaseAIProvider(ABC):
         
         return exposure_analysis
     
-    def _extract_brand_mentions(self, content: str, main_brand: str = None) -> Dict[str, Any]:
+    def _extract_brand_mentions(self, content: str) -> Dict[str, Any]:
         """
         从内容中提取品牌提及信息
         
         Args:
             content: AI响应内容
-            main_brand: 主要品牌名称
             
         Returns:
             Dict: 包含品牌提及信息的字典
@@ -182,10 +187,6 @@ class BaseAIProvider(ABC):
             '腾讯', '阿里', '百度', '字节跳动', '美团', '滴滴', '京东', '拼多多'
         ]
         
-        # 如果提供了主要品牌，添加到品牌列表中
-        if main_brand and main_brand not in known_brands:
-            known_brands.insert(0, main_brand)
-        
         mentioned_brands = []
         word_counts = {}
         sov_shares = {}
@@ -199,16 +200,11 @@ class BaseAIProvider(ABC):
                 word_counts[brand] = count
                 # 简化的SOV计算（实际实现中需要更复杂的逻辑）
                 sov_shares[brand] = count / max(1, len(mentioned_brands))
-                # 简化的感情分數（实际实现中需要情感分析）
-                sentiment_scores[brand] = 50.0 + (count * 2)  # 埪设提及次数越多感情越好
+                # 简化的感情分数（实际实现中需要情感分析）
+                sentiment_scores[brand] = 50.0 + (count * 2)  # 假设提及次数越多感情越好
         
-        # 识别未在已知品牌列表中的品牌提及
-        all_mentions = set()
-        for brand in known_brands:
-            all_mentions.update(re.findall(re.escape(brand), content))
-        
-        # 提取可能的竞争品牌（未在已知列表中的品牌提及）
-        # 這里簡化處理，實際應用中需要更複雜的實體識別
+        # 识别可能的竞争品牌（未在已知列表中的品牌提及）
+        # 这里简化处理，实际应用中需要更复杂的实体识别
         unlisted_competitors = []
         
         return {

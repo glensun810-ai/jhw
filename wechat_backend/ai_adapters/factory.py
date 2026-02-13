@@ -13,6 +13,12 @@ except ImportError as e:
     DeepSeekAdapter = None
 
 try:
+    from .deepseek_r1_adapter import DeepSeekR1Adapter
+except ImportError as e:
+    api_logger.warning(f"Failed to import DeepSeekR1Adapter: {e}")
+    DeepSeekR1Adapter = None
+
+try:
     from .qwen_adapter import QwenAdapter
 except ImportError as e:
     api_logger.warning(f"Failed to import QwenAdapter: {e}")
@@ -87,6 +93,8 @@ class AIAdapterFactory:
 # Register default providers
 if DeepSeekAdapter:
     AIAdapterFactory.register(AIPlatformType.DEEPSEEK, DeepSeekAdapter)
+if DeepSeekR1Adapter:
+    AIAdapterFactory.register(AIPlatformType.DEEPSEEKR1, DeepSeekR1Adapter)  # New R1 adapter
 if QwenAdapter:
     AIAdapterFactory.register(AIPlatformType.QWEN, QwenAdapter)
 if DoubaoAdapter:

@@ -22,6 +22,7 @@ def get_ai_client(platform_name: str, api_key: str, model_name: str, **kwargs) -
     # Map platform names to AIPlatformType
     platform_map = {
         'deepseek': AIPlatformType.DEEPSEEK,
+        'deepseekr1': AIPlatformType.DEEPSEEKR1,  # New DeepSeek R1 platform
         'doubao': AIPlatformType.DOUBAO,
         'yuanbao': AIPlatformType.YUANBAO,
         'qwen': AIPlatformType.QWEN,
