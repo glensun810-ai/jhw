@@ -30,10 +30,12 @@ from .analytics.monetization_service import MonetizationService, UserLevel
 from .analytics.source_intelligence_processor import SourceIntelligenceProcessor, process_brand_source_intelligence
 from .recommendation_generator import RecommendationGenerator, RecommendationPriority, RecommendationType
 from .cruise_controller import CruiseController
+from .market_intelligence_service import MarketIntelligenceService
 
 # Security imports
 from .security.auth import require_auth, require_auth_optional, get_current_user_id
 from .security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer, validate_safe_text
+from .security.sql_protection import sql_protector
 from .security.rate_limiting import rate_limit, CombinedRateLimiter
 
 # Monitoring imports
@@ -1253,3 +1255,59 @@ def get_cruise_trends():
     except Exception as e:
         api_logger.error(f"Error retrieving trend data: {e}")
         return jsonify({'error': 'Failed to retrieve trend data', 'details': str(e)}), 500
+
+
+# 初始化市场情报服务
+market_intelligence_service = MarketIntelligenceService()
+
+
+@wechat_bp.route('/market/benchmark', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/market/benchmark', require_auth=False, validate_inputs=True)
+def get_market_benchmark():
+    """获取市场基准对比数据"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Market benchmark endpoint accessed by user: {user_id}")
+
+    try:
+        # 从查询参数获取必要参数
+        brand_name = request.args.get('brand_name', '')
+        category = request.args.get('category', None)  # 可选参数
+        days = request.args.get('days', 30, type=int)
+
+        if not brand_name:
+            return jsonify({'error': 'brand_name is required'}), 400
+
+        if days <= 0 or days > 365:
+            return jsonify({'error': 'days must be between 1 and 365'}), 400
+
+        # 验证输入参数
+        if not sql_protector.validate_input(brand_name):
+            return jsonify({'error': 'Invalid brand_name'}), 400
+        if category and not sql_protector.validate_input(category):
+            return jsonify({'error': 'Invalid category'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 获取市场基准数据
+        benchmark_data = market_intelligence_service.get_market_benchmark_data(
+            brand_name=brand_name,
+            category=category,
+            days=days
+        )
+
+        return jsonify({
+            'status': 'success',
+            'brand_name': brand_name,
+            'category': category,
+            'days': days,
+            'benchmark_data': benchmark_data
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error retrieving market benchmark data: {e}")
+        return jsonify({'error': 'Failed to retrieve market benchmark data', 'details': str(e)}), 500
