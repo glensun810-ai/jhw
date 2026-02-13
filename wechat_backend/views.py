@@ -1604,3 +1604,137 @@ def optimize_assets():
     except Exception as e:
         api_logger.error(f"Error optimizing assets: {e}")
         return jsonify({'error': 'Failed to optimize assets', 'details': str(e)}), 500
+
+
+# 初始化报告生成器
+from .analytics.report_generator import ReportGenerator
+report_generator = ReportGenerator()
+
+
+@wechat_bp.route('/hub/summary', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/hub/summary', require_auth=False, validate_inputs=True)
+def get_hub_summary():
+    """获取枢纽摘要数据 - 品牌GEO运营分析汇总"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Hub summary endpoint accessed by user: {user_id}")
+
+    try:
+        # 从查询参数获取参数
+        brand_name = request.args.get('brand_name', '')
+        days = request.args.get('days', 7, type=int)  # 默认7天
+
+        if not brand_name:
+            return jsonify({'error': 'brand_name is required'}), 400
+
+        if days <= 0 or days > 365:
+            return jsonify({'error': 'days must be between 1 and 365'}), 400
+
+        # 验证输入参数
+        if not sql_protector.validate_input(brand_name):
+            return jsonify({'error': 'Invalid brand_name'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 生成枢纽摘要
+        summary = report_generator.get_hub_summary(brand_name, days)
+
+        return jsonify({
+            'status': 'success',
+            'summary': summary
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error generating hub summary: {e}")
+        return jsonify({'error': 'Failed to generate hub summary', 'details': str(e)}), 500
+
+
+@wechat_bp.route('/reports/executive', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=5, window=60, per='endpoint')
+@monitored_endpoint('/reports/executive', require_auth=False, validate_inputs=True)
+def get_executive_report():
+    """获取高管视角报告"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Executive report endpoint accessed by user: {user_id}")
+
+    try:
+        # 从查询参数获取参数
+        brand_name = request.args.get('brand_name', '')
+        days = request.args.get('days', 30, type=int)  # 默认30天
+
+        if not brand_name:
+            return jsonify({'error': 'brand_name is required'}), 400
+
+        if days <= 0 or days > 365:
+            return jsonify({'error': 'days must be between 1 and 365'}), 400
+
+        # 验证输入参数
+        if not sql_protector.validate_input(brand_name):
+            return jsonify({'error': 'Invalid brand_name'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 生成高管报告
+        summary = report_generator.generate_executive_summary(brand_name, days)
+
+        return jsonify({
+            'status': 'success',
+            'report': summary
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error generating executive report: {e}")
+        return jsonify({'error': 'Failed to generate executive report', 'details': str(e)}), 500
+
+
+@wechat_bp.route('/reports/pdf', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=3, window=60, per='endpoint')
+@monitored_endpoint('/reports/pdf', require_auth=False, validate_inputs=True)
+def get_pdf_report():
+    """获取PDF格式的报告"""
+    user_id = get_current_user_id()
+    api_logger.info(f"PDF report endpoint accessed by user: {user_id}")
+
+    try:
+        # 从查询参数获取参数
+        brand_name = request.args.get('brand_name', '')
+        days = request.args.get('days', 30, type=int)  # 默认30天
+
+        if not brand_name:
+            return jsonify({'error': 'brand_name is required'}), 400
+
+        if days <= 0 or days > 365:
+            return jsonify({'error': 'days must be between 1 and 365'}), 400
+
+        # 验证输入参数
+        if not sql_protector.validate_input(brand_name):
+            return jsonify({'error': 'Invalid brand_name'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 生成PDF报告
+        pdf_data = report_generator.generate_pdf_report(brand_name, days)
+
+        # 返回PDF文件
+        from flask import Response
+        return Response(
+            pdf_data,
+            mimetype='application/pdf',
+            headers={'Content-Disposition': f'attachment; filename=report_{brand_name}_{datetime.now().strftime("%Y%m%d")}.pdf'}
+        )
+
+    except Exception as e:
+        api_logger.error(f"Error generating PDF report: {e}")
+        return jsonify({'error': 'Failed to generate PDF report', 'details': str(e)}), 500
