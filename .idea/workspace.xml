@@ -4,7 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="" />
+    <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/PythonProject.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PythonProject.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/API_Spec_v2.0.json" beforeDir="false" afterPath="$PROJECT_DIR$/API_Spec_v2.0.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/analytics/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/analytics/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/views.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -16,7 +23,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="418" />
+    <option name="cachedIndexableFilesCount" value="437" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -84,7 +91,7 @@
       <recent name="$PROJECT_DIR$/docs" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.main">
+  <component name="RunManager" selected="Flask 服务器.PythonProject">
     <configuration name="app.js" type="NodeJSConfigurationType" temporary="true" nameIsGenerated="true" path-to-js-file="$PROJECT_DIR$/miniprogram/app.js" working-dir="$PROJECT_DIR$/miniprogram">
       <method v="2" />
     </configuration>
@@ -187,6 +194,23 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="PythonProject" type="Python.FlaskServer">
+      <module name="PythonProject" />
+      <option name="target" value="$PROJECT_DIR$/test_recommendations_endpoint.py" />
+      <option name="targetType" value="PATH" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="launchJavascriptDebuger" value="false" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Node.js.app.js" />
@@ -229,6 +253,7 @@
       <workItem from="1770823417168" duration="6323000" />
       <workItem from="1770864593057" duration="66435000" />
       <workItem from="1770944541119" duration="5376000" />
+      <workItem from="1770950349715" duration="2613000" />
     </task>
     <servers />
   </component>

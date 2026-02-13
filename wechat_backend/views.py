@@ -1402,3 +1402,125 @@ def get_prediction_forecast():
     except Exception as e:
         api_logger.error(f"Error generating prediction forecast: {e}")
         return jsonify({'error': 'Failed to generate prediction forecast', 'details': str(e)}), 500
+
+
+# 初始化工作流管理器
+from .analytics.workflow_manager import WorkflowManager
+workflow_manager = WorkflowManager()
+
+
+@wechat_bp.route('/workflow/tasks', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/workflow/tasks', require_auth=False, validate_inputs=True)
+def create_workflow_task():
+    """创建工作流任务 - 将负面证据打包并推送到Webhook"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Workflow task creation endpoint accessed by user: {user_id}")
+
+    try:
+        # 获取请求数据
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+
+        # 验证必需字段
+        required_fields = [
+            'evidence_fragment', 'associated_url', 'source_name',
+            'risk_level', 'brand_name', 'intervention_script',
+            'source_meta', 'webhook_url'
+        ]
+
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # 提取参数
+        evidence_fragment = data['evidence_fragment']
+        associated_url = data['associated_url']
+        source_name = data['source_name']
+        risk_level = data['risk_level']
+        brand_name = data['brand_name']
+        intervention_script = data['intervention_script']
+        source_meta = data['source_meta']
+        webhook_url = data['webhook_url']
+
+        # 验证输入参数
+        if not sql_protector.validate_input(evidence_fragment):
+            return jsonify({'error': 'Invalid evidence_fragment'}), 400
+        if not sql_protector.validate_input(associated_url):
+            return jsonify({'error': 'Invalid associated_url'}), 400
+        if not sql_protector.validate_input(source_name):
+            return jsonify({'error': 'Invalid source_name'}), 400
+        if not sql_protector.validate_input(brand_name):
+            return jsonify({'error': 'Invalid brand_name'}), 400
+        if not sql_protector.validate_input(webhook_url):
+            return jsonify({'error': 'Invalid webhook_url'}), 400
+
+        # 验证风险等级
+        valid_risk_levels = ['Low', 'Medium', 'High']
+        if risk_level not in valid_risk_levels:
+            return jsonify({'error': f'Invalid risk_level. Must be one of: {valid_risk_levels}'}), 400
+
+        # 验证webhook_url格式
+        import re
+        url_pattern = re.compile(
+            r'^https?://'  # http:// or https://
+            r'(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+        )
+        if not url_pattern.match(webhook_url):
+            return jsonify({'error': 'Invalid webhook_url format'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 创建并分发任务
+        task_id = workflow_manager.dispatch_task(
+            evidence_fragment=evidence_fragment,
+            associated_url=associated_url,
+            source_name=source_name,
+            risk_level=risk_level,
+            brand_name=brand_name,
+            intervention_script=intervention_script,
+            source_meta=source_meta,
+            webhook_url=webhook_url
+        )
+
+        return jsonify({
+            'status': 'success',
+            'task_id': task_id,
+            'message': 'Workflow task created and dispatched successfully',
+            'webhook_url': webhook_url
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error creating workflow task: {e}")
+        return jsonify({'error': 'Failed to create workflow task', 'details': str(e)}), 500
+
+
+@wechat_bp.route('/workflow/tasks/<task_id>', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/workflow/tasks/task_id', require_auth=False, validate_inputs=False)
+def get_workflow_task_status(task_id):
+    """获取工作流任务状态"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Workflow task status endpoint accessed by user: {user_id}, task_id: {task_id}")
+
+    try:
+        # 获取任务状态
+        status_info = workflow_manager.get_task_status(task_id)
+
+        if not status_info:
+            return jsonify({'error': 'Task not found'}), 404
+
+        return jsonify({
+            'status': 'success',
+            'task_info': status_info
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error getting workflow task status: {e}")
+        return jsonify({'error': 'Failed to get task status', 'details': str(e)}), 500

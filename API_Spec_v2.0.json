@@ -282,3 +282,52 @@
     }
   }
 }
+
+
+{
+  "paths": {
+    "/workflow/tasks": {
+      "post": {
+        "summary": "创建或推送干预任务",
+        "tags": ["执行闭环"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "evidence_id": { "type": "string" },
+                  "target_platform": { "type": "string" },
+                  "intervention_type": { "type": "string", "enum": ["content_push", "complaint", "optimization"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "任务创建成功并已分发" } }
+      }
+    },
+    "/hub/summary": {
+      "get": {
+        "summary": "获取高管决策摘要数据",
+        "tags": ["情报枢纽"],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roi_index": { "type": "number", "description": "干预投资回报指数" },
+                    "solved_risks": { "type": "integer" },
+                    "rank_recovery": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
