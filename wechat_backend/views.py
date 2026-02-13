@@ -1009,8 +1009,22 @@ def get_test_record(record_id):
 @wechat_bp.route('/api/ai-platforms', methods=['GET'])
 def get_ai_platforms():
     platforms = {
-        'domestic': [{'name': 'DeepSeek', 'checked': False}, {'name': '豆包', 'checked': False}, {'name': '元宝', 'checked': False}, {'name': '通义千问', 'checked': True}, {'name': '文心一言', 'checked': False}, {'name': 'Kimi', 'checked': True}, {'name': '讯飞星火', 'checked': False}],
-        'overseas': [{'name': 'ChatGPT', 'checked': True}, {'name': 'Claude', 'checked': True}, {'name': 'Gemini', 'checked': False}, {'name': 'Perplexity', 'checked': False}, {'name': 'Grok', 'checked': False}]
+        'domestic': [
+            {'name': 'DeepSeek', 'checked': False, 'available': True},
+            {'name': '豆包', 'checked': False, 'available': True},
+            {'name': '元宝', 'checked': False, 'available': True},
+            {'name': '通义千问', 'checked': True, 'available': True},  # Qwen now marked as available
+            {'name': '文心一言', 'checked': False, 'available': True},
+            {'name': 'Kimi', 'checked': True, 'available': True},
+            {'name': '讯飞星火', 'checked': False, 'available': True}
+        ],
+        'overseas': [
+            {'name': 'ChatGPT', 'checked': True, 'available': True},
+            {'name': 'Claude', 'checked': True, 'available': True},
+            {'name': 'Gemini', 'checked': False, 'available': True},
+            {'name': 'Perplexity', 'checked': False, 'available': True},
+            {'name': 'Grok', 'checked': False, 'available': True}
+        ]
     }
     return jsonify(platforms)
 
