@@ -1,10 +1,109 @@
 """
 工作流管理器单元测试
+测试Webhook功能和重试机制
 """
 import unittest
-import time
 from unittest.mock import Mock, patch, MagicMock
-from wechat_backend.analytics.workflow_manager import WorkflowManager, TaskStatus
+import time
+from datetime import datetime, timedelta
+from wechat_backend.ai_adapters.workflow_manager import WorkflowManager, WebhookManager, TaskPriority
+
+
+class TestWebhookManager(unittest.TestCase):
+    """测试WebhookManager类的功能"""
+
+    def setUp(self):
+        """设置测试环境"""
+        self.webhook_manager = WebhookManager()
+
+    @patch('requests.Session.post')
+    def test_send_webhook_success(self, mock_post):
+        """测试Webhook发送成功"""
+        # 模拟成功的HTTP响应
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_post.return_value = mock_response
+
+        # 测试数据
+        webhook_url = "https://example.com/webhook"
+        payload = {"test": "data"}
+        task_id = "test_task_123"
+
+        # 执行测试
+        result = self.webhook_manager.send_webhook(webhook_url, payload, task_id)
+
+        # 验证结果
+        self.assertTrue(result)
+        mock_post.assert_called_once_with(
+            webhook_url,
+            json=payload,
+            timeout=30
+        )
+
+    @patch('requests.Session.post')
+    def test_send_webhook_non_success_status(self, mock_post):
+        """测试Webhook收到非成功状态码"""
+        # 模拟非成功状态码的响应
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_post.return_value = mock_response
+
+        # 测试数据
+        webhook_url = "https://example.com/webhook"
+        payload = {"test": "data"}
+        task_id = "test_task_123"
+
+        # 执行测试
+        result = self.webhook_manager.send_webhook(webhook_url, payload, task_id)
+
+        # 验证结果
+        self.assertFalse(result)
+
+    @patch('requests.Session.post')
+    def test_send_webhook_timeout(self, mock_post):
+        """测试Webhook请求超时"""
+        # 模拟超时异常
+        mock_post.side_effect = TimeoutError("Request timed out")
+
+        # 测试数据
+        webhook_url = "https://example.com/webhook"
+        payload = {"test": "data"}
+        task_id = "test_task_123"
+
+        # 执行测试 - 应该捕获异常并返回False
+        with patch.object(self.webhook_manager.circuit_breaker, 'call') as mock_call:
+            # 让call方法直接执行内部函数，避免电路断路器的复杂逻辑
+            def call_func(func, *args, **kwargs):
+                return func(*args, **kwargs)
+            mock_call.side_effect = call_func
+            
+            result = self.webhook_manager.send_webhook(webhook_url, payload, task_id)
+
+        # 验证结果
+        self.assertFalse(result)
+
+    @patch('requests.Session.post')
+    def test_send_webhook_request_exception(self, mock_post):
+        """测试Webhook请求异常"""
+        # 模拟请求异常
+        mock_post.side_effect = Exception("Network error")
+
+        # 测试数据
+        webhook_url = "https://example.com/webhook"
+        payload = {"test": "data"}
+        task_id = "test_task_123"
+
+        # 执行测试
+        with patch.object(self.webhook_manager.circuit_breaker, 'call') as mock_call:
+            # 让call方法直接执行内部函数
+            def call_func(func, *args, **kwargs):
+                return func(*args, **kwargs)
+            mock_call.side_effect = call_func
+            
+            result = self.webhook_manager.send_webhook(webhook_url, payload, task_id)
+
+        # 验证结果
+        self.assertFalse(result)
 
 
 class TestWorkflowManager(unittest.TestCase):
@@ -12,324 +111,157 @@ class TestWorkflowManager(unittest.TestCase):
 
     def setUp(self):
         """设置测试环境"""
-        self.wf_manager = WorkflowManager()
+        self.workflow_manager = WorkflowManager()
 
     def test_create_task_package(self):
         """测试创建任务包功能"""
-        task_package = self.wf_manager.create_task_package(
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook"
+        # 测试数据
+        evidence_fragment = "测试证据片段"
+        associated_url = "https://example.com"
+        source_name = "测试信源"
+        risk_level = "High"
+        brand_name = "测试品牌"
+        intervention_script = "测试干预脚本"
+        source_meta = {"platform": "test", "category": "security"}
+        webhook_url = "https://example.com/webhook"
+
+        # 执行测试
+        task_package = self.workflow_manager.create_task_package(
+            evidence_fragment, associated_url, source_name, 
+            risk_level, brand_name, intervention_script, source_meta, webhook_url
         )
 
-        # 验证任务包结构
-        self.assertIn("task_id", task_package)
-        self.assertIn("payload", task_package)
-        self.assertIn("webhook_url", task_package)
-        self.assertEqual(task_package["webhook_url"], "https://hooks.example.com/webhook")
-        
-        payload = task_package["payload"]
-        self.assertEqual(payload["evidence_fragment"], "测试证据片段")
-        self.assertEqual(payload["brand_name"], "测试品牌")
-        self.assertEqual(payload["risk_level"], "High")
-        self.assertEqual(payload["intervention_script"], "测试纠偏脚本")
-        self.assertIn("created_at", payload)
+        # 验证结果
+        self.assertIsInstance(task_package, dict)
+        self.assertIn('task_type', task_package)
+        self.assertIn('evidence_data', task_package)
+        self.assertIn('delivery_instructions', task_package)
+        self.assertEqual(task_package['task_type'], 'negative_evidence_intervention')
+        self.assertEqual(task_package['evidence_data']['evidence_fragment'], evidence_fragment)
+        self.assertEqual(task_package['delivery_instructions']['webhook_url'], webhook_url)
 
-    def test_dispatch_task(self):
+    def test_priority_to_number_conversion(self):
+        """测试优先级到数字的转换"""
+        # 测试各种优先级
+        self.assertEqual(self.workflow_manager._priority_to_number(TaskPriority.LOW), 4)
+        self.assertEqual(self.workflow_manager._priority_to_number(TaskPriority.MEDIUM), 3)
+        self.assertEqual(self.workflow_manager._priority_to_number(TaskPriority.HIGH), 2)
+        self.assertEqual(self.workflow_manager._priority_to_number(TaskPriority.CRITICAL), 1)
+
+    @patch.object(WebhookManager, 'send_webhook')
+    def test_dispatch_task(self, mock_send_webhook):
         """测试任务分发功能"""
-        with patch.object(self.wf_manager, '_send_webhook_async') as mock_send:
-            task_id = self.wf_manager.dispatch_task(
-                evidence_fragment="测试证据片段",
-                associated_url="https://example.com",
-                source_name="测试信源",
-                risk_level="High",
-                brand_name="测试品牌",
-                intervention_script="测试纠偏脚本",
-                source_meta={"platform": "test", "category": "security"},
-                webhook_url="https://hooks.example.com/webhook"
-            )
+        # 模拟Webhook发送成功
+        mock_send_webhook.return_value = True
 
-            # 验证任务ID被创建
-            self.assertIsNotNone(task_id)
-            self.assertTrue(task_id.startswith("wf_"))
-            
-            # 验证任务被存储
-            self.assertIn(task_id, self.wf_manager.active_tasks)
-            
-            # 验证异步发送被调用
-            self.assertEqual(mock_send.call_count, 1)
+        # 测试数据
+        evidence_fragment = "测试证据片段"
+        associated_url = "https://example.com"
+        source_name = "测试信源"
+        risk_level = "High"
+        brand_name = "测试品牌"
+        intervention_script = "测试干预脚本"
+        source_meta = {"platform": "test", "category": "security"}
+        webhook_url = "https://example.com/webhook"
 
-    def test_get_task_status(self):
-        """测试获取任务状态功能"""
-        # 先创建一个任务
-        task_id = self.wf_manager.dispatch_task(
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook"
+        # 执行测试
+        task_id = self.workflow_manager.dispatch_task(
+            evidence_fragment, associated_url, source_name, 
+            risk_level, brand_name, intervention_script, source_meta, webhook_url
         )
 
-        # 等待任务被创建
-        time.sleep(0.1)
+        # 验证结果
+        self.assertIsInstance(task_id, str)
+        self.assertTrue(task_id.startswith('wf_'))
 
-        # 获取任务状态
-        status = self.wf_manager.get_task_status(task_id)
 
-        # 验证状态信息
-        self.assertIsNotNone(status)
-        self.assertEqual(status["task_id"], task_id)
-        self.assertIn(status["status"], [TaskStatus.PENDING.value, TaskStatus.PROCESSING.value])
-        self.assertEqual(status["retry_count"], 0)
-        self.assertIn("created_at", status)
-        self.assertIn("updated_at", status)
+class TestRetryMechanism(unittest.TestCase):
+    """测试重试机制"""
 
-    def test_get_nonexistent_task_status(self):
-        """测试获取不存在任务的状态"""
-        status = self.wf_manager.get_task_status("nonexistent_task_id")
-        self.assertIsNone(status)
+    def test_calculate_retry_delay_basic(self):
+        """测试基本重试延迟计算"""
+        workflow_manager = WorkflowManager()
 
-    def test_get_all_active_tasks(self):
-        """测试获取所有活动任务"""
-        # 创建多个任务
-        task_ids = []
-        for i in range(3):
-            task_id = self.wf_manager.dispatch_task(
-                evidence_fragment=f"测试证据片段{i}",
-                associated_url="https://example.com",
-                source_name="测试信源",
-                risk_level="High",
-                brand_name="测试品牌",
-                intervention_script="测试纠偏脚本",
-                source_meta={"platform": "test", "category": "security"},
-                webhook_url="https://hooks.example.com/webhook"
-            )
-            task_ids.append(task_id)
+        # 测试第一次重试（retry_count=0）
+        delay = workflow_manager._calculate_retry_delay(0)
+        self.assertGreaterEqual(delay, 30)  # 基础延迟30秒
+        self.assertLessEqual(delay, 40)  # 加上抖动不超过40秒
 
-        # 等待任务被创建
-        time.sleep(0.1)
+        # 测试第二次重试（retry_count=1）
+        delay = workflow_manager._calculate_retry_delay(1)
+        self.assertGreaterEqual(delay, 60)  # 30*2=60秒
+        self.assertLessEqual(delay, 70)  # 加上抖动不超过70秒
 
-        # 获取所有活动任务
-        active_tasks = self.wf_manager.get_all_active_tasks()
+        # 测试第三次重试（retry_count=2）
+        delay = workflow_manager._calculate_retry_delay(2)
+        self.assertGreaterEqual(delay, 120)  # 30*2^2=120秒
+        self.assertLessEqual(delay, 130)  # 加上抖动不超过130秒
 
-        # 验证任务数量
-        self.assertEqual(len(active_tasks), 3)
+    def test_calculate_retry_delay_maximum_limit(self):
+        """测试重试延迟的最大限制"""
+        workflow_manager = WorkflowManager()
+
+        # 测试大量重试次数，验证延迟不会超过最大限制（3600秒）
+        delay = workflow_manager._calculate_retry_delay(10)  # 大量重试
+        self.assertLessEqual(delay, 3600)  # 不应超过1小时
+
+
+def test_webhook_retry_simulation():
+    """模拟Webhook重试场景测试"""
+    print("测试Webhook重试机制模拟...")
+    
+    # 创建工作流管理器
+    workflow_manager = WorkflowManager()
+    
+    # 模拟Webhook发送失败的情况
+    with patch.object(WebhookManager, 'send_webhook') as mock_send_webhook:
+        # 让前两次调用失败，第三次成功
+        call_count = 0
+        def mock_behavior(url, payload, task_id):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                return False  # 前两次失败
+            else:
+                return True   # 第三次成功
         
-        # 验证任务ID存在于返回的列表中
-        returned_task_ids = [task["task_id"] for task in active_tasks]
-        for task_id in task_ids:
-            self.assertIn(task_id, returned_task_ids)
-
-    def test_cancel_task_success(self):
-        """测试成功取消任务"""
-        # 创建一个任务
-        task_id = self.wf_manager.dispatch_task(
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook"
-        )
-
-        # 等待任务被创建
-        time.sleep(0.1)
-
-        # 取消任务
-        result = self.wf_manager.cancel_task(task_id)
-
-        # 验证任务被取消
-        self.assertTrue(result)
-        self.assertNotIn(task_id, self.wf_manager.active_tasks)
-
-    def test_cancel_nonexistent_task(self):
-        """测试取消不存在的任务"""
-        result = self.wf_manager.cancel_task("nonexistent_task_id")
-        self.assertFalse(result)
-
-    @patch('requests.post')
-    def test_webhook_success(self, mock_post):
-        """测试Webhook成功发送"""
-        # 模拟成功的HTTP响应
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
-
+        mock_send_webhook.side_effect = mock_behavior
+        
         # 创建任务包
-        task_package = self.wf_manager.create_task_package(
+        task_package = workflow_manager.create_task_package(
             evidence_fragment="测试证据片段",
             associated_url="https://example.com",
             source_name="测试信源",
             risk_level="High",
             brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
+            intervention_script="测试干预脚本",
             source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook"
+            webhook_url="https://example.com/webhook"
         )
-
-        # 创建任务对象
-        from datetime import datetime
-        from wechat_backend.analytics.workflow_manager import WorkflowTask, TaskStatus
-        task = WorkflowTask(
-            task_id="test_task_123",
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook",
-            status=TaskStatus.PENDING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-
-        # 发送Webhook请求
-        success = self.wf_manager._send_webhook_request(task_package, task)
-
-        # 验证请求被发送
-        mock_post.assert_called_once()
-        self.assertTrue(success)
-
-    @patch('requests.post')
-    def test_webhook_failure(self, mock_post):
-        """测试Webhook失败"""
-        # 模拟失败的HTTP响应
-        mock_response = Mock()
-        mock_response.status_code = 500
-        mock_response.text = "Internal Server Error"
-        mock_post.return_value = mock_response
-
-        # 创建任务包
-        task_package = self.wf_manager.create_task_package(
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook"
-        )
-
-        # 创建任务对象
-        from datetime import datetime
-        from wechat_backend.analytics.workflow_manager import WorkflowTask, TaskStatus
-        task = WorkflowTask(
-            task_id="test_task_123",
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook",
-            status=TaskStatus.PENDING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-
-        # 发送Webhook请求
-        success = self.wf_manager._send_webhook_request(task_package, task)
-
-        # 验证请求被发送但失败
-        mock_post.assert_called_once()
-        self.assertFalse(success)
-
-    @patch('requests.post')
-    def test_webhook_timeout(self, mock_post):
-        """测试Webhook超时"""
-        # 模拟超时异常
-        mock_post.side_effect = TimeoutError("Request timed out")
-
-        # 创建任务包
-        task_package = self.wf_manager.create_task_package(
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook"
-        )
-
-        # 创建任务对象
-        from datetime import datetime
-        from wechat_backend.analytics.workflow_manager import WorkflowTask, TaskStatus
-        task = WorkflowTask(
-            task_id="test_task_123",
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook",
-            status=TaskStatus.PENDING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-
-        # 发送Webhook请求
-        success = self.wf_manager._send_webhook_request(task_package, task)
-
-        # 验证请求被发送但失败
-        mock_post.assert_called_once()
-        self.assertFalse(success)
-
-    def test_schedule_retry_logic(self):
-        """测试重试逻辑"""
-        # 创建任务对象
-        from datetime import datetime
-        from wechat_backend.analytics.workflow_manager import WorkflowTask, TaskStatus
-        task = WorkflowTask(
-            task_id="test_task_123",
-            evidence_fragment="测试证据片段",
-            associated_url="https://example.com",
-            source_name="测试信源",
-            risk_level="High",
-            brand_name="测试品牌",
-            intervention_script="测试纠偏脚本",
-            source_meta={"platform": "test", "category": "security"},
-            webhook_url="https://hooks.example.com/webhook",
-            status=TaskStatus.PENDING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            max_retries=3
-        )
-
-        # 验证初始重试计数
-        self.assertEqual(task.retry_count, 0)
-
-        # 模拟一次失败后增加重试计数
-        task.retry_count += 1
-        self.assertEqual(task.retry_count, 1)
-
-        # 验证状态变为重试中
-        task.status = TaskStatus.RETRYING
-        self.assertEqual(task.status, TaskStatus.RETRYING)
-
-        # 验证最大重试次数
-        for i in range(2):  # 已经有一次失败，再失败2次达到最大重试次数
-            task.retry_count += 1
-
-        self.assertEqual(task.retry_count, 3)
-        self.assertEqual(task.retry_count, task.max_retries)
+        
+        # 模拟处理任务（这会触发重试逻辑）
+        task_data = {
+            'task_id': 'test_task_123',
+            'task_package': task_package,
+            'webhook_url': 'https://example.com/webhook',
+            'retry_count': 0,
+            'max_retries': 3
+        }
+        
+        # 处理任务（会触发重试）
+        workflow_manager._process_task(task_data)
+        
+        # 验证调用次数
+        print(f"Webhook调用次数: {call_count}")
+        assert call_count == 3, f"期望调用3次，实际调用{call_count}次"
+        print("✓ 重试机制正常工作，失败后进行了重试")
+    
+    print("Webhook重试机制模拟测试完成！")
 
 
 if __name__ == '__main__':
-    unittest.main()
+    # 运行单元测试
+    unittest.main(argv=[''], exit=False, verbosity=2)
+    
+    # 运行模拟测试
+    test_webhook_retry_simulation()
