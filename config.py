@@ -1,4 +1,6 @@
 import os
+from typing import Optional
+
 
 class Config:
     # WeChat Mini Program Configuration
@@ -21,3 +23,55 @@ class Config:
     WECHAT_CODE_TO_SESSION_URL = 'https://api.weixin.qq.com/sns/jscode2session'
     WECHAT_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token'
     WECHAT_SEND_TEMPLATE_MSG_URL = 'https://api.weixin.qq.com/cgi-bin/message/wxopen/template/send'
+
+    # AI Platform API Keys
+    DOUBAO_API_KEY = os.environ.get('DOUBAO_API_KEY') or ''
+    DOUBAO_MODEL_ID = os.environ.get('DOUBAO_MODEL_ID') or 'ep-default-model'
+
+    DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY') or ''
+    QWEN_API_KEY = os.environ.get('QWEN_API_KEY') or ''
+    KIMI_API_KEY = os.environ.get('KIMI_API_KEY') or ''
+
+    # Optional API Keys for other platforms
+    CHATGPT_API_KEY = os.environ.get('CHATGPT_API_KEY') or ''
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or ''
+    ZHIPU_API_KEY = os.environ.get('ZHIPU_API_KEY') or ''
+    WENXIN_API_KEY = os.environ.get('WENXIN_API_KEY') or ''
+
+    @classmethod
+    def get_api_key(cls, platform: str) -> Optional[str]:
+        """
+        根据平台名称获取对应的API密钥
+
+        Args:
+            platform: 平台名称
+
+        Returns:
+            API密钥或None
+        """
+        platform_keys = {
+            'doubao': cls.DOUBAO_API_KEY,
+            'deepseek': cls.DEEPSEEK_API_KEY,
+            'qwen': cls.QWEN_API_KEY,
+            'kimi': cls.KIMI_API_KEY,
+            'chatgpt': cls.CHATGPT_API_KEY,
+            'gemini': cls.GEMINI_API_KEY,
+            'zhipu': cls.ZHIPU_API_KEY,
+            'wenxin': cls.WENXIN_API_KEY
+        }
+
+        return platform_keys.get(platform.lower())
+
+    @classmethod
+    def is_api_key_configured(cls, platform: str) -> bool:
+        """
+        检查指定平台的API密钥是否已配置
+
+        Args:
+            platform: 平台名称
+
+        Returns:
+            bool: 是否已配置API密钥
+        """
+        api_key = cls.get_api_key(platform)
+        return bool(api_key and api_key.strip() != '' and not api_key.startswith('sk-') and not api_key.endswith('[在此粘贴你的Key]'))

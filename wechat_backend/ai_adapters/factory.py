@@ -74,9 +74,11 @@ class AIAdapterFactory:
             api_logger.warning(f"Skipping registration for {platform_type.value}: Adapter class is None")
 
     @classmethod
-    def create(cls, platform_type: Union[AIPlatformType, str], api_key: str, model_name: str, **kwargs) -> AIClient:
+    def create(cls, platform_type: Union[AIPlatformType, str], api_key: str = None, model_name: str = None, **kwargs) -> AIClient:
         """
         Create an instance of an AI adapter for the specified platform
+        If api_key is not provided, attempts to load from environment variables
+        If model_name is not provided, uses platform-specific default
         """
         if isinstance(platform_type, str):
             try:
@@ -86,6 +88,18 @@ class AIAdapterFactory:
 
         if platform_type not in cls._adapters:
             raise ValueError(f"No adapter registered for platform: {platform_type}")
+
+        # If API key is not provided, try to get it from config
+        if not api_key:
+            from ..config_manager import config_manager
+            api_key = config_manager.get_api_key(platform_type.value)
+            if not api_key:
+                raise ValueError(f"No API key provided or configured for platform: {platform_type.value}")
+
+        # If model name is not provided, try to get default from config
+        if not model_name:
+            from ..config_manager import config_manager
+            model_name = config_manager.get_platform_model(platform_type.value) or f"default-{platform_type.value}-model"
 
         adapter_class = cls._adapters[platform_type]
         return adapter_class(api_key, model_name, **kwargs)
