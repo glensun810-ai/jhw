@@ -6,5 +6,6 @@ from .source_aggregator import SourceAggregator
 from .source_intelligence_processor import SourceIntelligenceProcessor, process_brand_source_intelligence
 from .impact_calculator import ImpactCalculator
 from .prediction_engine import PredictionEngine
+from .workflow_manager import WorkflowManager
 
-__all__ = ['RankAnalyzer', 'SourceAggregator', 'SourceIntelligenceProcessor', 'process_brand_source_intelligence', 'ImpactCalculator', 'PredictionEngine']
+__all__ = ['RankAnalyzer', 'SourceAggregator', 'SourceIntelligenceProcessor', 'process_brand_source_intelligence', 'ImpactCalculator', 'PredictionEngine', 'WorkflowManager']
