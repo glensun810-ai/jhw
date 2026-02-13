@@ -3,7 +3,7 @@
   height: 600rpx; /* 默认高度 */
 }
 
-ec-canvas {
+.ec-canvas {
   width: 100%;
   height: 100%;
 }

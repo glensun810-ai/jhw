@@ -1,4 +1,5 @@
 const { login } = require('../../utils/auth.js');
+const { sendVerificationCode, registerUser } = require('../../api/auth.js');
 
 Page({
   data: {
@@ -41,9 +42,9 @@ Page({
   },
 
   // 获取验证码
-  getVerificationCode: function() {
+  async getVerificationCode() {
     const phone = this.data.phone;
-    
+
     if (!this.isValidPhone(phone)) {
       wx.showToast({
         title: '请输入正确的手机号',
@@ -52,42 +53,35 @@ Page({
       return;
     }
 
-    wx.showLoading({
-      title: '发送中...'
-    });
+    try {
+      wx.showLoading({
+        title: '发送中...'
+      });
 
-    // 这后端发送验证码请求
-    wx.request({
-      url: 'http://127.0.0.1:5001/api/send-verification-code',
-      method: 'POST',
-      data: {
-        phone: phone
-      },
-      success: (res) => {
-        wx.hideLoading();
-        if (res.data.status === 'success') {
-          wx.showToast({
-            title: '验证码已发送',
-            icon: 'success'
-          });
-          
-          // 开始倒计时
-          this.startCountdown();
-        } else {
-          wx.showToast({
-            title: res.data.message || '发送失败',
-            icon: 'none'
-          });
-        }
-      },
-      fail: (error) => {
-        wx.hideLoading();
+      const res = await sendVerificationCode({ phone });
+
+      wx.hideLoading();
+      if (res.status === 'success') {
         wx.showToast({
-          title: '网络错误',
+          title: '验证码已发送',
+          icon: 'success'
+        });
+
+        // 开始倒计时
+        this.startCountdown();
+      } else {
+        wx.showToast({
+          title: res.message || '发送失败',
           icon: 'none'
         });
       }
-    });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({
+        title: '网络错误',
+        icon: 'none'
+      });
+    }
   },
 
   // 开始倒计时
@@ -113,7 +107,7 @@ Page({
   },
 
   // 注册
-  onRegister: function() {
+  async onRegister() {
     const { phone, verificationCode, password, confirmPassword } = this.data;
 
     if (!this.isValidPhone(phone)) {
@@ -156,57 +150,52 @@ Page({
       return;
     }
 
-    wx.showLoading({
-      title: '注册中...'
-    });
+    try {
+      wx.showLoading({
+        title: '注册中...'
+      });
 
-    // 这后端发送注册请求
-    wx.request({
-      url: 'http://127.0.0.1:5001/api/register',
-      method: 'POST',
-      data: {
+      const res = await registerUser({
         phone: phone,
         verificationCode: verificationCode,
         password: password
-      },
-      success: (res) => {
-        wx.hideLoading();
-        if (res.data.status === 'success') {
-          wx.showToast({
-            title: '注册成功',
-            icon: 'success'
-          });
+      });
 
-          // 自动登录
-          login({
-            phone: phone,
-            password: password
-          }).then((userData) => {
-            // 跳转到首页
-            wx.reLaunch({
-              url: '/pages/index/index'
-            });
-          }).catch((error) => {
-            wx.showToast({
-              title: error.message || '登录失败',
-              icon: 'none'
-            });
+      wx.hideLoading();
+      if (res.status === 'success') {
+        wx.showToast({
+          title: '注册成功',
+          icon: 'success'
+        });
+
+        // 自动登录
+        login({
+          phone: phone,
+          password: password
+        }).then((userData) => {
+          // 跳转到首页
+          wx.reLaunch({
+            url: '/pages/index/index'
           });
-        } else {
+        }).catch((error) => {
           wx.showToast({
-            title: res.data.message || '注册失败',
+            title: error.message || '登录失败',
             icon: 'none'
           });
-        }
-      },
-      fail: (error) => {
-        wx.hideLoading();
+        });
+      } else {
         wx.showToast({
-          title: '网络错误',
+          title: res.message || '注册失败',
           icon: 'none'
         });
       }
-    });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({
+        title: '网络错误',
+        icon: 'none'
+      });
+    }
   },
 
   // 验证手机号格式

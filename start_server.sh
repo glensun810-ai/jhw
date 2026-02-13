@@ -21,7 +21,7 @@ if [ ! -f "$PYTHON_PATH" ]; then
 fi
 
 # 检查端口是否被占用并终止占用进程
-PORT=5002
+PORT=5001
 PID=$(lsof -ti:$PORT)
 if [ ! -z "$PID" ]; then
     echo "⚠️  端口 $PORT 被占用，终止进程: $PID"

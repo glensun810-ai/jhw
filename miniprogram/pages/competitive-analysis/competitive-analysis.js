@@ -1,5 +1,6 @@
+const { performBrandTest, getTestProgress, performCompetitiveAnalysis } = require('../../api/competitive-analysis');
+
 const appid = 'wx8876348e089bc261'; // 您的 AppID
-const serverUrl = 'http://127.0.0.1:5001'; // 后端服务器地址
 
 Page({
   data: {
@@ -169,7 +170,7 @@ Page({
   },
 
   // 调用后端API进行竞争分析
-  callBackendCompetitiveAnalysis: function(targetBrand, competitorBrands, selectedModels) {
+  async callBackendCompetitiveAnalysis(targetBrand, competitorBrands, selectedModels) {
     wx.showLoading({
       title: '启动分析...'
     });
@@ -186,99 +187,89 @@ Page({
     // Get selected model names
     const selectedModelNames = [...selectedModels].map(model => ({ name: model.name, checked: true }));
 
-    // Call the perform-brand-test API with competitor brands
-    wx.request({
-      url: `${serverUrl}/api/perform-brand-test`,
-      method: 'POST',
-      data: {
+    try {
+      // Call the perform-brand-test API with competitor brands
+      const res = await performBrandTest({
         brandName: targetBrand,
         selectedModels: selectedModelNames,
         customQuestions: questions,
         competitorBrands: competitorBrands
-      },
-      header: {
-        'content-type': 'application/json'
-      },
-      success: (res) => {
-        if (res.statusCode === 200 && res.data.status === 'success') {
-          const executionId = res.data.executionId;
+      });
 
-          // Poll for the results
-          this.pollForCompetitiveResults(executionId, targetBrand, competitorBrands);
-        } else {
-          wx.hideLoading();
-          wx.showToast({
-            title: '启动分析失败',
-            icon: 'error'
-          });
-          this.setData({ isAnalyzing: false });
-        }
-      },
-      fail: (err) => {
+      if (res.statusCode === 200 && res.data.status === 'success') {
+        const executionId = res.data.executionId;
+
+        // Poll for the results
+        this.pollForCompetitiveResults(executionId, targetBrand, competitorBrands);
+      } else {
         wx.hideLoading();
-        console.error('启动分析请求失败:', err);
         wx.showToast({
-          title: '网络请求失败',
+          title: '启动分析失败',
           icon: 'error'
         });
         this.setData({ isAnalyzing: false });
       }
-    });
+    } catch (err) {
+      wx.hideLoading();
+      console.error('启动分析请求失败:', err);
+      wx.showToast({
+        title: '网络请求失败',
+        icon: 'error'
+      });
+      this.setData({ isAnalyzing: false });
+    }
   },
 
   // Poll for competitive analysis results
   pollForCompetitiveResults: function(executionId, targetBrand, competitorBrands) {
-    const pollInterval = setInterval(() => {
-      wx.request({
-        url: `${serverUrl}/api/test-progress?executionId=${executionId}`,
-        method: 'GET',
-        success: (res) => {
-          if (res.statusCode === 200) {
-            const data = res.data;
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await getTestProgress({ executionId });
 
-            this.setData({
-              analysisProgress: Math.round(data.progress)
-            });
+        if (res.statusCode === 200) {
+          const data = res.data;
 
-            if (data.status === 'completed') {
-              clearInterval(pollInterval);
+          this.setData({
+            analysisProgress: Math.round(data.progress)
+          });
 
-              // Check if competitive analysis data is available
-              if (data.competitiveAnalysis) {
-                wx.hideLoading();
-                this.processCompetitiveAnalysisResult({
-                  status: 'success',
-                  targetBrand: targetBrand,
-                  competitorBrands: competitorBrands,
-                  ...data.competitiveAnalysis
-                });
-              } else {
-                // If no competitive analysis data, run standalone analysis
-                this.runStandaloneCompetitiveAnalysis(data.results, targetBrand, competitorBrands);
-              }
-            } else if (data.status === 'failed') {
-              clearInterval(pollInterval);
+          if (data.status === 'completed') {
+            clearInterval(pollInterval);
+
+            // Check if competitive analysis data is available
+            if (data.competitiveAnalysis) {
               wx.hideLoading();
-              this.setData({
-                isAnalyzing: false
+              this.processCompetitiveAnalysisResult({
+                status: 'success',
+                targetBrand: targetBrand,
+                competitorBrands: competitorBrands,
+                ...data.competitiveAnalysis
               });
-              wx.showToast({
-                title: '分析失败: ' + (data.error || '未知错误'),
-                icon: 'none'
-              });
+            } else {
+              // If no competitive analysis data, run standalone analysis
+              this.runStandaloneCompetitiveAnalysis(data.results, targetBrand, competitorBrands);
             }
+          } else if (data.status === 'failed') {
+            clearInterval(pollInterval);
+            wx.hideLoading();
+            this.setData({
+              isAnalyzing: false
+            });
+            wx.showToast({
+              title: '分析失败: ' + (data.error || '未知错误'),
+              icon: 'none'
+            });
           }
-        },
-        fail: (err) => {
-          console.error('获取进度失败:', err);
-          // Don't clear interval, continue polling
         }
-      });
+      } catch (err) {
+        console.error('获取进度失败:', err);
+        // Don't clear interval, continue polling
+      }
     }, 1000); // Poll every second
   },
 
   // Run standalone competitive analysis if not included in test results
-  runStandaloneCompetitiveAnalysis: function(results, targetBrand, competitorBrands) {
+  async runStandaloneCompetitiveAnalysis(results, targetBrand, competitorBrands) {
     // Format results for competitive analysis
     const aiResponses = results.map(result => ({
       aiModel: result.aiModel,
@@ -286,40 +277,33 @@ Page({
       response: result.response
     }));
 
-    // Call the standalone competitive analysis API
-    wx.request({
-      url: `${serverUrl}/api/competitive-analysis`,
-      method: 'POST',
-      data: {
+    try {
+      // Call the standalone competitive analysis API
+      const res = await performCompetitiveAnalysis({
         targetBrand: targetBrand,
         competitorBrands: competitorBrands,
         aiResponses: aiResponses
-      },
-      header: {
-        'content-type': 'application/json'
-      },
-      success: (res) => {
-        wx.hideLoading();
-        if (res.statusCode === 200 && res.data.status === 'success') {
-          this.processCompetitiveAnalysisResult(res.data);
-        } else {
-          wx.showToast({
-            title: '竞争分析失败',
-            icon: 'error'
-          });
-          this.setData({ isAnalyzing: false });
-        }
-      },
-      fail: (err) => {
-        wx.hideLoading();
-        console.error('竞争分析请求失败:', err);
+      });
+
+      wx.hideLoading();
+      if (res.statusCode === 200 && res.data.status === 'success') {
+        this.processCompetitiveAnalysisResult(res.data);
+      } else {
         wx.showToast({
-          title: '网络请求失败',
+          title: '竞争分析失败',
           icon: 'error'
         });
         this.setData({ isAnalyzing: false });
       }
-    });
+    } catch (err) {
+      wx.hideLoading();
+      console.error('竞争分析请求失败:', err);
+      wx.showToast({
+        title: '网络请求失败',
+        icon: 'error'
+      });
+      this.setData({ isAnalyzing: false });
+    }
   },
 
   // 处理竞争分析结果

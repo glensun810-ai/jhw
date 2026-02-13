@@ -8,7 +8,7 @@
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
 
-PORT=5002
+PORT=5001
 
 echo "🔍 检查微信小程序后端服务状态..."
 

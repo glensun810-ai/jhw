@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, g
+from flask_cors import CORS
 import hashlib
 import hmac
 import json
@@ -103,6 +104,9 @@ def get_access_token():
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Enable CORS to allow requests from WeChat Mini Program
+CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
+
 # Add security headers
 @app.after_request
 def after_request(response):
@@ -199,4 +203,5 @@ def get_config():
 
 
 if __name__ == '__main__':
-    app.run(debug=Config.DEBUG, host='127.0.0.1', port=5001)
+    # Explicitly specify host and port to align with frontend contract
+    app.run(debug=Config.DEBUG, host='0.0.0.0', port=5001)

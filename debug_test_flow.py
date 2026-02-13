@@ -23,7 +23,7 @@ def test_frontend_to_backend_flow():
     # 1. 检查后端服务是否运行
     print("\n1️⃣ 检查后端服务连接...")
     try:
-        response = requests.get("http://127.0.0.1:5002/api/test")
+        response = requests.get("http://127.0.0.1:5001/api/test")
         if response.status_code == 200 and response.json().get('status') == 'success':
             print("   ✅ 后端服务连接正常")
         else:
@@ -54,7 +54,7 @@ def test_frontend_to_backend_flow():
     print("\n3️⃣ 发送品牌测试请求到后端...")
     try:
         response = requests.post(
-            "http://127.0.0.1:5002/api/perform-brand-test",
+            "http://127.0.0.1:5001/api/perform-brand-test",
             json=test_data,
             headers={'content-type': 'application/json'}
         )
@@ -73,7 +73,7 @@ def test_frontend_to_backend_flow():
                 
                 while poll_count < max_polls:
                     progress_response = requests.get(
-                        f"http://127.0.0.1:5002/api/test-progress?executionId={execution_id}"
+                        f"http://127.0.0.1:5001/api/test-progress?executionId={execution_id}"
                     )
                     
                     if progress_response.status_code == 200:

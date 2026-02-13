@@ -11,7 +11,7 @@ import time
 from typing import Dict, Any
 
 # Configuration
-BACKEND_URL = "http://127.0.0.1:5002"
+BACKEND_URL = "http://127.0.0.1:5001"
 TIMEOUT = 10  # seconds
 
 def test_rate_limiting():

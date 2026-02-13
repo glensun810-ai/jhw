@@ -8,7 +8,7 @@
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
 
-PORT=5002
+PORT=5001
 
 # 查找并终止服务进程
 PID=$(lsof -ti:$PORT)
@@ -32,6 +32,6 @@ fi
 
 # 清理可能的僵尸进程
 pkill -f "main.py" 2>/dev/null || true
-pkill -f "python.*5002" 2>/dev/null || true
+pkill -f "python.*5001" 2>/dev/null || true
 
 echo "✅ 清理完成"

@@ -1,4 +1,4 @@
-const serverUrl = 'http://127.0.0.1:5001';
+const { getTestHistory } = require('../../api/history.js');
 
 Page({
   data: {
@@ -33,39 +33,34 @@ Page({
   },
 
   // 加载历史记录
-  loadHistory: function () {
+  async loadHistory() {
     this.setData({ isLoading: true });
-    wx.request({
-      url: `${serverUrl}/api/test-history`,
-      method: 'GET',
-      data: {
+    try {
+      const res = await getTestHistory({
         userOpenid: this.data.openid
-      },
-      success: (res) => {
-        if (res.statusCode === 200 && res.data.status === 'success') {
-          // 格式化时间
-          const formattedHistory = res.data.history.map(item => {
-            item.created_at = new Date(item.created_at).toLocaleString();
-            return item;
-          });
-          this.setData({
-            historyList: formattedHistory,
-            isLoading: false
-          });
-        } else {
-          this.setData({ isLoading: false });
-          wx.showToast({ title: '加载失败', icon: 'error' });
-        }
-      },
-      fail: (err) => {
+      });
+
+      if (res.statusCode === 200 && res.data.status === 'success') {
+        // 格式化时间
+        const formattedHistory = res.data.history.map(item => {
+          item.created_at = new Date(item.created_at).toLocaleString();
+          return item;
+        });
+        this.setData({
+          historyList: formattedHistory,
+          isLoading: false
+        });
+      } else {
         this.setData({ isLoading: false });
-        console.error('加载历史记录失败:', err);
-        wx.showToast({ title: '网络请求失败', icon: 'error' });
-      },
-      complete: () => {
-        wx.stopPullDownRefresh();
+        wx.showToast({ title: '加载失败', icon: 'error' });
       }
-    });
+    } catch (err) {
+      this.setData({ isLoading: false });
+      console.error('加载历史记录失败:', err);
+      wx.showToast({ title: '网络请求失败', icon: 'error' });
+    } finally {
+      wx.stopPullDownRefresh();
+    }
   },
 
   // 查看详情

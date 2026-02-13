@@ -5,6 +5,7 @@
 
 const { checkLoginStatus, getUserInfo } = require('./auth.js');
 const { getSearchResults, saveSearchResults } = require('./local-storage.js');
+const { syncDataApi, downloadDataApi, uploadResultApi, deleteResultApi } = require('../api/data-sync.js');
 
 class DataSyncManager {
   constructor() {
@@ -31,7 +32,7 @@ class DataSyncManager {
     if (this.syncTimer) {
       clearInterval(this.syncTimer);
     }
-    
+
     this.syncTimer = setInterval(() => {
       this.syncData();
     }, this.syncInterval);
@@ -59,7 +60,7 @@ class DataSyncManager {
     try {
       // 获取本地保存的搜索结果
       const localResults = getSearchResults();
-      
+
       if (localResults.length === 0) {
         console.log('没有需要同步的数据');
         return;
@@ -72,32 +73,20 @@ class DataSyncManager {
         return;
       }
 
-      // 向后端发送同步请求
-      wx.request({
-        url: 'http://127.0.0.1:5001/api/sync-data',
-        method: 'POST',
-        header: {
-          'Authorization': `Bearer ${wx.getStorageSync('userToken')}`,
-          'Content-Type': 'application/json'
-        },
-        data: {
-          openid: userInfo.openid,
-          localResults: localResults
-        },
-        success: (res) => {
-          if (res.data.status === 'success') {
-            console.log('数据同步成功');
-            
-            // 如果同步成功，可以考虑清理本地数据（根据策略决定）
-            // this.cleanupLocalData(localResults, res.data.syncedIds);
-          } else {
-            console.error('数据同步失败:', res.data.message);
-          }
-        },
-        fail: (error) => {
-          console.error('数据同步请求失败:', error);
-        }
+      // 调用API进行数据同步
+      const res = await syncDataApi({
+        openid: userInfo.openid,
+        localResults: localResults
       });
+
+      if (res.status === 'success') {
+        console.log('数据同步成功');
+
+        // 如果同步成功，可以考虑清理本地数据（根据策略决定）
+        // this.cleanupLocalData(localResults, res.syncedIds);
+      } else {
+        console.error('数据同步失败:', res.message);
+      }
     } catch (error) {
       console.error('数据同步过程出错:', error);
     }
@@ -119,30 +108,19 @@ class DataSyncManager {
         return;
       }
 
-      wx.request({
-        url: 'http://127.0.0.1:5001/api/download-data',
-        method: 'GET',
-        header: {
-          'Authorization': `Bearer ${wx.getStorageSync('userToken')}`,
-          'Content-Type': 'application/json'
-        },
-        data: {
-          openid: userInfo.openid
-        },
-        success: (res) => {
-          if (res.data.status === 'success') {
-            console.log('数据下载成功');
-            
-            // 合并云端数据到本地
-            this.mergeCloudDataToLocal(res.data.cloudResults);
-          } else {
-            console.error('数据下载失败:', res.data.message);
-          }
-        },
-        fail: (error) => {
-          console.error('数据下载请求失败:', error);
-        }
+      // 调用API进行数据下载
+      const res = await downloadDataApi({
+        openid: userInfo.openid
       });
+
+      if (res.status === 'success') {
+        console.log('数据下载成功');
+
+        // 合并云端数据到本地
+        this.mergeCloudDataToLocal(res.cloudResults);
+      } else {
+        console.error('数据下载失败:', res.message);
+      }
     } catch (error) {
       console.error('数据下载过程出错:', error);
     }
@@ -158,7 +136,7 @@ class DataSyncManager {
     }
 
     const localResults = getSearchResults();
-    
+
     // 创建云端数据的ID映射，便于快速查找
     const cloudMap = {};
     cloudResults.forEach(item => {
@@ -196,39 +174,28 @@ class DataSyncManager {
       return Promise.reject(new Error('用户未登录'));
     }
 
-    return new Promise((resolve, reject) => {
+    try {
       const userInfo = getUserInfo();
       if (!userInfo || !userInfo.openid) {
-        reject(new Error('用户信息不完整'));
-        return;
+        throw new Error('用户信息不完整');
       }
 
-      wx.request({
-        url: 'http://127.0.0.1:5001/api/upload-result',
-        method: 'POST',
-        header: {
-          'Authorization': `Bearer ${wx.getStorageSync('userToken')}`,
-          'Content-Type': 'application/json'
-        },
-        data: {
-          openid: userInfo.openid,
-          result: result
-        },
-        success: (res) => {
-          if (res.data.status === 'success') {
-            console.log('单个结果上传成功');
-            resolve(res.data);
-          } else {
-            console.error('单个结果上传失败:', res.data.message);
-            reject(new Error(res.data.message));
-          }
-        },
-        fail: (error) => {
-          console.error('单个结果上传请求失败:', error);
-          reject(error);
-        }
+      const res = await uploadResultApi({
+        openid: userInfo.openid,
+        result: result
       });
-    });
+
+      if (res.status === 'success') {
+        console.log('单个结果上传成功');
+        return res;
+      } else {
+        console.error('单个结果上传失败:', res.message);
+        throw new Error(res.message);
+      }
+    } catch (error) {
+      console.error('单个结果上传请求失败:', error);
+      throw error;
+    }
   }
 
   /**
@@ -238,42 +205,31 @@ class DataSyncManager {
   async deleteCloudResult(id) {
     if (!checkLoginStatus()) {
       console.log('用户未登录，无法删除云端数据');
-      return Promise.reject(new Error('用户未登录'));
+      throw new Error('用户未登录');
     }
 
-    return new Promise((resolve, reject) => {
+    try {
       const userInfo = getUserInfo();
       if (!userInfo || !userInfo.openid) {
-        reject(new Error('用户信息不完整'));
-        return;
+        throw new Error('用户信息不完整');
       }
 
-      wx.request({
-        url: 'http://127.0.0.1:5001/api/delete-result',
-        method: 'POST',
-        header: {
-          'Authorization': `Bearer ${wx.getStorageSync('userToken')}`,
-          'Content-Type': 'application/json'
-        },
-        data: {
-          openid: userInfo.openid,
-          id: id
-        },
-        success: (res) => {
-          if (res.data.status === 'success') {
-            console.log('云端数据删除成功');
-            resolve(res.data);
-          } else {
-            console.error('云端数据删除失败:', res.data.message);
-            reject(new Error(res.data.message));
-          }
-        },
-        fail: (error) => {
-          console.error('云端数据删除请求失败:', error);
-          reject(error);
-        }
+      const res = await deleteResultApi({
+        openid: userInfo.openid,
+        id: id
       });
-    });
+
+      if (res.status === 'success') {
+        console.log('云端数据删除成功');
+        return res;
+      } else {
+        console.error('云端数据删除失败:', res.message);
+        throw new Error(res.message);
+      }
+    } catch (error) {
+      console.error('云端数据删除请求失败:', error);
+      throw error;
+    }
   }
 
   /**
@@ -288,7 +244,7 @@ class DataSyncManager {
 
     // 只留未同步的数据
     const unsyncedResults = localResults.filter(result => !syncedIds.includes(result.id));
-    
+
     if (unsyncedResults.length !== localResults.length) {
       saveSearchResults(unsyncedResults);
       console.log(`清理了 ${localResults.length - unsyncedResults.length} 条已同步的数据`);

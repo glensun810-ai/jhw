@@ -5,4 +5,4 @@ from wechat_backend import app
 load_dotenv()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5002)  # 使用5002端口避免冲突
+    app.run(debug=True, host='127.0.0.1', port=5001)  # 使用5001端口与前端保持一致

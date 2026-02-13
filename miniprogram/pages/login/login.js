@@ -1,4 +1,5 @@
 const { login, checkLoginStatus } = require('../../utils/auth.js');
+const { sendVerificationCode } = require('../../api/auth.js');
 
 Page({
   data: {
@@ -91,9 +92,9 @@ Page({
   },
 
   // 获取验证码
-  getVerificationCode: function() {
+  async getVerificationCode() {
     const phone = this.data.phone;
-    
+
     if (!this.isValidPhone(phone)) {
       wx.showToast({
         title: '请输入正确的手机号',
@@ -102,43 +103,35 @@ Page({
       return;
     }
 
-    // 模拟发送验证码
-    wx.showLoading({
-      title: '发送中...'
-    });
+    try {
+      wx.showLoading({
+        title: '发送中...'
+      });
 
-    // 这后端发送验证码请求
-    wx.request({
-      url: 'http://127.0.0.1:5001/api/send-verification-code',
-      method: 'POST',
-      data: {
-        phone: phone
-      },
-      success: (res) => {
-        wx.hideLoading();
-        if (res.data.status === 'success') {
-          wx.showToast({
-            title: '验证码已发送',
-            icon: 'success'
-          });
-          
-          // 开始倒计时
-          this.startCountdown();
-        } else {
-          wx.showToast({
-            title: res.data.message || '发送失败',
-            icon: 'none'
-          });
-        }
-      },
-      fail: (error) => {
-        wx.hideLoading();
+      const res = await sendVerificationCode({ phone });
+
+      wx.hideLoading();
+      if (res.status === 'success') {
         wx.showToast({
-          title: '网络错误',
+          title: '验证码已发送',
+          icon: 'success'
+        });
+
+        // 开始倒计时
+        this.startCountdown();
+      } else {
+        wx.showToast({
+          title: res.message || '发送失败',
           icon: 'none'
         });
       }
-    });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({
+        title: '网络错误',
+        icon: 'none'
+      });
+    }
   },
 
   // 开始倒计时

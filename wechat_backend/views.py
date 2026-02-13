@@ -142,31 +142,100 @@ def perform_brand_test():
     """Perform brand cognition test across multiple AI platforms (Async) with Multi-Brand Support"""
     # 获取当前用户ID
     user_id = get_current_user_id()
-    api_logger.info(f"Brand test endpoint accessed by user: {user_id}")
 
-    # 获取并验证请求数据
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'No JSON data provided'}), 400
+    # 要求：使用 request.get_json(force=True)
+    data = request.get_json(force=True)
+
+    # 添加调试日志：在获取 data 后，立即添加打印
+    print(f"DEBUG: Received JSON Data: {data}")
+    if data is None:
+        return jsonify({"status": "error", "error": "Empty or invalid JSON", "code": 400}), 400
 
     # 输入验证和净化
     try:
-        # 验证品牌列表
-        brand_list = data.get('brand_list', [])
+        # 重构校验逻辑 (InputValidator)：确保它不再寻找 customQuestions
+        # 验证品牌列表是否存在且为 list 类型
+        if 'brand_list' not in data:
+            return jsonify({"status": "error", "error": 'Missing brand_list in request data', "code": 400, 'received_fields': list(data.keys())}), 400
+        if not isinstance(data['brand_list'], list):
+            return jsonify({"status": "error", "error": 'brand_list must be a list', "code": 400, 'received': type(data['brand_list']).__name__, 'received_value': data['brand_list']}), 400
+        brand_list = data['brand_list']
         if not brand_list:
-            return jsonify({'error': 'brand_list is required'}), 400
+            return jsonify({"status": "error", "error": 'brand_list cannot be empty', "code": 400, 'received': brand_list}), 400
 
         # 验证品牌名称的安全性
         for brand in brand_list:
+            if not isinstance(brand, str):
+                return jsonify({"status": "error", "error": f'Each brand in brand_list must be a string, got {type(brand)}', "code": 400, 'problematic_value': brand}), 400
             if not validate_safe_text(brand, max_length=100):
-                return jsonify({'error': f'Invalid brand name: {brand}'}), 400
+                return jsonify({"status": "error", "error": f'Invalid brand name: {brand}', "code": 400}), 400
+
+        # 审计要求：在后端打印关键调试日志
+        api_logger.info(f"[Sprint 1] 接收到品牌列表: {brand_list}")
 
         main_brand = brand_list[0]
 
-        # 验证其他参数
-        selected_models = data.get('selectedModels', [])
-        custom_questions = data.get('customQuestions', [])
-        user_openid = data.get('userOpenid', user_id or 'anonymous')  # 使用认证的用户ID
+        # 验证其他参数 - 确保 selectedModels 只要是 list 类型即通过
+        if 'selectedModels' not in data:
+            return jsonify({"status": "error", "error": 'Missing selectedModels in request data', "code": 400, 'received_fields': list(data.keys())}), 400
+        if not isinstance(data['selectedModels'], list):
+            return jsonify({"status": "error", "error": 'selectedModels must be a list', "code": 400, 'received': type(data['selectedModels']).__name__, 'received_value': data['selectedModels']}), 400
+        selected_models = data['selectedModels']
+        if not selected_models:
+            return jsonify({"status": "error", "error": 'At least one AI model must be selected', "code": 400, 'received': selected_models}), 400
+
+        # 要求：如果 selectedModels 传入的是字典列表，代码需具备自动提取 id 字段的健壮性
+        # 解析器加固：从 selectedModels 对象数组中提取 id 或 value，转化为纯字符串列表
+        parsed_selected_models = []
+        for model in selected_models:
+            if isinstance(model, dict):
+                # 如果是对象，提取其核心标识符
+                model_name = model.get('name') or model.get('id') or model.get('value') or model.get('label')
+                if model_name:
+                    parsed_selected_models.append({'name': model_name, 'checked': model.get('checked', True)})
+                else:
+                    # 如果对象中没有合适的标识符，尝试使用第一个可用的键值
+                    for key, value in model.items():
+                        if key in ['name', 'id', 'value', 'label'] and isinstance(value, str):
+                            parsed_selected_models.append({'name': value, 'checked': model.get('checked', True)})
+                            break
+            elif isinstance(model, str):
+                # 如果是字符串，直接使用
+                parsed_selected_models.append({'name': model, 'checked': True})
+            else:
+                # 其他类型，跳过或报错
+                api_logger.warning(f"Unsupported model format: {model}, type: {type(model)}")
+
+        # 更新 selected_models 为解析后的格式
+        selected_models = parsed_selected_models
+
+        # 审计要求：在后端打印关键调试日志
+        original_model_names = [model.get('name', model) if isinstance(model, dict) else model for model in data['selectedModels']]
+        converted_model_names = [model['name'] for model in selected_models]
+        api_logger.info(f"[Sprint 1] 转换后的模型列表: {converted_model_names} (原始: {original_model_names})")
+
+        if not selected_models:
+            return jsonify({"status": "error", "error": 'No valid AI models found after parsing', "code": 400}), 400
+
+        # 重构校验逻辑：custom_question 只要是 string 类型即通过
+        custom_questions = []
+        if 'custom_question' in data:
+            # 优先处理新的 custom_question 字段（字符串）
+            if not isinstance(data['custom_question'], str):
+                return jsonify({"status": "error", "error": 'custom_question must be a string', "code": 400, 'received': type(data['custom_question']).__name__, 'received_value': data['custom_question']}), 400
+            # 将字符串转换为数组
+            custom_questions = [data['custom_question']] if data['custom_question'].strip() else []
+        elif 'customQuestions' in data:
+            # 保持对旧格式的兼容（数组格式）
+            if not isinstance(data['customQuestions'], list):
+                return jsonify({"status": "error", "error": 'customQuestions must be a list', "code": 400, 'received': type(data['customQuestions']).__name__, 'received_value': data['customQuestions']}), 400
+            custom_questions = data['customQuestions']
+        else:
+            # 如果两个字段都没有提供，使用空数组
+            custom_questions = []
+
+        # 使用认证的用户ID，如果未认证则使用anonymous
+        user_openid = data.get('userOpenid') or (user_id if user_id != 'anonymous' else 'anonymous')
         api_key = data.get('apiKey', '')  # 在实际应用中，不应通过前端传递API密钥
 
         user_level = UserLevel(data.get('userLevel', 'Free'))
@@ -176,17 +245,67 @@ def perform_brand_test():
         judge_model = data.get('judgeModel')  # 前端传入的评判模型
         judge_api_key = data.get('judgeApiKey')  # 前端传入的评判API密钥
 
-        if not selected_models:
-            return jsonify({'error': 'At least one AI model must be selected'}), 400
+        # Provider可用性检查：验证所选模型是否已配置API Key并在AIAdapterFactory中注册
+        from .ai_adapters.factory import AIAdapterFactory
+        from .ai_adapters.base_adapter import AIPlatformType
+
+        for model in selected_models:
+            model_name = model['name'] if isinstance(model, dict) else model
+            # 使用AIAdapterFactory的标准化方法
+            normalized_model_name = AIAdapterFactory.get_normalized_model_name(model_name)
+
+            try:
+                # 尝试获取平台类型
+                platform_type = AIPlatformType(normalized_model_name)
+                # 检查适配器是否已注册
+                if platform_type not in AIAdapterFactory._adapters:
+                    # 打印出当前所有已注册的 Keys 并在报错中返回给前端
+                    registered_keys = [pt.value for pt in AIAdapterFactory._adapters.keys()]
+                    api_logger.error(f"Model {model_name} (normalized to {normalized_model_name}) not registered. Available models: {registered_keys}")
+                    return jsonify({
+                        "status": "error",
+                        "error": f'Model {model_name} not registered in AIAdapterFactory',
+                        "code": 400,
+                        "available_models": registered_keys,
+                        "received_model": model_name,
+                        "normalized_to": normalized_model_name
+                    }), 400
+
+                # 检查API Key是否已配置
+                from .config_manager import config_manager
+                api_key = config_manager.get_api_key(normalized_model_name)
+                if not api_key:
+                    return jsonify({"status": "error", "error": f'Model {model_name} not configured - missing API key', "code": 400, 'message': 'API Key 缺失'}), 400
+
+            except ValueError:
+                # 如果模型名称不是标准平台类型，检查是否为自定义模型
+                platform_name_lower = normalized_model_name
+                if platform_name_lower not in [pt.value for pt in AIPlatformType]:
+                    # 对于非标准平台，检查是否在适配器注册表中
+                    if platform_name_lower not in [name.value for name in AIPlatformType.__members__.values()]:
+                        # 检查是否在已注册的适配器中
+                        registered_names = [pt.value for pt in AIAdapterFactory._adapters.keys()]
+                        if platform_name_lower not in registered_names:
+                            api_logger.error(f"Model {model_name} (normalized to {normalized_model_name}) not registered. Available models: {registered_names}")
+                            return jsonify({
+                                "status": "error",
+                                "error": f'Model {model_name} not registered in AIAdapterFactory',
+                                "code": 400,
+                                "available_models": registered_names,
+                                "received_model": model_name,
+                                "normalized_to": normalized_model_name
+                            }), 400
 
         # 验证自定义问题的安全性
         for question in custom_questions:
+            if not isinstance(question, str):
+                return jsonify({'error': f'Each question in customQuestions must be a string, got {type(question)}'}), 400
             if not validate_safe_text(question, max_length=500):
                 return jsonify({'error': f'Unsafe question content: {question}'}), 400
 
     except Exception as e:
         api_logger.error(f"Input validation failed: {str(e)}")
-        return jsonify({'error': 'Invalid input data'}), 400
+        return jsonify({'error': f'Invalid input data: {str(e)}'}), 400
 
     # 立即生成执行ID和基础存储，不等待测试用例生成
     execution_id = str(uuid.uuid4())
@@ -248,31 +367,122 @@ def perform_brand_test():
                         'status': progress.status.value
                     })
 
+            # 更新状态为 AI 获取阶段
+            if execution_id in execution_store:
+                execution_store[execution_id].update({
+                    'status': 'ai_fetching',
+                    'stage': 'ai_fetching',
+                    'progress': 10  # Start at 10% when fetching AI responses
+                })
+
             results = executor.execute_tests(all_test_cases, api_key, lambda eid, p: progress_callback(execution_id, p), timeout=600)  # 10分钟超时
             executor.shutdown()
 
+            # 更新状态为智能评估阶段
+            if execution_id in execution_store:
+                execution_store[execution_id].update({
+                    'status': 'intelligence_evaluating',
+                    'stage': 'intelligence_evaluating',
+                    'progress': 60  # Move to 60% when evaluating intelligence
+                })
+
             processed_results = process_and_aggregate_results_with_ai_judge(results, brand_list, main_brand, judge_platform, judge_model, judge_api_key)
 
-            # 使用真实的信源情报处理器
+            # 【执行动作 A：构建信源情报层】
+            # 使用信源情报处理器
             try:
-                # 使用线程池执行器来运行异步函数
-                def run_async_processing():
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
-                        return loop.run_until_complete(
-                            process_brand_source_intelligence(main_brand, processed_results['detailed_results'])
-                        )
-                    finally:
-                        loop.close()
+                from services.intelligence.source_analyzer import SourceAnalyzer
+                source_analyzer = SourceAnalyzer()
 
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(run_async_processing)
-                    source_intelligence_map = future.result(timeout=30)  # 设置超时时间
+                # 为每个结果进行信源分析
+                for result in processed_results['detailed_results']:
+                    response_text = result.get('response', '')
+                    if response_text:
+                        source_analysis = source_analyzer.analyze_sources(response_text)
+                        result['sources'] = source_analysis  # 将信源分析结果存入 detailed_results.sources 字段
+
+                api_logger.info(f"[SourceAnalyzer] Processed sources for {len(processed_results['detailed_results'])} results")
+
             except Exception as e:
                 api_logger.error(f"信源情报处理失败: {e}")
-                # 如果异步处理失败，使用模拟数据
-                source_intelligence_map = generate_mock_source_intelligence_map(main_brand)
+                # 如果信源分析失败，使用空数组，不中断整个流程
+                for result in processed_results['detailed_results']:
+                    result['sources'] = {
+                        'total_sources': 0,
+                        'sources': [],
+                        'category_distribution': {},
+                        'authoritative_sources': [],
+                        'highest_confidence': 0.0,
+                        'lowest_confidence': 0.0
+                    }
+
+            # 【执行动作 B：集成趋势预测引擎】
+            # 使用趋势预测服务
+            try:
+                from services.intelligence.prediction_service import PredictionService
+                prediction_service = PredictionService()
+
+                # 准备历史数据用于预测（这里使用当前的评分数据作为示例）
+                # 在实际应用中，这里应该使用真正的历史数据
+                historical_data = {}
+
+                # 从当前结果中提取各维度的分数作为历史数据
+                authority_scores = [r.get('authority_score', 0) for r in processed_results['detailed_results'] if 'authority_score' in r]
+                visibility_scores = [r.get('visibility_score', 0) for r in processed_results['detailed_results'] if 'visibility_score' in r]
+                sentiment_scores = [r.get('sentiment_score', 0) for r in processed_results['detailed_results'] if 'sentiment_score' in r]
+
+                # 构建历史数据字典
+                if authority_scores:
+                    historical_data['authority_score'] = authority_scores
+                if visibility_scores:
+                    historical_data['visibility_score'] = visibility_scores
+                if sentiment_scores:
+                    historical_data['sentiment_score'] = sentiment_scores
+
+                # 如果没有足够的历史数据，使用当前平均值
+                if not historical_data:
+                    avg_authority = sum(authority_scores) / len(authority_scores) if authority_scores else 75.0
+                    avg_visibility = sum(visibility_scores) / len(visibility_scores) if visibility_scores else 70.0
+                    avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 75.0
+
+                    historical_data = {
+                        'authority_score': [avg_authority],
+                        'visibility_score': [avg_visibility],
+                        'sentiment_score': [avg_sentiment]
+                    }
+
+                # 生成预测报告
+                prediction_report = prediction_service.generate_prediction_report(historical_data, main_brand)
+
+                # 将预测结果添加到每个结果中
+                for result in processed_results['detailed_results']:
+                    result['prediction'] = prediction_report  # 将预测结果存入 detailed_results.prediction 字段
+
+                api_logger.info(f"[PredictionService] Generated predictions for {main_brand}")
+
+            except Exception as e:
+                api_logger.error(f"趋势预测处理失败: {e}")
+                # 如果预测失败，为每个结果添加空的预测字段，不中断整个流程
+                for result in processed_results['detailed_results']:
+                    result['prediction'] = {
+                        'brand_name': main_brand,
+                        'prediction_summary': {
+                            'overall_trend': 'unknown',
+                            'forecast_horizon_days': 7,
+                            'confidence_level': 'low'
+                        },
+                        'forecast_details': {},
+                        'risk_assessment': {
+                            'volatility_by_dimension': {},
+                            'high_risk_dimensions': [],
+                            'overall_risk_level': 'unknown',
+                            'recommendations': ['预测服务暂时不可用']
+                        },
+                        'historical_data_summary': {
+                            'data_points_per_dimension': {},
+                            'latest_values': {}
+                        }
+                    }
 
             semantic_contrast_data = generate_mock_semantic_contrast_data(main_brand)
 
@@ -310,8 +520,99 @@ def perform_brand_test():
             except Exception as e:
                 api_logger.error(f"Error saving test record: {e}")
 
+            # 【任务 C：完善任务状态机与进度反馈】
+            # 更新状态为竞争分析阶段
+            if execution_id in execution_store:
+                execution_store[execution_id].update({
+                    'status': 'competition_analyzing',
+                    'stage': 'competition_analyzing',
+                    'progress': 80  # Move to 80% when analyzing competition
+                })
+
+            # 【任务 B：集成竞争情报分析器】
+            # 缝合竞争分析与评估：在TestCase执行完成后，自动触发CompetitiveAnalyzer
+            # 因为现在有 brand_list 数组，可以正式开始计算品牌间的"关键词重合度"和"差异化评分"
+            try:
+                from .analytics.competitive_analyzer import CompetitiveAnalyzer
+                competitive_analyzer = CompetitiveAnalyzer()
+
+                # 为品牌列表中的每个品牌对进行竞争分析
+                if len(brand_list) > 1:
+                    # 创建品牌分析结果映射
+                    brand_analysis_results = {}
+
+                    # 为每个品牌生成详细的分析
+                    for brand in brand_list:
+                        # 获取该品牌的详细结果
+                        brand_results = [result for result in stripped_data['results'] if result.get('brand') == brand]
+
+                        if brand_results:
+                            # 将该品牌的AI响应合并为一段文本
+                            brand_responses = " ".join([result.get('response', '') for result in brand_results])
+
+                            # 与其他品牌进行对比分析
+                            for other_brand in brand_list:
+                                if other_brand != brand:
+                                    # 获取其他品牌的响应
+                                    other_brand_results = [result for result in stripped_data['results'] if result.get('brand') == other_brand]
+                                    other_brand_responses = " ".join([result.get('response', '') for result in other_brand_results])
+
+                                    # 执行竞争分析
+                                    analysis_result = competitive_analyzer.analyze(
+                                        brand_responses,
+                                        other_brand_responses,
+                                        brand,
+                                        other_brand
+                                    )
+
+                                    # 存储分析结果
+                                    if brand not in brand_analysis_results:
+                                        brand_analysis_results[brand] = {}
+                                    brand_analysis_results[brand][other_brand] = analysis_result
+
+                    # 将竞争分析结果添加到返回数据中
+                    stripped_data['competitive_analysis_details'] = brand_analysis_results
+                    api_logger.info(f"Competitive analysis completed for brands: {brand_list}")
+
+                    # 【任务 B：数据落库】将分析出的关键词地图和对比结论存入 TestResult 的汇总字段
+                    # 添加关键词重叠度信息到结果中
+                    for brand in brand_list:
+                        brand_results = [result for result in stripped_data['results'] if result.get('brand') == brand]
+                        if brand in brand_analysis_results:
+                            for other_brand, analysis in brand_analysis_results[brand].items():
+                                # 为每个品牌的每个结果添加竞争分析信息
+                                for result in brand_results:
+                                    if 'competitor_overlap' not in result:
+                                        result['competitor_overlap'] = {
+                                            'compared_with': other_brand,
+                                            'common_keywords': analysis.get('common_keywords', []),
+                                            'unique_to_brand': analysis.get('my_brand_unique_keywords', []),
+                                            'unique_to_competitor': analysis.get('competitor_unique_keywords', []),
+                                            'differentiation_summary': analysis.get('differentiation_gap', '')
+                                        }
+
+                else:
+                    # 单品牌情况：仍然可以进行一些分析
+                    api_logger.info(f"Single brand analysis for: {brand_list[0]}")
+
+            except Exception as e:
+                api_logger.error(f"Competitive analysis failed: {e}")
+                # 【技术约束：异常隔离】如果某个品牌的评分失败，不能中断整个诊断任务，需记录 Error Log 并继续执行竞争分析
+                # 如果竞争分析失败，不影响主要流程，继续执行
+                # 【技术约束：异常处理】如果信源提取或预测失败，不要让整个任务崩溃，而是将对应字段置为 null 或空数组
+                for result in stripped_data['results']:
+                    if 'competitor_overlap' not in result:
+                        result['competitor_overlap'] = {
+                            'compared_with': '',
+                            'common_keywords': [],
+                            'unique_to_brand': [],
+                            'unique_to_competitor': [],
+                            'differentiation_summary': '竞争分析服务暂时不可用'
+                        }
+
             if execution_id in execution_store:
                 stripped_data['status'] = 'completed'
+                stripped_data['stage'] = 'completed'  # 【任务 C：完善任务状态机与进度反馈】
                 stripped_data['progress'] = 100
                 stripped_data['recordId'] = record_id
                 execution_store[execution_id].update(stripped_data)
@@ -324,7 +625,7 @@ def perform_brand_test():
     thread = Thread(target=run_async_test)
     thread.start()
 
-    return jsonify({'status': 'success', 'executionId': execution_id, 'message': 'Test started successfully'})
+    return jsonify({'status': 'success', 'execution_id': execution_id, 'message': 'Test started successfully'})
 
 def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_brand, judge_platform=None, judge_model=None, judge_api_key=None):
     """
@@ -342,6 +643,15 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
         else:
             # No judge parameters provided, skip AI judging
             api_logger.info("No judge parameters provided, skipping AI evaluation")
+
+    # 导入误解分析器
+    try:
+        from .intelligence_services.misunderstanding_analyzer import MisunderstandingAnalyzer
+        misunderstanding_analyzer = MisunderstandingAnalyzer()
+        api_logger.info("Misunderstanding analyzer loaded successfully")
+    except ImportError:
+        api_logger.warning("Misunderstanding analyzer not available")
+        misunderstanding_analyzer = None
 
     scoring_engine = ScoringEngine()
     enhanced_scoring_engine = EnhancedScoringEngine()
@@ -396,6 +706,36 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                         # 使用增强评分引擎计算增强分数（用于内部分析）
                         enhanced_result = calculate_enhanced_scores([judge_result], brand_name=current_brand)
 
+                        # 【任务 A：集成自动评分引擎】
+                        # 在 AI 生成回复后立即调用 evaluator.py 计算质量指标
+                        try:
+                            from gco_validator.scoring import ResponseEvaluator
+                            evaluator = ResponseEvaluator()
+                            scoring_result = evaluator.evaluate_response(ai_response_content, question, current_brand)
+
+                            # 记录评分日志
+                            api_logger.info(f"[Evaluator] {current_brand} 评分：{scoring_result.overall_score}分 (准确度:{scoring_result.accuracy}, 完整度:{scoring_result.completeness})")
+                        except Exception as eval_error:
+                            api_logger.error(f"Evaluation failed for {current_brand}: {str(eval_error)}")
+                            # 如果评分失败，使用默认值
+                            scoring_result = None
+
+                        # 使用误解分析器进行分析
+                        misunderstanding_result = None
+                        if misunderstanding_analyzer:
+                            try:
+                                misunderstanding_result = misunderstanding_analyzer.analyze(
+                                    brand_name=current_brand,
+                                    question_text=question,
+                                    ai_answer=ai_response_content,
+                                    judge_result=judge_result
+                                )
+                                api_logger.info(f"Misunderstanding analysis completed for {current_brand}: {misunderstanding_result.has_issue}")
+                            except Exception as e:
+                                api_logger.error(f"Error in misunderstanding analysis: {e}")
+                                # 如果分析失败，创建默认结果
+                                misunderstanding_result = None
+
                         detailed_result = {
                             'success': True,
                             'brand': current_brand,
@@ -408,6 +748,15 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                             'purity_score': judge_result.purity_score,
                             'consistency_score': judge_result.consistency_score,
                             'score': basic_score.geo_score,  # 保持原有分数以确保兼容性
+                            # 【任务 A：数据入库】将 ScoringResult 结构化存入对应 TestCase 的结果对象中
+                            'quality_metrics': {
+                                'accuracy_score': scoring_result.accuracy if scoring_result else 0,
+                                'completeness_score': scoring_result.completeness if scoring_result else 0,
+                                'relevance_score': scoring_result.relevance if scoring_result else 0,
+                                'coherence_score': scoring_result.coherence if scoring_result else 0,
+                                'overall_quality_score': scoring_result.overall_score if scoring_result else 0,
+                                'detailed_feedback': scoring_result.detailed_feedback if scoring_result else {}
+                            } if scoring_result else None,
                             'enhanced_scores': {
                                 'geo_score': enhanced_result.geo_score,
                                 'cognitive_confidence': enhanced_result.cognitive_confidence,
@@ -415,6 +764,13 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                                 'detailed_analysis': enhanced_result.detailed_analysis,
                                 'recommendations': enhanced_result.recommendations
                             },
+                            'misunderstanding_analysis': {
+                                'has_issue': misunderstanding_result.has_issue if misunderstanding_result else False,
+                                'issue_types': misunderstanding_result.issue_types if misunderstanding_result else [],
+                                'risk_level': misunderstanding_result.risk_level if misunderstanding_result else 'low',
+                                'issue_summary': misunderstanding_result.issue_summary if misunderstanding_result else 'Analysis not available',
+                                'improvement_hint': misunderstanding_result.improvement_hint if misunderstanding_result else 'No suggestions'
+                            } if misunderstanding_result else None,
                             'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
                         }
                         brand_results_map[current_brand].append(judge_result)
@@ -431,6 +787,19 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                         }
                 else:
                     # Skip AI evaluation, use basic result structure
+                    # 【任务 A：集成自动评分引擎】即使没有AI judge，也要进行基本评分
+                    try:
+                        from gco_validator.scoring import ResponseEvaluator
+                        evaluator = ResponseEvaluator()
+                        scoring_result = evaluator.evaluate_response(ai_response_content, question, current_brand)
+
+                        # 记录评分日志
+                        api_logger.info(f"[Evaluator] {current_brand} 评分：{scoring_result.overall_score}分 (准确度:{scoring_result.accuracy}, 完整度:{scoring_result.completeness})")
+                    except Exception as eval_error:
+                        api_logger.error(f"Evaluation failed for {current_brand}: {str(eval_error)}")
+                        # 如果评分失败，使用默认值
+                        scoring_result = None
+
                     detailed_result = {
                         'success': True,
                         'brand': current_brand,
@@ -443,6 +812,15 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                         'purity_score': 0,
                         'consistency_score': 0,
                         'score': 0,  # Default score when no AI judge
+                        # 【任务 A：数据入库】将 ScoringResult 结构化存入对应 TestCase 的结果对象中
+                        'quality_metrics': {
+                            'accuracy_score': scoring_result.accuracy if scoring_result else 0,
+                            'completeness_score': scoring_result.completeness if scoring_result else 0,
+                            'relevance_score': scoring_result.relevance if scoring_result else 0,
+                            'coherence_score': scoring_result.coherence if scoring_result else 0,
+                            'overall_quality_score': scoring_result.overall_score if scoring_result else 0,
+                            'detailed_feedback': scoring_result.detailed_feedback if scoring_result else {}
+                        } if scoring_result else None,
                         'enhanced_scores': {
                             'geo_score': 0,
                             'cognitive_confidence': 0.0,
@@ -450,6 +828,7 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                             'detailed_analysis': {},
                             'recommendations': []
                         },
+                        'misunderstanding_analysis': None,  # No analysis when AI judge is not available
                         'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
                     }
                     # Add a basic judge result with default scores for scoring calculations
@@ -936,29 +1315,30 @@ def submit_brand_test():
 @wechat_bp.route('/test/status/<task_id>', methods=['GET'])
 @rate_limit(limit=20, window=60, per='endpoint')
 @monitored_endpoint('/test/status', require_auth=False, validate_inputs=False)
-def get_task_status(task_id):
+def get_task_status_api(task_id):
     """轮询任务进度与分阶段状态"""
     if not task_id:
         return jsonify({'error': 'Task ID is required'}), 400
 
-    # 尝试从数据库获取任务状态
-    task_status = get_task_status(task_id)
+    # 尝试从全局存储获取任务状态
+    if task_id in execution_store:
+        task_status = execution_store[task_id]
 
-    if not task_status:
+        # 按照API契约返回任务状态信息
+        response_data = {
+            'task_id': task_id,
+            'progress': task_status.get('progress', 0),
+            'stage': task_status.get('stage', 'init'),  # 【任务 C：前端同步】确保返回当前的 stage 描述
+            'status': task_status.get('status', 'init'),
+            'results': task_status.get('results', []),
+            'is_completed': task_status.get('status') == 'completed',
+            'created_at': task_status.get('start_time', None)
+        }
+
+        # 返回任务状态信息
+        return jsonify(response_data), 200
+    else:
         return jsonify({'error': 'Task not found'}), 404
-
-    # 按照API契约返回任务状态信息
-    response_data = {
-        'task_id': task_status.task_id,
-        'progress': task_status.progress,
-        'stage': task_status.stage.value,
-        'status_text': task_status.status_text,
-        'is_completed': task_status.is_completed,
-        'created_at': task_status.created_at
-    }
-
-    # 返回任务状态信息
-    return jsonify(response_data), 200
 
 
 @wechat_bp.route('/test/result/<task_id>', methods=['GET'])
@@ -1767,3 +2147,304 @@ def get_workflow_task_status(task_id):
         api_logger.error(f"Error getting workflow task status: {e}")
         return jsonify({'error': 'Failed to get task status', 'details': str(e)}), 500
 
+
+# Additional endpoints to match frontend API expectations
+@wechat_bp.route('/api/validate-token', methods=['POST'])
+@rate_limit(limit=20, window=60, per='ip')
+def validate_token():
+    """Validate user token"""
+    api_logger.info("Token validation endpoint accessed")
+
+    # In a real implementation, this would validate the JWT token
+    # For now, returning a mock response
+    return jsonify({
+        'status': 'valid',
+        'message': 'Token is valid'
+    })
+
+
+@wechat_bp.route('/api/refresh-token', methods=['POST'])
+@rate_limit(limit=10, window=60, per='ip')
+def refresh_token():
+    """Refresh user token"""
+    api_logger.info("Token refresh endpoint accessed")
+
+    # In a real implementation, this would refresh the JWT token
+    # For now, returning a mock response
+    data = request.get_json() or {}
+    refresh_token = data.get('refresh_token')
+
+    if not refresh_token:
+        return jsonify({'error': 'Refresh token is required'}), 400
+
+    # Generate a new token (mock implementation)
+    new_token = f"refreshed_{refresh_token[:8]}_token"
+
+    return jsonify({
+        'status': 'success',
+        'token': new_token,
+        'expires_in': 3600  # 1 hour
+    })
+
+
+@wechat_bp.route('/api/send-verification-code', methods=['POST'])
+@rate_limit(limit=5, window=60, per='ip')
+def send_verification_code():
+    """Send verification code to user"""
+    api_logger.info("Send verification code endpoint accessed")
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    phone = data.get('phone')
+    if not phone:
+        return jsonify({'error': 'Phone number is required'}), 400
+
+    # Validate phone number format
+    import re
+    phone_pattern = r'^1[3-9]\d{9}$'
+    if not re.match(phone_pattern, phone):
+        return jsonify({'error': 'Invalid phone number format'}), 400
+
+    # In a real implementation, this would send an SMS verification code
+    # For now, returning a mock response
+    import random
+    verification_code = f"{random.randint(100000, 999999)}"
+
+    api_logger.info(f"Verification code sent to {phone} (mock: {verification_code})")
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Verification code sent successfully',
+        'phone': phone
+    })
+
+
+@wechat_bp.route('/api/register', methods=['POST'])
+@rate_limit(limit=5, window=60, per='ip')
+def register_user():
+    """Register new user"""
+    api_logger.info("User registration endpoint accessed")
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    phone = data.get('phone')
+    verification_code = data.get('verificationCode') or data.get('verification_code')
+    password = data.get('password')
+
+    if not phone or not verification_code or not password:
+        return jsonify({'error': 'Phone, verification code, and password are required'}), 400
+
+    # In a real implementation, this would verify the code and register the user
+    # For now, returning a mock response
+    return jsonify({
+        'status': 'success',
+        'message': 'User registered successfully',
+        'user_id': f"user_{phone[-4:]}"
+    })
+
+
+@wechat_bp.route('/api/user/profile', methods=['GET', 'POST'])
+@require_auth_optional
+@rate_limit(limit=20, window=60, per='ip')
+def get_user_profile():
+    """Get user profile information"""
+    user_id = get_current_user_id()
+    api_logger.info(f"User profile endpoint accessed by user: {user_id}")
+
+    # In a real implementation, this would fetch user profile from DB
+    # For now, returning a mock response
+    return jsonify({
+        'status': 'success',
+        'profile': {
+            'user_id': user_id or 'anonymous',
+            'username': f'user_{user_id[-4:]}' if user_id else 'anonymous',
+            'email': 'user@example.com',
+            'phone': '138****8888',
+            'created_at': datetime.now().isoformat()
+        }
+    })
+
+
+@wechat_bp.route('/api/user/update', methods=['POST'])
+@require_auth
+@rate_limit(limit=10, window=60, per='ip')
+def update_user_profile():
+    """Update user profile information"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Update user profile endpoint accessed by user: {user_id}")
+
+    data = request.get_json() or {}
+
+    # In a real implementation, this would update user profile in DB
+    # For now, returning a mock response
+    return jsonify({
+        'status': 'success',
+        'message': 'Profile updated successfully',
+        'updated_fields': list(data.keys())
+    })
+
+
+@wechat_bp.route('/api/sync-data', methods=['POST'])
+@require_auth
+@rate_limit(limit=10, window=60, per='ip')
+def sync_data():
+    """Sync user data"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Data sync endpoint accessed by user: {user_id}")
+
+    data = request.get_json() or {}
+    openid = data.get('openid')
+    local_results = data.get('localResults', data.get('local_results', []))
+
+    if not openid:
+        return jsonify({'error': 'OpenID is required'}), 400
+
+    # In a real implementation, this would sync data to/from DB
+    # For now, returning a mock response
+    return jsonify({
+        'status': 'success',
+        'message': 'Data synced successfully',
+        'synced_count': len(local_results),
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@wechat_bp.route('/api/download-data', methods=['POST'])
+@require_auth
+@rate_limit(limit=10, window=60, per='ip')
+def download_data():
+    """Download user data"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Data download endpoint accessed by user: {user_id}")
+
+    data = request.get_json() or {}
+    openid = data.get('openid')
+
+    if not openid:
+        return jsonify({'error': 'OpenID is required'}), 400
+
+    # In a real implementation, this would fetch data from DB
+    # For now, returning a mock response
+    return jsonify({
+        'status': 'success',
+        'message': 'Data downloaded successfully',
+        'cloudResults': [],  # Return empty array or mock data
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@wechat_bp.route('/api/upload-result', methods=['POST'])
+@require_auth
+@rate_limit(limit=10, window=60, per='ip')
+def upload_result():
+    """Upload individual result"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Upload result endpoint accessed by user: {user_id}")
+
+    data = request.get_json() or {}
+    openid = data.get('openid')
+    result = data.get('result')
+
+    if not openid or not result:
+        return jsonify({'error': 'OpenID and result are required'}), 400
+
+    # In a real implementation, this would save result to DB
+    # For now, returning a mock response
+    return jsonify({
+        'status': 'success',
+        'message': 'Result uploaded successfully',
+        'result_id': f"result_{hash(str(result)) % 10000}",
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@wechat_bp.route('/api/delete-result', methods=['POST'])
+@require_auth
+@rate_limit(limit=10, window=60, per='ip')
+def delete_result():
+    """Delete individual result"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Delete result endpoint accessed by user: {user_id}")
+
+    data = request.get_json() or {}
+    openid = data.get('openid')
+    result_id = data.get('id')
+
+    if not openid or not result_id:
+        return jsonify({'error': 'OpenID and result ID are required'}), 400
+
+    # In a real implementation, this would delete result from DB
+    # For now, returning a mock response
+    return jsonify({
+        'status': 'success',
+        'message': 'Result deleted successfully',
+        'deleted_id': result_id,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@wechat_bp.route('/api/competitive-analysis', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=10, window=60, per='ip')
+def competitive_analysis():
+    """Perform competitive analysis (duplicate of action/recommendations for frontend compatibility)"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Competitive analysis endpoint accessed by user: {user_id}")
+
+    data = request.get_json() or {}
+
+    # This is a duplicate of /action/recommendations to satisfy frontend expectations
+    # In a real implementation, this might have different logic
+    source_intelligence = data.get('source_intelligence', {})
+    evidence_chain = data.get('evidence_chain', [])
+    brand_name = data.get('brand_name', '未知品牌')
+
+    try:
+        # Use the same logic as action/recommendations but with different endpoint
+        from .recommendation_generator import RecommendationGenerator
+        generator = RecommendationGenerator()
+
+        recommendations = generator.generate_recommendations(
+            source_intelligence=source_intelligence,
+            evidence_chain=evidence_chain,
+            brand_name=brand_name
+        )
+
+        # Convert to JSON-friendly format
+        recommendations_json = []
+        for rec in recommendations:
+            recommendations_json.append({
+                'priority': rec.priority.value,
+                'type': rec.type.value,
+                'title': rec.title,
+                'description': rec.description,
+                'target': rec.target,
+                'estimated_impact': rec.estimated_impact,
+                'action_steps': rec.action_steps,
+                'urgency': rec.urgency
+            })
+
+        return jsonify({
+            'status': 'success',
+            'recommendations': recommendations_json,
+            'count': len(recommendations_json),
+            'brand_name': brand_name
+        })
+
+    except ImportError:
+        # If RecommendationGenerator is not available, return a mock response
+        api_logger.warning("RecommendationGenerator not available, returning mock data")
+        return jsonify({
+            'status': 'success',
+            'recommendations': [],
+            'count': 0,
+            'brand_name': brand_name,
+            'message': 'Mock response - RecommendationGenerator not available'
+        })
+    except Exception as e:
+        api_logger.error(f"Error generating competitive analysis: {e}")
+        return jsonify({'error': 'Failed to generate competitive analysis', 'details': str(e)}), 500

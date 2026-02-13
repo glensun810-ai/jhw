@@ -236,7 +236,7 @@ def require_auth_optional(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user_id = None
-        
+
         # 尝试JWT认证
         if jwt:
             auth_header = request.headers.get('Authorization')
@@ -247,20 +247,26 @@ def require_auth_optional(f):
                     user_id = payload.get('user_id') or payload.get('openid')
                 except AuthenticationError:
                     pass  # JWT验证失败，继续
-        
+
         # 尝试微信会话认证
         if not user_id:
             wechat_openid = request.headers.get('X-WX-OpenID') or request.headers.get('X-OpenID') or request.headers.get('X-Wechat-OpenID')
             if wechat_openid:
                 user_id = wechat_openid
-        
-        # 设置用户ID（即使为None）
-        g.user_id = user_id
+
+        # 尝试从请求体获取用户信息（某些情况下前端可能传递）
+        if not user_id and request.is_json:
+            data = request.get_json()
+            if data and 'userOpenid' in data:
+                user_id = data['userOpenid']
+
+        # 设置用户ID（如果为None，则标记为anonymous）
+        g.user_id = user_id if user_id is not None else 'anonymous'
         g.is_authenticated = user_id is not None
-        g.auth_method = 'jwt' if jwt and request.headers.get('Authorization', '').startswith('Bearer ') else 'wechat_session' if user_id else 'none'
-        
+        g.auth_method = 'jwt' if jwt and request.headers.get('Authorization', '').startswith('Bearer ') else 'wechat_session' if user_id else 'anonymous'
+
         return f(*args, **kwargs)
-    
+
     return decorated_function
 
 

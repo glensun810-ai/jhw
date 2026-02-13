@@ -1,7 +1,7 @@
 <view class="chart-container">
   <!-- ECharts Canvas -->
   <view class="echart-wrap" wx:if="{{ isLoaded && !isError }}">
-    <ec-canvas id="{{ canvasId }}" canvas-id="{{ canvasId }}" ec="{{ ec }}"></ec-canvas>
+    <ec-canvas class="ec-canvas" id="{{ canvasId }}" canvas-id="{{ canvasId }}" ec="{{ ec }}"></ec-canvas>
   </view>
 
   <!-- Skeleton Loading -->
