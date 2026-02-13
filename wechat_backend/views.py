@@ -1311,3 +1311,94 @@ def get_market_benchmark():
     except Exception as e:
         api_logger.error(f"Error retrieving market benchmark data: {e}")
         return jsonify({'error': 'Failed to retrieve market benchmark data', 'details': str(e)}), 500
+
+
+@wechat_bp.route('/predict/forecast', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=10, window=60, per='endpoint')
+@monitored_endpoint('/predict/forecast', require_auth=False, validate_inputs=True)
+def get_prediction_forecast():
+    """获取品牌认知趋势预测和风险因素"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Prediction forecast endpoint accessed by user: {user_id}")
+
+    try:
+        # 从查询参数获取必要参数
+        brand_name = request.args.get('brand_name', '')
+        days = request.args.get('days', 7, type=int)  # 默认预测7天
+        history_days = request.args.get('history_days', 30, type=int)  # 默认使用30天历史数据
+
+        if not brand_name:
+            return jsonify({'error': 'brand_name is required'}), 400
+
+        if days <= 0 or days > 30:
+            return jsonify({'error': 'days must be between 1 and 30'}), 400
+
+        if history_days <= 0 or history_days > 365:
+            return jsonify({'error': 'history_days must be between 1 and 365'}), 400
+
+        # 验证输入参数
+        if not sql_protector.validate_input(brand_name):
+            return jsonify({'error': 'Invalid brand_name'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 获取历史趋势数据用于预测
+        trend_data = cruise_controller.get_trend_data(brand_name, history_days)
+
+        if not trend_data:
+            return jsonify({
+                'status': 'warning',
+                'message': 'No historical data available for prediction',
+                'predictions': [],
+                'risk_factors': []
+            })
+
+        # 使用预测引擎进行预测
+        from .analytics.prediction_engine import PredictionEngine
+        prediction_engine = PredictionEngine()
+
+        # 准备历史数据
+        historical_data = []
+        for data_point in trend_data:
+            historical_entry = {
+                'rank': data_point.get('rank'),
+                'overall_score': data_point.get('overall_score'),
+                'sentiment_score': data_point.get('sentiment_score'),
+                'timestamp': data_point.get('timestamp'),
+                'evidence_chain': []  # 在实际应用中，这需要从数据库获取完整的证据链数据
+            }
+            historical_data.append(historical_entry)
+
+        # 获取证据链数据（简化版本，实际应用中需要从数据库获取完整证据链）
+        # 这里我们使用趋势数据中的信息来模拟证据链
+        evidence_chain = []
+        for data_point in trend_data[-7:]:  # 使用最近7天的数据
+            if data_point.get('overall_score', 100) < 60:  # 假设分数低于60表示有问题
+                evidence_chain.append({
+                    'negative_fragment': f"品牌认知分数偏低({data_point.get('overall_score', 0)})",
+                    'associated_url': 'internal_system',
+                    'source_name': 'System Alert',
+                    'risk_level': 'Medium'
+                })
+
+        # 为每个历史数据点添加证据链
+        for entry in historical_data:
+            entry['evidence_chain'] = evidence_chain if entry['overall_score'] and entry['overall_score'] < 60 else []
+
+        # 执行预测
+        prediction_result = prediction_engine.predict_weekly_rank_with_risks(historical_data)
+
+        return jsonify({
+            'status': 'success',
+            'brand_name': brand_name,
+            'forecast_period': days,
+            'prediction_result': prediction_result
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error generating prediction forecast: {e}")
+        return jsonify({'error': 'Failed to generate prediction forecast', 'details': str(e)}), 500
