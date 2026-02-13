@@ -1,0 +1,19 @@
+Collecting APScheduler==3.10.4
+  Downloading APScheduler-3.10.4-py3-none-any.whl.metadata (5.7 kB)
+Collecting SQLAlchemy
+  Downloading sqlalchemy-2.0.46-cp314-cp314-macosx_11_0_arm64.whl.metadata (9.5 kB)
+Collecting six>=1.4.0 (from APScheduler==3.10.4)
+  Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting pytz (from APScheduler==3.10.4)
+  Downloading pytz-2025.2-py2.py3-none-any.whl.metadata (22 kB)
+Collecting tzlocal!=3.*,>=2.0 (from APScheduler==3.10.4)
+  Downloading tzlocal-5.3.1-py3-none-any.whl.metadata (7.6 kB)
+Requirement already satisfied: typing-extensions>=4.6.0 in ./.venv/lib/python3.14/site-packages (from SQLAlchemy) (4.15.0)
+Downloading APScheduler-3.10.4-py3-none-any.whl (59 kB)
+Downloading sqlalchemy-2.0.46-cp314-cp314-macosx_11_0_arm64.whl (2.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 2.8 MB/s eta 0:00:00
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading tzlocal-5.3.1-py3-none-any.whl (18 kB)
+Downloading pytz-2025.2-py2.py3-none-any.whl (509 kB)
+Installing collected packages: pytz, tzlocal, SQLAlchemy, six, APScheduler
+Successfully installed APScheduler-3.10.4 SQLAlchemy-2.0.46 pytz-2025.2 six-1.17.0 tzlocal-5.3.1

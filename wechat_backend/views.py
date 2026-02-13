@@ -29,6 +29,7 @@ from .analytics.interception_analyst import InterceptionAnalyst
 from .analytics.monetization_service import MonetizationService, UserLevel
 from .analytics.source_intelligence_processor import SourceIntelligenceProcessor, process_brand_source_intelligence
 from .recommendation_generator import RecommendationGenerator, RecommendationPriority, RecommendationType
+from .cruise_controller import CruiseController
 
 # Security imports
 from .security.auth import require_auth, require_auth_optional, get_current_user_id
@@ -1087,3 +1088,168 @@ def get_action_recommendations():
     except Exception as e:
         api_logger.error(f"Error generating recommendations: {e}")
         return jsonify({'error': 'Failed to generate recommendations', 'details': str(e)}), 500
+
+
+# 初始化巡航控制器
+cruise_controller = CruiseController()
+
+
+@wechat_bp.route('/cruise/config', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=10, window=60, per='endpoint')
+@monitored_endpoint('/cruise/config', require_auth=False, validate_inputs=True)
+def configure_cruise_task():
+    """配置定时诊断任务"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Cruise configuration endpoint accessed by user: {user_id}")
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    try:
+        # 验证必需字段
+        user_openid = data.get('user_openid', user_id or 'anonymous')
+        brand_name = data.get('brand_name', '')
+        interval_hours = data.get('interval_hours', 24)  # 默认24小时
+        ai_models = data.get('ai_models', [])
+        questions = data.get('questions', [])
+        job_id = data.get('job_id')
+
+        if not brand_name:
+            return jsonify({'error': 'brand_name is required'}), 400
+
+        if not ai_models or not isinstance(ai_models, list) or len(ai_models) == 0:
+            return jsonify({'error': 'ai_models is required and must be a non-empty list'}), 400
+
+        if not isinstance(interval_hours, int) or interval_hours <= 0:
+            return jsonify({'error': 'interval_hours must be a positive integer'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 调度诊断任务
+        scheduled_job_id = cruise_controller.schedule_diagnostic_task(
+            user_openid=user_openid,
+            brand_name=brand_name,
+            interval_hours=interval_hours,
+            ai_models=ai_models,
+            questions=questions,
+            job_id=job_id
+        )
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Cruise task scheduled successfully',
+            'job_id': scheduled_job_id,
+            'brand_name': brand_name,
+            'interval_hours': interval_hours
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error scheduling cruise task: {e}")
+        return jsonify({'error': 'Failed to schedule cruise task', 'details': str(e)}), 500
+
+
+@wechat_bp.route('/cruise/config', methods=['DELETE'])
+@require_auth_optional
+@rate_limit(limit=10, window=60, per='endpoint')
+@monitored_endpoint('/cruise/config', require_auth=False, validate_inputs=True)
+def cancel_cruise_task():
+    """取消定时诊断任务"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Cruise task cancellation endpoint accessed by user: {user_id}")
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    try:
+        job_id = data.get('job_id')
+        if not job_id:
+            return jsonify({'error': 'job_id is required'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 取消已调度的任务
+        cruise_controller.cancel_scheduled_task(job_id)
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Cruise task cancelled successfully',
+            'job_id': job_id
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error cancelling cruise task: {e}")
+        return jsonify({'error': 'Failed to cancel cruise task', 'details': str(e)}), 500
+
+
+@wechat_bp.route('/cruise/tasks', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/cruise/tasks', require_auth=False, validate_inputs=False)
+def get_cruise_tasks():
+    """获取所有已调度的巡航任务"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Cruise tasks retrieval endpoint accessed by user: {user_id}")
+
+    try:
+        # 获取所有已调度的任务
+        scheduled_tasks = cruise_controller.get_scheduled_tasks()
+
+        return jsonify({
+            'status': 'success',
+            'tasks': scheduled_tasks,
+            'count': len(scheduled_tasks)
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error retrieving cruise tasks: {e}")
+        return jsonify({'error': 'Failed to retrieve cruise tasks', 'details': str(e)}), 500
+
+
+@wechat_bp.route('/cruise/trends', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=20, window=60, per='endpoint')
+@monitored_endpoint('/cruise/trends', require_auth=False, validate_inputs=True)
+def get_cruise_trends():
+    """获取趋势数据"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Cruise trends endpoint accessed by user: {user_id}")
+
+    try:
+        # 从查询参数获取品牌名称和天数
+        brand_name = request.args.get('brand_name', '')
+        days = request.args.get('days', 30, type=int)
+
+        if not brand_name:
+            return jsonify({'error': 'brand_name is required'}), 400
+
+        if days <= 0 or days > 365:
+            return jsonify({'error': 'days must be between 1 and 365'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 获取趋势数据
+        trend_data = cruise_controller.get_trend_data(brand_name, days)
+
+        return jsonify({
+            'status': 'success',
+            'brand_name': brand_name,
+            'days': days,
+            'trend_data': trend_data,
+            'count': len(trend_data)
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error retrieving trend data: {e}")
+        return jsonify({'error': 'Failed to retrieve trend data', 'details': str(e)}), 500
