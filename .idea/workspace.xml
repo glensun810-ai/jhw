@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="" />
+    <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/provider_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/provider_factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wechat_backend/analytics/workflow_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/analytics/workflow_manager.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -16,7 +20,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="437" />
+    <option name="cachedIndexableFilesCount" value="489" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
