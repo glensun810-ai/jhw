@@ -28,6 +28,7 @@ from ai_judge_module import AIJudgeClient, JudgeResult, ConfidenceLevel
 from .analytics.interception_analyst import InterceptionAnalyst
 from .analytics.monetization_service import MonetizationService, UserLevel
 from .analytics.source_intelligence_processor import SourceIntelligenceProcessor, process_brand_source_intelligence
+from .recommendation_generator import RecommendationGenerator, RecommendationPriority, RecommendationType
 
 # Security imports
 from .security.auth import require_auth, require_auth_optional, get_current_user_id
@@ -1021,3 +1022,68 @@ def get_token():
 @wechat_bp.route('/api/user_info', methods=['POST'])
 def decrypt_user_info():
     return jsonify({'status': 'success', 'user_info': {}})
+
+
+@wechat_bp.route('/action/recommendations', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=10, window=60, per='endpoint')
+@monitored_endpoint('/action/recommendations', require_auth=False, validate_inputs=True)
+def get_action_recommendations():
+    """获取干预行动建议"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Action recommendations endpoint accessed by user: {user_id}")
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    # 验证必需字段
+    try:
+        source_intelligence = data.get('source_intelligence', {})
+        evidence_chain = data.get('evidence_chain', [])
+        brand_name = data.get('brand_name', '未知品牌')
+
+        if not isinstance(source_intelligence, dict):
+            return jsonify({'error': 'source_intelligence must be a dictionary'}), 400
+
+        if not isinstance(evidence_chain, list):
+            return jsonify({'error': 'evidence_chain must be a list'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 创建推荐生成器实例
+        generator = RecommendationGenerator()
+
+        # 生成建议
+        recommendations = generator.generate_recommendations(
+            source_intelligence=source_intelligence,
+            evidence_chain=evidence_chain,
+            brand_name=brand_name
+        )
+
+        # 转换为JSON友好的格式
+        recommendations_json = []
+        for rec in recommendations:
+            recommendations_json.append({
+                'priority': rec.priority.value,
+                'type': rec.type.value,
+                'title': rec.title,
+                'description': rec.description,
+                'target': rec.target,
+                'estimated_impact': rec.estimated_impact,
+                'action_steps': rec.action_steps,
+                'urgency': rec.urgency
+            })
+
+        return jsonify({
+            'status': 'success',
+            'recommendations': recommendations_json,
+            'count': len(recommendations_json)
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error generating recommendations: {e}")
+        return jsonify({'error': 'Failed to generate recommendations', 'details': str(e)}), 500
