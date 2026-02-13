@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 class AIPlatformType(Enum):
     """支持的AI平台枚举"""
     DEEPSEEK = "deepseek"
+    DEEPSEEKR1 = "deepseekr1"  # New DeepSeek R1 platform type
     CHATGPT = "chatgpt"
     CLAUDE = "claude"
     GEMINI = "gemini"
