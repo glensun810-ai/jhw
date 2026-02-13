@@ -1524,3 +1524,83 @@ def get_workflow_task_status(task_id):
     except Exception as e:
         api_logger.error(f"Error getting workflow task status: {e}")
         return jsonify({'error': 'Failed to get task status', 'details': str(e)}), 500
+
+
+# 初始化资产智能引擎
+from .analytics.asset_intelligence_engine import AssetIntelligenceEngine
+asset_intelligence_engine = AssetIntelligenceEngine()
+
+
+@wechat_bp.route('/assets/optimization', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=10, window=60, per='endpoint')
+@monitored_endpoint('/assets/optimization', require_auth=False, validate_inputs=True)
+def optimize_assets():
+    """资产优化接口 - 分析官方资产与AI偏好的匹配度并提供优化建议"""
+    user_id = get_current_user_id()
+    api_logger.info(f"Asset optimization endpoint accessed by user: {user_id}")
+
+    try:
+        # 获取请求数据
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+
+        # 验证必需字段
+        required_fields = ['official_asset', 'ai_preferences']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # 提取参数
+        official_asset = data['official_asset']
+        ai_preferences = data['ai_preferences']  # 格式: {platform_name: [content1, content2, ...]}
+
+        # 验证输入参数
+        if not isinstance(official_asset, str) or len(official_asset.strip()) == 0:
+            return jsonify({'error': 'official_asset must be a non-empty string'}), 400
+
+        if not isinstance(ai_preferences, dict) or len(ai_preferences) == 0:
+            return jsonify({'error': 'ai_preferences must be a non-empty dictionary'}), 400
+
+        # 验证ai_preferences的结构
+        for platform, contents in ai_preferences.items():
+            if not isinstance(contents, list):
+                return jsonify({'error': f'ai_preferences[{platform}] must be a list of strings'}), 400
+            for content in contents:
+                if not isinstance(content, str):
+                    return jsonify({'error': f'all items in ai_preferences[{platform}] must be strings'}), 400
+
+        # 验证输入内容的安全性
+        from .security.input_validation import validate_safe_text
+        if not validate_safe_text(official_asset, max_length=5000):
+            return jsonify({'error': 'Invalid official_asset content'}), 400
+
+        for platform, contents in ai_preferences.items():
+            if not validate_safe_text(platform, max_length=100):
+                return jsonify({'error': f'Invalid platform name: {platform}'}), 400
+            for content in contents:
+                if not validate_safe_text(content, max_length=5000):
+                    return jsonify({'error': f'Invalid content in {platform}'}), 400
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {str(e)}")
+        return jsonify({'error': 'Invalid input data'}), 400
+
+    try:
+        # 执行资产智能分析
+        analysis_result = asset_intelligence_engine.analyze_content_matching(
+            official_asset=official_asset,
+            ai_preferences=ai_preferences
+        )
+
+        return jsonify({
+            'status': 'success',
+            'analysis_result': analysis_result,
+            'content_hit_rate': analysis_result['overall_score'],
+            'optimization_suggestions': analysis_result['optimization_suggestions']
+        })
+
+    except Exception as e:
+        api_logger.error(f"Error optimizing assets: {e}")
+        return jsonify({'error': 'Failed to optimize assets', 'details': str(e)}), 500
