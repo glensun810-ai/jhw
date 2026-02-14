@@ -83,7 +83,7 @@ class DoubaoAdapter(AIClient):
                 "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=10  # 健康检查超时较短
+                timeout=30  # 偞康检查超时增加到30秒
             )
             latency = time.time() - start
 
@@ -161,7 +161,7 @@ class DoubaoAdapter(AIClient):
 
         temperature = kwargs.get('temperature', doubao_config.default_temperature if doubao_config else 0.7)
         max_tokens = kwargs.get('max_tokens', doubao_config.default_max_tokens if doubao_config else 1000)
-        timeout = kwargs.get('timeout', doubao_config.timeout if doubao_config else 30)
+        timeout = kwargs.get('timeout', doubao_config.timeout if doubao_config else 60)
 
         # Prepare payload for Doubao API
         payload = {
