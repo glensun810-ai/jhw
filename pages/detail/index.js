@@ -3,6 +3,9 @@ const { getMatrixData, getColorByScore } = require('./utils/matrixHelper');
 const { getTaskStatusApi } = require('../../api/home');
 const { parseTaskStatus } = require('../../services/DiagnosisService');
 
+// 引入 DEBUG_AI_CODE 日志工具
+const { debugLog, debugLogStatusFlow, debugLogResults, debugLogException, ENABLE_DEBUG_AI_CODE } = require('../../utils/debug');
+
 Page({
   data: {
     matrixData: null,
@@ -190,6 +193,11 @@ Page({
     this.stagnantProgressCounter = 0; // 进度停滞计数器
     this.lastProgressValue = 0; // 上一次的进度值
 
+    // Log polling start with DEBUG_AI_CODE
+    if (ENABLE_DEBUG_AI_CODE) {
+      debugLog('POLLING_START', this.executionId, `Starting polling for task ${this.executionId}`); // #DEBUG_CLEAN
+    }
+
     // 开始轮询
     this.pollInterval = setInterval(async () => {
       try {
@@ -199,12 +207,22 @@ Page({
           // 使用服务层解析任务状态数据
           const parsedStatus = parseTaskStatus(statusData);
 
+          // Log polling response with DEBUG_AI_CODE
+          if (ENABLE_DEBUG_AI_CODE) {
+            debugLog('POLLING_RESPONSE', this.executionId, `Received status: progress=${statusData.progress}, is_completed=${statusData.is_completed}`); // #DEBUG_CLEAN
+          }
+
           // 检查任务是否完成
           const isCompleted = statusData.is_completed ||
                              parsedStatus.stage === 'completed';
 
           if (isCompleted) {
             clearInterval(this.pollInterval);
+
+            // Log completion with DEBUG_AI_CODE
+            if (ENABLE_DEBUG_AI_CODE) {
+              debugLog('POLLING_COMPLETED', this.executionId, `Task completed with status: ${JSON.stringify(statusData)}`); // #DEBUG_CLEAN
+            }
 
             // 计算实际耗时
             const actualTime = Math.round((Date.now() - this.startTime) / 1000);
@@ -222,10 +240,20 @@ Page({
             if (statusData.results && Array.isArray(statusData.results) && statusData.results.length > 0) {
               // 如果已经有结果数据，可以提前处理部分数据显示
               console.log('检测到部分结果数据，准备更新界面...');
+
+              // Log results received with DEBUG_AI_CODE
+              if (ENABLE_DEBUG_AI_CODE) {
+                debugLogResults(this.executionId, statusData.results.length, JSON.stringify(statusData.results[0]).substring(0, 100)); // #DEBUG_CLEAN
+              }
             }
           }
         }
       } catch (error) {
+        // Log polling error with DEBUG_AI_CODE
+        if (ENABLE_DEBUG_AI_CODE) {
+          debugLogException(this.executionId, `Polling error: ${JSON.stringify(error)}`); // #DEBUG_CLEAN
+        }
+
         console.error('轮询错误:', error);
         clearInterval(this.pollInterval);
 
@@ -322,6 +350,17 @@ Page({
 
       // 触发冲刺动画 even for normal completion
       this.rapidFinishAnimation();
+    }
+
+    // Log results parsing with DEBUG_AI_CODE
+    if (ENABLE_DEBUG_AI_CODE) {
+      const resultsLength = (statusData.results || []).length;
+      debugLogResults(this.executionId, resultsLength, resultsLength > 0 ? JSON.stringify(statusData.results[0]).substring(0, 100) : 'No results'); // #DEBUG_CLEAN
+
+      // If results length is 0, trigger high-light warning
+      if (resultsLength === 0) {
+        debugLog('RESULTS_WARNING', this.executionId, '⚠️ WARNING: RESULTS ARRAY IS EMPTY!'); // #DEBUG_CLEAN
+      }
     }
 
     // 打印结果数组长度用于验证
