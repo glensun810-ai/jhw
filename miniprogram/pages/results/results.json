@@ -1,8 +1,0 @@
-{
-  "usingComponents": {
-    "base-chart": "../../components/BaseChart/index",
-    "source-graph": "../../components/SourceGraph/index",
-    "competitive-intelligence-view": "../../components/CompetitiveIntelligenceView/index"
-  },
-  "navigationBarTitleText": "品牌洞察报告"
-}

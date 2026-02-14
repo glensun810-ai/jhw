@@ -1,7 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "skeleton": "../Skeleton/Skeleton"
-  },
-  "styleIsolation": "apply-shared"
-}

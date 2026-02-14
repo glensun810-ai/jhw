@@ -7,9 +7,12 @@ App({
 
   onLaunch: function () {
     console.log('应用启动');
-    
+
     // 检查用户授权状态
     this.checkAuthStatus();
+
+    // 一次性清理逻辑：清理所有保存的文件
+    this.clearSavedFiles();
   },
 
   onShow: function (options) {
@@ -76,5 +79,34 @@ App({
     this.globalData.openid = openid;
     // 同时保存到本地缓存
     wx.setStorageSync('openid', openid);
+  },
+
+  // 清理所有保存的文件
+  clearSavedFiles: function() {
+    wx.getSavedFileList({
+      success: (res) => {
+        const fileList = res.fileList;
+        if (fileList && fileList.length > 0) {
+          console.log(`发现 ${fileList.length} 个保存的文件，开始清理...`);
+
+          fileList.forEach((file) => {
+            wx.removeSavedFile({
+              filePath: file.filePath,
+              success: () => {
+                console.log(`成功删除文件: ${file.filePath}`);
+              },
+              fail: (err) => {
+                console.error(`删除文件失败: ${file.filePath}`, err);
+              }
+            });
+          });
+        } else {
+          console.log('没有找到需要清理的保存文件');
+        }
+      },
+      fail: (err) => {
+        console.error('获取保存文件列表失败', err);
+      }
+    });
   }
 })

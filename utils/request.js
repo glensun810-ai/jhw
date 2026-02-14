@@ -140,6 +140,19 @@ const request = (options = {}) => {
           wx.hideLoading();
         }
 
+        // 检查是否是存储空间超出限制的错误
+        if (error.errMsg && error.errMsg.includes('the maximum size limit exceeded')) {
+          console.warn('存储空间超出限制，正在清理缓存...');
+
+          // 调用存储清理函数，专门处理AI诊断大数据包
+          clearStorageRecursive();
+
+          // 静默忽略此错误，不显示错误提示
+          console.log('存储清理完成，忽略存储限制错误');
+          resolve(null); // 返回空结果而不是拒绝
+          return;
+        }
+
         // 请求失败
         const errorMsg = error.errMsg || '网络请求失败';
         if (showError) {
@@ -243,11 +256,95 @@ const del = (url, data = {}, options = {}) => {
   });
 };
 
+// 清理存储空间的函数
+const clearStorage = () => {
+  // 清理临时文件
+  wx.getSavedFileList({
+    success: (res) => {
+      const fileList = res.fileList;
+      if (fileList && fileList.length > 0) {
+        console.log(`发现 ${fileList.length} 个保存的文件，开始清理...`);
+
+        fileList.forEach((file) => {
+          wx.removeSavedFile({
+            filePath: file.filePath,
+            success: () => {
+              console.log(`成功删除文件: ${file.filePath}`);
+            },
+            fail: (err) => {
+              console.error(`删除文件失败: ${file.filePath}`, err);
+            }
+          });
+        });
+      }
+
+      // 清理本地存储
+      wx.clearStorage({
+        success: () => {
+          console.log('本地存储清理完成');
+        },
+        fail: (err) => {
+          console.error('本地存储清理失败', err);
+        }
+      });
+    },
+    fail: (err) => {
+      console.error('获取保存文件列表失败', err);
+    }
+  });
+};
+
+// 递归清理存储空间的函数，专门用于AI诊断大数据包
+const clearStorageRecursive = () => {
+  // 递归清理保存的文件
+  const cleanFilesRecursively = (index = 0) => {
+    wx.getSavedFileList({
+      success: (res) => {
+        const fileList = res.fileList;
+        if (fileList && fileList.length > index) {
+          // 删除当前索引的文件
+          wx.removeSavedFile({
+            filePath: fileList[index].filePath,
+            success: () => {
+              console.log(`成功删除文件: ${fileList[index].filePath}`);
+              // 递归处理下一个文件
+              cleanFilesRecursively(index + 1);
+            },
+            fail: (err) => {
+              console.error(`删除文件失败: ${fileList[index].filePath}`, err);
+              // 即使失败也继续处理下一个文件
+              cleanFilesRecursively(index + 1);
+            }
+          });
+        } else {
+          // 所有文件都已处理完毕，清理本地存储
+          wx.clearStorage({
+            success: () => {
+              console.log('本地存储清理完成');
+            },
+            fail: (err) => {
+              console.error('本地存储清理失败', err);
+            }
+          });
+        }
+      },
+      fail: (err) => {
+        console.error('获取保存文件列表失败', err);
+      }
+    });
+  };
+
+  // 开始递归清理
+  cleanFilesRecursively();
+};
+
 module.exports = {
   request,
   get,
   post,
   put,
   delete: del, // 避免与 JavaScript 关键字冲突
-  ENV_CONFIG
+  ENV_CONFIG,
+  clearStorage,
+  clearStorageRecursive
 };

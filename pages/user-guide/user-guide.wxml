@@ -1,4 +1,4 @@
-<view class="container">
+<view class="page-container container">
   <!-- 页面头部 -->
   <view class="page-header">
     <text class="page-title">使用指南</text>

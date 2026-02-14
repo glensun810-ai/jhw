@@ -1,3 +1,0 @@
-<view class="container">
-  <ec-canvas class="ec-canvas" id="source-graph-canvas" canvas-id="source-graph-canvas" ec="{{ ec }}"></ec-canvas>
-</view>
