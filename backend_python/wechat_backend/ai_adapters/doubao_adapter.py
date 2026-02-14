@@ -11,6 +11,14 @@ from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
 from config_manager import Config as PlatformConfigManager
 from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from utils.debug_manager import ai_io_log, exception_log, debug_log
+
+# Import the new DEBUG_AI_CODE logger
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+from backend_python.utils.logger import debug_log_ai_io, debug_log_exception, ENABLE_DEBUG_AI_CODE
 
 
 class DoubaoAdapter(AIClient):
@@ -39,14 +47,14 @@ class DoubaoAdapter(AIClient):
         )
         self.session.mount('https://', adapter)
         self.session.mount('http://', adapter)
-        
+
         # 初始化延迟统计
         self.latency_history = []
-        
+
         # 初始化电路断路器
         self.circuit_breaker = get_circuit_breaker(platform_name="doubao", model_name=model_name)
 
-        api_logger.info(f"DoubaoAdapter initialized for model: {model_name} with connection pooling and circuit breaker")
+        debug_log("AI_ADAPTER_INIT", f"DoubaoAdapter initialized for model: {model_name} with connection pooling and circuit breaker")
 
         # 执行健康检查
         self._health_check()
@@ -56,18 +64,20 @@ class DoubaoAdapter(AIClient):
         try:
             # 发送一个极简请求，token计数为1
             minimal_prompt = "ping"
-            
+
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
-            
+
             payload = {
                 "model": self.model_name,
                 "messages": [{"role": "user", "content": minimal_prompt}],
                 "max_tokens": 1  # 只生成1个token，快速响应
             }
-            
+
+            debug_log("HEALTH_CHECK", f"Performing health check for Doubao API with model: {self.model_name}")
+
             start = time.time()
             response = self.session.post(
                 "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
@@ -76,15 +86,15 @@ class DoubaoAdapter(AIClient):
                 timeout=10  # 健康检查超时较短
             )
             latency = time.time() - start
-            
+
             if response.status_code == 200:
-                api_logger.info(f"Doubao health check passed, latency: {latency:.2f}s")
+                debug_log("HEALTH_CHECK", f"Doubao health check passed, latency: {latency:.2f}s")
             else:
-                api_logger.error(f"Doubao health check failed: {response.status_code}, response: {response.text[:200]}...")
+                exception_log(f"Doubao health check failed: {response.status_code}, response: {response.text[:200]}...")
         except Exception as e:
-            api_logger.error(f"Doubao health check failed: {e}")
+            exception_log(f"Doubao health check failed: {e}")
             # 不抛出异常，只是记录警告
-            api_logger.warning("Doubao service may be unavailable at startup")
+            debug_log("HEALTH_CHECK", "Doubao service may be unavailable at startup")
 
     def _get_headers(self):
         """统一管理请求头"""
@@ -97,11 +107,36 @@ class DoubaoAdapter(AIClient):
         """
         向 Doubao API 发送请求 (带熔断保护和延迟统计)
         """
+        # Extract execution_id from kwargs if available for DEBUG_AI_CODE logging
+        execution_id = kwargs.get('execution_id', 'unknown')
+
+        # Log AI I/O with DEBUG_AI_CODE logging
+        if ENABLE_DEBUG_AI_CODE:
+            debug_log_ai_io("DOUBAO_ADAPTER", execution_id, prompt[:50] + "...", "AI processing request") # #DEBUG_CLEAN
+
+        # Also keep the original debug logging
+        ai_io_log(f"Sending prompt to Doubao API. Prompt preview: {prompt[:50]}...")
+
         # 使用电路断路器保护API调用
         try:
-            return self.circuit_breaker.call(self._make_request_internal, prompt, **kwargs)
+            response = self.circuit_breaker.call(self._make_request_internal, prompt, **kwargs)
+            ai_io_log(f"Doubao API response received. Response preview: {response.content[:100] if response.content else 'None'}")
+
+            # Log the response with DEBUG_AI_CODE logging
+            if ENABLE_DEBUG_AI_CODE:
+                response_preview = response.content[:100] if response.content else 'None'
+                debug_log_ai_io("DOUBAO_ADAPTER", execution_id, prompt[:50] + "...", response_preview) # #DEBUG_CLEAN
+
+            return response
         except CircuitBreakerOpenError as e:
-            api_logger.error(f"Doubao API 熔断中: {e}")
+            exception_log(f"Doubao API 熔断中: {e}")
+
+            # Log exception with DEBUG_AI_CODE logging
+            if ENABLE_DEBUG_AI_CODE:
+                import traceback
+                error_msg = f"CircuitBreakerOpenError: {str(e)}\n{traceback.format_exc()}"
+                debug_log_exception("DOUBAO_ADAPTER", execution_id, error_msg) # #DEBUG_CLEAN
+
             # 返回一个响应表示服务暂时不可用
             return AIResponse(
                 success=False,
@@ -116,6 +151,9 @@ class DoubaoAdapter(AIClient):
         """
         实际的API请求逻辑
         """
+        # Extract execution_id from kwargs for DEBUG_AI_CODE logging
+        execution_id = kwargs.get('execution_id', 'unknown')
+
         messages = [{"role": "user", "content": prompt}]
 
         platform_config_manager = PlatformConfigManager()
@@ -136,6 +174,12 @@ class DoubaoAdapter(AIClient):
         start_time = time.time()
         try:
             # 使用会话发送请求以复用连接
+            debug_log("AI_IO", f"Making request to Doubao API with payload: {payload}")
+
+            # Log with DEBUG_AI_CODE system
+            if ENABLE_DEBUG_AI_CODE:
+                debug_log_ai_io("DOUBAO_ADAPTER_INTERNAL", execution_id, str(payload)[:100], "Sending request to API") # #DEBUG_CLEAN
+
             response = self.session.post(
                 "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
                 headers=self._get_headers(),
@@ -159,14 +203,14 @@ class DoubaoAdapter(AIClient):
                 if p95_idx >= len(sorted_latencies):
                     p95_idx = len(sorted_latencies) - 1
                 p95 = sorted_latencies[p95_idx]
-                api_logger.info(f"Doubao latency stats - current: {latency:.2f}s, p95: {p95:.2f}s")
+                debug_log("AI_IO", f"Doubao latency stats - current: {latency:.2f}s, p95: {p95:.2f}s")
             else:
-                api_logger.info(f"Doubao response success. Latency: {latency:.2f}s")
+                debug_log("AI_IO", f"Doubao response success. Latency: {latency:.2f}s")
 
             # Attempt to extract content - try multiple possible response structures
             content = None
             tokens_used = 0
-            
+
             # Try standard OpenAI format first
             if response_data and "choices" in response_data and len(response_data["choices"]) > 0:
                 if "message" in response_data["choices"][0]:
@@ -174,7 +218,7 @@ class DoubaoAdapter(AIClient):
                 elif "delta" in response_data["choices"][0]:
                     # Handle streaming response format
                     content = response_data["choices"][0]["delta"].get("content", "")
-                
+
                 tokens_used = response_data.get("usage", {}).get("total_tokens", 0)
             # Try alternative formats
             elif "result" in response_data:
@@ -187,6 +231,12 @@ class DoubaoAdapter(AIClient):
                 content = response_data["content"]
 
             if content is not None:
+                debug_log("AI_IO", f"Doubao API response processed successfully. Content preview: {content[:100]}")
+
+                # Log with DEBUG_AI_CODE system
+                if ENABLE_DEBUG_AI_CODE:
+                    debug_log_ai_io("DOUBAO_ADAPTER_INTERNAL", execution_id, str(payload)[:100], content[:100]) # #DEBUG_CLEAN
+
                 return AIResponse(
                     success=True,
                     content=content,
@@ -199,7 +249,12 @@ class DoubaoAdapter(AIClient):
             else:
                 error_message = response_data.get("error", {}).get("message", "Unknown Doubao API error") or str(response_data)
                 error_type = self._map_error_message(error_message)
-                api_logger.error(f"Doubao API returned no content: {error_message}")
+
+                # Log with DEBUG_AI_CODE system for errors
+                if ENABLE_DEBUG_AI_CODE:
+                    debug_log_exception("DOUBAO_ADAPTER_INTERNAL", execution_id, f"Doubao API returned no content: {error_message}") # #DEBUG_CLEAN
+
+                exception_log(f"Doubao API returned no content: {error_message}")
                 return AIResponse(
                     success=False,
                     error_message=error_message,
@@ -212,8 +267,14 @@ class DoubaoAdapter(AIClient):
         except requests.exceptions.RequestException as e:
             # This catches all requests-related exceptions including timeouts
             error_message = f"Doubao API request failed: {e}"
-            api_logger.error(error_message)
+            exception_log(error_message)
             latency = time.time() - start_time
+
+            # Log exception with DEBUG_AI_CODE system
+            if ENABLE_DEBUG_AI_CODE:
+                import traceback
+                error_msg = f"requests.exceptions.RequestException: {str(e)}\n{traceback.format_exc()}"
+                debug_log_exception("DOUBAO_ADAPTER_INTERNAL", execution_id, error_msg) # #DEBUG_CLEAN
 
             # Check if this is a timeout or connection error that should trigger circuit breaker
             should_propagate = isinstance(e, (
@@ -228,7 +289,7 @@ class DoubaoAdapter(AIClient):
             if should_propagate:
                 # This is an exception that should trigger the circuit breaker
                 # So we re-raise it to be caught by the circuit breaker's call method
-                api_logger.warning(f"Propagating exception to circuit breaker: {type(e).__name__}")
+                debug_log("EXCEPTION", f"Propagating exception to circuit breaker: {type(e).__name__}")
                 raise e
             else:
                 # This is an HTTP error that shouldn't trigger circuit breaker (e.g., 401, 429, 500)
@@ -242,7 +303,12 @@ class DoubaoAdapter(AIClient):
                             # 404错误通常表示API端点不存在或API密钥错误
                             error_type = AIErrorType.INVALID_API_KEY
                             error_message = f"Doubao API endpoint not found (404). Check API endpoint and credentials: {e.response.text}"
-                            api_logger.error(f"Doubao 404 Error - This usually indicates an incorrect API key or endpoint: {e.response.text}")
+
+                            # Log 404 error with DEBUG_AI_CODE system
+                            if ENABLE_DEBUG_AI_CODE:
+                                debug_log_exception("DOUBAO_ADAPTER_INTERNAL", execution_id, f"Doubao 404 Error: {e.response.text}") # #DEBUG_CLEAN
+
+                            exception_log(f"Doubao 404 Error - This usually indicates an incorrect API key or endpoint: {e.response.text}")
                         elif status_code == 429:
                             error_type = AIErrorType.RATE_LIMIT_EXCEEDED
                         elif status_code >= 500:
@@ -261,14 +327,20 @@ class DoubaoAdapter(AIClient):
                 )
         except Exception as e:
             error_message = f"An unexpected error occurred with Doubao API: {e}"
-            api_logger.error(error_message)
+            exception_log(error_message)
             latency = time.time() - start_time
+
+            # Log exception with DEBUG_AI_CODE system
+            if ENABLE_DEBUG_AI_CODE:
+                import traceback
+                error_msg = f"Unexpected error: {str(e)}\n{traceback.format_exc()}"
+                debug_log_exception("DOUBAO_ADAPTER_INTERNAL", execution_id, error_msg) # #DEBUG_CLEAN
 
             # For non-requests exceptions, check if it's a timeout-related error
             should_propagate = isinstance(e, (ConnectionError, TimeoutError))
 
             if should_propagate:
-                api_logger.warning(f"Propagating exception to circuit breaker: {type(e).__name__}")
+                debug_log("EXCEPTION", f"Propagating exception to circuit breaker: {type(e).__name__}")
                 raise e
             else:
                 record_error("doubao", "UNKNOWN_ERROR", str(e))

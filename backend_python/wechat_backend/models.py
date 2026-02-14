@@ -184,20 +184,31 @@ def init_task_status_db():
 def save_task_status(task_status):
     """保存任务状态"""
     db_logger.info(f"Saving task status for task: {task_status.task_id}")
-    
+
+    # Import DEBUG_AI_CODE logger
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+    from utils.debug_manager import debug_log
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    from backend_python.utils.logger import debug_log_results, ENABLE_DEBUG_AI_CODE
+
+    # Extract execution_id from task_id if it contains one (for DEBUG_AI_CODE logging)
+    execution_id = task_status.task_id.split('_')[1] if '_' in task_status.task_id and len(task_status.task_id.split('_')) > 1 else 'unknown'
+
     # 验证输入
     if not sql_protector.validate_input(task_status.task_id):
         raise ValueError("Invalid task_id")
-    
+
     safe_query = SafeDatabaseQuery(DB_PATH)
-    
+
     # 检查任务是否存在
     existing_task = safe_query.execute_query('SELECT task_id FROM task_statuses WHERE task_id = ?', (task_status.task_id,))
-    
+
     if existing_task:
         # 更新现有任务状态
         safe_query.execute_query('''
-            UPDATE task_statuses 
+            UPDATE task_statuses
             SET progress = ?, stage = ?, status_text = ?, is_completed = ?, updated_at = CURRENT_TIMESTAMP
             WHERE task_id = ?
         ''', (
@@ -210,7 +221,7 @@ def save_task_status(task_status):
     else:
         # 插入新任务状态
         safe_query.execute_query('''
-            INSERT INTO task_statuses 
+            INSERT INTO task_statuses
             (task_id, progress, stage, status_text, is_completed)
             VALUES (?, ?, ?, ?, ?)
         ''', (
@@ -220,8 +231,12 @@ def save_task_status(task_status):
             task_status.status_text,
             task_status.is_completed
         ))
-    
+
     db_logger.info(f"Task status saved successfully for task: {task_status.task_id}")
+
+    # Log with DEBUG_AI_CODE system
+    if ENABLE_DEBUG_AI_CODE:
+        debug_log_results("DATABASE_SAVE", execution_id, 1, f"Task status saved: {task_status.stage.value}, progress: {task_status.progress}%") # #DEBUG_CLEAN
 
 
 def get_task_status(task_id):
@@ -335,10 +350,30 @@ def update_task_stage(task_id, stage, progress=None, status_text=None):
     if not sql_protector.validate_input(task_id):
         raise ValueError("Invalid task_id")
 
-    db_logger.info(f"Updating task {task_id} to stage: {stage.value}")
+    # Log the status flow with debug logging
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+    from utils.debug_manager import status_flow_log, debug_log
+
+    # Import DEBUG_AI_CODE logger
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    from backend_python.utils.logger import debug_log_status_flow, ENABLE_DEBUG_AI_CODE
+
+    # Extract execution_id from task_id if it contains one (for DEBUG_AI_CODE logging)
+    # Assuming task_id format might contain execution_id
+    execution_id = task_id.split('_')[1] if '_' in task_id and len(task_id.split('_')) > 1 else 'unknown'
+
+    debug_log("STATUS_FLOW", f"Updating task {task_id} to stage: {stage.value}, progress: {progress}, status_text: {status_text}")
+    status_flow_log(f"Updating task {task_id} from previous stage to {stage.value}, progress: {progress}")
 
     # 获取当前任务状态
     current_status = get_task_status(task_id)
+
+    # Track old stage for DEBUG_AI_CODE logging
+    old_stage = current_status.stage.value if current_status else 'unknown'
+    new_stage = stage.value
+    progress_value = progress if progress is not None else (current_status.progress if current_status else 0)
 
     if not current_status:
         # 如果任务不存在，创建新的任务状态
@@ -364,7 +399,12 @@ def update_task_stage(task_id, stage, progress=None, status_text=None):
     # 保存更新后的状态
     save_task_status(current_status)
 
-    db_logger.info(f"Task {task_id} updated to stage: {stage.value}, progress: {current_status.progress}%")
+    debug_log("STATUS_FLOW", f"Task {task_id} updated to stage: {stage.value}, progress: {current_status.progress}%")
+    status_flow_log(f"Task {task_id} updated to stage: {stage.value}, progress: {current_status.progress}%")
+
+    # Log with DEBUG_AI_CODE system
+    if ENABLE_DEBUG_AI_CODE:
+        debug_log_status_flow("UPDATE_TASK_STAGE", execution_id, old_stage, new_stage, progress_value) # #DEBUG_CLEAN
 
 
 def save_brand_test_result(brand_test_result):
@@ -373,6 +413,17 @@ def save_brand_test_result(brand_test_result):
         raise ValueError("Invalid task_id")
 
     db_logger.info(f"Saving brand test result for task: {brand_test_result.task_id}")
+
+    # Import DEBUG_AI_CODE logger
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+    from utils.debug_manager import debug_log
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    from backend_python.utils.logger import debug_log_results, ENABLE_DEBUG_AI_CODE
+
+    # Extract execution_id from task_id if it contains one (for DEBUG_AI_CODE logging)
+    execution_id = brand_test_result.task_id.split('_')[1] if '_' in brand_test_result.task_id and len(brand_test_result.task_id.split('_')) > 1 else 'unknown'
 
     safe_query = SafeDatabaseQuery(DB_PATH)
 
@@ -425,6 +476,12 @@ def save_brand_test_result(brand_test_result):
         ))
 
     db_logger.info(f"Brand test result saved successfully for task: {brand_test_result.task_id}")
+
+    # Log with DEBUG_AI_CODE system
+    if ENABLE_DEBUG_AI_CODE:
+        results_length = len(brand_test_result.detailed_results) if brand_test_result.detailed_results else 0
+        first_element_summary = str(brand_test_result.detailed_results[0])[:100] if brand_test_result.detailed_results else "No results"
+        debug_log_results("DATABASE_SAVE", execution_id, results_length, first_element_summary) # #DEBUG_CLEAN
 
 
 def get_brand_test_result(task_id):

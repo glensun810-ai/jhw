@@ -3,10 +3,13 @@
  * 符合 REFACTOR_GUIDE.md 规范
  */
 
+// 引入 DEBUG_AI_CODE 日志工具
+const { debugLog, debugLogAiIo, debugLogStatusFlow, debugLogResults, debugLogException, ENABLE_DEBUG_AI_CODE } = require('./debug');
+
 // 环境配置
 const ENV_CONFIG = {
   develop: {
-    baseURL: 'http://127.0.0.1:5001', // 开发环境 API 地址
+    baseURL: 'http://127.0.0.1:5001', // 开发环境 API 地址 - corrected to 5001
     timeout: 30000 // 30秒超时
   },
   trial: {
@@ -73,6 +76,15 @@ const request = (options = {}) => {
       showError = true
     } = options;
 
+    // Extract execution_id from data if present for cross-end association
+    const executionId = data.execution_id || data.task_id || 'unknown';
+
+    // Log request initiation with DEBUG_AI_CODE
+    if (ENABLE_DEBUG_AI_CODE) {
+      debugLog('REQUEST', executionId, `Sending ${method} request to ${url}`); // #DEBUG_CLEAN
+      debugLog('REQUEST_DATA', executionId, `Request data: ${JSON.stringify(data).substring(0, 200)}...`); // #DEBUG_CLEAN
+    }
+
     // 显示加载动画
     if (loading) {
       wx.showLoading({
@@ -95,6 +107,12 @@ const request = (options = {}) => {
         // 隐藏加载动画
         if (loading) {
           wx.hideLoading();
+        }
+
+        // Log response with DEBUG_AI_CODE
+        if (ENABLE_DEBUG_AI_CODE) {
+          debugLog('RESPONSE', executionId, `Received response with status: ${response.statusCode}`); // #DEBUG_CLEAN
+          debugLog('RESPONSE_DATA', executionId, `Response data preview: ${JSON.stringify(response.data).substring(0, 200)}...`); // #DEBUG_CLEAN
         }
 
         // 检查响应状态
@@ -138,6 +156,11 @@ const request = (options = {}) => {
         // 隐藏加载动画
         if (loading) {
           wx.hideLoading();
+        }
+
+        // Log failure with DEBUG_AI_CODE
+        if (ENABLE_DEBUG_AI_CODE) {
+          debugLogException(executionId, `Request failed: ${JSON.stringify(error)}`); // #DEBUG_CLEAN
         }
 
         // 检查是否是存储空间超出限制的错误

@@ -22,7 +22,7 @@ app = create_app()
 
 if __name__ == '__main__':
     # 直接运行时的配置
-    port = int(os.environ.get('PORT', 5001))
+    port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_DEBUG', '1').lower() in ('1', 'true', 'yes')
 
     print(f"🚀 Starting WeChat Backend API server on port {port}")

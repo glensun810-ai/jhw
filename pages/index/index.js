@@ -494,7 +494,7 @@ Page({
     const pollInterval = setInterval(async () => {
       try {
         const res = await getTaskStatusApi(executionId);
-
+        console.log("返回数据：",res)//调试用，上线前删除
         if (res.statusCode === 200) {
           // 更新调试区域显示原始JSON
           this.setData({ debugJson: JSON.stringify(res.data, null, 2) });
