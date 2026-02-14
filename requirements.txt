@@ -1,23 +1,8 @@
-Flask==2.0.1
-requests==2.25.1
-python-dotenv==0.19.2
-google-generativeai==0.3.2
-snownlp==0.12.3
-
-# Please run the following command to download the Chinese model for spaCy:
-# python -m spacy download zh_core_web_sm
-
-# 安全相关的依赖包
-cryptography>=41.0.0  # 用于加密操作
-certifi>=2023.0.0     # 用于SSL证书验证
-requests>=2.31.0      # HTTP请求库
-urllib3>=2.0.0        # 底层HTTP库
-PyJWT>=2.4.0          # 用于JWT令牌处理
-bleach>=6.0.0         # 用于HTML净化
-marshmallow>=3.19.0    # 用于数据验证
-flask-talisman>=1.0.0  # 用于安全头设置
-flask-wtf>=1.1.1      # 用于CSRF保护
-
-# 调度相关的依赖包
-APScheduler==3.10.4
-SQLAlchemy>=2.0.0
+blinker==1.9.0
+click==8.3.1
+Flask==3.1.2
+flask-cors==6.0.2
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+Werkzeug==3.1.5

@@ -1,5 +1,0 @@
-<!-- components/Skeleton/Skeleton.wxml -->
-<view class="skeleton-wrapper" wx:if="{{loading}}">
-  <view class="skeleton-line animated" wx:for="{{rowList}}" wx:key="*this"></view>
-</view>
-<slot wx:else></slot>

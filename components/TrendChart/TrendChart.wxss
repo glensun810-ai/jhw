@@ -8,6 +8,7 @@
   margin-bottom: 20rpx;
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(10px); /* 保留磨砂玻璃效果 */
 }
 
 /* 添加海军蓝渐变边框效果 */

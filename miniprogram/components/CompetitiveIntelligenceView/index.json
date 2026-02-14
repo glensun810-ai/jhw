@@ -1,7 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "base-chart": "../BaseChart/index",
-    "count-up": "../CountUp/index"
-  }
-}

@@ -1,0 +1,3184 @@
+[
+    {
+        "file": "./test_competitive_analyzer.py",
+        "logic": [
+            "setUp",
+            "test_keyword_extraction_basic",
+            "test_keyword_extraction_with_overlap_names",
+            "test_common_keywords_identification",
+            "test_unique_keywords_identification",
+            "test_differentiation_summary_generation",
+            "test_empty_text_handling",
+            "test_no_shared_keywords",
+            "test_full_analysis_workflow",
+            "test_special_characters_handling",
+            "test_case_insensitive_brand_matching",
+            "TestCompetitiveAnalyzer"
+        ]
+    },
+    {
+        "file": "./final_verification_complete.py",
+        "logic": [
+            "check_auth_decorator_usage",
+            "check_import_statements",
+            "check_security_improvements",
+            "check_sensitive_info_removal",
+            "check_api_endpoints",
+            "main"
+        ]
+    },
+    {
+        "file": "./step1_api_key_rotation.py",
+        "logic": [
+            "create_secure_env_file",
+            "create_env_example",
+            "update_gitignore",
+            "sanitize_existing_files",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_prediction_standalone.py",
+        "logic": [
+            "test_declining_trend_warning_feedback",
+            "test_stable_trend_as_comparison",
+            "__init__",
+            "exponential_smoothing_forecast",
+            "linear_regression_forecast",
+            "predict_ranking_trend",
+            "identify_cognitive_risks",
+            "_calculate_risk_impact",
+            "_assess_recent_decline",
+            "predict_weekly_rank_with_risks",
+            "PredictionEngine"
+        ]
+    },
+    {
+        "file": "./test_config_loading.py",
+        "logic": [
+            "test_config_loading"
+        ]
+    },
+    {
+        "file": "./verify_doubao_integration.py",
+        "logic": [
+            "test_doubao_api_integration",
+            "main"
+        ]
+    },
+    {
+        "file": "./verify_deepseek_implementation.py",
+        "logic": [
+            "verify_base_ai_provider",
+            "verify_deepseek_provider",
+            "verify_provider_factory",
+            "verify_api_integration",
+            "run_functionality_tests",
+            "main"
+        ]
+    },
+    {
+        "file": "./diagnose_doubao_api.py",
+        "logic": [
+            "check_environment_variables",
+            "test_api_connectivity",
+            "suggest_api_configuration",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_scenario_fix.py",
+        "logic": [
+            "test_scenario_fix",
+            "main"
+        ]
+    },
+    {
+        "file": "./run.py",
+        "logic": [
+            "create_app"
+        ]
+    },
+    {
+        "file": "./test_workflow_basic.py",
+        "logic": [
+            "test_retry_mechanism",
+            "test_task_packaging",
+            "test_priority_mapping",
+            "test_webhook_simulation",
+            "calculate_retry_delay",
+            "create_task_package",
+            "priority_to_number",
+            "send_webhook",
+            "process_task_with_retry",
+            "TaskPriority",
+            "TaskStatus"
+        ]
+    },
+    {
+        "file": "./misunderstanding_analyzer.py",
+        "logic": [
+            "analyze",
+            "_evaluate_risk_level",
+            "_generate_issue_summary",
+            "_generate_improvement_hint",
+            "MisunderstandingType",
+            "MisunderstandingResult",
+            "MisunderstandingAnalyzer"
+        ]
+    },
+    {
+        "file": "./test_doubao_new_deployment.py",
+        "logic": [
+            "test_doubao_api",
+            "test_different_model_names",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_existing_functionality.py",
+        "logic": [
+            "test_backward_compatibility_of_ai_judge_client",
+            "test_backward_compatibility_of_process_function",
+            "test_new_functionality_works_as_expected",
+            "test_deepseek_not_called_unless_explicitly_requested",
+            "test_function_signature_compatibility",
+            "test_default_behavior_preserved",
+            "test_error_handling_preserved",
+            "test_partial_parameter_handling",
+            "TestExistingFunctionality"
+        ]
+    },
+    {
+        "file": "./update_all_adapters.py",
+        "logic": [
+            "update_all_remaining_adapters",
+            "fix_typo_in_circuit_breaker",
+            "fix_typo_in_retry_mechanism",
+            "main"
+        ]
+    },
+    {
+        "file": "./verify_implementation.py",
+        "logic": [
+            "check_module_availability",
+            "check_file_existence",
+            "check_sensitive_data_removal",
+            "run_all_checks"
+        ]
+    },
+    {
+        "file": "./test_sql_protection_fix.py",
+        "logic": [
+            "test_sql_protection",
+            "test_database_operations",
+            "main"
+        ]
+    },
+    {
+        "file": "./final_validation_complete.py",
+        "logic": [
+            "main"
+        ]
+    },
+    {
+        "file": "./test_infrastructure_upgrade.py",
+        "logic": [
+            "setUp",
+            "test_task_status_creation",
+            "test_task_stage_updates",
+            "test_deep_intelligence_result",
+            "test_api_endpoints_simulation",
+            "test_brand_test_result_model",
+            "test_state_machine_transitions",
+            "TestInfrastructureUpgrade"
+        ]
+    },
+    {
+        "file": "./test_app_run_fix.py",
+        "logic": [
+            "test_app_import",
+            "test_main_import",
+            "test_app_attributes"
+        ]
+    },
+    {
+        "file": "./debug_test_flow.py",
+        "logic": [
+            "test_frontend_to_backend_flow",
+            "analyze_backend_processing",
+            "check_common_issues",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_zhipu_e2e.py",
+        "logic": [
+            "test_zhipu_e2e",
+            "verify_results"
+        ]
+    },
+    {
+        "file": "./config.py",
+        "logic": [
+            "get_api_key",
+            "is_api_key_configured",
+            "Config"
+        ]
+    },
+    {
+        "file": "./validate_ai_integration.py",
+        "logic": [
+            "test_ai_integration",
+            "check_api_keys",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_logging.py",
+        "logic": [
+            "test_logging"
+        ]
+    },
+    {
+        "file": "./test_webhook_core_functionality.py",
+        "logic": [
+            "test_webhook_success",
+            "test_webhook_with_retry",
+            "test_webhook_max_retries",
+            "test_delay_calculation",
+            "run_all_tests",
+            "__init__",
+            "send_webhook",
+            "_simulate_api_call",
+            "_calculate_delay",
+            "always_success_call",
+            "success_on_second_call",
+            "always_fail_call",
+            "TaskPriority",
+            "WebhookManager"
+        ]
+    },
+    {
+        "file": "./config_manager.py",
+        "logic": [
+            "__init__",
+            "_load_from_env",
+            "get_platform_config",
+            "add_platform",
+            "validate_keys",
+            "check_missing_keys",
+            "get_available_platforms",
+            "PlatformConfig",
+            "Config"
+        ]
+    },
+    {
+        "file": "./step6_testing_verification.py",
+        "logic": [
+            "create_comprehensive_tests",
+            "create_integration_tests",
+            "create_final_verification_script",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_data_flow_validation.py",
+        "logic": [
+            "validate_request_response_formats",
+            "validate_data_structure_consistency",
+            "validate_data_transformation",
+            "run_data_flow_validation"
+        ]
+    },
+    {
+        "file": "./test_database_id_fix.py",
+        "logic": [
+            "setUp",
+            "tearDown",
+            "test_normal_auto_increment_sequence",
+            "test_single_record_positive_id",
+            "test_multiple_users_different_brands",
+            "test_retrieve_records_by_correct_ids",
+            "test_large_number_of_records",
+            "test_consecutive_saves_after_retrieval",
+            "setUp",
+            "tearDown",
+            "test_save_with_invalid_user_openid",
+            "test_save_with_none_values",
+            "test_retrieve_nonexistent_record",
+            "test_retrieve_with_negative_id",
+            "test_retrieve_with_zero_id",
+            "setUp",
+            "tearDown",
+            "test_empty_strings_and_lists",
+            "test_extremely_long_strings",
+            "test_extreme_numeric_values",
+            "test_unicode_characters",
+            "test_save_immediately_after_init",
+            "test_multiple_saves_in_single_operation",
+            "setUp",
+            "tearDown",
+            "test_get_user_test_history_still_works",
+            "test_all_functions_work_together",
+            "test_database_init_remains_unchanged",
+            "test_no_more_id_zero_issue",
+            "TestDatabaseAutoIncrementFix",
+            "TestDatabaseAbnormalScenarios",
+            "TestDatabaseEdgeCases",
+            "TestBackwardCompatibility"
+        ]
+    },
+    {
+        "file": "./backend_python/test_recommendations_endpoint.py",
+        "logic": [
+            "test_recommendations_endpoint",
+            "test_recommendations_endpoint_no_negative",
+            "test_invalid_input",
+            "run_endpoint_tests"
+        ]
+    },
+    {
+        "file": "./config_manager_demo.py",
+        "logic": [
+            "__init__",
+            "_load_from_env",
+            "get_platform_config",
+            "add_platform",
+            "validate_keys",
+            "check_missing_keys",
+            "get_available_platforms",
+            "PlatformConfig",
+            "Config"
+        ]
+    },
+    {
+        "file": "./test_fix_verification.py",
+        "logic": [
+            "test_executor_function",
+            "test_views_function",
+            "test_ai_judge_module",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_comprehensive_infrastructure_upgrade.py",
+        "logic": [
+            "setUp",
+            "test_full_task_lifecycle",
+            "test_api_contract_compliance",
+            "test_nested_structure_mapping",
+            "TestComprehensiveInfrastructureUpgrade"
+        ]
+    },
+    {
+        "file": "./test_ai_judge_client_simple.py",
+        "logic": [
+            "test_init_with_valid_parameters",
+            "test_init_with_none_parameters",
+            "test_init_with_partial_parameters",
+            "test_init_without_any_parameters",
+            "test_init_with_empty_string_parameters",
+            "test_backward_compatibility",
+            "test_adapter_creation_with_dynamic_params",
+            "test_evaluate_response_method_exists",
+            "getenv_side_effect",
+            "getenv_side_effect",
+            "getenv_side_effect",
+            "TestAIJudgeClientDynamicParameters"
+        ]
+    },
+    {
+        "file": "./prompt13_optimizer.py",
+        "logic": [
+            "__init__",
+            "generate",
+            "_generate_overview",
+            "_generate_content_suggestions",
+            "_generate_seo_suggestions",
+            "_generate_geo_suggestions",
+            "_generate_pr_suggestions",
+            "Prompt13Optimizer"
+        ]
+    },
+    {
+        "file": "./diagnose_startup.py",
+        "logic": [
+            "test_startup"
+        ]
+    },
+    {
+        "file": "./test_market_intelligence_service.py",
+        "logic": [
+            "test_market_intelligence_service",
+            "test_sparse_data_handling",
+            "test_empty_data_handling",
+            "run_all_tests"
+        ]
+    },
+    {
+        "file": "./test_source_aggregator.py",
+        "logic": [
+            "setUp",
+            "test_url_extraction_from_text",
+            "test_url_extraction_from_citations",
+            "test_source_statistics_generation",
+            "test_domain_authority_assessment",
+            "test_keyword_extraction",
+            "test_risk_level_determination",
+            "test_full_aggregation_workflow",
+            "test_empty_input_handling",
+            "test_markdown_link_extraction",
+            "TestSourceAggregator"
+        ]
+    },
+    {
+        "file": "./geo_prompt_builder.py",
+        "logic": [
+            "get_system_prompt",
+            "build_user_prompt",
+            "build_prompt",
+            "PromptType",
+            "PromptBuilder"
+        ]
+    },
+    {
+        "file": "./final_circuit_breaker_verification.py",
+        "logic": [
+            "test_circuit_breaker_is_now_working",
+            "test_adapter_method_integration",
+            "main",
+            "timeout_func",
+            "success_func"
+        ]
+    },
+    {
+        "file": "./test_provider_implementation.py",
+        "logic": [
+            "setUp",
+            "test_register_provider",
+            "test_create_provider_instance",
+            "test_create_provider_without_model_name",
+            "test_create_nonexistent_provider_raises_error",
+            "test_get_available_providers",
+            "setUp",
+            "test_ask_question_success",
+            "test_ask_question_with_reasoning_extraction",
+            "test_extract_reasoning_from_content",
+            "test_extract_reasoning_from_content_no_markers",
+            "test_ask_question_timeout",
+            "test_ask_question_api_error",
+            "test_health_check",
+            "test_provider_factory_with_deepseek_provider",
+            "ask_question",
+            "__init__",
+            "ask_question",
+            "__init__",
+            "ask_question",
+            "ask_question",
+            "ask_question",
+            "TestProviderFactory",
+            "TestDeepSeekProvider",
+            "TestIntegration",
+            "MockProvider",
+            "MockProvider",
+            "MockProvider",
+            "MockProvider1",
+            "MockProvider2"
+        ]
+    },
+    {
+        "file": "./final_patch.py",
+        "logic": [
+            "update_erniebot_adapter",
+            "update_domestic_providers",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_semantic_gap_analysis.py",
+        "logic": [
+            "test_semantic_gap_analysis",
+            "test_perfect_match_scenario",
+            "test_no_match_scenario"
+        ]
+    },
+    {
+        "file": "./test_integration_basic.py",
+        "logic": [
+            "test_ai_judge_client_initialization_various_scenarios",
+            "test_process_function_with_different_scenarios",
+            "test_process_function_with_judge_parameters",
+            "test_old_initialization_still_works",
+            "test_function_signature_compatibility",
+            "TestIntegrationFunctionality",
+            "TestBackwardCompatibility"
+        ]
+    },
+    {
+        "file": "./prompt13_optimizer_enhanced.py",
+        "logic": [
+            "__init__",
+            "generate",
+            "_generate_overview",
+            "_generate_content_suggestions",
+            "_generate_seo_suggestions",
+            "_generate_geo_suggestions",
+            "_generate_pr_suggestions",
+            "Prompt13OptimizerEnhanced"
+        ]
+    },
+    {
+        "file": "./test_report_generator.py",
+        "logic": [
+            "setUp",
+            "test_calculate_roi_metrics_basic",
+            "test_calculate_roi_metrics_with_data",
+            "test_calculate_exposure_increment_basic",
+            "test_calculate_exposure_increment_with_improvement",
+            "test_calculate_exposure_increment_with_decline",
+            "test_calculate_ranking_improvement_basic",
+            "test_calculate_ranking_improvement_with_improvement",
+            "test_calculate_ranking_improvement_with_decline",
+            "test_calculate_sentiment_trend_basic",
+            "test_calculate_sentiment_trend_with_data",
+            "test_calculate_avg_score_basic",
+            "test_calculate_avg_score_with_data",
+            "test_generate_key_insights_empty",
+            "test_generate_recommendations_empty",
+            "test_generate_executive_summary_basic",
+            "test_get_hub_summary_with_data",
+            "test_get_hub_summary_no_data",
+            "test_get_hub_summary_error_handling",
+            "TestReportGenerator"
+        ]
+    },
+    {
+        "file": "./test_doubao_timeout_fix.py",
+        "logic": [
+            "test_scheduler_concurrency",
+            "test_executor_concurrency",
+            "test_concurrent_execution_with_reduced_workers",
+            "test_executor_initialization",
+            "run_comprehensive_tests"
+        ]
+    },
+    {
+        "file": "./debug_analysis_timeout.py",
+        "logic": [
+            "analyze_api_call_pattern",
+            "test_single_api_call_efficiency",
+            "suggest_optimizations",
+            "check_backend_config",
+            "analyze_timeout_issue",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_api_response.py",
+        "logic": [
+            "test_api_response_structure"
+        ]
+    },
+    {
+        "file": "./test_doubao_brand_diagnosis.py",
+        "logic": [
+            "test_brand_diagnosis_workflow",
+            "test_frontend_simulation",
+            "main",
+            "dummy_progress_callback"
+        ]
+    },
+    {
+        "file": "./test_missing_data_scenarios.py",
+        "logic": [
+            "test_missing_data_scenarios"
+        ]
+    },
+    {
+        "file": "./verify_auth_fix_complete.py",
+        "logic": [
+            "start_test_server",
+            "test_api_endpoints",
+            "main",
+            "run_server"
+        ]
+    },
+    {
+        "file": "./test_brand_strengthening_logic.py",
+        "logic": [
+            "test_brand_strengthening_when_no_negative",
+            "test_correction_when_negative_exists",
+            "test_mixed_scenarios",
+            "run_comprehensive_verification"
+        ]
+    },
+    {
+        "file": "./final_verification.py",
+        "logic": [
+            "verify_all_fixes",
+            "test_application_startup"
+        ]
+    },
+    {
+        "file": "./test_circuit_breaker_integration_fix.py",
+        "logic": [
+            "test_circuit_breaker_integration",
+            "test_circuit_breaker_trips_on_timeout",
+            "test_circuit_breaker_handles_different_exceptions",
+            "test_adapter_with_simulated_failures",
+            "run_all_tests",
+            "timeout_func",
+            "success_func",
+            "timeout_func",
+            "connection_error_func",
+            "http_error_func"
+        ]
+    },
+    {
+        "file": "./update_ai_adapters.py",
+        "logic": [
+            "update_chatgpt_adapter",
+            "update_qwen_adapter",
+            "update_gemini_adapter",
+            "main"
+        ]
+    },
+    {
+        "file": "./fix_monitoring_integration.py",
+        "logic": [
+            "update_views_with_monitoring",
+            "add_monitoring_to_other_endpoints",
+            "main"
+        ]
+    },
+    {
+        "file": "./validate_modules.py",
+        "logic": [
+            "test_rank_analyzer",
+            "test_source_aggregator",
+            "test_integration"
+        ]
+    },
+    {
+        "file": "./test_real_ai_diagnosis.py",
+        "logic": [
+            "test_brand_diagnosis",
+            "test_individual_platforms",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_circuit_breaker_integration.py",
+        "logic": [
+            "test_circuit_breaker_creation",
+            "test_circuit_breaker_states",
+            "test_circuit_breaker_decorator",
+            "test_doubao_adapter_has_circuit_breaker",
+            "run_all_tests",
+            "flaky_function",
+            "protected_call"
+        ]
+    },
+    {
+        "file": "./debug_detailed_analysis.py",
+        "logic": [
+            "test_direct_doubao_api",
+            "test_backend_api_endpoint",
+            "analyze_model_mapping",
+            "check_adapter_creation",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_deepseek_fix.py",
+        "logic": [
+            "test_ai_judge_client_parameters",
+            "test_process_function_parameters",
+            "test_no_judge_scenario",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_doubao_integration.py",
+        "logic": [
+            "run_integration_test",
+            "test_real_api_connection",
+            "main",
+            "setUp",
+            "test_adapter_initialization",
+            "test_send_prompt_success",
+            "test_send_prompt_failure",
+            "test_send_prompt_no_choices",
+            "test_error_mapping",
+            "TestDoubaoIntegration"
+        ]
+    },
+    {
+        "file": "./test_api_keys.py",
+        "logic": [
+            "test_deepseek_api",
+            "test_qwen_api",
+            "test_doubao_api",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_simple_asset_engine.py",
+        "logic": [
+            "test_asset_intelligence_engine",
+            "__init__",
+            "calculate_semantic_similarity",
+            "tokenize_chinese",
+            "simple_overlap_ratio",
+            "clean_text",
+            "extract_keywords",
+            "__init__",
+            "analyze_content_matching",
+            "_analyze_single_platform",
+            "_generate_optimization_suggestions",
+            "_identify_semantic_gaps",
+            "_classify_drift_severity",
+            "calculate_content_hit_rate",
+            "get_optimization_recommendations",
+            "SimpleSemanticAnalyzer",
+            "AssetIntelligenceEngine"
+        ]
+    },
+    {
+        "file": "./test_ai_adapter.py",
+        "logic": [
+            "test_ai_adapter_layer"
+        ]
+    },
+    {
+        "file": "./test_backend_connection.py",
+        "logic": [
+            "test_health_endpoint",
+            "test_index_endpoint",
+            "test_config_endpoint",
+            "test_test_api_endpoint",
+            "test_platform_status_endpoint",
+            "test_ai_platforms_endpoint",
+            "test_brand_test_endpoint",
+            "run_all_tests"
+        ]
+    },
+    {
+        "file": "./test_enhanced_scoring.py",
+        "logic": [
+            "test_basic_scoring_compatibility",
+            "test_enhanced_scoring",
+            "test_backward_compatibility",
+            "test_edge_cases",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_import_fix.py",
+        "logic": [
+            "test_module_imports",
+            "test_config_access",
+            "test_auth_module"
+        ]
+    },
+    {
+        "file": "./test_deepseek_r1_reasoning.py",
+        "logic": [
+            "test_end_to_end_reasoning_extraction",
+            "setUp",
+            "test_extract_reasoning_content_basic",
+            "test_extract_reasoning_from_alternative_fields",
+            "test_extract_reasoning_from_thinking_process",
+            "test_extract_reasoning_from_content_with_patterns",
+            "test_analyze_reasoning_chain_basic",
+            "test_analyze_reasoning_chain_with_competitor_mentions",
+            "test_analyze_reasoning_chain_empty_content",
+            "test_send_prompt_with_reasoning_extraction",
+            "test_calculate_risk_impact_basic",
+            "test_calculate_risk_impact_with_keywords",
+            "TestDeepSeekR1Adapter"
+        ]
+    },
+    {
+        "file": "./test_real_api_calls.py",
+        "logic": [
+            "test_deepseek_api",
+            "test_qwen_api",
+            "test_doubao_api",
+            "test_chatgpt_api",
+            "test_zhipu_api",
+            "test_gemin_api",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_provider_abstraction.py",
+        "logic": [
+            "test_provider_abstraction",
+            "__init__",
+            "ask_question",
+            "extract_citations",
+            "_get_response_text",
+            "to_standard_format",
+            "_extract_brand_mentions",
+            "__init__",
+            "ask_question",
+            "register",
+            "create",
+            "BaseAIProvider",
+            "DeepSeekProvider",
+            "ProviderFactory"
+        ]
+    },
+    {
+        "file": "./setup_doubao_secure.py",
+        "logic": [
+            "create_secure_env_file",
+            "verify_env_file",
+            "check_gitignore",
+            "main"
+        ]
+    },
+    {
+        "file": "./step2_security_architecture.py",
+        "logic": [
+            "create_secure_config_module",
+            "create_network_security_module",
+            "update_ai_adapters_for_security",
+            "install_required_packages",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_recommendation_generator.py",
+        "logic": [
+            "test_recommendation_generator",
+            "test_no_negative_content",
+            "test_api_endpoint_simulation"
+        ]
+    },
+    {
+        "file": "./test_qwen_provider.py",
+        "logic": [
+            "run_mock_tests",
+            "setUp",
+            "test_inheritance_from_base_provider",
+            "test_extract_citations_basic_urls",
+            "test_extract_citations_markdown_links",
+            "test_extract_citations_numbered_references",
+            "test_extract_citations_qwen_specific_formats",
+            "test_ask_question_success",
+            "test_to_standard_format_basic",
+            "test_to_standard_format_with_citations",
+            "test_assess_domain_authority",
+            "test_calculate_contribution_score",
+            "test_extract_evidence_chain",
+            "test_ask_question_timeout_handling",
+            "test_ask_question_http_error_handling",
+            "test_full_workflow_simulation",
+            "TestQwenProvider",
+            "TestQwenProviderIntegration"
+        ]
+    },
+    {
+        "file": "./debug_in_depth_analysis.py",
+        "logic": [
+            "test_minimal_workflow",
+            "check_backend_logs",
+            "analyze_frontend_request_format",
+            "main"
+        ]
+    },
+    {
+        "file": "./step3_performance_reliability.py",
+        "logic": [
+            "create_connection_pool_module",
+            "create_circuit_breaker_module",
+            "create_retry_mechanism_module",
+            "update_ai_adapters_with_resilience_features",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_enhanced_source_aggregator.py",
+        "logic": [
+            "test_enhanced_source_aggregator",
+            "__init__",
+            "aggregate",
+            "_extract_urls",
+            "_extract_site_name",
+            "_normalize_url",
+            "_generate_source_statistics",
+            "aggregate_multiple_models",
+            "_generate_url_id",
+            "_assess_domain_authority",
+            "SourceAggregator"
+        ]
+    },
+    {
+        "file": "./test_asset_intelligence_engine.py",
+        "logic": [
+            "setUp",
+            "test_calculate_content_hit_rate_basic",
+            "test_calculate_content_hit_rate_different_content",
+            "test_calculate_content_hit_rate_identical_content",
+            "test_analyze_content_matching_basic",
+            "test_get_optimization_recommendations",
+            "test_analyze_single_platform",
+            "test_generate_optimization_suggestions",
+            "test_identify_semantic_gaps",
+            "test_empty_inputs",
+            "test_special_characters",
+            "TestAssetIntelligenceEngine"
+        ]
+    },
+    {
+        "file": "./test_recommendation_comprehensive.py",
+        "logic": [
+            "test_recommendation_logic",
+            "test_no_negative_content_logic",
+            "test_api_format_conversion",
+            "test_edge_cases",
+            "run_all_tests"
+        ]
+    },
+    {
+        "file": "./step4_monitoring_logging.py",
+        "logic": [
+            "create_metrics_collector",
+            "create_alert_system",
+            "create_logging_enhancements",
+            "update_ai_adapters_with_monitoring",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_deepseek_provider.py",
+        "logic": [
+            "test_deepseek_provider_with_mock_api",
+            "setUp",
+            "test_inheritance_from_base_provider",
+            "test_initialization_with_env_vars",
+            "test_ask_question_success",
+            "test_ask_question_with_reasoning_content",
+            "test_extract_citations_basic_urls",
+            "test_extract_citations_markdown_links",
+            "test_extract_citations_numbered_references",
+            "test_to_standard_format_basic",
+            "test_to_standard_format_with_detailed_response",
+            "test_extract_reasoning_content_various_formats",
+            "test_extract_reasoning_from_content_patterns",
+            "test_ask_question_timeout_handling",
+            "test_ask_question_http_error_handling",
+            "test_health_check_method_exists",
+            "test_contract_compliance",
+            "test_openai_protocol_alignment",
+            "test_response_structure_compliance",
+            "TestDeepSeekProvider",
+            "TestDeepSeekProviderIntegration"
+        ]
+    },
+    {
+        "file": "./test_workflow_manager.py",
+        "logic": [
+            "test_webhook_retry_simulation",
+            "setUp",
+            "test_send_webhook_success",
+            "test_send_webhook_non_success_status",
+            "test_send_webhook_timeout",
+            "test_send_webhook_request_exception",
+            "setUp",
+            "test_create_task_package",
+            "test_priority_to_number_conversion",
+            "test_dispatch_task",
+            "test_calculate_retry_delay_basic",
+            "test_calculate_retry_delay_maximum_limit",
+            "mock_behavior",
+            "call_func",
+            "call_func",
+            "TestWebhookManager",
+            "TestWorkflowManager",
+            "TestRetryMechanism"
+        ]
+    },
+    {
+        "file": "./test_final_verification.py",
+        "logic": [
+            "test_complete_cruise_functionality",
+            "test_api_integration",
+            "run_final_verification"
+        ]
+    },
+    {
+        "file": "./test_cruise_system.py",
+        "logic": [
+            "test_cruise_controller_initialization",
+            "test_schedule_and_cancel_task",
+            "test_compare_results",
+            "test_trend_data_retrieval",
+            "test_alert_triggering_on_rank_drop",
+            "test_no_alert_when_rank_stable",
+            "run_all_cruise_tests"
+        ]
+    },
+    {
+        "file": "./test_real_api_calls_updated.py",
+        "logic": [
+            "test_deepseek_api",
+            "test_qwen_api",
+            "test_doubao_api",
+            "test_chatgpt_api",
+            "test_zhipu_api",
+            "test_gemin_api",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_edge_cases.py",
+        "logic": [
+            "test_ai_judge_client_with_extreme_parameters",
+            "test_ai_judge_client_with_special_characters",
+            "test_ai_judge_client_with_unicode_characters",
+            "test_process_function_with_extreme_data",
+            "test_process_function_with_mixed_parameter_scenarios",
+            "test_process_function_with_empty_collections",
+            "test_process_function_with_none_inputs",
+            "test_process_function_with_malformed_data",
+            "TestEdgeCases"
+        ]
+    },
+    {
+        "file": "./test_integration.py",
+        "logic": [
+            "test_integration",
+            "__init__",
+            "calculate_impact_index",
+            "_normalize_citation_score",
+            "_normalize_coverage_score",
+            "_normalize_sentiment_score",
+            "_get_authority_multiplier",
+            "calculate_batch_impacts",
+            "__init__",
+            "aggregate",
+            "_extract_urls",
+            "_extract_site_name",
+            "_normalize_url",
+            "_generate_source_statistics",
+            "aggregate_multiple_models",
+            "_generate_url_id",
+            "_assess_domain_authority",
+            "__init__",
+            "get_weight",
+            "__init__",
+            "process",
+            "_estimate_sentiment_for_source",
+            "ImpactCalculator",
+            "SourceAggregator",
+            "SourceWeightLibrary",
+            "SourceIntelligenceProcessor"
+        ]
+    },
+    {
+        "file": "./enhanced_scoring_engine.py",
+        "logic": [
+            "create_default_scoring_engine",
+            "calculate_enhanced_scores",
+            "__init__",
+            "update_belief",
+            "__init__",
+            "detect_bias",
+            "__init__",
+            "_load_industry_benchmarks",
+            "calculate",
+            "_calculate_cognitive_confidence",
+            "_map_grade_and_label",
+            "_generate_detailed_analysis",
+            "_analyze_trends",
+            "_generate_recommendations",
+            "_generate_enhanced_summary",
+            "CognitiveDimension",
+            "EnhancedFinalScoreResult",
+            "BayesianCognitiveUpdater",
+            "CognitiveBiasDetector",
+            "EnhancedScoringEngine"
+        ]
+    },
+    {
+        "file": "./ai_client.py",
+        "logic": [
+            "send_prompt",
+            "health_check",
+            "AIResponse",
+            "AIClient"
+        ]
+    },
+    {
+        "file": "./e2e_functional_test.py",
+        "logic": [
+            "test_app_initialization",
+            "test_view_functions",
+            "test_security_components",
+            "test_network_components",
+            "test_monitoring_components",
+            "test_ai_adapters",
+            "test_database_functionality",
+            "test_input_validation",
+            "main",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_comprehensive_scenarios.py",
+        "logic": [
+            "setUp",
+            "tearDown",
+            "test_normal_ai_judge_client_initialization",
+            "test_normal_process_function_with_valid_judge_params",
+            "test_normal_multiple_brands_processing",
+            "test_normal_successful_evaluation_with_scores",
+            "test_normal_skip_judge_when_no_params",
+            "setUp",
+            "tearDown",
+            "test_abnormal_ai_judge_client_with_invalid_platform",
+            "test_abnormal_process_function_with_malformed_results",
+            "test_abnormal_process_function_with_none_values",
+            "test_abnormal_ai_judge_client_with_special_chars",
+            "setUp",
+            "tearDown",
+            "test_edge_case_ai_judge_client_with_empty_strings",
+            "test_edge_case_ai_judge_client_with_whitespace_only",
+            "test_edge_case_process_function_with_empty_lists",
+            "test_edge_case_process_function_with_extreme_values",
+            "test_edge_case_process_function_with_unicode",
+            "test_edge_case_mixed_param_scenarios",
+            "TestNormalScenarios",
+            "TestAbnormalScenarios",
+            "TestEdgeCases"
+        ]
+    },
+    {
+        "file": "./debug_monitor_workflow.py",
+        "logic": [
+            "monitor_test_progress",
+            "run_complete_workflow_test",
+            "test_specific_scenario",
+            "main"
+        ]
+    },
+    {
+        "file": "./simple_api_test.py",
+        "logic": [
+            "test_deepseek_api",
+            "test_qwen_api",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_frontend_backend_integration.py",
+        "logic": [
+            "test_frontend_backend_connection",
+            "test_results_page_data_flow",
+            "test_history_endpoints",
+            "run_integration_tests"
+        ]
+    },
+    {
+        "file": "./test_enhanced_circuit_breaker.py",
+        "logic": [
+            "test_basic_circuit_breaker_functionality",
+            "test_timeout_exception_handling",
+            "test_platform_specific_circuit_breakers",
+            "test_doubao_adapter_integration",
+            "run_all_tests",
+            "successful_func",
+            "failing_func",
+            "timeout_func"
+        ]
+    },
+    {
+        "file": "./test_enhanced_features.py",
+        "logic": [
+            "test_enhanced_features",
+            "__init__",
+            "calculate_impact_index",
+            "_normalize_citation_score",
+            "_normalize_coverage_score",
+            "_normalize_sentiment_score",
+            "_get_authority_multiplier",
+            "calculate_batch_impacts",
+            "__init__",
+            "_extract_urls",
+            "_extract_site_name",
+            "_normalize_url",
+            "_generate_url_id",
+            "_assess_domain_authority",
+            "aggregate_multiple_models",
+            "ImpactCalculator",
+            "SourceAggregator"
+        ]
+    },
+    {
+        "file": "./test_workflow_simple.py",
+        "logic": [
+            "test_workflow_manager",
+            "__init__",
+            "create_task_package",
+            "dispatch_task",
+            "get_task_status",
+            "get_all_active_tasks",
+            "TaskStatus",
+            "WorkflowTask",
+            "WorkflowManager"
+        ]
+    },
+    {
+        "file": "./test_webhook_functionality.py",
+        "logic": [
+            "test_webhook_retry_mechanism_with_simulated_failures",
+            "setUp",
+            "test_successful_webhook_delivery",
+            "test_webhook_timeout_retry",
+            "test_webhook_failure_no_retry_after_max_attempts",
+            "test_webhook_400_error_no_retry",
+            "test_webhook_500_error_with_retry",
+            "test_create_task_package_structure",
+            "test_priority_to_number_mapping",
+            "test_workflow_dispatch_with_different_priorities",
+            "test_circuit_breaker_protection",
+            "test_exponential_backoff_calculation",
+            "test_task_status_update",
+            "create_response_sequence",
+            "TestWebhookFunctionality"
+        ]
+    },
+    {
+        "file": "./verify_qwen_provider_standalone.py",
+        "logic": [
+            "test_qwen_provider_implementation",
+            "__init__",
+            "ask_question",
+            "extract_citations",
+            "_get_response_text",
+            "to_standard_format",
+            "_assess_domain_authority",
+            "_calculate_contribution_score",
+            "_extract_evidence_chain",
+            "QwenProvider"
+        ]
+    },
+    {
+        "file": "./quick_db_test.py",
+        "logic": [
+            "test_id_fix"
+        ]
+    },
+    {
+        "file": "./test_fixed_adapters.py",
+        "logic": [
+            "test_deepseek",
+            "test_qwen",
+            "test_doubao",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_results_page_fix.py",
+        "logic": [
+            "test_end_to_end_workflow",
+            "test_ai_judge_fallback",
+            "main",
+            "progress_callback"
+        ]
+    },
+    {
+        "file": "./test_direct_api_calls.py",
+        "logic": [
+            "test_deepseek_api_call",
+            "test_qwen_api_call",
+            "test_doubao_api_call",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_doubao_timeout_fix_corrected.py",
+        "logic": [
+            "test_scheduler_concurrency",
+            "test_executor_concurrency",
+            "test_concurrent_execution_with_reduced_workers",
+            "test_executor_initialization",
+            "run_comprehensive_tests"
+        ]
+    },
+    {
+        "file": "./test_basic_security.py",
+        "logic": [
+            "test_security_headers",
+            "test_optional_auth_mechanism",
+            "test_basic_input_validation",
+            "run_security_tests"
+        ]
+    },
+    {
+        "file": "./ai_judge_module.py",
+        "logic": [
+            "build_judge_prompt",
+            "parse",
+            "__init__",
+            "evaluate_response",
+            "ConfidenceLevel",
+            "JudgeResult",
+            "JudgePromptBuilder",
+            "JudgeResultParser",
+            "AIJudgeClient"
+        ]
+    },
+    {
+        "file": "./precise_security_verification.py",
+        "logic": [
+            "check_project_source_code_only",
+            "check_auth_decorators",
+            "check_config_access",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_impact_calculator.py",
+        "logic": [
+            "setUp",
+            "test_calculate_impact_index_basic",
+            "test_calculate_impact_index_low_values",
+            "test_calculate_impact_index_medium_values",
+            "test_calculate_impact_index_zero_values",
+            "test_calculate_impact_index_max_values",
+            "test_normalize_citation_score",
+            "test_normalize_coverage_score",
+            "test_normalize_sentiment_score",
+            "test_get_authority_multiplier",
+            "test_calculate_batch_impacts",
+            "TestImpactCalculator"
+        ]
+    },
+    {
+        "file": "./test_security_mechanisms.py",
+        "logic": [
+            "test_rate_limiting",
+            "test_security_headers",
+            "test_input_validation",
+            "test_optional_auth_mechanism",
+            "test_api_endpoint_security",
+            "run_security_tests"
+        ]
+    },
+    {
+        "file": "./test_process_aggregate_results.py",
+        "logic": [
+            "setUp",
+            "tearDown",
+            "test_normal_execution_with_judge_params",
+            "test_execution_without_judge_params",
+            "test_execution_with_empty_judge_params",
+            "test_execution_with_partial_judge_params",
+            "test_execution_with_invalid_raw_results_format",
+            "test_execution_with_malformed_result_items",
+            "test_execution_with_failed_results",
+            "test_main_brand_not_in_results",
+            "TestProcessAndAggregateResults"
+        ]
+    },
+    {
+        "file": "./test_declining_trend_prediction.py",
+        "logic": [
+            "test_declining_trend_warning_feedback",
+            "test_stable_trend_as_comparison"
+        ]
+    },
+    {
+        "file": "./step5_code_refactor_optimization.py",
+        "logic": [
+            "create_rate_limiter",
+            "create_unified_request_wrapper",
+            "update_ai_adapters_with_unified_wrapper",
+            "main"
+        ]
+    },
+    {
+        "file": "./e2e_functional_test_clean.py",
+        "logic": [
+            "test_app_initialization",
+            "test_view_functions",
+            "test_security_components",
+            "test_network_components",
+            "test_monitoring_components",
+            "test_ai_adapters",
+            "test_database_functionality",
+            "test_input_validation",
+            "run_all_tests",
+            "main"
+        ]
+    },
+    {
+        "file": "./deepseek_adapter.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "health_check",
+            "DeepSeekAdapter"
+        ]
+    },
+    {
+        "file": "./test_database_fix.py",
+        "logic": [
+            "test_database_fix",
+            "check_table_schema"
+        ]
+    },
+    {
+        "file": "./test_ai_judge_client.py",
+        "logic": [
+            "setUp",
+            "tearDown",
+            "test_init_with_valid_parameters",
+            "test_init_with_none_parameters",
+            "test_init_with_partial_parameters",
+            "test_init_without_any_parameters",
+            "test_init_with_empty_string_parameters",
+            "test_backward_compatibility",
+            "test_adapter_creation_with_dynamic_params",
+            "test_evaluate_response_skipped_when_no_client",
+            "TestAIJudgeClientDynamicParameters"
+        ]
+    },
+    {
+        "file": "./test_doubao_api.py",
+        "logic": [
+            "test_doubao_api",
+            "test_erniebot_api",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_prediction_engine.py",
+        "logic": [
+            "setUp",
+            "test_exponential_smoothing_forecast_basic",
+            "test_linear_regression_forecast_basic",
+            "test_linear_regression_forecast_declining_trend",
+            "test_predict_ranking_trend_improving",
+            "test_predict_ranking_trend_declining",
+            "test_predict_ranking_trend_stable",
+            "test_identify_cognitive_risks_empty_evidence",
+            "test_identify_cognitive_risks_with_high_risk",
+            "test_identify_cognitive_risks_with_medium_risk",
+            "test_identify_cognitive_risks_with_declining_trend",
+            "test_predict_weekly_rank_with_risks",
+            "test_calculate_risk_impact_high_risk",
+            "test_calculate_risk_impact_medium_risk",
+            "test_calculate_risk_impact_with_keywords",
+            "test_assess_recent_decline_positive_slope",
+            "test_assess_recent_decline_negative_slope",
+            "TestPredictionEngine"
+        ]
+    },
+    {
+        "file": "./scoring_engine.py",
+        "logic": [
+            "calculate",
+            "_map_grade_and_label",
+            "_generate_summary",
+            "FinalScoreResult",
+            "ScoringEngine"
+        ]
+    },
+    {
+        "file": "./test_alert_logic.py",
+        "logic": [
+            "test_brand_strengthening_when_no_negative",
+            "test_content_correction_when_negative_exists",
+            "test_alert_conditions",
+            "run_final_verification"
+        ]
+    },
+    {
+        "file": "./test_health_check_warmup.py",
+        "logic": [
+            "test_doubao_adapter_with_health_check",
+            "test_connection_pooling",
+            "test_latency_statistics",
+            "test_factory_integration",
+            "test_circuit_breaker_integration",
+            "run_all_tests"
+        ]
+    },
+    {
+        "file": "./test_doubao_fixes.py",
+        "logic": [
+            "test_doubao_adapter_import",
+            "test_doubao_adapter_initialization",
+            "test_model_mapping",
+            "test_model_id_mapping",
+            "main"
+        ]
+    },
+    {
+        "file": "./test_workflow_retry_mechanism.py",
+        "logic": [
+            "test_retry_mechanism_with_simulated_failures",
+            "test_retry_mechanism_with_eventual_success",
+            "test_task_packaging_functionality",
+            "test_webhook_timeout_handling",
+            "mock_failed_request",
+            "mock_eventual_success_request",
+            "mock_timeout_request"
+        ]
+    },
+    {
+        "file": "./test_rank_analyzer.py",
+        "logic": [
+            "setUp",
+            "test_extract_ranking_list_basic",
+            "test_extract_ranking_list_with_overlap_names",
+            "test_extract_ranking_list_partial_match_avoidance",
+            "test_brand_details_calculation",
+            "test_word_count_calculation",
+            "test_unlisted_competitors_detection",
+            "test_analyze_method_full_workflow",
+            "test_empty_response_handling",
+            "test_no_monitored_brand_mentioned",
+            "test_special_characters_and_boundaries",
+            "test_case_insensitive_matching",
+            "TestRankAnalyzer"
+        ]
+    },
+    {
+        "file": "./simple_test_impact_calculator.py",
+        "logic": [
+            "test_impact_calculator",
+            "__init__",
+            "calculate_impact_index",
+            "_normalize_citation_score",
+            "_normalize_coverage_score",
+            "_normalize_sentiment_score",
+            "_get_authority_multiplier",
+            "calculate_batch_impacts",
+            "ImpactCalculator"
+        ]
+    },
+    {
+        "file": "./verify_qwen_implementation.py",
+        "logic": [
+            "verify_qwen_provider_implementation",
+            "test_qwen_citation_extraction"
+        ]
+    },
+    {
+        "file": "./wechat_backend/market_intelligence_service.py",
+        "logic": [
+            "__init__",
+            "calculate_category_benchmarks",
+            "_get_all_brand_data_in_category",
+            "_extract_rank_from_results",
+            "_calculate_average_sentiment",
+            "_calculate_benchmarks",
+            "_calculate_my_brand_metrics",
+            "_generate_all_brands_comparison",
+            "get_market_benchmark_data",
+            "MarketIntelligenceService"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_utils.py",
+        "logic": [
+            "get_ai_client",
+            "run_brand_test_with_ai",
+            "evaluate_response_accuracy"
+        ]
+    },
+    {
+        "file": "./wechat_backend/semantic_analyzer.py",
+        "logic": [
+            "__init__",
+            "analyze_semantic_drift",
+            "extract_keywords",
+            "calculate_semantic_similarity",
+            "tokenize_chinese",
+            "simple_overlap_ratio",
+            "calculate_drift_score",
+            "classify_drift_severity",
+            "identify_negative_terms",
+            "identify_positive_terms",
+            "clean_text",
+            "__init__",
+            "analyze_attribution",
+            "_source_referenced_in_response",
+            "_calculate_risk_score",
+            "SemanticAnalyzer",
+            "AttributionAnalyzer"
+        ]
+    },
+    {
+        "file": "./wechat_backend/logging_config.py",
+        "logic": [
+            "setup_logging",
+            "get_logger"
+        ]
+    },
+    {
+        "file": "./wechat_backend/config_manager.py",
+        "logic": [
+            "get_api_key",
+            "is_platform_configured",
+            "get_platform_model",
+            "ConfigurationManager"
+        ]
+    },
+    {
+        "file": "./wechat_backend/models.py",
+        "logic": [
+            "init_task_status_db",
+            "save_task_status",
+            "get_task_status",
+            "save_deep_intelligence_result",
+            "get_deep_intelligence_result",
+            "update_task_stage",
+            "save_brand_test_result",
+            "get_brand_test_result",
+            "__init__",
+            "to_dict",
+            "from_dict",
+            "__init__",
+            "__init__",
+            "to_dict",
+            "from_dict",
+            "TaskStage",
+            "TaskStatus",
+            "BrandTestResult",
+            "DeepIntelligenceResult"
+        ]
+    },
+    {
+        "file": "./wechat_backend/database.py",
+        "logic": [
+            "init_db",
+            "save_test_record",
+            "get_user_test_history",
+            "get_test_record_by_id",
+            "save_user_preference",
+            "get_user_preference",
+            "get_all_user_preferences"
+        ]
+    },
+    {
+        "file": "./wechat_backend/recommendation_generator.py",
+        "logic": [
+            "__init__",
+            "generate_recommendations",
+            "_identify_high_priority_sources",
+            "_generate_correction_recommendations",
+            "_generate_pr_correction_script",
+            "_generate_source_attack_recommendations",
+            "_generate_brand_strengthening_recommendations",
+            "_priority_to_int",
+            "RecommendationPriority",
+            "RecommendationType",
+            "Recommendation",
+            "RecommendationGenerator"
+        ]
+    },
+    {
+        "file": "./wechat_backend/__init__.py",
+        "logic": [
+            "create_app"
+        ]
+    },
+    {
+        "file": "./wechat_backend/source_weight_library.py",
+        "logic": [
+            "__init__",
+            "init_database",
+            "load_default_weights",
+            "get_source_weight",
+            "get_multiple_source_weights",
+            "extract_domain_from_url",
+            "extract_domains_from_urls",
+            "get_sources_by_category",
+            "get_high_weight_sources",
+            "extract_domain_from_url",
+            "add_source",
+            "update_source_weight",
+            "get_all_categories",
+            "get_all_sources",
+            "search_sources_by_domain",
+            "get_sources_by_weights_range",
+            "SourceWeightLibrary"
+        ]
+    },
+    {
+        "file": "./wechat_backend/cruise_controller.py",
+        "logic": [
+            "__init__",
+            "_init_scheduler",
+            "schedule_diagnostic_task",
+            "cancel_scheduled_task",
+            "get_scheduled_tasks",
+            "compare_results",
+            "compare_with_previous_result",
+            "_get_test_record_by_id",
+            "_get_previous_test_record",
+            "_extract_comparison_data",
+            "_extract_rank",
+            "_count_negative_evidence",
+            "_extract_sentiment_score",
+            "get_trend_data",
+            "_calculate_avg_sentiment",
+            "_extract_rank_from_detailed",
+            "shutdown",
+            "CruiseController"
+        ]
+    },
+    {
+        "file": "./wechat_backend/result_processor.py",
+        "logic": [
+            "__init__",
+            "calculate_semantic_drift",
+            "_extract_keywords",
+            "_calculate_word_similarity",
+            "_classify_drift_severity",
+            "__init__",
+            "process_detailed_results",
+            "_process_basic_scoring",
+            "_evaluate_response_advanced",
+            "_calculate_digital_vitality",
+            "_generate_actionable_insights",
+            "SemanticAnalyzerOld",
+            "ResultProcessor"
+        ]
+    },
+    {
+        "file": "./wechat_backend/circuit_breaker.py",
+        "logic": [
+            "get_circuit_breaker",
+            "reset_circuit_breaker",
+            "circuit_breaker",
+            "__init__",
+            "call",
+            "_on_success",
+            "_on_failure",
+            "_to_open",
+            "_to_half_open",
+            "_to_closed",
+            "_allow_recovery",
+            "_get_remaining_time",
+            "get_state_info",
+            "force_open",
+            "force_close",
+            "decorator",
+            "wrapper",
+            "CircuitBreakerState",
+            "CircuitBreakerError",
+            "CircuitBreakerOpenError",
+            "CircuitBreaker"
+        ]
+    },
+    {
+        "file": "./wechat_backend/cruise_executor.py",
+        "logic": [
+            "run_diagnostic_task",
+            "progress_callback"
+        ]
+    },
+    {
+        "file": "./wechat_backend/app.py",
+        "logic": [
+            "get_access_token",
+            "after_request",
+            "warm_up_adapters",
+            "index",
+            "health_check",
+            "get_config",
+            "require_auth",
+            "require_auth_optional",
+            "get_current_user_id",
+            "decorated_function",
+            "decorated_function"
+        ]
+    },
+    {
+        "file": "./wechat_backend/competitive_analysis.py",
+        "logic": [
+            "__init__",
+            "analyze_market_share",
+            "__init__",
+            "analyze_recommendation_weights",
+            "__init__",
+            "analyze_competitor_intelligence",
+            "__init__",
+            "perform_competitive_analysis",
+            "_analyze_category_performance",
+            "_generate_summary_insights",
+            "MentionType",
+            "BrandMention",
+            "CompetitorAnalysisResult",
+            "MarketShareAnalyzer",
+            "RecommendationWeightAnalyzer",
+            "CompetitorIntelligenceAnalyzer",
+            "CompetitiveAnalyzer"
+        ]
+    },
+    {
+        "file": "./wechat_backend/views.py",
+        "logic": [
+            "verify_wechat_signature",
+            "wechat_verify",
+            "wechat_login",
+            "test_api",
+            "perform_brand_test",
+            "process_and_aggregate_results_with_ai_judge",
+            "generate_mock_source_intelligence_map",
+            "generate_mock_semantic_contrast_data",
+            "get_source_intelligence",
+            "get_platform_status",
+            "get_test_progress",
+            "submit_brand_test",
+            "get_task_status_api",
+            "get_task_result",
+            "get_test_history",
+            "get_test_record",
+            "get_ai_platforms",
+            "send_template_message",
+            "get_token",
+            "decrypt_user_info",
+            "get_action_recommendations",
+            "configure_cruise_task",
+            "cancel_cruise_task",
+            "get_cruise_tasks",
+            "get_cruise_trends",
+            "get_market_benchmark",
+            "get_prediction_forecast",
+            "optimize_assets",
+            "get_hub_summary",
+            "get_executive_report",
+            "get_pdf_report",
+            "create_workflow_task",
+            "get_workflow_task_status",
+            "validate_token",
+            "refresh_token",
+            "send_verification_code",
+            "register_user",
+            "get_user_profile",
+            "update_user_profile",
+            "sync_data",
+            "download_data",
+            "upload_result",
+            "delete_result",
+            "competitive_analysis",
+            "run_async_test",
+            "run_async_test",
+            "progress_callback",
+            "progress_callback",
+            "run_async_processing"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/mock_providers.py",
+        "logic": [
+            "__init__",
+            "validate_config",
+            "get_provider_type",
+            "MockProvider"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/base_provider.py",
+        "logic": [
+            "__init__",
+            "ask_question",
+            "extract_citations",
+            "_get_response_text",
+            "to_standard_format",
+            "_extract_brand_mentions",
+            "BaseAIProvider"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/deepseek_r1_adapter.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_extract_reasoning_content",
+            "_extract_reasoning_from_content",
+            "analyze_reasoning_chain",
+            "_map_request_exception",
+            "health_check",
+            "DeepSeekR1Adapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/zhipu_adapter.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_map_error_message",
+            "ZhipuAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/doubao_provider.py",
+        "logic": [
+            "__init__",
+            "ask_question",
+            "health_check",
+            "DoubaoProvider"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/deepseek_provider.py",
+        "logic": [
+            "__init__",
+            "ask_question",
+            "_extract_reasoning_content",
+            "_extract_reasoning_from_content",
+            "extract_citations",
+            "to_standard_format",
+            "_extract_brand_mentions",
+            "health_check",
+            "DeepSeekProvider"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/qwen_adapter.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_map_error_code",
+            "QwenAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/enhanced_factory.py",
+        "logic": [
+            "register",
+            "create",
+            "_str_to_platform_type",
+            "_get_backup_platform",
+            "register_with_monitoring",
+            "get_monitor",
+            "EnhancedAIAdapterFactory"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/factory.py",
+        "logic": [
+            "register",
+            "get_normalized_model_name",
+            "create",
+            "AIAdapterFactory"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/workflow_manager.py",
+        "logic": [
+            "__init__",
+            "send_webhook",
+            "_send_webhook_internal",
+            "__init__",
+            "_start_background_processor",
+            "_start_retry_processor",
+            "create_task_package",
+            "dispatch_task",
+            "_priority_to_number",
+            "_process_task",
+            "_process_task_with_retry",
+            "_calculate_retry_delay",
+            "_update_task_status",
+            "get_task_status",
+            "process_tasks",
+            "process_retries",
+            "TaskPriority",
+            "TaskStatus",
+            "WorkflowTask",
+            "WebhookManager",
+            "WorkflowManager"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/provider_factory.py",
+        "logic": [
+            "register",
+            "create",
+            "get_available_providers",
+            "ProviderFactory"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/domestic_providers.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_map_error_code",
+            "__init__",
+            "_get_access_token",
+            "send_prompt",
+            "_map_error_code",
+            "TongyiAdapter",
+            "WenxinAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/doubao_adapter.py",
+        "logic": [
+            "__init__",
+            "_health_check",
+            "_get_headers",
+            "send_prompt",
+            "_make_request_internal",
+            "_map_error_message",
+            "get_latency_stats",
+            "__del__",
+            "DoubaoAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/qwen_provider.py",
+        "logic": [
+            "__init__",
+            "ask_question",
+            "extract_citations",
+            "to_standard_format",
+            "_calculate_contribution_score",
+            "_assess_domain_authority",
+            "_extract_evidence_chain",
+            "health_check",
+            "QwenProvider"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/doubao_adapter_fixed.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_map_error_message",
+            "DoubaoAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/gemini_adapter.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_map_error_code",
+            "GeminiAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/enhanced_base.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_is_platform_available",
+            "_create_rate_limit_response",
+            "_create_fallback_response",
+            "_send_actual_request",
+            "EnhancedAIClient"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/sync_providers.py",
+        "logic": [
+            "__init__",
+            "_send_actual_request",
+            "__init__",
+            "_send_actual_request",
+            "__init__",
+            "_send_actual_request",
+            "__init__",
+            "_send_actual_request",
+            "__init__",
+            "_send_actual_request",
+            "_get_access_token",
+            "__init__",
+            "_send_actual_request",
+            "DeepSeekProvider",
+            "DoubaoProvider",
+            "QwenProvider",
+            "YuanbaoProvider",
+            "ErnieProvider",
+            "KimiProvider"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/base_adapter.py",
+        "logic": [
+            "to_dict",
+            "__init__",
+            "send_prompt",
+            "AIPlatformType",
+            "AIErrorType",
+            "AIResponse",
+            "AIClient"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/deepseek_adapter.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_map_request_exception",
+            "health_check",
+            "DeepSeekAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/manager.py",
+        "logic": [
+            "__init__",
+            "_load_config",
+            "_initialize_providers",
+            "_register_mock_providers",
+            "query_all_providers",
+            "_normalize_response",
+            "_record_usage",
+            "get_available_providers",
+            "is_provider_available",
+            "validate_all_configs",
+            "__init__",
+            "send_prompt",
+            "test_ai_manager",
+            "AIManager",
+            "MockProvider"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/base.py",
+        "logic": [
+            "__init__",
+            "validate_config",
+            "get_model_info",
+            "get_provider_type",
+            "__init__",
+            "register_provider",
+            "__init__",
+            "validate_config",
+            "get_provider_type",
+            "AIProviderType",
+            "StandardAIResponse",
+            "BaseAIProvider",
+            "AsyncAIManager",
+            "MockProvider"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/erniebot_adapter.py",
+        "logic": [
+            "__init__",
+            "_get_access_token",
+            "send_prompt",
+            "_map_error_code",
+            "ErnieBotAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/ai_adapters/chatgpt_adapter.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "_map_error_message",
+            "ChatGPTAdapter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/security/auth.py",
+        "logic": [
+            "require_auth",
+            "require_auth_optional",
+            "get_current_user_id",
+            "get_auth_method",
+            "is_authenticated",
+            "__init__",
+            "generate_token",
+            "decode_token",
+            "verify_token",
+            "hash_password",
+            "verify_password",
+            "__init__",
+            "assign_role",
+            "has_permission",
+            "require_permission",
+            "decorated_function",
+            "decorated_function",
+            "decorator",
+            "decorated_function",
+            "AuthenticationError",
+            "AuthorizationError",
+            "JWTManager",
+            "PasswordHasher",
+            "AccessControl",
+            "Config"
+        ]
+    },
+    {
+        "file": "./wechat_backend/security/rate_limiting.py",
+        "logic": [
+            "rate_limit",
+            "check_rate_limit",
+            "get_rate_limit_info",
+            "__init__",
+            "is_allowed",
+            "__init__",
+            "is_allowed",
+            "__init__",
+            "is_allowed",
+            "__init__",
+            "get_client_ip",
+            "is_allowed",
+            "get_rate_limit_headers",
+            "__init__",
+            "is_allowed",
+            "get_rate_limit_headers",
+            "__init__",
+            "is_allowed",
+            "decorator",
+            "decorated_function",
+            "RateLimiter",
+            "SlidingWindowRateLimiter",
+            "TokenBucketRateLimiter",
+            "IPBasedRateLimiter",
+            "EndpointRateLimiter",
+            "CombinedRateLimiter"
+        ]
+    },
+    {
+        "file": "./wechat_backend/security/sql_protection.py",
+        "logic": [
+            "is_safe_sql_input",
+            "sanitize_sql_input",
+            "create_safe_query",
+            "__init__",
+            "contains_sql_injection",
+            "sanitize_input",
+            "validate_input",
+            "__init__",
+            "execute_query",
+            "execute_safe_select",
+            "execute_safe_insert",
+            "SQLInjectionProtector",
+            "SafeDatabaseQuery"
+        ]
+    },
+    {
+        "file": "./wechat_backend/security/input_validation.py",
+        "logic": [
+            "validate_and_sanitize_request",
+            "is_valid_email",
+            "is_valid_url",
+            "sanitize_input",
+            "validate_safe_text",
+            "validate_email",
+            "validate_url",
+            "validate_alphanumeric",
+            "validate_safe_text",
+            "sanitize_html",
+            "sanitize_string",
+            "sanitize_user_input",
+            "bleach_clean",
+            "__init__",
+            "load",
+            "String",
+            "Email",
+            "Url",
+            "InputValidator",
+            "InputSanitizer",
+            "RequestSchema",
+            "RequestSchema",
+            "Schema",
+            "fields",
+            "ValidationError"
+        ]
+    },
+    {
+        "file": "./wechat_backend/security/flask_security.py",
+        "logic": [
+            "create_secure_app"
+        ]
+    },
+    {
+        "file": "./wechat_backend/security/secure_config.py",
+        "logic": [
+            "get_config_manager",
+            "load_secure_config_from_file",
+            "save_secure_config_to_file",
+            "encrypt_sensitive_value",
+            "decrypt_sensitive_value",
+            "__init__",
+            "_get_cipher",
+            "encrypt_value",
+            "decrypt_value",
+            "encrypt_config_dict",
+            "decrypt_config_dict",
+            "SecureConfig"
+        ]
+    },
+    {
+        "file": "./wechat_backend/optimization/progress_tracker_optimization.py",
+        "logic": [
+            "get_optimized_progress_tracker",
+            "__init__",
+            "create_execution",
+            "update_progress",
+            "get_progress",
+            "_calculate_poll_interval",
+            "complete_execution",
+            "fail_execution",
+            "cleanup_old_executions",
+            "ExecutionStatus",
+            "OptimizedProgressTracker"
+        ]
+    },
+    {
+        "file": "./wechat_backend/network/security.py",
+        "logic": [
+            "get_http_client",
+            "reset_http_client",
+            "__init__",
+            "_prepare_headers",
+            "get",
+            "post",
+            "put",
+            "delete",
+            "_make_request",
+            "_validate_response",
+            "close",
+            "__init__",
+            "verify_certificate",
+            "SecureHttpClient",
+            "CertificatePinner"
+        ]
+    },
+    {
+        "file": "./wechat_backend/network/rate_limiter.py",
+        "logic": [
+            "get_rate_limiter_manager",
+            "is_rate_limited",
+            "check_rate_limit",
+            "__init__",
+            "is_allowed",
+            "__init__",
+            "is_allowed",
+            "__init__",
+            "is_allowed",
+            "__init__",
+            "is_allowed",
+            "__init__",
+            "is_allowed",
+            "get_limiter",
+            "RateLimitAlgorithm",
+            "RateLimiter",
+            "TokenBucketRateLimiter",
+            "SlidingWindowRateLimiter",
+            "FixedWindowRateLimiter",
+            "RateLimiterManager"
+        ]
+    },
+    {
+        "file": "./wechat_backend/network/circuit_breaker.py",
+        "logic": [
+            "get_circuit_breaker",
+            "get_circuit_breaker_group",
+            "__init__",
+            "call",
+            "_on_success",
+            "_on_failure",
+            "force_open",
+            "force_close",
+            "get_state_info",
+            "__init__",
+            "get_circuit_breaker",
+            "get_state_info",
+            "force_open_all",
+            "force_close_all",
+            "CircuitState",
+            "CircuitBreaker",
+            "CircuitBreakerGroup"
+        ]
+    },
+    {
+        "file": "./wechat_backend/network/request_wrapper.py",
+        "logic": [
+            "get_request_wrapper",
+            "get_ai_request_wrapper",
+            "__init__",
+            "_prepare_url",
+            "_prepare_headers",
+            "_check_rate_limit",
+            "_make_request",
+            "get",
+            "post",
+            "put",
+            "delete",
+            "patch",
+            "request_with_resilience",
+            "__init__",
+            "make_ai_request",
+            "_request_func",
+            "UnifiedRequestWrapper",
+            "AIPlatformRequestWrapper"
+        ]
+    },
+    {
+        "file": "./wechat_backend/network/retry_mechanism.py",
+        "logic": [
+            "retry_execution",
+            "__init__",
+            "calculate_delay",
+            "should_retry",
+            "execute_with_retry",
+            "__init__",
+            "execute_with_smart_retry",
+            "decorator",
+            "wrapper",
+            "RetryStrategy",
+            "RetryHandler",
+            "SmartRetryHandler"
+        ]
+    },
+    {
+        "file": "./wechat_backend/network/connection_pool.py",
+        "logic": [
+            "get_connection_pool_manager",
+            "get_session_for_url",
+            "get_default_session",
+            "cleanup_connection_pools",
+            "__init__",
+            "_create_session",
+            "get_session_for_host",
+            "get_default_session",
+            "close_all_sessions",
+            "ConnectionPoolManager"
+        ]
+    },
+    {
+        "file": "./wechat_backend/intelligence_services/misunderstanding_analyzer.py",
+        "logic": [
+            "analyze",
+            "_evaluate_risk_level",
+            "_generate_issue_summary",
+            "_generate_improvement_hint",
+            "MisunderstandingType",
+            "MisunderstandingResult",
+            "MisunderstandingAnalyzer"
+        ]
+    },
+    {
+        "file": "./wechat_backend/test_engine/progress_tracker.py",
+        "logic": [
+            "__post_init__",
+            "__init__",
+            "create_execution",
+            "update_running",
+            "update_completed",
+            "update_failed",
+            "get_progress",
+            "get_all_executions",
+            "remove_execution",
+            "reset_execution",
+            "get_status_summary",
+            "_execution_to_dict",
+            "TestStatus",
+            "TestProgress",
+            "ProgressTracker"
+        ]
+    },
+    {
+        "file": "./wechat_backend/test_engine/scheduler.py",
+        "logic": [
+            "__init__",
+            "schedule_tests",
+            "_execute_sequential",
+            "_execute_concurrent",
+            "_execute_single_task_with_queue",
+            "_get_actual_model_id",
+            "_execute_single_task",
+            "_map_model_to_platform",
+            "shutdown",
+            "ExecutionStrategy",
+            "TestTask",
+            "TestScheduler"
+        ]
+    },
+    {
+        "file": "./wechat_backend/test_engine/executor.py",
+        "logic": [
+            "run_brand_cognition_test",
+            "__init__",
+            "execute_tests",
+            "get_execution_progress",
+            "get_all_executions",
+            "cancel_execution",
+            "shutdown",
+            "progress_callback",
+            "progress_callback",
+            "TestExecutor"
+        ]
+    },
+    {
+        "file": "./wechat_backend/question_system/question_templates.py",
+        "logic": [
+            "__init__",
+            "_load_standard_templates",
+            "get_templates_by_category",
+            "get_all_templates",
+            "validate_custom_questions",
+            "clean_question_text",
+            "create_custom_questions",
+            "QuestionCategory",
+            "QuestionTemplate",
+            "CustomQuestion",
+            "QuestionManager"
+        ]
+    },
+    {
+        "file": "./wechat_backend/question_system/test_case_generator.py",
+        "logic": [
+            "__post_init__",
+            "start_execution",
+            "complete_execution",
+            "fail_execution",
+            "__init__",
+            "generate_test_cases",
+            "generate_test_cases_from_templates",
+            "execute_test_cases_sequentially",
+            "TestCaseStatus",
+            "TestCase",
+            "TestCaseGenerator"
+        ]
+    },
+    {
+        "file": "./wechat_backend/monitoring/alert_system.py",
+        "logic": [
+            "get_alert_system",
+            "add_alert",
+            "start_alert_monitoring",
+            "stop_alert_monitoring",
+            "__init__",
+            "evaluate",
+            "__init__",
+            "check_condition",
+            "trigger",
+            "should_notify",
+            "notify",
+            "deactivate",
+            "__init__",
+            "add_alert",
+            "remove_alert",
+            "add_callback",
+            "evaluate_alerts",
+            "start_monitoring",
+            "stop_monitoring",
+            "_monitor_loop",
+            "get_active_alerts",
+            "AlertSeverity",
+            "AlertCondition",
+            "Alert",
+            "AlertSystem"
+        ]
+    },
+    {
+        "file": "./wechat_backend/monitoring/logging_enhancements.py",
+        "logic": [
+            "get_audit_logger",
+            "get_security_logger",
+            "get_api_logger",
+            "log_api_access",
+            "log_security_event",
+            "log_api_request",
+            "log_api_response",
+            "__init__",
+            "_log_structured",
+            "info",
+            "warning",
+            "error",
+            "critical",
+            "__init__",
+            "log_api_access",
+            "log_authentication",
+            "log_authorization",
+            "log_data_access",
+            "log_config_change",
+            "__init__",
+            "log_security_event",
+            "log_potential_attack",
+            "log_brute_force_attempt",
+            "log_unauthorized_access",
+            "log_privilege_escalation",
+            "__init__",
+            "log_request",
+            "log_response",
+            "log_error",
+            "LogEventType",
+            "StructuredLogger",
+            "AuditLogger",
+            "SecurityLogger",
+            "APILogger"
+        ]
+    },
+    {
+        "file": "./wechat_backend/monitoring/metrics_collector.py",
+        "logic": [
+            "get_metrics_collector",
+            "record_api_call",
+            "record_error",
+            "record_security_event",
+            "__init__",
+            "record_api_call",
+            "record_error",
+            "record_security_event",
+            "increment_counter",
+            "set_gauge",
+            "get_api_call_stats",
+            "get_error_stats",
+            "get_total_api_calls",
+            "get_security_events",
+            "get_counters",
+            "get_gauges",
+            "cleanup_old_metrics",
+            "MetricType",
+            "MetricsCollector"
+        ]
+    },
+    {
+        "file": "./wechat_backend/monitoring/monitoring_config.py",
+        "logic": [
+            "configure_monitoring_system",
+            "initialize_monitoring"
+        ]
+    },
+    {
+        "file": "./wechat_backend/monitoring/monitoring_decorator.py",
+        "logic": [
+            "monitored_endpoint",
+            "validate_request_data",
+            "setup_default_alerts",
+            "log_api_call_metric",
+            "log_error_metric",
+            "start_monitoring_system",
+            "decorator",
+            "validate_recursive",
+            "wrapper"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/monetization_service.py",
+        "logic": [
+            "__init__",
+            "can_access",
+            "__init__",
+            "strip_data_for_user",
+            "UserLevel",
+            "FeatureGate",
+            "MonetizationService"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/asset_intelligence_engine.py",
+        "logic": [
+            "__init__",
+            "analyze_content_matching",
+            "_analyze_single_platform",
+            "_generate_optimization_suggestions",
+            "_identify_semantic_gaps",
+            "calculate_content_hit_rate",
+            "get_optimization_recommendations",
+            "AssetIntelligenceEngine"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/source_intelligence_processor.py",
+        "logic": [
+            "__init__",
+            "get_weight",
+            "__init__",
+            "extract_sources",
+            "match_source_weight",
+            "analyze_sentiment_from_context",
+            "process",
+            "_estimate_sentiment_for_source",
+            "SourceWeightLibrary",
+            "SourceIntelligenceProcessor"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/api_monitor.py",
+        "logic": [
+            "remaining",
+            "__init__",
+            "update_platform_config",
+            "check_api_availability",
+            "record_request",
+            "get_rate_limit_remaining",
+            "is_rate_limited",
+            "ApiStatus",
+            "QuotaInfo",
+            "ApiMonitor"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/impact_calculator.py",
+        "logic": [
+            "test_impact_calculator",
+            "__init__",
+            "calculate_impact_index",
+            "_normalize_citation_score",
+            "_normalize_coverage_score",
+            "_normalize_sentiment_score",
+            "_get_authority_multiplier",
+            "calculate_batch_impacts",
+            "ImpactCalculator"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/prediction_engine.py",
+        "logic": [
+            "__init__",
+            "exponential_smoothing_forecast",
+            "linear_regression_forecast",
+            "predict_ranking_trend",
+            "identify_cognitive_risks",
+            "_calculate_risk_impact",
+            "_assess_recent_decline",
+            "predict_weekly_rank_with_risks",
+            "PredictionEngine"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/workflow_manager.py",
+        "logic": [
+            "__init__",
+            "send_webhook",
+            "_send_webhook_internal",
+            "__init__",
+            "_start_background_processor",
+            "_start_retry_processor",
+            "create_task_package",
+            "dispatch_task",
+            "_priority_to_number",
+            "_process_task",
+            "_process_task_with_retry",
+            "_update_task_status",
+            "get_task_status",
+            "worker",
+            "retry_worker",
+            "TaskPriority",
+            "TaskStatus",
+            "WorkflowTask",
+            "WebhookManager",
+            "WorkflowManager"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/interception_analyst.py",
+        "logic": [
+            "__init__",
+            "calculate_first_mention_rate",
+            "calculate_sov",
+            "analyze_interception_risk",
+            "get_authority_score",
+            "InterceptionAnalyst"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/report_generator.py",
+        "logic": [
+            "__init__",
+            "generate_executive_summary",
+            "_get_test_results",
+            "_calculate_roi_metrics",
+            "_calculate_exposure_increment",
+            "_calculate_ranking_improvement",
+            "_calculate_sentiment_trend",
+            "_calculate_avg_score",
+            "_generate_key_insights",
+            "_generate_recommendations",
+            "generate_pdf_report",
+            "get_hub_summary",
+            "ReportGenerator"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/competitive_analyzer.py",
+        "logic": [
+            "__init__",
+            "analyze",
+            "_extract_keywords",
+            "_generate_differentiation_summary",
+            "compare_brands_in_exposure_analysis",
+            "_extract_brand_description",
+            "CompetitiveAnalyzer"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/source_aggregator.py",
+        "logic": [
+            "__init__",
+            "aggregate",
+            "_extract_urls",
+            "_extract_site_name",
+            "_normalize_url",
+            "_generate_source_statistics",
+            "aggregate_multiple_models",
+            "associate_evidence_chain",
+            "_find_associated_source",
+            "_extract_keywords",
+            "_determine_risk_level",
+            "_generate_url_id",
+            "_assess_domain_authority",
+            "associate_negative_fragments",
+            "_find_associated_url",
+            "_extract_keywords",
+            "_determine_risk_level",
+            "SourceAggregator"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/rank_analyzer.py",
+        "logic": [
+            "__init__",
+            "analyze",
+            "_extract_ranking_list",
+            "_is_valid_brand_boundary",
+            "_extract_brand_details",
+            "_calculate_brand_word_count",
+            "_find_all_brand_positions",
+            "_find_sentence_start",
+            "_find_sentence_end",
+            "_identify_unlisted_competitors",
+            "RankAnalyzer"
+        ]
+    },
+    {
+        "file": "./wechat_backend/analytics/recommendation_system.py",
+        "logic": [
+            "__init__",
+            "recommend_platforms",
+            "get_cost_efficient_platforms",
+            "PlatformRecommendation"
+        ]
+    },
+    {
+        "file": "./demo/main_demo.py",
+        "logic": [
+            "print_header",
+            "print_section",
+            "demo_source_weight_library",
+            "demo_semantic_analyzer",
+            "demo_attribution_analyzer",
+            "demo_competitive_analyzer",
+            "demo_full_integration",
+            "demo_visualization_data",
+            "main"
+        ]
+    },
+    {
+        "file": "./demo/competitive_demo.py",
+        "logic": [
+            "print_header",
+            "print_section",
+            "demo_competitive_analyzer",
+            "demo_competitive_integration",
+            "demo_comprehensive_scenario",
+            "main"
+        ]
+    },
+    {
+        "file": "./demo/demo_main.py",
+        "logic": [
+            "print_header",
+            "print_section",
+            "demo_source_weight_library",
+            "demo_semantic_analyzer",
+            "demo_attribution_analyzer",
+            "demo_full_integration",
+            "demo_visualization_data",
+            "main"
+        ]
+    },
+    {
+        "file": "./tests/test_security_improvements.py",
+        "logic": [
+            "run_security_tests",
+            "setUp",
+            "test_secure_http_client_creation",
+            "test_connection_pool_management",
+            "test_circuit_breaker_functionality",
+            "test_rate_limiter_functionality",
+            "test_metrics_collection",
+            "test_unified_request_wrapper",
+            "test_deepseek_adapter_initialization",
+            "test_deepseek_adapter_send_prompt",
+            "test_error_mapping",
+            "test_concurrent_requests_handling",
+            "test_resource_cleanup",
+            "test_metrics_retention",
+            "test_security_event_recording",
+            "failing_function",
+            "TestSecurityImprovements",
+            "TestPerformanceAndReliability",
+            "TestMonitoringAndLogging"
+        ]
+    },
+    {
+        "file": "./tests/test_startup.py",
+        "logic": [
+            "test_perform_brand_test",
+            "test_provider_availability",
+            "main"
+        ]
+    },
+    {
+        "file": "./tests/test_integration.py",
+        "logic": [
+            "run_integration_tests",
+            "test_end_to_end_request_flow",
+            "test_circuit_breaker_with_rate_limiter",
+            "test_adapter_with_all_components",
+            "test_metrics_collection_through_workflow",
+            "TestIntegration"
+        ]
+    },
+    {
+        "file": "./gco_validator/reporting/report_generator.py",
+        "logic": [
+            "__init__",
+            "generate_report",
+            "format_report",
+            "_calculate_summary_stats",
+            "_format_json",
+            "_format_csv",
+            "_format_html",
+            "_format_text",
+            "__init__",
+            "generate_performance_chart",
+            "ReportFormat",
+            "ReportData",
+            "ReportGenerator",
+            "ResultVisualizer"
+        ]
+    },
+    {
+        "file": "./gco_validator/core/logging.py",
+        "logic": [
+            "setup_logging",
+            "get_logger"
+        ]
+    },
+    {
+        "file": "./gco_validator/core/exceptions.py",
+        "logic": [
+            "add_exception_handlers",
+            "__init__",
+            "__init__",
+            "__init__",
+            "__init__",
+            "GCOValidatorException",
+            "ValidationError",
+            "AIPlatformException",
+            "TestExecutionException"
+        ]
+    },
+    {
+        "file": "./gco_validator/config/settings.py",
+        "logic": [
+            "Settings",
+            "Config"
+        ]
+    },
+    {
+        "file": "./gco_validator/schemas/test_schemas.py",
+        "logic": [
+            "AIModel",
+            "BrandTestRequest",
+            "TestResult",
+            "BrandTestResponse",
+            "TestProgressResponse",
+            "TestHistoryResponse",
+            "AIPlatform",
+            "AIPlatformsResponse"
+        ]
+    },
+    {
+        "file": "./gco_validator/test_engine/progress_tracker.py",
+        "logic": [
+            "__post_init__",
+            "__init__",
+            "create_execution",
+            "update_running",
+            "update_completed",
+            "update_failed",
+            "get_progress",
+            "get_all_executions",
+            "remove_execution",
+            "reset_execution",
+            "get_status_summary",
+            "_execution_to_dict",
+            "TestStatus",
+            "TestProgress",
+            "ProgressTracker"
+        ]
+    },
+    {
+        "file": "./gco_validator/test_engine/scheduler.py",
+        "logic": [
+            "__init__",
+            "schedule_tests",
+            "_execute_sequential",
+            "_execute_concurrent",
+            "_execute_batch",
+            "_execute_single_task",
+            "_simulate_ai_call",
+            "shutdown",
+            "ExecutionStrategy",
+            "TestTask",
+            "TestScheduler"
+        ]
+    },
+    {
+        "file": "./gco_validator/test_engine/executor.py",
+        "logic": [
+            "run_brand_cognition_test",
+            "__init__",
+            "execute_tests",
+            "get_execution_progress",
+            "get_all_executions",
+            "cancel_execution",
+            "shutdown",
+            "progress_callback",
+            "progress_callback",
+            "TestExecutor"
+        ]
+    },
+    {
+        "file": "./gco_validator/ai_clients/factory.py",
+        "logic": [
+            "register",
+            "create",
+            "get_available_platforms",
+            "is_platform_supported",
+            "AIAdapterFactory"
+        ]
+    },
+    {
+        "file": "./gco_validator/ai_clients/deepseek_adapter.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "validate_config",
+            "get_platform_type",
+            "DeepSeekAdapter"
+        ]
+    },
+    {
+        "file": "./gco_validator/ai_clients/base.py",
+        "logic": [
+            "__init__",
+            "send_prompt",
+            "validate_config",
+            "get_model_info",
+            "get_platform_type",
+            "AIPlatformType",
+            "AIResponse",
+            "AIClient"
+        ]
+    },
+    {
+        "file": "./gco_validator/question_system/question_templates.py",
+        "logic": [
+            "__init__",
+            "_load_standard_templates",
+            "get_templates_by_category",
+            "get_all_templates",
+            "validate_custom_questions",
+            "clean_question_text",
+            "create_custom_questions",
+            "QuestionCategory",
+            "QuestionTemplate",
+            "CustomQuestion",
+            "QuestionManager"
+        ]
+    },
+    {
+        "file": "./gco_validator/question_system/test_case_generator.py",
+        "logic": [
+            "__post_init__",
+            "start_execution",
+            "complete_execution",
+            "fail_execution",
+            "__init__",
+            "generate_test_cases",
+            "generate_test_cases_from_templates",
+            "execute_test_cases_sequentially",
+            "TestCaseStatus",
+            "TestCase",
+            "TestCaseGenerator"
+        ]
+    },
+    {
+        "file": "./gco_validator/scoring/evaluator.py",
+        "logic": [
+            "calculate_accuracy",
+            "calculate_completeness",
+            "calculate_quality_score",
+            "__init__",
+            "evaluate_response",
+            "_calculate_accuracy",
+            "_calculate_completeness",
+            "_calculate_relevance",
+            "_calculate_coherence",
+            "_analyze_sentiment",
+            "ScoringResult",
+            "ResponseEvaluator"
+        ]
+    },
+    {
+        "file": "./gco_validator/api/v1/test_routes.py",
+        "logic": [
+            "progress_callback"
+        ]
+    },
+    {
+        "file": "./gco_validator/api/v1/report_routes.py",
+        "logic": [
+            "ReportFormatEnum"
+        ]
+    },
+    {
+        "file": "./services/intelligence/prediction_service.py",
+        "logic": [
+            "test_prediction_service",
+            "__init__",
+            "exponential_smoothing_forecast",
+            "linear_regression_forecast",
+            "predict_scores_trend",
+            "_generate_simulated_history",
+            "predict_multi_dimensional_trends",
+            "_calculate_overall_trend",
+            "generate_prediction_report",
+            "_calculate_confidence_level",
+            "_assess_prediction_risks",
+            "_generate_risk_recommendations",
+            "PredictionService"
+        ]
+    },
+    {
+        "file": "./services/intelligence/source_analyzer.py",
+        "logic": [
+            "test_source_analyzer",
+            "__init__",
+            "extract_urls",
+            "_is_valid_url",
+            "classify_source",
+            "_extract_title_from_url",
+            "_calculate_confidence",
+            "analyze_sources",
+            "SourceAnalyzer"
+        ]
+    }
+]

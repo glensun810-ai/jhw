@@ -41,7 +41,12 @@ const getTestProgressApi = (executionId) => {
  * @returns {Promise}
  */
 const getTaskStatusApi = (executionId) => {
-  return get(`${API_ENDPOINTS.BRAND.STATUS}/${executionId}`);
+  // 根据API契约，确保路径格式正确对应后端路由 /test/status/<task_id>
+  // 构造完整的API路径，确保与后端路由 /test/status/<task_id> 匹配
+  const apiUrl = `${API_ENDPOINTS.BRAND.STATUS}/${executionId}`;
+  console.log(`Calling API: ${apiUrl} with executionId: ${executionId}`);
+
+  return get(apiUrl);
 };
 
 module.exports = {

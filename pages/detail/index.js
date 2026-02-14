@@ -203,7 +203,7 @@ Page({
           const isCompleted = statusData.is_completed ||
                              parsedStatus.stage === 'completed';
 
-          if (isCompleted && statusData.results && statusData.results.length > 0) {
+          if (isCompleted) {
             clearInterval(this.pollInterval);
 
             // 计算实际耗时
@@ -217,6 +217,12 @@ Page({
 
             // 检测进度停滞
             this.checkProgressStagnation(statusData.progress);
+
+            // 数据防御：即使任务未完成，也要检查是否有可用的结果数据
+            if (statusData.results && Array.isArray(statusData.results) && statusData.results.length > 0) {
+              // 如果已经有结果数据，可以提前处理部分数据显示
+              console.log('检测到部分结果数据，准备更新界面...');
+            }
           }
         }
       } catch (error) {
@@ -308,12 +314,20 @@ Page({
       // 触发1.5秒的极速冲刺动画直达100%
       this.rapidFinishAnimation();
     } else {
-      // 正常完成
+      // 正常完成 - 现在也触发冲刺动画，因为后端可能直接返回100%
       this.setData({
         progress: 100,
         progressText: '研判完成，正在生成报告...'
       });
+
+      // 触发冲刺动画 even for normal completion
+      this.rapidFinishAnimation();
     }
+
+    // 打印结果数组长度用于验证
+    console.log("=== FRONTEND RESULTS ARRAY LENGTH ===");
+    console.log("Received results array length:", (statusData.results || []).length);
+    console.log("==================================");
 
     // 处理完成的数据
     this.processCompletedResults(statusData);
@@ -325,10 +339,20 @@ Page({
   },
 
   /**
-   * 进度条极速冲刺动画（1.5秒冲刺到100%）
+   * 进度条极速冲刺动画（从当前进度冲刺到100%）
    */
   rapidFinishAnimation: function() {
-    // 创建快速完成动画，1.5秒内冲刺到100%
+    // 调用震动反馈
+    wx.vibrateShort({
+      success: () => {
+        console.log('震动反馈成功');
+      },
+      fail: (err) => {
+        console.log('震动反馈失败:', err);
+      }
+    });
+
+    // 创建快速完成动画，从当前进度冲刺到100%
     const startProgress = this.data.progress;
     const targetProgress = 100;
     const duration = 1500; // 1.5秒
@@ -404,7 +428,23 @@ Page({
    */
   fetchTaskStatus: async function(executionId) {
     try {
-      return await getTaskStatusApi(executionId);
+      const response = await getTaskStatusApi(executionId);
+
+      // 检查是否为完成状态
+      if (response && (response.is_completed || response.status === 'completed' || response.progress >= 100)) {
+        // 确保进度为100
+        response.progress = 100;
+        response.is_completed = true;
+
+        // 立即触发数据格式化逻辑
+        this.processCompletedResults(response);
+      } else if (response && response.results && Array.isArray(response.results) && response.results.length > 0) {
+        // 即使任务未完成，但如果已有结果数据，也可以进行部分处理
+        // 这有助于在长时间运行的任务中提供更好的用户体验
+        console.log('检测到部分结果数据，但任务尚未完成');
+      }
+
+      return response;
     } catch (error) {
       console.error('获取任务状态失败:', error);
       throw error; // 重新抛出错误，让调用方处理
@@ -416,10 +456,39 @@ Page({
    */
   processCompletedResults: function(statusData) {
     try {
-      // 标准化数据结构
-      const normalizedResults = this.normalizeResults(statusData.results || [], this.brandList);
+      // 数据防御：检查 results 是否存在且为数组
+      const rawResults = statusData.results || [];
 
-      // 转换数据为矩阵格式
+      // 如果 results 长度为 0，显示友好提示
+      if (!Array.isArray(rawResults) || rawResults.length === 0) {
+        console.warn('收到空的 results 数据，显示友好提示');
+
+        // 显示友好提示
+        this.setData({
+          progressText: '正在深度聚合模型数据...',
+          isLoading: false,
+          showSkeleton: false
+        });
+
+        // 继续显示加载状态，但给出用户友好的提示
+        setTimeout(() => {
+          // 如果长时间后仍然没有数据，显示模拟数据
+          if (!this.data.matrixData && (!this.data.gridData || this.data.gridData.rows.length === 0)) {
+            wx.showToast({
+              title: '正在聚合数据，请稍候...',
+              icon: 'none',
+              duration: 2000
+            });
+          }
+        }, 5000); // 5秒后如果还没有数据则提示
+
+        return; // 退出处理，不继续执行
+      }
+
+      // 标准化数据结构
+      const normalizedResults = this.normalizeResults(rawResults, this.brandList);
+
+      // 显式执行 transformToMatrix 转换（解析逻辑同步）
       const matrixData = this.transformToMatrix(normalizedResults, this.brandList);
 
       // 获取问题列表
