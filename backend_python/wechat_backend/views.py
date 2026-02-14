@@ -356,7 +356,18 @@ def perform_brand_test():
 
             api_logger.info(f"Starting async brand test '{execution_id}' for brands: {brand_list} (User: {user_id}, Level: {user_level.value}) - Total test cases: {len(all_test_cases)}")
 
-            executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)  # Reduced from 10 to 3 to prevent API timeouts
+            # 【修复】检测是否包含豆包平台，如果是则使用顺序执行避免超时
+            has_doubao = any('doubao' in model.get('name', '').lower() or '豆包' in model.get('name', '') 
+                           for model in selected_models)
+            
+            if has_doubao:
+                # 豆包API响应慢，使用顺序执行更稳定
+                executor = TestExecutor(max_workers=1, strategy=ExecutionStrategy.SEQUENTIAL)
+                api_logger.info(f"[ExecutionStrategy] Detected Doubao, using SEQUENTIAL execution for stability")
+            else:
+                # 其他平台使用并发执行
+                executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)
+                api_logger.info(f"[ExecutionStrategy] Using CONCURRENT execution with max_workers=3")
 
             def progress_callback(exec_id, progress):
                 if execution_id in execution_store:
@@ -1729,7 +1740,16 @@ def submit_brand_test():
 
             api_logger.info(f"Starting async brand test '{task_id}' for brands: {brand_list} - Total test cases: {len(all_test_cases)}")
 
-            executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)
+            # 【修复】检测是否包含豆包平台，如果是则使用顺序执行避免超时
+            has_doubao = any('doubao' in model.get('name', '').lower() or '豆包' in model.get('name', '') 
+                           for model in selected_models)
+            
+            if has_doubao:
+                executor = TestExecutor(max_workers=1, strategy=ExecutionStrategy.SEQUENTIAL)
+                api_logger.info(f"[ExecutionStrategy] Detected Doubao, using SEQUENTIAL execution for stability")
+            else:
+                executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)
+                api_logger.info(f"[ExecutionStrategy] Using CONCURRENT execution with max_workers=3")
 
             def progress_callback(exec_id, progress):
                 # 计算进度百分比

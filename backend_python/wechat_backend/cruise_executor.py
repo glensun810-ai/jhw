@@ -44,7 +44,14 @@ def run_diagnostic_task(
             ]
 
         # 创建测试执行器
-        executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)
+        # 【修复】检测是否包含豆包平台，如果是则使用顺序执行避免超时
+        has_doubao = any('doubao' in m.lower() or '豆包' in m for m in ai_models)
+        if has_doubao:
+            executor = TestExecutor(max_workers=1, strategy=ExecutionStrategy.SEQUENTIAL)
+            logger.info(f"[ExecutionStrategy] Detected Doubao in cruise task, using SEQUENTIAL execution")
+        else:
+            executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)
+            logger.info(f"[ExecutionStrategy] Using CONCURRENT execution for cruise task")
 
         # 创建测试用例
         test_case_generator = TestCaseGenerator()
