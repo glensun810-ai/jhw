@@ -32,7 +32,7 @@ class TestTask:
     ai_model: str
     question: str
     priority: int = 0
-    timeout: int = 30
+    timeout: int = 90  # 增加默认超时到90秒，适配豆包等慢速API
     max_retries: int = 3
     metadata: Dict[str, Any] = None
 
@@ -141,6 +141,8 @@ class TestScheduler:
         api_logger.debug(f"Executing task {task.id} for model {task.ai_model}")
 
         last_error = "Max retries reached"
+        platform_name = None
+        actual_model_id = None
 
         for attempt in range(task.max_retries):
             try:
@@ -162,6 +164,32 @@ class TestScheduler:
 
                 # Log response time for monitoring
                 api_logger.info(f"Task {task.id} for model {task.ai_model} completed in {latency:.2f}s")
+
+                # 【新增】记录AI响应到日志（所有平台通用）
+                try:
+                    from utils.ai_response_logger_v2 import log_ai_response
+                    log_ai_response(
+                        question=task.question,
+                        response=ai_response.content if ai_response.success else '',
+                        platform=task.ai_model,  # 使用显示名称
+                        model=actual_model_id or platform_name,  # 使用实际模型ID
+                        brand=task.brand_name,
+                        latency_ms=round(latency * 1000),
+                        tokens_used=getattr(ai_response, 'tokens_used', None),
+                        success=ai_response.success,
+                        error_message=ai_response.error_message if not ai_response.success else None,
+                        metadata={
+                            'source': 'main_system_scheduler',
+                            'task_id': task.id,
+                            'attempt': attempt + 1,
+                            'platform_name': platform_name,
+                            'max_retries': task.max_retries
+                        }
+                    )
+                    api_logger.info(f"[AIResponseLogger] Task {task.id} response logged successfully")
+                except Exception as log_error:
+                    # 记录失败不应影响主流程
+                    api_logger.warning(f"[AIResponseLogger] Failed to log task {task.id}: {log_error}")
 
                 if ai_response.success:
                     api_logger.info(f"Task {task.id} completed successfully on attempt {attempt + 1}")
@@ -186,6 +214,28 @@ class TestScheduler:
             time.sleep(2 ** attempt) # Exponential backoff
 
         api_logger.error(f"All {task.max_retries} attempts failed for task {task.id}. Last error: {last_error}")
+        
+        # 【新增】记录失败的调用
+        try:
+            from utils.ai_response_logger_v2 import log_ai_response
+            log_ai_response(
+                question=task.question,
+                response='',
+                platform=task.ai_model,
+                model=actual_model_id or platform_name or 'unknown',
+                brand=task.brand_name,
+                success=False,
+                error_message=last_error,
+                metadata={
+                    'source': 'main_system_scheduler',
+                    'task_id': task.id,
+                    'failed_after': task.max_retries,
+                    'platform_name': platform_name
+                }
+            )
+        except Exception:
+            pass  # 忽略记录失败的错误
+        
         return {
             'task_id': task.id,
             'success': False,
@@ -200,24 +250,29 @@ class TestScheduler:
     def _get_actual_model_id(self, display_model_name: str, platform_name: str) -> str:
         """Maps display model name to actual model ID for the platform."""
         # Map display names to actual model IDs
+        # 优先从环境变量读取，确保使用正确的模型ID
         model_id_map = {
-            'doubao': os.getenv('DOUBAO_MODEL_ID', 'Doubao-pro'),  # Use configured model ID
-            'deepseek': 'deepseek-chat',
-            'qwen': 'qwen-turbo',  # or whatever the correct model ID is
-            'wenxin': 'ernie-bot-4.5',  # or whatever the correct model ID is
-            'zhipu': 'glm-4',  # or whatever the correct model ID is
-            'openai': 'gpt-3.5-turbo',  # or whatever the correct model ID is
-            'anthropic': 'claude-3-haiku-20240307',  # or whatever the correct model ID is
-            'google': 'gemini-pro',  # or whatever the correct model ID is
+            'doubao': os.getenv('DOUBAO_MODEL_ID') or 'ep-20260212000000-gd5tq',  # 必须配置正确的模型ID
+            'deepseek': os.getenv('DEEPSEEK_MODEL_ID', 'deepseek-chat'),
+            'qwen': os.getenv('QWEN_MODEL_ID', 'qwen-turbo'),
+            'wenxin': os.getenv('WENXIN_MODEL_ID', 'ernie-bot-4.5'),
+            'zhipu': os.getenv('ZHIPU_MODEL_ID', 'glm-4'),
+            'openai': os.getenv('OPENAI_MODEL_ID', 'gpt-3.5-turbo'),
+            'anthropic': os.getenv('ANTHROPIC_MODEL_ID', 'claude-3-haiku-20240307'),
+            'google': os.getenv('GOOGLE_MODEL_ID', 'gemini-pro'),
         }
 
-        return model_id_map.get(platform_name, display_model_name)
+        actual_model_id = model_id_map.get(platform_name, display_model_name)
+        api_logger.info(f"[ModelMapping] {display_model_name} ({platform_name}) -> {actual_model_id}")
+        return actual_model_id
 
     def _execute_single_task(self, task: TestTask) -> Dict[str, Any]:
         """Executes a single test task with retry mechanism using real AI clients."""
         api_logger.debug(f"Executing task {task.id} for model {task.ai_model}")
 
         last_error = "Max retries reached"
+        platform_name = None
+        actual_model_id = None
 
         for attempt in range(task.max_retries):
             try:
@@ -233,18 +288,44 @@ class TestScheduler:
                 ai_client = AIAdapterFactory.create(platform_name, config.api_key, actual_model_id)
 
                 # Use synchronous send_prompt method instead of async query
+                start_time = time.time()
                 ai_response = ai_client.send_prompt(task.question)
+                latency = time.time() - start_time
+
+                # 【新增】记录AI响应到日志（所有平台通用）
+                try:
+                    from utils.ai_response_logger_v2 import log_ai_response
+                    log_ai_response(
+                        question=task.question,
+                        response=ai_response.content if ai_response.success else '',
+                        platform=task.ai_model,
+                        model=actual_model_id or platform_name,
+                        brand=task.brand_name,
+                        latency_ms=round(latency * 1000),
+                        tokens_used=getattr(ai_response, 'tokens_used', None),
+                        success=ai_response.success,
+                        error_message=ai_response.error_message if not ai_response.success else None,
+                        metadata={
+                            'source': 'main_system_sequential',
+                            'task_id': task.id,
+                            'attempt': attempt + 1,
+                            'platform_name': platform_name
+                        }
+                    )
+                except Exception as log_error:
+                    api_logger.warning(f"[AIResponseLogger] Failed to log task {task.id}: {log_error}")
 
                 if ai_response.success:
                     api_logger.info(f"Task {task.id} completed successfully on attempt {attempt + 1}")
                     return {
                         'task_id': task.id,
                         'success': True,
-                        'result': ai_response.to_dict(),  # AIResponse has to_dict method
+                        'result': ai_response.to_dict(),
                         'attempt': attempt + 1,
                         'model': task.ai_model,
                         'question': task.question,
-                        'brand_name': task.brand_name
+                        'brand_name': task.brand_name,
+                        'latency': latency
                     }
                 else:
                     last_error = ai_response.error_message
@@ -257,6 +338,27 @@ class TestScheduler:
             time.sleep(2 ** attempt) # Exponential backoff
 
         api_logger.error(f"All {task.max_retries} attempts failed for task {task.id}. Last error: {last_error}")
+        
+        # 【新增】记录失败的调用
+        try:
+            from utils.ai_response_logger_v2 import log_ai_response
+            log_ai_response(
+                question=task.question,
+                response='',
+                platform=task.ai_model,
+                model=actual_model_id or platform_name or 'unknown',
+                brand=task.brand_name,
+                success=False,
+                error_message=last_error,
+                metadata={
+                    'source': 'main_system_sequential',
+                    'task_id': task.id,
+                    'failed_after': task.max_retries
+                }
+            )
+        except Exception:
+            pass
+        
         return {
             'task_id': task.id,
             'success': False,
