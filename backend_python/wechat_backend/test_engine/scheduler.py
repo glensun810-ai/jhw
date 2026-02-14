@@ -158,8 +158,15 @@ class TestScheduler:
                 ai_client = AIAdapterFactory.create(platform_name, config.api_key, actual_model_id)
 
                 # Use synchronous send_prompt method instead of async query
+                # 【修复】根据平台类型设置合适的超时时间，豆包需要更长的超时
+                if platform_name == 'doubao':
+                    api_timeout = 90  # 豆包API响应慢，使用90秒超时
+                    api_logger.info(f"[TimeoutConfig] Task {task.id} using 90s timeout for Doubao API call")
+                else:
+                    api_timeout = task.timeout  # 其他平台使用任务配置的超时
+                
                 start_time = time.time()
-                ai_response = ai_client.send_prompt(task.question)
+                ai_response = ai_client.send_prompt(task.question, timeout=api_timeout)
                 latency = time.time() - start_time
 
                 # Log response time for monitoring
@@ -288,8 +295,15 @@ class TestScheduler:
                 ai_client = AIAdapterFactory.create(platform_name, config.api_key, actual_model_id)
 
                 # Use synchronous send_prompt method instead of async query
+                # 【修复】根据平台类型设置合适的超时时间，豆包需要更长的超时
+                if platform_name == 'doubao':
+                    api_timeout = 90  # 豆包API响应慢，使用90秒超时
+                    api_logger.info(f"[TimeoutConfig] Task {task.id} using 90s timeout for Doubao API call (sequential)")
+                else:
+                    api_timeout = task.timeout  # 其他平台使用任务配置的超时
+                
                 start_time = time.time()
-                ai_response = ai_client.send_prompt(task.question)
+                ai_response = ai_client.send_prompt(task.question, timeout=api_timeout)
                 latency = time.time() - start_time
 
                 # 【新增】记录AI响应到日志（所有平台通用）

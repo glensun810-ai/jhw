@@ -104,23 +104,38 @@ def get_access_token():
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Enable CORS to allow requests from WeChat Mini Program
-CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
+# Enable CORS BEFORE registering blueprints
+# 配置支持微信小程序的跨域请求，包括OPTIONS预检请求
+CORS(app, 
+     supports_credentials=True, 
+     resources={
+         r"/api/*": {
+             "origins": "*",
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization", "X-WX-OpenID", "X-OpenID", "X-Wechat-OpenID", "X-Requested-With"],
+             "expose_headers": ["Content-Type", "X-Request-ID"],
+             "supports_credentials": True
+         }
+     })
+
+# Register the blueprint AFTER CORS configuration
+from wechat_backend.views import wechat_bp
+app.register_blueprint(wechat_bp)
 
 # Add security headers
 @app.after_request
 def after_request(response):
     """Add security headers to all responses"""
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'"
+    # 不覆盖CORS已经设置的头部
+    if 'X-Content-Type-Options' not in response.headers:
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+    if 'X-Frame-Options' not in response.headers:
+        response.headers['X-Frame-Options'] = 'DENY'
+    if 'X-XSS-Protection' not in response.headers:
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+    # 移除可能导致API请求问题的CSP头部
+    # response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'"
     return response
-
-# Register the blueprint
-from wechat_backend.views import wechat_bp
-app.register_blueprint(wechat_bp)
 
 # Start monitoring system
 from wechat_backend.monitoring.monitoring_config import initialize_monitoring
