@@ -1,0 +1,158 @@
+/* components/CompetitorList/CompetitorList.wxss */
+.competitor-list {
+  background-color: #1A202C;
+  border: 1rpx solid #303030;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 添加海军蓝渐变边框效果 */
+.competitor-list::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4rpx;
+  background: linear-gradient(90deg, #1A237E, #00E5FF);
+  z-index: 1;
+}
+
+.competitor-list-wrapper,
+.competitor-list-header,
+.competitor-list-content,
+.competitor-list-keywords-layout,
+.competitor-list-placeholder-container {
+  position: relative;
+  z-index: 2;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.list-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #e8e8e8;
+}
+
+.keywords-layout {
+  display: flex;
+  gap: 20rpx;
+}
+
+.keywords-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.column-header {
+  margin-bottom: 15rpx;
+}
+
+.column-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #00E5FF; /* 使用科技青色 */
+}
+
+.keyword-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15rpx;
+  min-height: 100rpx;
+  padding: 20rpx;
+  background-color: #262626;
+  border-radius: 12rpx;
+}
+
+.keyword-tag {
+  font-size: 24rpx;
+  padding: 10rpx 16rpx;
+  border-radius: 20rpx;
+  white-space: nowrap;
+  font-weight: bold;
+  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
+}
+
+.brand-keyword {
+  background: linear-gradient(135deg, #1A237E 0%, #00E5FF 100%); /* 渐变背景 */
+  color: #FFFFFF; /* 白色文字 */
+  border: 1rpx solid #00E5FF;
+}
+
+.competitor-keyword {
+  background-color: rgba(255, 107, 107, 0.2);
+  color: #FF6B6B;
+  border: 1rpx solid #FF6B6B;
+}
+
+.placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00E5FF; /* 使用科技青色 */
+  font-size: 24rpx;
+  font-weight: bold;
+  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
+}
+
+.placeholder-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200rpx;
+  width: 100%;
+}
+
+.placeholder-text {
+  font-size: 28rpx;
+  color: #00E5FF; /* 使用科技青色 */
+  font-weight: bold;
+  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.loading-item {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+  padding: 20rpx;
+  background-color: #262626;
+  border-radius: 12rpx;
+}
+
+.loading-line {
+  height: 30rpx;
+  background: linear-gradient(90deg, #1A237E 25%, #00E5FF 50%, #1A237E 75%); /* 渐变背景 */
+  background-size: 200% 100%;
+  border-radius: 4rpx;
+  animation: loading 1.5s infinite;
+}
+
+.loading-line.short {
+  width: 70%;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

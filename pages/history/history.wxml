@@ -1,0 +1,50 @@
+<view class="container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">历史诊断报告</text>
+    <text class="page-subtitle">回顾并追踪您的品牌AI认知演变</text>
+  </view>
+
+  <!-- 历史记录列表 -->
+  <view class="history-list" wx:if="{{historyList.length > 0}}">
+    <view class="history-card" wx:for="{{historyList}}" wx:key="id" bindtap="viewDetail" data-id="{{item.id}}">
+      <view class="card-left">
+        <text class="brand-name">{{item.brand_name}}</text>
+        <text class="test-time">{{item.created_at}}</text>
+      </view>
+      <view class="card-right">
+        <view class="score-display">
+          <text class="score-num {{item.overall_score >= 80 ? 'text-green' : (item.overall_score >= 60 ? 'text-orange' : 'text-red')}}">{{item.overall_score}}</text>
+          <text class="score-label">分</text>
+        </view>
+        <view class="arrow-right">›</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 快速访问最近结果 -->
+  <view class="quick-access-section" wx:if="{{historyList.length === 0 && !isLoading}}">
+    <view class="recent-result-card" bindtap="viewLatestResult">
+      <view class="card-content">
+        <text class="card-title">最近的诊断结果</text>
+        <text class="card-desc">快速访问您最近的一次品牌AI认知诊断</text>
+      </view>
+      <view class="arrow-right">›</view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{historyList.length === 0 && !isLoading}}">
+    <text class="empty-icon">🗂️</text>
+    <text class="empty-text">暂无历史报告</text>
+    <button class="empty-btn" bindtap="goHome">立即进行一次诊断</button>
+    <button class="empty-btn secondary-btn" bindtap="viewSavedResults">查看已保存结果</button>
+    <button class="empty-btn secondary-btn" bindtap="viewPublicHistory">查看公共历史</button>
+    <button class="empty-btn secondary-btn" bindtap="viewPersonalHistory">查看个人历史</button>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <text>正在加载...</text>
+  </view>
+</view>

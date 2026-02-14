@@ -1,0 +1,100 @@
+<view class="container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">已保存的搜索结果</text>
+    <view class="search-bar">
+      <input class="search-input" placeholder="搜索品牌或标签..." value="{{searchKeyword}}" bindinput="onSearchInput" />
+      <button class="search-btn" bindtap="onSearch">搜索</button>
+    </view>
+  </view>
+
+  <!-- 筛选工具栏 -->
+  <view class="filter-bar">
+    <view class="filter-item" bindtap="showTimeFilter">
+      <text>{{timeRangeText}}</text>
+      <text class="arrow">▼</text>
+    </view>
+    <view class="filter-item" bindtap="showCategoryFilter">
+      <text>{{categoryFilterText}}</text>
+      <text class="arrow">▼</text>
+    </view>
+    <view class="filter-item" bindtap="sortByChange">
+      <text>{{sortByText}}</text>
+      <text class="arrow">▼</text>
+    </view>
+  </view>
+
+  <!-- 结果列表 -->
+  <view class="results-list">
+    <view class="result-card" wx:for="{{filteredResults}}" wx:key="id">
+      <view class="card-header">
+        <text class="brand-name">🏷️ {{item.brandName}}</text>
+        <text class="save-time">{{formatDate(item.timestamp)}}</text>
+      </view>
+      <view class="card-content">
+        <view class="score-summary">
+          <text class="score-item">📊 综合: {{item.results.overallScore || 0}}分</text>
+          <text class="score-item">🏆 权威度: {{item.results.overallAuthority || 0}}</text>
+        </view>
+        <view class="tags-container">
+          <text class="tag" wx:for="{{item.tags}}" wx:key="tag" wx:if="{{item}}">{{item}}</text>
+        </view>
+        <view class="notes" wx:if="{{item.notes}}">📝 {{item.notes}}</view>
+      </view>
+      <view class="card-actions">
+        <button class="action-btn view-btn" bindtap="viewResult" data-id="{{item.id}}">查看</button>
+        <button class="action-btn edit-btn" bindtap="editResult" data-id="{{item.id}}">编辑</button>
+        <button class="action-btn delete-btn" bindtap="deleteResult" data-id="{{item.id}}">删除</button>
+      </view>
+    </view>
+
+    <view class="empty-state" wx:if="{{filteredResults.length === 0}}">
+      <text>暂无保存的搜索结果</text>
+    </view>
+  </view>
+
+  <!-- 时间筛选弹窗 -->
+  <view class="modal-overlay" wx:if="{{showTimeFilterModal}}">
+    <view class="modal-content">
+      <view class="modal-header">
+        <text>选择时间范围</text>
+        <text class="close-btn" bindtap="hideTimeFilter">✕</text>
+      </view>
+      <view class="modal-body">
+        <view class="time-option" wx:for="{{timeOptions}}" wx:key="value" bindtap="selectTimeOption" data-value="{{item.value}}">
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 分类筛选弹窗 -->
+  <view class="modal-overlay" wx:if="{{showCategoryFilterModal}}">
+    <view class="modal-content">
+      <view class="modal-header">
+        <text>选择分类</text>
+        <text class="close-btn" bindtap="hideCategoryFilter">✕</text>
+      </view>
+      <view class="modal-body">
+        <view class="category-option" wx:for="{{allCategories}}" wx:key="category" bindtap="selectCategory" data-category="{{item}}">
+          <text>{{item}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 排序弹窗 -->
+  <view class="modal-overlay" wx:if="{{showSortByModal}}">
+    <view class="modal-content">
+      <view class="modal-header">
+        <text>排序方式</text>
+        <text class="close-btn" bindtap="hideSortByModal">✕</text>
+      </view>
+      <view class="modal-body">
+        <view class="sort-option" wx:for="{{sortOptions}}" wx:key="value" bindtap="selectSortOption" data-value="{{item.value}}">
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

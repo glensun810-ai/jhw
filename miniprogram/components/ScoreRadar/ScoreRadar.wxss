@@ -1,0 +1,56 @@
+/* components/ScoreRadar/ScoreRadar.wxss */
+.score-radar {
+  width: 100%;
+  background-color: #1A202C;
+  border: 1rpx solid #303030;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 添加海军蓝渐变边框效果 */
+.score-radar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4rpx;
+  background: linear-gradient(90deg, #1A237E, #00E5FF);
+  z-index: 1;
+}
+
+.score-radar-wrapper,
+.score-radar-container,
+.score-radar-loading-container,
+.score-radar-placeholder-container {
+  position: relative;
+  z-index: 2;
+}
+
+.radar-container {
+  width: 100%;
+  height: 500rpx;
+}
+
+.radar-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.loading-container, .placeholder-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 500rpx;
+  width: 100%;
+}
+
+.loading-text, .placeholder-text {
+  font-size: 28rpx;
+  color: #00E5FF; /* 使用科技青色 */
+  font-weight: bold;
+  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
+}

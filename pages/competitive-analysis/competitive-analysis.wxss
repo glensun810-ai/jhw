@@ -1,0 +1,315 @@
+.container {
+  padding: 20rpx;
+  background-color: #f7f8fa;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.title {
+  text-align: center;
+  font-size: 36rpx;
+  font-weight: bold;
+  margin: 20rpx 0 40rpx;
+  color: #333;
+}
+
+.section {
+  background: white;
+  margin-bottom: 24rpx;
+  padding: 30rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.section.transparent-bg {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 30rpx;
+  color: #333;
+  position: relative;
+  padding-left: 20rpx;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6rpx;
+  bottom: 6rpx;
+  width: 8rpx;
+  background-color: #07c160;
+  border-radius: 4rpx;
+}
+
+.input-group {
+  margin-bottom: 20rpx;
+}
+
+.label {
+  display: block;
+  font-size: 28rpx;
+  margin-bottom: 10rpx;
+  color: #333;
+}
+
+.input {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+/* 竞争对手输入样式 */
+.competitor-input-container {
+  margin-top: 20rpx;
+}
+
+.competitor-input-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15rpx;
+}
+
+.competitor-input {
+  flex: 1;
+  height: 60rpx;
+  line-height: 60rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx 0 0 8rpx;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+.add-btn {
+  width: 80rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  background-color: #07c160;
+  color: white;
+  border-radius: 0 8rpx 8rpx 0;
+  font-size: 32rpx;
+  margin-left: -1rpx;
+}
+
+.competitor-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+
+.competitor-tag {
+  display: flex;
+  align-items: center;
+  background-color: #e6f4ff;
+  color: #1989fa;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  border: 1rpx solid #1989fa;
+}
+
+.remove-icon {
+  margin-left: 8rpx;
+  color: #fa5151;
+}
+
+/* AI模型选择样式 */
+.ai-category {
+  margin-bottom: 20rpx;
+}
+
+.category-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+  padding-left: 10rpx;
+  border-left: 4rpx solid #07c160;
+}
+
+.checkbox-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkbox-item {
+  margin-bottom: 10rpx;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  font-size: 28rpx;
+}
+
+.btn-primary {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #07c160;
+  color: white;
+  border-radius: 44rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  box-shadow: 0 6rpx 16rpx rgba(7, 193, 96, 0.3);
+}
+
+.btn-primary:active {
+  background-color: #06ad56;
+  transform: translateY(2rpx);
+}
+
+.progress-container {
+  display: flex;
+  align-items: center;
+  margin: 20rpx 0;
+}
+
+.progress-text {
+  margin-left: 20rpx;
+  font-size: 28rpx;
+  color: #666;
+}
+
+.analyzing-info {
+  text-align: center;
+  font-size: 28rpx;
+  color: #666;
+  margin-top: 20rpx;
+}
+
+/* 竞争分析样式 */
+.competitive-section {
+  margin-bottom: 30rpx;
+}
+
+.competitive-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-bottom: 10rpx;
+  border-bottom: 2rpx solid #eee;
+}
+
+.market-share-container,
+.recommendation-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.market-share-item,
+.recommendation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.share-brand,
+.rec-brand {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+  width: 120rpx;
+  flex-shrink: 0;
+}
+
+.share-progress,
+.rec-weight {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  margin-left: 20rpx;
+}
+
+.share-progress progress,
+.rec-weight progress {
+  flex: 1;
+  height: 24rpx;
+  border-radius: 12rpx;
+}
+
+.share-percent,
+.rec-percent {
+  font-size: 24rpx;
+  color: #666;
+  margin-left: 10rpx;
+  width: 60rpx;
+  text-align: right;
+}
+
+.insights-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.insight-item {
+  padding: 16rpx;
+  background-color: #f0f9ff;
+  border-radius: 8rpx;
+  border-left: 4rpx solid #1890ff;
+}
+
+.insight-text {
+  font-size: 26rpx;
+  color: #333;
+  line-height: 1.5;
+}
+
+.intelligence-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.intelligence-item {
+  padding: 16rpx;
+  background-color: #f9f0ff;
+  border-radius: 8rpx;
+  border: 1rpx solid #d3adf7;
+}
+
+.intel-brand {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #722ed1;
+  margin-bottom: 12rpx;
+}
+
+.intel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.intel-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.intel-label {
+  font-size: 24rpx;
+  color: #666;
+  font-weight: bold;
+  margin-bottom: 4rpx;
+}
+
+.intel-value {
+  font-size: 26rpx;
+  color: #333;
+  line-height: 1.4;
+}

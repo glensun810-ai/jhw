@@ -1,0 +1,61 @@
+/* components/AnalysisCharts/AnalysisCharts.wxss */
+.analysis-charts {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 添加海军蓝渐变边框效果 */
+.analysis-charts::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4rpx;
+  background: linear-gradient(90deg, #1A237E, #00E5FF);
+  z-index: 1;
+}
+
+.analysis-charts-wrapper,
+.analysis-charts-content,
+.analysis-charts-chart-section,
+.analysis-charts-radar-section,
+.analysis-charts-trend-section {
+  position: relative;
+  z-index: 2;
+}
+
+.chart-section {
+  background-color: #1A202C;
+  border: 1rpx solid #303030;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+  color: #e8e8e8;
+}
+
+.navy-blue { color: #1A237E; }
+.cyber-cyan { color: #00E5FF; }
+
+.radar-container, .trend-container {
+  width: 100%;
+  height: 500rpx;
+}
+
+.radar-canvas, .trend-canvas {
+  width: 100%;
+  height: 100%;
+}

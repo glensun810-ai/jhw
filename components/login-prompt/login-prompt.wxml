@@ -1,0 +1,9 @@
+<!-- components/login-prompt/login-prompt.wxml -->
+<view class="login-prompt-container" wx:if="{{show && !isLoggedIn}}">
+  <view class="login-prompt">
+    <text class="prompt-text">{{promptText}}</text>
+    <button class="login-btn" bindtap="goToLogin">
+      <text>{{buttonText}}</text>
+    </button>
+  </view>
+</view>

@@ -1,0 +1,75 @@
+<view class="container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">历史记录详情</text>
+    <text class="page-subtitle">{{brandName}} - {{formatDate(timestamp)}}</text>
+  </view>
+
+  <!-- 总体评分 -->
+  <view class="overall-score-section">
+    <view class="score-card">
+      <text class="score-number">{{overallScore}}</text>
+      <text class="score-grade">{{overallGrade}}</text>
+      <text class="score-desc">{{overallSummary}}</text>
+    </view>
+  </view>
+
+  <!-- 评分维度 -->
+  <view class="score-dimensions-section">
+    <view class="dimension-item">
+      <text class="dimension-label">权威度</text>
+      <view class="dimension-bar">
+        <view class="bar-fill" style="width: {{overallAuthority}}%;"></view>
+      </view>
+      <text class="dimension-value">{{overallAuthority}}分</text>
+    </view>
+    <view class="dimension-item">
+      <text class="dimension-label">可见度</text>
+      <view class="dimension-bar">
+        <view class="bar-fill" style="width: {{overallVisibility}}%;"></view>
+      </view>
+      <text class="dimension-value">{{overallVisibility}}分</text>
+    </view>
+    <view class="dimension-item">
+      <text class="dimension-label">纯净度</text>
+      <view class="dimension-bar">
+        <view class="bar-fill" style="width: {{overallPurity}}%;"></view>
+      </view>
+      <text class="dimension-value">{{overallPurity}}分</text>
+    </view>
+    <view class="dimension-item">
+      <text class="dimension-label">一致性</text>
+      <view class="dimension-bar">
+        <view class="bar-fill" style="width: {{overallConsistency}}%;"></view>
+      </view>
+      <text class="dimension-value">{{overallConsistency}}分</text>
+    </view>
+  </view>
+
+  <!-- 详细结果列表 -->
+  <view class="detailed-results-section">
+    <text class="section-title">详细测试结果</text>
+    <view class="result-item" wx:for="{{detailedResults}}" wx:key="index">
+      <view class="result-header">
+        <text class="result-brand">品牌: {{item.brand}}</text>
+        <text class="result-model">平台: {{item.aiModel}}</text>
+      </view>
+      <view class="result-question">问题: {{item.question}}</view>
+      <view class="result-response">回答: {{item.response}}</view>
+      <view class="result-scores">
+        <text class="score-item">权威度: {{item.authority_score}}</text>
+        <text class="score-item">可见度: {{item.visibility_score}}</text>
+        <text class="score-item">纯净度: {{item.purity_score}}</text>
+        <text class="score-item">一致性: {{item.consistency_score}}</text>
+      </view>
+      <view class="result-score">总分: {{item.score}}</view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-actions">
+    <button class="action-btn home-btn" bindtap="goHome">返回首页</button>
+    <button class="action-btn history-btn" bindtap="viewHistory">查看历史</button>
+    <button class="action-btn report-btn" bindtap="generateReport">生成报告</button>
+  </view>
+</view>

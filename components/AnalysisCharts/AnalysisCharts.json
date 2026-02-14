@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "ec-canvas": "../ec-canvas/ec-canvas",
+    "skeleton": "../Skeleton/Skeleton"
+  },
+  "styleIsolation": "apply-shared"
+}

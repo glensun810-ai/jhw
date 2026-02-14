@@ -1,0 +1,37 @@
+<!-- components/SourceCard/SourceCard.wxml -->
+<view class="source-card-container">
+  <view class="list-header">
+    <text class="list-title cyber-cyan">{{title}}</text>
+    <text class="list-count" wx:if="{{sources.length > 0}}">({{sources.length}})</text>
+  </view>
+
+  <skeleton type="paragraph" rows="5" loading="{{loading}}">
+    <!-- 信源卡片列表 -->
+    <view class="source-cards" wx:if="{{!loading && sources.length > 0}}">
+      <view
+        class="source-card"
+        wx:for="{{sources}}"
+        wx:key="index"
+        data-index="{{index}}"
+        bindtap="onSourceCardTap">
+        <view class="card-content">
+          <view class="card-icon">
+            <!-- 域名图标 -->
+            <text class="domain-initial">{{getDomain(item.url).substring(0,1).toUpperCase()}}</text>
+          </view>
+          <view class="card-info">
+            <text class="card-title">{{item.title || item.name || '未知标题'}}</text>
+            <text class="card-domain">{{getDomain(item.url)}}</text>
+            <text class="card-url">{{item.url}}</text>
+          </view>
+          <view class="card-arrow">›</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 防御性渲染：当数据为空时显示占位符 -->
+    <view class="placeholder-container" wx:if="{{!loading && (!sources || sources.length === 0)}}">
+      <text class="placeholder-text">AI 未检索到明确的外部引用</text>
+    </view>
+  </skeleton>
+</view>

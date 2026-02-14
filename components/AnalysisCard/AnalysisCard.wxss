@@ -1,0 +1,112 @@
+/* components/AnalysisCard/AnalysisCard.wxss */
+.analysis-card {
+  background-color: #1A202C;
+  border: 1rpx solid #303030;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(20px); /* 玻璃拟态 */
+  background: rgba(255, 255, 255, 0.05); /* 玻璃拟态背景 */
+}
+
+/* 添加海军蓝渐变背景效果 */
+.analysis-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4rpx;
+  background: linear-gradient(90deg, #1A237E, #00E5FF);
+  z-index: 1;
+}
+
+.analysis-card-wrapper,
+.analysis-card-header,
+.analysis-card-content,
+.analysis-data-content {
+  position: relative;
+  z-index: 2;
+}
+
+.card-header {
+  margin-bottom: 20rpx;
+}
+
+.card-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #e8e8e8;
+  margin-bottom: 8rpx;
+}
+
+.card-subtitle {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  display: block;
+}
+
+.status-indicator {
+  margin-bottom: 20rpx;
+}
+
+.status-text {
+  font-size: 26rpx;
+  margin-bottom: 15rpx;
+  display: block;
+}
+
+.progress-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.progress-bar-container {
+  flex: 1;
+  height: 12rpx;
+  background-color: #262626;
+  border-radius: 6rpx;
+  overflow: hidden;
+  margin-right: 20rpx;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #1A237E, #00E5FF);
+  transition: width 0.5s ease;
+}
+
+.progress-text {
+  font-size: 24rpx;
+  color: #00E5FF; /* 使用科技青色 */
+  min-width: 60rpx;
+  text-align: right;
+  font-weight: bold;
+  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
+}
+
+.data-content {
+  min-height: 100rpx;
+}
+
+.placeholder, .loading-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100rpx;
+  background-color: #262626;
+  border-radius: 8rpx;
+}
+
+.placeholder-text, .loading-text {
+  font-size: 26rpx;
+  color: #8c8c8c;
+}
+
+.loading {
+  opacity: 0.7;
+}

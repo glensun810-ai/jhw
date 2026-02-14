@@ -33,6 +33,22 @@ const getCurrentEnv = () => {
 
 const env = getCurrentEnv();
 
+// 获取基础URL覆盖
+const getBaseUrl = () => {
+  // 优先使用本地存储的自定义URL
+  try {
+    const customBaseURL = wx.getStorageSync('custom_base_url');
+    if (customBaseURL && typeof customBaseURL === 'string' && customBaseURL.startsWith('http')) {
+      return customBaseURL;
+    }
+  } catch (e) {
+    console.warn('无法获取自定义API地址:', e);
+  }
+
+  // 否则使用环境配置
+  return env.baseURL;
+};
+
 /**
  * 统一请求方法
  * @param {Object} options - 请求参数
@@ -67,7 +83,7 @@ const request = (options = {}) => {
 
     // 构建请求参数
     const requestParams = {
-      url: url.startsWith('http') ? url : env.baseURL + url, // 支持绝对路径和相对路径
+      url: url.startsWith('http') ? url : getBaseUrl() + url, // 支持绝对路径和相对路径，优先使用自定义URL
       method: method.toUpperCase(),
       data: data,
       header: {

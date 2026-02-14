@@ -1,0 +1,32 @@
+<!-- components/AnalysisCharts/AnalysisCharts.wxml -->
+<view class="analysis-charts analysis-charts-wrapper">
+  <!-- 雷达图区域 -->
+  <view class="chart-section radar-section analysis-charts-radar-section">
+    <text class="chart-title navy-blue">维度雷达图</text>
+    <skeleton type="rect" height="500rpx" loading="{{loading}}">
+      <view class="radar-container analysis-charts-chart-section">
+        <ec-canvas
+          id="radar-chart-canvas"
+          canvas-id="radar-chart-canvas"
+          ec="{{radarEc}}"
+          class="radar-canvas">
+        </ec-canvas>
+      </view>
+    </skeleton>
+  </view>
+
+  <!-- 趋势图区域 -->
+  <view class="chart-section trend-section analysis-charts-trend-section">
+    <text class="chart-title cyber-cyan">趋势分析图</text>
+    <skeleton type="rect" height="500rpx" loading="{{loading}}">
+      <view class="trend-container analysis-charts-chart-section">
+        <ec-canvas
+          id="trend-chart-canvas"
+          canvas-id="trend-chart-canvas"
+          ec="{{trendEc}}"
+          class="trend-canvas">
+        </ec-canvas>
+      </view>
+    </skeleton>
+  </view>
+</view>

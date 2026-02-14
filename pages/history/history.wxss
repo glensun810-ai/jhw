@@ -1,0 +1,169 @@
+/* 全局样式 */
+page {
+  background-color: #121826;
+  color: #e8e8e8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.container {
+  padding: 40rpx;
+}
+
+/* 页面头部 */
+.page-header {
+  text-align: center;
+  margin-bottom: 64rpx;
+}
+
+.page-title {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #fff;
+}
+
+.page-subtitle {
+  font-size: 28rpx;
+  color: #8c8c8c;
+  margin-top: 15rpx;
+}
+
+/* 历史记录列表 */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+.history-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1A202C;
+  border: 1rpx solid #303030;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  transition: background-color 0.3s;
+}
+
+.history-card:active {
+  background-color: #262626;
+}
+
+.card-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #e8e8e8;
+  margin-bottom: 10rpx;
+}
+
+.test-time {
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+.card-right {
+  display: flex;
+  align-items: center;
+}
+
+.score-display {
+  display: flex;
+  align-items: baseline;
+  margin-right: 30rpx;
+}
+
+.score-num {
+  font-size: 48rpx;
+  font-weight: bold;
+}
+
+.score-num.text-green { color: #00F5A0; }
+.score-num.text-orange { color: #FF8C00; }
+.score-num.text-red { color: #ff4d4f; }
+
+.score-label {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  margin-left: 4rpx;
+}
+
+.arrow-right {
+  font-size: 40rpx;
+  color: #8c8c8c;
+}
+
+/* 快速访问区域 */
+.quick-access-section {
+  margin-bottom: 40rpx;
+}
+
+.recent-result-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1A202C;
+  border: 1rpx solid #303030;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  transition: background-color 0.3s;
+}
+
+.recent-result-card:active {
+  background-color: #262626;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #e8e8e8;
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.card-desc {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  display: block;
+}
+
+/* 空状态和加载状态 */
+.empty-state, .loading-state {
+  text-align: center;
+  padding-top: 200rpx;
+  color: #8c8c8c;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+.empty-text {
+  font-size: 30rpx;
+  display: block;
+  margin-bottom: 40rpx;
+}
+
+.empty-btn {
+  background-color: #00F5A0;
+  color: #141414;
+  font-weight: bold;
+  border-radius: 40rpx;
+  padding: 20rpx 40rpx;
+  font-size: 28rpx;
+  margin-bottom: 20rpx;
+}
+.secondary-btn {
+  background-color: #00A9FF;
+  color: #fff;
+}

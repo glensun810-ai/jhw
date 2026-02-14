@@ -1,0 +1,233 @@
+/* components/IntelligenceDrawer/IntelligenceDrawer.wxss */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.drawer-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 80%;
+  background: rgba(13, 17, 23, 0.9); /* 深空黑带透明度 */
+  border-top-left-radius: 32rpx;
+  border-top-right-radius: 32rpx;
+  backdrop-filter: blur(20px); /* 磨砂玻璃效果 */
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx 40rpx 20rpx;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05); /* 玻璃拟态 */
+  backdrop-filter: blur(10px); /* 玻璃拟态模糊 */
+}
+
+.header-content {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-info {
+  flex: 1;
+}
+
+.brand-model-question {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  display: block;
+  margin-bottom: 10rpx;
+  word-break: break-all;
+}
+
+.header-score {
+  display: flex;
+  align-items: baseline;
+}
+
+.score-number {
+  font-size: 64rpx;
+  font-weight: bold;
+  color: #00F2FF; /* 高亮科技青 */
+  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
+}
+
+.score-percent {
+  font-size: 24rpx;
+  color: #8c8c8c;
+  margin-left: 10rpx;
+}
+
+.close-btn {
+  font-size: 40rpx;
+  color: #8c8c8c;
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05); /* 玻璃拟态 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px); /* 玻璃拟态模糊 */
+}
+
+.drawer-content {
+  flex: 1;
+  padding: 30rpx 40rpx;
+  overflow-y: auto;
+}
+
+.summary-section,
+.sources-section,
+.detailed-scores-section {
+  margin-bottom: 40rpx;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #00F2FF; /* 高亮科技青 */
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.summary-content {
+  background: rgba(255, 255, 255, 0.05); /* 玻璃拟态 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  backdrop-filter: blur(10px); /* 玻璃拟态模糊 */
+}
+
+.summary-text {
+  font-size: 26rpx;
+  color: #e8e8e8;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.source-card {
+  background: rgba(255, 255, 255, 0.05); /* 玻璃拟态 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  backdrop-filter: blur(10px); /* 玻璃拟态模糊 */
+}
+
+.source-url {
+  font-size: 24rpx;
+  color: #00F2FF; /* 高亮科技青 */
+  display: block;
+  margin-bottom: 8rpx;
+  word-break: break-all;
+  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
+}
+
+.source-title {
+  font-size: 26rpx;
+  color: #e8e8e8;
+  display: block;
+}
+
+.scores-container {
+  background: rgba(255, 255, 255, 0.05); /* 玻璃拟态 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  backdrop-filter: blur(10px); /* 玻璃拟态模糊 */
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.score-item:last-child {
+  margin-bottom: 0;
+}
+
+.score-label {
+  font-size: 24rpx;
+  color: #e8e8e8;
+  width: 120rpx;
+  flex-shrink: 0;
+}
+
+.score-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.score-fill {
+  height: 20rpx;
+  background: linear-gradient(90deg, #00F2FF, #00C853);
+  border-radius: 10rpx;
+  margin-right: 15rpx;
+}
+
+.score-value {
+  font-size: 24rpx;
+  color: #00F2FF; /* 高亮科技青 */
+  font-weight: bold;
+  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
+}
+
+.no-scores {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 40rpx 0;
+}
+
+.drawer-actions {
+  display: flex;
+  padding: 30rpx 40rpx;
+  gap: 20rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05); /* 玻璃拟态 */
+  backdrop-filter: blur(10px); /* 玻璃拟态模糊 */
+}
+
+.action-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #e8e8e8;
+  border: none;
+}
+
+.copy-btn {
+  background: linear-gradient(135deg, #0D1117 0%, #00F2FF 100%);
+}
+
+.poster-btn {
+  background: linear-gradient(135deg, #0D1117 0%, #00C853 100%);
+}

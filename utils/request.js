@@ -1,73 +1,253 @@
 /**
- * @file utils/request.js
- * @description 核心请求基座 - 严禁 AI 随意修改内部逻辑
+ * 统一请求工具
+ * 符合 REFACTOR_GUIDE.md 规范
  */
 
-// 环境配置：方便未来切换开发/测试/生产环境
+// 环境配置
 const ENV_CONFIG = {
-  develop: 'https://dev.api.yourdomain.com', // 开发环境
-  trial: 'https://test.api.yourdomain.com',   // 体验环境
-  release: 'https://api.yourdomain.com'      // 线上环境
+  develop: {
+    baseURL: 'http://127.0.0.1:5001', // 开发环境 API 地址
+    timeout: 30000 // 30秒超时
+  },
+  trial: {
+    baseURL: 'https://staging.api.yourdomain.com', // 体验版 API 地址
+    timeout: 20000 // 20秒超时
+  },
+  release: {
+    baseURL: 'https://api.yourdomain.com', // 正式环境 API 地址
+    timeout: 15000 // 15秒超时
+  }
 };
 
-// 获取当前小程序环境
-const { miniProgram } = wx.getAccountInfoSync();
-const BASE_URL = ENV_CONFIG[miniProgram.envVersion] || ENV_CONFIG.release;
+// 获取当前环境配置
+const getCurrentEnv = () => {
+  try {
+    const accountInfo = wx.getAccountInfoSync();
+    const envVersion = accountInfo.miniProgram.envVersion || 'release'; // 默认为正式版
+    return ENV_CONFIG[envVersion] || ENV_CONFIG.release;
+  } catch (e) {
+    console.warn('获取环境信息失败，默认使用生产环境配置', e);
+    return ENV_CONFIG.release;
+  }
+};
 
-const request = (options) => {
+const env = getCurrentEnv();
+
+// 获取基础URL覆盖
+const getBaseUrl = () => {
+  // 优先使用本地存储的自定义URL
+  try {
+    const customBaseURL = wx.getStorageSync('custom_base_url');
+    if (customBaseURL && typeof customBaseURL === 'string' && customBaseURL.startsWith('http')) {
+      return customBaseURL;
+    }
+  } catch (e) {
+    console.warn('无法获取自定义API地址:', e);
+  }
+
+  // 否则使用环境配置
+  return env.baseURL;
+};
+
+/**
+ * 统一请求方法
+ * @param {Object} options - 请求参数
+ * @param {string} options.url - 请求地址
+ * @param {string} options.method - 请求方法
+ * @param {Object} options.data - 请求数据
+ * @param {Object} options.header - 请求头
+ * @param {boolean} options.loading - 是否显示loading
+ * @param {number} options.timeout - 超时时间
+ * @param {boolean} options.showError - 是否显示错误提示
+ * @returns {Promise}
+ */
+const request = (options = {}) => {
   return new Promise((resolve, reject) => {
-    // 1. 组装 Header（自动注入 Token）
-    const header = {
-      'content-type': 'application/json',
-      ...options.header
-    };
-    const token = wx.getStorageSync('token');
-    if (token) {
-      header['Authorization'] = `Bearer ${token}`;
+    const {
+      url,
+      method = 'GET',
+      data = {},
+      header = {},
+      loading = true,
+      timeout = env.timeout,
+      showError = true
+    } = options;
+
+    // 显示加载动画
+    if (loading) {
+      wx.showLoading({
+        title: '加载中...',
+        mask: true
+      });
     }
 
-    // 2. 显示加载状态（可选）
-    if (options.loading !== false) {
-      wx.showLoading({ title: '加载中...', mask: true });
-    }
+    // 构建请求参数
+    const requestParams = {
+      url: url.startsWith('http') ? url : getBaseUrl() + url, // 支持绝对路径和相对路径，优先使用自定义URL
+      method: method.toUpperCase(),
+      data: data,
+      header: {
+        'Content-Type': 'application/json',
+        ...header
+      },
+      timeout: timeout || env.timeout,
+      success: (response) => {
+        // 隐藏加载动画
+        if (loading) {
+          wx.hideLoading();
+        }
 
-    wx.request({
-      url: options.url.startsWith('http') ? options.url : `${BASE_URL}${options.url}`,
-      method: options.method || 'GET',
-      data: options.data || {},
-      header: header,
-      timeout: 10000,
-      success: (res) => {
-        // 3. 业务状态码拦截（根据你的后端协议修改）
-        const { statusCode, data } = res;
-
-        if (statusCode >= 200 && statusCode < 300) {
-          // 假设后端返回格式为 { code: 0, data: {...}, msg: "" }
-          if (data.code === 0 || data.code === 200) {
-            resolve(data.data);
-          } else if (data.code === 401) {
-            // Token 过期处理
-            wx.removeStorageSync('token');
-            wx.navigateTo({ url: '/pages/login/login' });
-            reject(data);
-          } else {
-            wx.showToast({ title: data.msg || '业务错误', icon: 'none' });
-            reject(data);
+        // 检查响应状态
+        if (response.statusCode === 200) {
+          // 成功响应
+          resolve(response.data);
+        } else if (response.statusCode === 401) {
+          // 未授权，需要重新登录
+          handleUnauthorized();
+          const errorMsg = '未授权，请重新登录';
+          if (showError) {
+            wx.showToast({
+              title: errorMsg,
+              icon: 'none'
+            });
           }
+          reject(new Error(errorMsg));
         } else {
-          wx.showToast({ title: `服务器异常: ${statusCode}`, icon: 'none' });
-          reject(res);
+          // 其他错误状态码
+          // 错误捕获增强：如果状态码为 400，尝试打印出后端返回的 res.data.error 或 res.data.details
+          let errorMsg = `请求失败，状态码: ${response.statusCode}`;
+          if (response.statusCode === 400 && response.data) {
+            if (response.data.error) {
+              errorMsg += ` - ${response.data.error}`;
+            }
+            if (response.data.details) {
+              errorMsg += ` (${response.data.details})`;
+            }
+          }
+
+          if (showError) {
+            wx.showToast({
+              title: '请求失败',
+              icon: 'none'
+            });
+          }
+          reject(new Error(errorMsg));
         }
       },
-      fail: (err) => {
-        wx.showToast({ title: '网络连接失败', icon: 'error' });
-        reject(err);
-      },
-      complete: () => {
-        if (options.loading !== false) wx.hideLoading();
+      fail: (error) => {
+        // 隐藏加载动画
+        if (loading) {
+          wx.hideLoading();
+        }
+
+        // 请求失败
+        const errorMsg = error.errMsg || '网络请求失败';
+        if (showError) {
+          wx.showToast({
+            title: '网络错误',
+            icon: 'none'
+          });
+        }
+        reject(new Error(errorMsg));
       }
-    });
+    };
+
+    // 请求拦截器：自动添加token
+    const token = wx.getStorageSync('userToken');
+    if (token) {
+      requestParams.header.Authorization = `Bearer ${token}`;
+    }
+
+    // 发起请求
+    wx.request(requestParams);
   });
 };
 
-export default request;
+/**
+ * 处理401未授权状态
+ */
+const handleUnauthorized = () => {
+  // 清空本地缓存的用户信息
+  wx.removeStorageSync('userInfo');
+  wx.removeStorageSync('userToken');
+  wx.removeStorageSync('isLoggedIn');
+  wx.removeStorageSync('userPermissions');
+
+  // 跳转到登录页面
+  wx.redirectTo({
+    url: '/pages/login/login'
+  });
+};
+
+/**
+ * GET 请求封装
+ * @param {string} url - 请求地址
+ * @param {Object} params - 查询参数
+ * @param {Object} options - 其他选项
+ * @returns {Promise}
+ */
+const get = (url, params = {}, options = {}) => {
+  return request({
+    url,
+    method: 'GET',
+    data: params,
+    ...options
+  });
+};
+
+/**
+ * POST 请求封装
+ * @param {string} url - 请求地址
+ * @param {Object} data - 请求数据
+ * @param {Object} options - 其他选项
+ * @returns {Promise}
+ */
+const post = (url, data = {}, options = {}) => {
+  return request({
+    url,
+    method: 'POST',
+    data,
+    ...options
+  });
+};
+
+/**
+ * PUT 请求封装
+ * @param {string} url - 请求地址
+ * @param {Object} data - 请求数据
+ * @param {Object} options - 其他选项
+ * @returns {Promise}
+ */
+const put = (url, data = {}, options = {}) => {
+  return request({
+    url,
+    method: 'PUT',
+    data,
+    ...options
+  });
+};
+
+/**
+ * DELETE 请求封装
+ * @param {string} url - 请求地址
+ * @param {Object} data - 请求数据
+ * @param {Object} options - 其他选项
+ * @returns {Promise}
+ */
+const del = (url, data = {}, options = {}) => {
+  return request({
+    url,
+    method: 'DELETE',
+    data,
+    ...options
+  });
+};
+
+module.exports = {
+  request,
+  get,
+  post,
+  put,
+  delete: del, // 避免与 JavaScript 关键字冲突
+  ENV_CONFIG
+};

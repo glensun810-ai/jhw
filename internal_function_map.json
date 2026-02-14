@@ -1840,7 +1840,7 @@
             "get_platform_status",
             "get_test_progress",
             "submit_brand_test",
-            "get_task_status",
+            "get_task_status_api",
             "get_task_result",
             "get_test_history",
             "get_test_record",
@@ -1876,7 +1876,6 @@
             "run_async_test",
             "progress_callback",
             "progress_callback",
-            "run_async_processing",
             "run_async_processing"
         ]
     },
@@ -1971,6 +1970,7 @@
         "file": "./wechat_backend/ai_adapters/factory.py",
         "logic": [
             "register",
+            "get_normalized_model_name",
             "create",
             "AIAdapterFactory"
         ]
@@ -3147,6 +3147,38 @@
         "file": "./gco_validator/api/v1/report_routes.py",
         "logic": [
             "ReportFormatEnum"
+        ]
+    },
+    {
+        "file": "./services/intelligence/prediction_service.py",
+        "logic": [
+            "test_prediction_service",
+            "__init__",
+            "exponential_smoothing_forecast",
+            "linear_regression_forecast",
+            "predict_scores_trend",
+            "_generate_simulated_history",
+            "predict_multi_dimensional_trends",
+            "_calculate_overall_trend",
+            "generate_prediction_report",
+            "_calculate_confidence_level",
+            "_assess_prediction_risks",
+            "_generate_risk_recommendations",
+            "PredictionService"
+        ]
+    },
+    {
+        "file": "./services/intelligence/source_analyzer.py",
+        "logic": [
+            "test_source_analyzer",
+            "__init__",
+            "extract_urls",
+            "_is_valid_url",
+            "classify_source",
+            "_extract_title_from_url",
+            "_calculate_confidence",
+            "analyze_sources",
+            "SourceAnalyzer"
         ]
     }
 ]
