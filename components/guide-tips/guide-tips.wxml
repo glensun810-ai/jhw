@@ -1,0 +1,7 @@
+<!-- components/guide-tips/guide-tips.wxml -->
+<view class="guide-tip-container" wx:if="{{isVisible}}">
+  <view class="guide-tip {{type}}">
+    <text class="tip-text">{{text}}</text>
+    <text class="close-btn" wx:if="{{closable}}" bindtap="closeTip">✕</text>
+  </view>
+</view>

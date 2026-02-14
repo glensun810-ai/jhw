@@ -1,0 +1,18 @@
+<!-- components/TrendChart/TrendChart.wxml -->
+<skeleton type="rect" height="400rpx" loading="{{loading}}">
+  <view class="trend-chart trend-chart-wrapper">
+    <view class="chart-container trend-chart-container" wx:if="{{!loading}}">
+      <ec-canvas
+        id="trend-chart-canvas"
+        canvas-id="trend-chart-canvas"
+        ec="{{ec}}"
+        class="chart-canvas">
+      </ec-canvas>
+    </view>
+
+    <!-- 防御性渲染：当数据为空时显示占位符 -->
+    <view class="placeholder-container trend-chart-placeholder-container" wx:if="{{!chartData && !loading}}">
+      <text class="placeholder-text">暂无图表数据</text>
+    </view>
+  </view>
+</skeleton>

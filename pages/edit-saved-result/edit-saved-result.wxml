@@ -1,0 +1,51 @@
+<view class="container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">编辑保存的搜索结果</text>
+  </view>
+
+  <!-- 编辑表单 -->
+  <view class="edit-form">
+    <view class="form-group">
+      <text class="label">品牌名称</text>
+      <input class="input" value="{{brandName}}" bindinput="onBrandNameInput" placeholder="请输入品牌名称" />
+    </view>
+
+    <view class="form-group">
+      <text class="label">标签</text>
+      <view class="tags-container">
+        <view class="tag-item" wx:for="{{tags}}" wx:key="tag" wx:if="{{item}}">
+          <text>{{item}}</text>
+          <text class="remove-tag" bindtap="removeTag" data-index="{{index}}">×</text>
+        </view>
+        <view class="add-tag-container">
+          <input class="tag-input" value="{{newTag}}" bindinput="onNewTagInput" placeholder="添加标签" />
+          <button class="add-tag-btn" bindtap="addTag">添加</button>
+        </view>
+      </view>
+    </view>
+
+    <view class="form-group">
+      <text class="label">分类</text>
+      <picker class="picker" range="{{categories}}" value="{{categoryIndex}}" bindchange="onCategoryChange">
+        <view class="picker-view">{{selectedCategory}}</view>
+      </picker>
+    </view>
+
+    <view class="form-group">
+      <text class="label">备注</text>
+      <textarea class="textarea" value="{{notes}}" bindinput="onNotesInput" placeholder="请输入备注信息" />
+    </view>
+
+    <view class="form-group">
+      <text class="label">收藏</text>
+      <switch class="switch" checked="{{isFavorite}}" bindchange="onFavoriteChange" />
+    </view>
+  </view>
+
+  <!-- 保存按钮 -->
+  <view class="save-section">
+    <button class="save-btn" bindtap="saveChanges">保存更改</button>
+    <button class="cancel-btn" bindtap="cancelEdit">取消</button>
+  </view>
+</view>

@@ -5,47 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ce81edd-f1cb-42e7-a73f-813193baffda" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/COMPREHENSIVE_API_DOCUMENTATION.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/REFACTOR_GUIDE.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/api_contract.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/00_AI Coding元指令.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/utils/request.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SERVICE_STARTUP_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/SERVICE_STARTUP_GUIDE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database.db" beforeDir="false" afterPath="$PROJECT_DIR$/database.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/debug_detailed_analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/debug_detailed_analysis.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/debug_in_depth_analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/debug_in_depth_analysis.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/debug_monitor_workflow.py" beforeDir="false" afterPath="$PROJECT_DIR$/debug_monitor_workflow.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/debug_test_flow.py" beforeDir="false" afterPath="$PROJECT_DIR$/debug_test_flow.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DEVELOPMENT_SOP.md" beforeDir="false" afterPath="$PROJECT_DIR$/DEVELOPMENT_SOP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/REFACTOR_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/REFACTOR_GUIDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal_function_map.json" beforeDir="false" afterPath="$PROJECT_DIR$/internal_function_map.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/BaseChart/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/BaseChart/index.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/BaseChart/index.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/BaseChart/index.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/SourceGraph/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/SourceGraph/index.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/SourceGraph/index.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/SourceGraph/index.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/pages/competitive-analysis/competitive-analysis.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/competitive-analysis/competitive-analysis.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/pages/history/history.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/history/history.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/api/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/api/home.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/app.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/pages/login/login.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/login/login.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/pages/register/register.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/register/register.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/utils/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/utils/auth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/utils/data-sync.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/utils/data-sync.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/start_server.sh" beforeDir="false" afterPath="$PROJECT_DIR$/start_server.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/status_server.sh" beforeDir="false" afterPath="$PROJECT_DIR$/status_server.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/stop_server.sh" beforeDir="false" afterPath="$PROJECT_DIR$/stop_server.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_backend_connection.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_backend_connection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_basic_security.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_basic_security.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_data_flow_validation.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_data_flow_validation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_frontend_backend_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_frontend_backend_integration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_recommendations_endpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_recommendations_endpoint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_security_mechanisms.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_security_mechanisms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/verify_auth_fix_complete.py" beforeDir="false" afterPath="$PROJECT_DIR$/verify_auth_fix_complete.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/ai_adapters/factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/ai_adapters/factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wechat_backend/security/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/security/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.json" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/index/index.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/index/index.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/homeService.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/homeService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/utils/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/utils/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/utils/request.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/request.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/wechat_backend/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -59,7 +33,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="512" />
+    <option name="cachedIndexableFilesCount" value="573" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -98,40 +72,40 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Flask 服务器.Flask (wechat_backend/app.py).executor": "Run",
-    "Flask 服务器.PythonProject.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.demo_main.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.main_demo.executor": "Run",
-    "Python.qwen_adapter.executor": "Run",
-    "Python.run.executor": "Debug",
-    "Python.sync_logic.executor": "Run",
-    "Python.window_tiler.executor": "Run",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "main",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true",
-    "wxn.project": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Flask 服务器.Flask (wechat_backend/app.py).executor&quot;: &quot;Run&quot;,
+    &quot;Flask 服务器.PythonProject.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.demo_main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main_demo.executor&quot;: &quot;Run&quot;,
+    &quot;Python.qwen_adapter.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.sync_logic.executor&quot;: &quot;Run&quot;,
+    &quot;Python.window_tiler.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;,
+    &quot;wxn.project&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/docs" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.sync_logic">
+  <component name="RunManager" selected="Flask 服务器.PythonProject">
     <configuration name="app.js" type="NodeJSConfigurationType" temporary="true" nameIsGenerated="true" path-to-js-file="$PROJECT_DIR$/miniprogram/app.js" working-dir="$PROJECT_DIR$/miniprogram">
       <method v="2" />
     </configuration>
@@ -256,7 +230,7 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -308,7 +282,8 @@
       <workItem from="1770864593057" duration="66435000" />
       <workItem from="1770944541119" duration="5376000" />
       <workItem from="1770950349715" duration="22724000" />
-      <workItem from="1771000267971" duration="7857000" />
+      <workItem from="1771000267971" duration="21365000" />
+      <workItem from="1771040534763" duration="6941000" />
     </task>
     <servers />
   </component>
@@ -320,10 +295,10 @@
     <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770933166725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$demo_main.coverage" NAME="demo_main 覆盖结果" MODIFIED="1770745116755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/PythonProject$qwen_adapter.coverage" NAME="qwen_adapter 覆盖结果" MODIFIED="1770828819857" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wechat_backend/ai_adapters" />
-    <SUITE FILE_PATH="coverage/PythonProject$sync_logic.coverage" NAME="sync_logic 覆盖结果" MODIFIED="1771004010062" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/PythonProject$sync_logic.coverage" NAME="sync_logic 覆盖结果" MODIFIED="1771011826977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$window_tiler.coverage" NAME="window_tiler 覆盖结果" MODIFIED="1770295290564" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$main_demo.coverage" NAME="main_demo 覆盖结果" MODIFIED="1770745135752" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
-    <SUITE FILE_PATH="coverage/PythonProject$PythonProject.coverage" NAME="PythonProject 覆盖结果" MODIFIED="1771004109140" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/PythonProject$PythonProject.coverage" NAME="PythonProject 覆盖结果" MODIFIED="1771048705315" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

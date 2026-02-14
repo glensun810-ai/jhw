@@ -1,0 +1,18 @@
+<!-- components/ScoreRadar/ScoreRadar.wxml -->
+<skeleton type="rect" height="400rpx" loading="{{loading}}">
+  <view class="score-radar score-radar-wrapper">
+    <view class="radar-container score-radar-container" wx:if="{{!loading}}">
+      <ec-canvas
+        id="score-radar-canvas"
+        canvas-id="score-radar-canvas"
+        ec="{{ec}}"
+        class="radar-canvas">
+      </ec-canvas>
+    </view>
+
+    <!-- 防御性渲染：当数据为空时显示占位符 -->
+    <view class="placeholder-container score-radar-placeholder-container" wx:if="{{!scores && !loading}}">
+      <text class="placeholder-text">暂无评分数据</text>
+    </view>
+  </view>
+</skeleton>

@@ -677,37 +677,147 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
         actual_results = raw_results.get('results', [])
 
     for result in actual_results:
-        # 检查result的结构，确保兼容不同的数据格式
-        if isinstance(result, dict):
-            # 如果result已经是处理过的格式
-            current_brand = result.get('brand_name', result.get('brand', 'unknown'))
+        try:
+            # 检查result的结构，确保兼容不同的数据格式
+            if isinstance(result, dict):
+                # 如果result已经是处理过的格式
+                current_brand = result.get('brand_name', result.get('brand', 'unknown'))
 
-            # 检查是否成功获取了AI响应
-            if result.get('success', False):
-                # 根据不同数据格式获取响应内容
-                ai_response_content = ""
-                if 'result' in result and isinstance(result['result'], dict):
-                    ai_response_content = result['result'].get('content', '')
-                elif 'response' in result:
-                    ai_response_content = result['response']
-                elif 'content' in result:
-                    ai_response_content = result['content']
+                # 检查是否成功获取了AI响应
+                if result.get('success', False):
+                    # 根据不同数据格式获取响应内容
+                    ai_response_content = ""
+                    if 'result' in result and isinstance(result['result'], dict):
+                        ai_response_content = result['result'].get('content', '')
+                    elif 'response' in result:
+                        ai_response_content = result['response']
+                    elif 'content' in result:
+                        ai_response_content = result['content']
 
-                question = result.get('question', result.get('original_question', ''))
+                    # 数据清洗：如果响应内容为空，填充默认值
+                    if not ai_response_content:
+                        ai_response_content = "暂无分析结论"
 
-                # Only evaluate with AI judge if it's available
-                if ai_judge:
-                    judge_result = ai_judge.evaluate_response(current_brand, question, ai_response_content)
+                    question = result.get('question', result.get('original_question', ''))
 
-                    if judge_result:
-                        # 使用基础评分引擎计算基础分数
-                        basic_score = scoring_engine.calculate([judge_result])
+                    # Only evaluate with AI judge if it's available
+                    if ai_judge:
+                        judge_result = ai_judge.evaluate_response(current_brand, question, ai_response_content)
 
-                        # 使用增强评分引擎计算增强分数（用于内部分析）
-                        enhanced_result = calculate_enhanced_scores([judge_result], brand_name=current_brand)
+                        if judge_result:
+                            # 使用基础评分引擎计算基础分数
+                            basic_score = scoring_engine.calculate([judge_result])
 
-                        # 【任务 A：集成自动评分引擎】
-                        # 在 AI 生成回复后立即调用 evaluator.py 计算质量指标
+                            # 使用增强评分引擎计算增强分数（用于内部分析）
+                            enhanced_result = calculate_enhanced_scores([judge_result], brand_name=current_brand)
+
+                            # 【任务 A：集成自动评分引擎】
+                            # 在 AI 生成回复后立即调用 evaluator.py 计算质量指标
+                            try:
+                                from gco_validator.scoring import ResponseEvaluator
+                                evaluator = ResponseEvaluator()
+                                scoring_result = evaluator.evaluate_response(ai_response_content, question, current_brand)
+
+                                # 记录评分日志
+                                api_logger.info(f"[Evaluator] {current_brand} 评分：{scoring_result.overall_score}分 (准确度:{scoring_result.accuracy}, 完整度:{scoring_result.completeness})")
+                            except Exception as eval_error:
+                                api_logger.error(f"Evaluation failed for {current_brand}: {str(eval_error)}")
+                                # 如果评分失败，使用默认值
+                                scoring_result = None
+
+                            # 使用误解分析器进行分析
+                            misunderstanding_result = None
+                            if misunderstanding_analyzer:
+                                try:
+                                    misunderstanding_result = misunderstanding_analyzer.analyze(
+                                        brand_name=current_brand,
+                                        question_text=question,
+                                        ai_answer=ai_response_content,
+                                        judge_result=judge_result
+                                    )
+                                    api_logger.info(f"Misunderstanding analysis completed for {current_brand}: {misunderstanding_result.has_issue}")
+                                except Exception as e:
+                                    api_logger.error(f"Error in misunderstanding analysis: {e}")
+                                    # 如果分析失败，创建默认结果
+                                    misunderstanding_result = None
+
+                            # 数据清洗：确保分数字段存在且为数字
+                            authority_score = getattr(judge_result, 'accuracy_score', 0)
+                            if not isinstance(authority_score, (int, float)):
+                                authority_score = 0
+
+                            visibility_score = getattr(judge_result, 'completeness_score', 0)
+                            if not isinstance(visibility_score, (int, float)):
+                                visibility_score = 0
+
+                            sentiment_score = getattr(judge_result, 'sentiment_score', 0)
+                            if not isinstance(sentiment_score, (int, float)):
+                                sentiment_score = 0
+
+                            purity_score = getattr(judge_result, 'purity_score', 0)
+                            if not isinstance(purity_score, (int, float)):
+                                purity_score = 0
+
+                            consistency_score = getattr(judge_result, 'consistency_score', 0)
+                            if not isinstance(consistency_score, (int, float)):
+                                consistency_score = 0
+
+                            score = getattr(basic_score, 'geo_score', 0)
+                            if not isinstance(score, (int, float)):
+                                score = 0
+
+                            detailed_result = {
+                                'success': True,
+                                'brand': current_brand,
+                                'aiModel': result.get('model', result.get('ai_model', 'unknown')),
+                                'question': question,
+                                'response': ai_response_content,
+                                'authority_score': authority_score,
+                                'visibility_score': visibility_score,
+                                'sentiment_score': sentiment_score,
+                                'purity_score': purity_score,
+                                'consistency_score': consistency_score,
+                                'score': score,  # 保持原有分数以确保兼容性
+                                # 【任务 A：数据入库】将 ScoringResult 结构化存入对应 TestCase 的结果对象中
+                                'quality_metrics': {
+                                    'accuracy_score': scoring_result.accuracy if scoring_result and isinstance(scoring_result.accuracy, (int, float)) else 0,
+                                    'completeness_score': scoring_result.completeness if scoring_result and isinstance(scoring_result.completeness, (int, float)) else 0,
+                                    'relevance_score': scoring_result.relevance if scoring_result and isinstance(scoring_result.relevance, (int, float)) else 0,
+                                    'coherence_score': scoring_result.coherence if scoring_result and isinstance(scoring_result.coherence, (int, float)) else 0,
+                                    'overall_quality_score': scoring_result.overall_score if scoring_result and isinstance(scoring_result.overall_score, (int, float)) else 0,
+                                    'detailed_feedback': scoring_result.detailed_feedback if scoring_result else {}
+                                } if scoring_result else None,
+                                'enhanced_scores': {
+                                    'geo_score': getattr(enhanced_result, 'geo_score', 0),
+                                    'cognitive_confidence': getattr(enhanced_result, 'cognitive_confidence', 0.0),
+                                    'bias_indicators': getattr(enhanced_result, 'bias_indicators', []),
+                                    'detailed_analysis': getattr(enhanced_result, 'detailed_analysis', {}),
+                                    'recommendations': getattr(enhanced_result, 'recommendations', [])
+                                },
+                                'misunderstanding_analysis': {
+                                    'has_issue': getattr(misunderstanding_result, 'has_issue', False),
+                                    'issue_types': getattr(misunderstanding_result, 'issue_types', []),
+                                    'risk_level': getattr(misunderstanding_result, 'risk_level', 'low'),
+                                    'issue_summary': getattr(misunderstanding_result, 'issue_summary', 'Analysis not available'),
+                                    'improvement_hint': getattr(misunderstanding_result, 'improvement_hint', 'No suggestions')
+                                } if misunderstanding_result else None,
+                                'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
+                            }
+                            brand_results_map[current_brand].append(judge_result)
+                            platform_results_map[detailed_result['aiModel']].append(detailed_result)
+                        else:
+                            detailed_result = {
+                                'success': False,
+                                'brand': current_brand,
+                                'aiModel': result.get('model', result.get('ai_model', 'unknown')),
+                                'question': question,
+                                'response': "Evaluation Failed by AI Judge",
+                                'score': 0,
+                                'error_type': 'EvaluationFailed'
+                            }
+                    else:
+                        # Skip AI evaluation, use basic result structure
+                        # 【任务 A：集成自动评分引擎】即使没有AI judge，也要进行基本评分
                         try:
                             from gco_validator.scoring import ResponseEvaluator
                             evaluator = ResponseEvaluator()
@@ -720,147 +830,99 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                             # 如果评分失败，使用默认值
                             scoring_result = None
 
-                        # 使用误解分析器进行分析
-                        misunderstanding_result = None
-                        if misunderstanding_analyzer:
-                            try:
-                                misunderstanding_result = misunderstanding_analyzer.analyze(
-                                    brand_name=current_brand,
-                                    question_text=question,
-                                    ai_answer=ai_response_content,
-                                    judge_result=judge_result
-                                )
-                                api_logger.info(f"Misunderstanding analysis completed for {current_brand}: {misunderstanding_result.has_issue}")
-                            except Exception as e:
-                                api_logger.error(f"Error in misunderstanding analysis: {e}")
-                                # 如果分析失败，创建默认结果
-                                misunderstanding_result = None
-
                         detailed_result = {
                             'success': True,
                             'brand': current_brand,
                             'aiModel': result.get('model', result.get('ai_model', 'unknown')),
                             'question': question,
                             'response': ai_response_content,
-                            'authority_score': judge_result.accuracy_score,
-                            'visibility_score': judge_result.completeness_score,
-                            'sentiment_score': judge_result.sentiment_score,
-                            'purity_score': judge_result.purity_score,
-                            'consistency_score': judge_result.consistency_score,
-                            'score': basic_score.geo_score,  # 保持原有分数以确保兼容性
+                            'authority_score': 0,  # Default score when no AI judge
+                            'visibility_score': 0,
+                            'sentiment_score': 0,
+                            'purity_score': 0,
+                            'consistency_score': 0,
+                            'score': 0,  # Default score when no AI judge
                             # 【任务 A：数据入库】将 ScoringResult 结构化存入对应 TestCase 的结果对象中
                             'quality_metrics': {
-                                'accuracy_score': scoring_result.accuracy if scoring_result else 0,
-                                'completeness_score': scoring_result.completeness if scoring_result else 0,
-                                'relevance_score': scoring_result.relevance if scoring_result else 0,
-                                'coherence_score': scoring_result.coherence if scoring_result else 0,
-                                'overall_quality_score': scoring_result.overall_score if scoring_result else 0,
+                                'accuracy_score': scoring_result.accuracy if scoring_result and isinstance(scoring_result.accuracy, (int, float)) else 0,
+                                'completeness_score': scoring_result.completeness if scoring_result and isinstance(scoring_result.completeness, (int, float)) else 0,
+                                'relevance_score': scoring_result.relevance if scoring_result and isinstance(scoring_result.relevance, (int, float)) else 0,
+                                'coherence_score': scoring_result.coherence if scoring_result and isinstance(scoring_result.coherence, (int, float)) else 0,
+                                'overall_quality_score': scoring_result.overall_score if scoring_result and isinstance(scoring_result.overall_score, (int, float)) else 0,
                                 'detailed_feedback': scoring_result.detailed_feedback if scoring_result else {}
                             } if scoring_result else None,
                             'enhanced_scores': {
-                                'geo_score': enhanced_result.geo_score,
-                                'cognitive_confidence': enhanced_result.cognitive_confidence,
-                                'bias_indicators': enhanced_result.bias_indicators,
-                                'detailed_analysis': enhanced_result.detailed_analysis,
-                                'recommendations': enhanced_result.recommendations
+                                'geo_score': 0,
+                                'cognitive_confidence': 0.0,
+                                'bias_indicators': [],
+                                'detailed_analysis': {},
+                                'recommendations': []
                             },
-                            'misunderstanding_analysis': {
-                                'has_issue': misunderstanding_result.has_issue if misunderstanding_result else False,
-                                'issue_types': misunderstanding_result.issue_types if misunderstanding_result else [],
-                                'risk_level': misunderstanding_result.risk_level if misunderstanding_result else 'low',
-                                'issue_summary': misunderstanding_result.issue_summary if misunderstanding_result else 'Analysis not available',
-                                'improvement_hint': misunderstanding_result.improvement_hint if misunderstanding_result else 'No suggestions'
-                            } if misunderstanding_result else None,
+                            'misunderstanding_analysis': None,  # No analysis when AI judge is not available
                             'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
                         }
-                        brand_results_map[current_brand].append(judge_result)
+                        # Add a basic judge result with default scores for scoring calculations
+                        basic_judge_result = JudgeResult(
+                            accuracy_score=0,
+                            completeness_score=0,
+                            sentiment_score=50,  # Neutral sentiment
+                            purity_score=0,
+                            consistency_score=0,
+                            judgement="AI evaluation skipped",
+                            confidence_level=ConfidenceLevel.MEDIUM
+                        )
+                        brand_results_map[current_brand].append(basic_judge_result)
                         platform_results_map[detailed_result['aiModel']].append(detailed_result)
-                    else:
-                        detailed_result = {
-                            'success': False,
-                            'brand': current_brand,
-                            'aiModel': result.get('model', result.get('ai_model', 'unknown')),
-                            'question': question,
-                            'response': "Evaluation Failed by AI Judge",
-                            'score': 0,
-                            'error_type': 'EvaluationFailed'
-                        }
                 else:
-                    # Skip AI evaluation, use basic result structure
-                    # 【任务 A：集成自动评分引擎】即使没有AI judge，也要进行基本评分
-                    try:
-                        from gco_validator.scoring import ResponseEvaluator
-                        evaluator = ResponseEvaluator()
-                        scoring_result = evaluator.evaluate_response(ai_response_content, question, current_brand)
-
-                        # 记录评分日志
-                        api_logger.info(f"[Evaluator] {current_brand} 评分：{scoring_result.overall_score}分 (准确度:{scoring_result.accuracy}, 完整度:{scoring_result.completeness})")
-                    except Exception as eval_error:
-                        api_logger.error(f"Evaluation failed for {current_brand}: {str(eval_error)}")
-                        # 如果评分失败，使用默认值
-                        scoring_result = None
-
+                    # 处理失败的结果
                     detailed_result = {
-                        'success': True,
+                        'success': False,
                         'brand': current_brand,
                         'aiModel': result.get('model', result.get('ai_model', 'unknown')),
-                        'question': question,
-                        'response': ai_response_content,
-                        'authority_score': 0,  # Default score when no AI judge
-                        'visibility_score': 0,
-                        'sentiment_score': 0,
-                        'purity_score': 0,
-                        'consistency_score': 0,
-                        'score': 0,  # Default score when no AI judge
-                        # 【任务 A：数据入库】将 ScoringResult 结构化存入对应 TestCase 的结果对象中
-                        'quality_metrics': {
-                            'accuracy_score': scoring_result.accuracy if scoring_result else 0,
-                            'completeness_score': scoring_result.completeness if scoring_result else 0,
-                            'relevance_score': scoring_result.relevance if scoring_result else 0,
-                            'coherence_score': scoring_result.coherence if scoring_result else 0,
-                            'overall_quality_score': scoring_result.overall_score if scoring_result else 0,
-                            'detailed_feedback': scoring_result.detailed_feedback if scoring_result else {}
-                        } if scoring_result else None,
-                        'enhanced_scores': {
-                            'geo_score': 0,
-                            'cognitive_confidence': 0.0,
-                            'bias_indicators': [],
-                            'detailed_analysis': {},
-                            'recommendations': []
-                        },
-                        'misunderstanding_analysis': None,  # No analysis when AI judge is not available
-                        'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
+                        'question': result.get('question', result.get('original_question', '')),
+                        'response': f"Error: {result.get('error', result.get('error_message', 'Unknown error'))}",
+                        'score': 0,
+                        'error_message': result.get('error', result.get('error_message', 'Unknown error')),
+                        'error_type': result.get('error_type', 'GeneralError')
                     }
-                    # Add a basic judge result with default scores for scoring calculations
-                    basic_judge_result = JudgeResult(
-                        accuracy_score=0,
-                        completeness_score=0,
-                        sentiment_score=50,  # Neutral sentiment
-                        purity_score=0,
-                        consistency_score=0,
-                        judgement="AI evaluation skipped",
-                        confidence_level=ConfidenceLevel.MEDIUM
-                    )
-                    brand_results_map[current_brand].append(basic_judge_result)
-                    platform_results_map[detailed_result['aiModel']].append(detailed_result)
-            else:
-                # 处理失败的结果
-                detailed_result = {
-                    'success': False,
-                    'brand': current_brand,
-                    'aiModel': result.get('model', result.get('ai_model', 'unknown')),
-                    'question': result.get('question', result.get('original_question', '')),
-                    'response': f"Error: {result.get('error', result.get('error_message', 'Unknown error'))}",
-                    'score': 0,
-                    'error_message': result.get('error', result.get('error_message', 'Unknown error')),
-                    'error_type': result.get('error_type', 'GeneralError')
-                }
 
-            detailed_results.append(detailed_result)
-        else:
-            # 如果result不是字典格式，跳过
-            api_logger.warning(f"Unexpected result format: {result}")
-            continue
+                detailed_results.append(detailed_result)
+            else:
+                # 如果result不是字典格式，跳过
+                api_logger.warning(f"Unexpected result format: {result}")
+                continue
+        except (TypeError, KeyError) as e:
+            # 捕获TypeError或KeyError，确保即使部分模型调用失败，剩余模型的数据也能正常聚合
+            api_logger.error(f"Error processing result due to TypeError/KeyError: {e}, result: {result}")
+            # 创建一个默认的成功结果，确保任务能继续推进
+            default_result = {
+                'success': True,
+                'brand': result.get('brand_name', result.get('brand', 'unknown')) if isinstance(result, dict) else 'unknown',
+                'aiModel': result.get('model', result.get('ai_model', 'unknown')) if isinstance(result, dict) else 'unknown',
+                'question': result.get('question', result.get('original_question', '')) if isinstance(result, dict) else 'unknown',
+                'response': "暂无分析结论",
+                'score': 0,
+                'error_message': f"Processing error: {str(e)}",
+                'error_type': 'ProcessingError'
+            }
+            detailed_results.append(default_result)
+            continue  # 继续处理下一个结果
+        except Exception as e:
+            # 捕获其他类型的异常
+            api_logger.error(f"Unexpected error processing result: {e}, result: {result}")
+            # 创建一个默认的成功结果，确保任务能继续推进
+            default_result = {
+                'success': True,
+                'brand': result.get('brand_name', result.get('brand', 'unknown')) if isinstance(result, dict) else 'unknown',
+                'aiModel': result.get('model', result.get('ai_model', 'unknown')) if isinstance(result, dict) else 'unknown',
+                'question': result.get('question', result.get('original_question', '')) if isinstance(result, dict) else 'unknown',
+                'response': "暂无分析结论",
+                'score': 0,
+                'error_message': f"Unexpected error: {str(e)}",
+                'error_type': 'UnexpectedError'
+            }
+            detailed_results.append(default_result)
+            continue  # 继续处理下一个结果
 
     brand_scores = {}
     for brand, judge_results in brand_results_map.items():
