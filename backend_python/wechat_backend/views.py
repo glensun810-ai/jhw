@@ -142,9 +142,9 @@ def test_api():
     return jsonify({'message': 'Backend is working correctly!', 'status': 'success'})
 
 @wechat_bp.route('/api/perform-brand-test', methods=['POST', 'OPTIONS'])
-# @require_auth_optional  # 可选身份验证，支持微信会话 - 临时禁用
-# @rate_limit(limit=5, window=60, per='endpoint')  # 限制每个端点每分钟最多5个请求 - 临时禁用
-# @monitored_endpoint('/api/perform-brand-test', require_auth=False, validate_inputs=True)
+@require_auth_optional  # 可选身份验证，支持微信会话
+@rate_limit(limit=5, window=60, per='endpoint')  # 限制每个端点每分钟最多5个请求
+@monitored_endpoint('/api/perform-brand-test', require_auth=False, validate_inputs=True)
 def perform_brand_test():
     """Perform brand cognition test across multiple AI platforms (Async) with Multi-Brand Support"""
     # 【调试】记录请求信息
@@ -277,47 +277,25 @@ def perform_brand_test():
             # 使用AIAdapterFactory的标准化方法
             normalized_model_name = AIAdapterFactory.get_normalized_model_name(model_name)
 
-            try:
-                # 尝试获取平台类型
-                platform_type = AIPlatformType(normalized_model_name)
-                # 检查适配器是否已注册
-                if platform_type not in AIAdapterFactory._adapters:
-                    # 打印出当前所有已注册的 Keys 并在报错中返回给前端
-                    registered_keys = [pt.value for pt in AIAdapterFactory._adapters.keys()]
-                    api_logger.error(f"Model {model_name} (normalized to {normalized_model_name}) not registered. Available models: {registered_keys}")
-                    return jsonify({
-                        "status": "error",
-                        "error": f'Model {model_name} not registered in AIAdapterFactory',
-                        "code": 400,
-                        "available_models": registered_keys,
-                        "received_model": model_name,
-                        "normalized_to": normalized_model_name
-                    }), 400
+            # 检查平台是否可用（已注册且API密钥已配置）
+            if not AIAdapterFactory.is_platform_available(normalized_model_name):
+                # 打印出当前所有已注册的 Keys 并在报错中返回给前端
+                registered_keys = [pt.value for pt in AIAdapterFactory._adapters.keys()]
+                api_logger.error(f"Model {model_name} (normalized to {normalized_model_name}) not registered or not configured. Available models: {registered_keys}")
+                return jsonify({
+                    "status": "error",
+                    "error": f'Model {model_name} not registered or not configured in AIAdapterFactory',
+                    "code": 400,
+                    "available_models": registered_keys,
+                    "received_model": model_name,
+                    "normalized_to": normalized_model_name
+                }), 400
 
-                # 检查API Key是否已配置
-                from .config_manager import config_manager
-                api_key = config_manager.get_api_key(normalized_model_name)
-                if not api_key:
-                    return jsonify({"status": "error", "error": f'Model {model_name} not configured - missing API key', "code": 400, 'message': 'API Key 缺失'}), 400
-
-            except ValueError:
-                # 如果模型名称不是标准平台类型，检查是否为自定义模型
-                platform_name_lower = normalized_model_name
-                if platform_name_lower not in [pt.value for pt in AIPlatformType]:
-                    # 对于非标准平台，检查是否在适配器注册表中
-                    if platform_name_lower not in [name.value for name in AIPlatformType.__members__.values()]:
-                        # 检查是否在已注册的适配器中
-                        registered_names = [pt.value for pt in AIAdapterFactory._adapters.keys()]
-                        if platform_name_lower not in registered_names:
-                            api_logger.error(f"Model {model_name} (normalized to {normalized_model_name}) not registered. Available models: {registered_names}")
-                            return jsonify({
-                                "status": "error",
-                                "error": f'Model {model_name} not registered in AIAdapterFactory',
-                                "code": 400,
-                                "available_models": registered_names,
-                                "received_model": model_name,
-                                "normalized_to": normalized_model_name
-                            }), 400
+            # 检查API Key是否已配置
+            from .config_manager import config_manager
+            api_key = config_manager.get_api_key(normalized_model_name)
+            if not api_key:
+                return jsonify({"status": "error", "error": f'Model {model_name} not configured - missing API key', "code": 400, 'message': 'API Key 缺失'}), 400
 
         # 验证自定义问题的安全性
         for question in custom_questions:
@@ -379,18 +357,51 @@ def perform_brand_test():
 
             api_logger.info(f"Starting async brand test '{execution_id}' for brands: {brand_list} (User: {user_id}, Level: {user_level.value}) - Total test cases: {len(all_test_cases)}")
 
-            # 【修复】检测是否包含豆包平台，如果是则使用顺序执行避免超时
-            has_doubao = any('doubao' in model.get('name', '').lower() or '豆包' in model.get('name', '') 
-                           for model in selected_models)
+            # 【优化】智能检测平台组合，动态调整并发策略
+            platform_stats = {}
+            for model in selected_models:
+                model_name = model.get('name', '') if isinstance(model, dict) else model
+                normalized_name = AIAdapterFactory.get_normalized_model_name(model_name)
+                
+                # 统计各平台类型
+                if normalized_name not in platform_stats:
+                    platform_stats[normalized_name] = 0
+                platform_stats[normalized_name] += 1
             
-            if has_doubao:
-                # 豆包API响应慢，使用顺序执行更稳定
-                executor = TestExecutor(max_workers=1, strategy=ExecutionStrategy.SEQUENTIAL)
-                api_logger.info(f"[ExecutionStrategy] Detected Doubao, using SEQUENTIAL execution for stability")
+            # 检查是否包含慢速平台（如豆包）
+            has_slow_platform = any(
+                'doubao' in normalized_name or 
+                'wenxin' in normalized_name or  # 文心一言也可能较慢
+                'spark' in normalized_name      # 讯飞星火可能较慢
+                for normalized_name in platform_stats.keys()
+            )
+            
+            # 根据平台组合和数量动态调整并发策略
+            total_models = len(selected_models)
+            if has_slow_platform:
+                # 如果包含慢速平台，降低并发度以避免超时
+                if total_models <= 2:
+                    max_workers = 1  # 少量模型时顺序执行
+                    strategy = ExecutionStrategy.SEQUENTIAL
+                elif total_models <= 4:
+                    max_workers = 2  # 中等数量时适度并发
+                    strategy = ExecutionStrategy.CONCURRENT
+                else:
+                    max_workers = 2  # 大量模型时仍需控制并发
+                    strategy = ExecutionStrategy.CONCURRENT
+                api_logger.info(f"[ExecutionStrategy] Detected slow platform, using {strategy.value} execution with max_workers={max_workers}")
             else:
-                # 其他平台使用并发执行
-                executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)
-                api_logger.info(f"[ExecutionStrategy] Using CONCURRENT execution with max_workers=3")
+                # 不包含慢速平台时，可以使用更高并发度
+                if total_models <= 3:
+                    max_workers = 3
+                elif total_models <= 6:
+                    max_workers = 4
+                else:
+                    max_workers = 5  # 设置上限避免过度并发
+                strategy = ExecutionStrategy.CONCURRENT
+                api_logger.info(f"[ExecutionStrategy] Using CONCURRENT execution with max_workers={max_workers}")
+            
+            executor = TestExecutor(max_workers=max_workers, strategy=strategy)
 
             def progress_callback(exec_id, progress):
                 if execution_id in execution_store:
@@ -409,7 +420,9 @@ def perform_brand_test():
                     'progress': 10  # Start at 10% when fetching AI responses
                 })
 
-            results = executor.execute_tests(all_test_cases, api_key, lambda eid, p: progress_callback(execution_id, p), timeout=600)  # 10分钟超时
+            # 动态计算超时时间：基础600秒 + 每个测试额外30秒（最多可调整到1200秒）
+            dynamic_timeout = min(1200, 600 + len(all_test_cases) * 30)  # 每个测试增加30秒
+            results = executor.execute_tests(all_test_cases, api_key, lambda eid, p: progress_callback(execution_id, p), timeout=dynamic_timeout, user_openid=user_id or "anonymous")  # 动态超时时间，最低600秒，最高1200秒
             executor.shutdown()
 
             # 更新状态为智能评估阶段

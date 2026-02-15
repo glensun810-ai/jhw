@@ -10,6 +10,7 @@ from ..question_system import TestCase
 from .scheduler import TestScheduler, TestTask, ExecutionStrategy
 from .progress_tracker import ProgressTracker, TestProgress
 from ..logging_config import api_logger
+from ..database import save_test_record
 
 
 class TestExecutor:
@@ -34,7 +35,8 @@ class TestExecutor:
         test_cases: List[TestCase],
         api_key: str = "",
         on_progress_update: Callable[[str, TestProgress], None] = None,
-        timeout: int = 300  # 5分钟默认超时
+        timeout: int = 300,  # 5分钟默认超时
+        user_openid: str = "anonymous"  # 添加用户标识用于保存到数据库
     ) -> Dict[str, Any]:
         """
         Execute a list of test cases with progress tracking
@@ -43,6 +45,8 @@ class TestExecutor:
             test_cases: List of test cases to execute
             api_key: API key for AI platforms
             on_progress_update: Callback function to call when progress updates
+            timeout: Timeout in seconds for the entire test execution
+            user_openid: User identifier for saving results to database
             
         Returns:
             Dict with execution results and statistics
@@ -76,12 +80,57 @@ class TestExecutor:
             )
             test_tasks.append(task)
         
-        # Define callback for progress updates
+        # Define callback for progress updates and checkpoint saving
         def progress_callback(task: TestTask, result: Dict[str, Any]):
             if result.get('success', False):
                 self.progress_tracker.update_completed(execution_id, result)
             else:
                 self.progress_tracker.update_failed(execution_id, result.get('error', 'Unknown error'))
+            
+            # 实现分批次保存：每完成一个测试（无论成功或失败）都立即保存到数据库
+            try:
+                # 提取模型名称，将其格式化为一致的格式
+                model_name = task.ai_model
+                if model_name.lower() in ['豆包', 'doubao']:
+                    model_display_name = '豆包'
+                elif model_name.lower() in ['deepseek', 'deepseekr1']:
+                    model_display_name = 'DeepSeek'
+                elif model_name.lower() in ['qwen', '通义千问', '千问']:
+                    model_display_name = '通义千问'
+                elif model_name.lower() in ['zhipu', '智谱ai', '智谱']:
+                    model_display_name = '智谱AI'
+                else:
+                    model_display_name = model_name
+                
+                # 创建一个单独的测试结果记录并保存到数据库
+                single_test_result = {
+                    'brand_name': task.brand_name,
+                    'question': task.question,
+                    'ai_model': model_display_name,
+                    'response': result.get('result', ''),
+                    'success': result.get('success', False),
+                    'error': result.get('error', '') if not result.get('success', False) else '',
+                    'timestamp': datetime.now().isoformat(),
+                    'execution_id': execution_id,
+                    'attempt': result.get('attempt', 1)
+                }
+                
+                # 保存单个测试结果到数据库
+                record_id = save_test_record(
+                    user_openid=user_openid,
+                    brand_name=task.brand_name,
+                    ai_models_used=[model_display_name],
+                    questions_used=[task.question],
+                    overall_score=0,  # 暂时设为0，因为这是单个测试的结果
+                    total_tests=1,
+                    results_summary={'individual_test': True, 'task_id': task.id, 'execution_id': execution_id, 'success': result.get('success', False)},
+                    detailed_results=[single_test_result]
+                )
+                
+                api_logger.info(f"Saved individual test result (success: {result.get('success', False)}) to database with ID: {record_id}")
+                
+            except Exception as e:
+                api_logger.error(f"Failed to save individual test result to database: {e}")
             
             # Call the external progress update callback if provided
             current_progress = self.progress_tracker.get_progress(execution_id)
@@ -103,6 +152,8 @@ class TestExecutor:
                 try:
                     results = future.result(timeout=timeout)
                 except concurrent.futures.TimeoutError:
+                    # 即使超时也要确保已保存的结果不会丢失
+                    api_logger.warning(f"Test execution timed out after {timeout} seconds, but individual results were saved")
                     raise TimeoutError(f"Test execution timed out after {timeout} seconds")
         else:
             # Execute without timeout
