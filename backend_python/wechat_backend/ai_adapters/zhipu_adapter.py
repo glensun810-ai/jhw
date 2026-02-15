@@ -7,6 +7,7 @@ from ..network.request_wrapper import get_ai_request_wrapper
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
 from config_manager import Config as PlatformConfigManager
+from ...utils.ai_response_wrapper import log_detailed_response
 
 class ZhipuAdapter(AIClient):
     """
@@ -65,6 +66,25 @@ class ZhipuAdapter(AIClient):
                 content = response_data["choices"][0]["message"]["content"]
                 tokens_used = response_data["usage"]["total_tokens"] if response_data.get("usage") else 0
                 api_logger.info(f"Zhipu response success. Tokens: {tokens_used}, Latency: {latency:.2f}s")
+                
+                # Log response to enhanced logger with context
+                try:
+                    execution_id = kwargs.get('execution_id', 'unknown')
+                    log_detailed_response(
+                        question=prompt,
+                        response=content,
+                        platform=self.platform_type.value,
+                        model=self.model_name,
+                        success=True,
+                        latency_ms=int(latency * 1000),  # Convert to milliseconds
+                        tokens_used=tokens_used,
+                        execution_id=execution_id,
+                        **kwargs  # Pass any additional context from kwargs
+                    )
+                except Exception as log_error:
+                    # Don't let logging errors affect the main response
+                    api_logger.warning(f"Failed to log response to enhanced logger: {log_error}")
+                
                 return AIResponse(
                     success=True,
                     content=content,
@@ -78,6 +98,26 @@ class ZhipuAdapter(AIClient):
                 error_message = response_data.get("error", {}).get("message", "Unknown Zhipu API error")
                 error_type = self._map_error_message(error_message)
                 api_logger.error(f"Zhipu API returned no choices: {error_message}")
+                
+                # Log failed response to enhanced logger with context
+                try:
+                    execution_id = kwargs.get('execution_id', 'unknown')
+                    log_detailed_response(
+                        question=prompt,
+                        response="",  # No content in case of failure
+                        platform=self.platform_type.value,
+                        model=self.model_name,
+                        success=False,
+                        error_message=error_message,
+                        error_type=error_type.value if error_type else "UNKNOWN_ERROR",
+                        latency_ms=int(latency * 1000),  # Convert to milliseconds
+                        execution_id=execution_id,
+                        **kwargs  # Pass any additional context from kwargs
+                    )
+                except Exception as log_error:
+                    # Don't let logging errors affect the main response
+                    api_logger.warning(f"Failed to log failed response to enhanced logger: {log_error}")
+                
                 return AIResponse(
                     success=False,
                     error_message=error_message,
@@ -101,6 +141,25 @@ class ZhipuAdapter(AIClient):
                 elif status_code >= 500:
                     error_type = AIErrorType.SERVER_ERROR
 
+            # Log failed response to enhanced logger with context
+            try:
+                execution_id = kwargs.get('execution_id', 'unknown')
+                log_detailed_response(
+                    question=prompt,
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type=error_type.value if error_type else "REQUEST_EXCEPTION",
+                    latency_ms=int(latency * 1000),  # Convert to milliseconds
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+            except Exception as log_error:
+                # Don't let logging errors affect the main response
+                api_logger.warning(f"Failed to log request exception to enhanced logger: {log_error}")
+
             record_error("zhipu", error_type.value, str(e))
             return AIResponse(
                 success=False,
@@ -114,6 +173,26 @@ class ZhipuAdapter(AIClient):
             error_message = f"An unexpected error occurred with Zhipu API: {e}"
             api_logger.error(error_message)
             latency = time.time() - start_time
+            
+            # Log failed response to enhanced logger with context
+            try:
+                execution_id = kwargs.get('execution_id', 'unknown')
+                log_detailed_response(
+                    question=prompt,
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type="UNEXPECTED_ERROR",
+                    latency_ms=int(latency * 1000),  # Convert to milliseconds
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+            except Exception as log_error:
+                # Don't let logging errors affect the main response
+                api_logger.warning(f"Failed to log unexpected error to enhanced logger: {log_error}")
+            
             record_error("zhipu", "UNKNOWN_ERROR", str(e))
             return AIResponse(
                 success=False,

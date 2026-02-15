@@ -20,6 +20,9 @@ from utils.debug_manager import ai_io_log, exception_log, debug_log
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from backend_python.utils.logger import debug_log_ai_io, debug_log_exception, ENABLE_DEBUG_AI_CODE
 
+# Import the enhanced AI response logger
+from ...utils.ai_response_wrapper import log_detailed_response
+
 
 class DoubaoAdapter(AIClient):
     """
@@ -237,6 +240,23 @@ class DoubaoAdapter(AIClient):
                 if ENABLE_DEBUG_AI_CODE:
                     debug_log_ai_io("DOUBAO_ADAPTER_INTERNAL", execution_id, str(payload)[:100], content[:100]) # #DEBUG_CLEAN
 
+                # Log response to enhanced logger with context
+                try:
+                    log_detailed_response(
+                        question=prompt,
+                        response=content,
+                        platform=self.platform_type.value,
+                        model=self.model_name,
+                        success=True,
+                        latency_ms=int(latency * 1000),  # Convert to milliseconds
+                        tokens_used=tokens_used,
+                        execution_id=execution_id,
+                        **kwargs  # Pass any additional context from kwargs
+                    )
+                except Exception as log_error:
+                    # Don't let logging errors affect the main response
+                    api_logger.warning(f"Failed to log response to enhanced logger: {log_error}")
+
                 return AIResponse(
                     success=True,
                     content=content,
@@ -253,6 +273,24 @@ class DoubaoAdapter(AIClient):
                 # Log with DEBUG_AI_CODE system for errors
                 if ENABLE_DEBUG_AI_CODE:
                     debug_log_exception("DOUBAO_ADAPTER_INTERNAL", execution_id, f"Doubao API returned no content: {error_message}") # #DEBUG_CLEAN
+
+                # Log failed response to enhanced logger with context
+                try:
+                    log_detailed_response(
+                        question=prompt,
+                        response="",  # No content in case of failure
+                        platform=self.platform_type.value,
+                        model=self.model_name,
+                        success=False,
+                        error_message=error_message,
+                        error_type=error_type.value if error_type else "UNKNOWN_ERROR",
+                        latency_ms=int(latency * 1000),  # Convert to milliseconds
+                        execution_id=execution_id,
+                        **kwargs  # Pass any additional context from kwargs
+                    )
+                except Exception as log_error:
+                    # Don't let logging errors affect the main response
+                    api_logger.warning(f"Failed to log failed response to enhanced logger: {log_error}")
 
                 exception_log(f"Doubao API returned no content: {error_message}")
                 return AIResponse(
@@ -275,6 +313,24 @@ class DoubaoAdapter(AIClient):
                 import traceback
                 error_msg = f"requests.exceptions.RequestException: {str(e)}\n{traceback.format_exc()}"
                 debug_log_exception("DOUBAO_ADAPTER_INTERNAL", execution_id, error_msg) # #DEBUG_CLEAN
+
+            # Log failed response to enhanced logger with context
+            try:
+                log_detailed_response(
+                    question=prompt,
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type="REQUEST_EXCEPTION",
+                    latency_ms=int(latency * 1000),  # Convert to milliseconds
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+            except Exception as log_error:
+                # Don't let logging errors affect the main response
+                api_logger.warning(f"Failed to log request exception to enhanced logger: {log_error}")
 
             # Check if this is a timeout or connection error that should trigger circuit breaker
             should_propagate = isinstance(e, (
@@ -308,6 +364,24 @@ class DoubaoAdapter(AIClient):
                             if ENABLE_DEBUG_AI_CODE:
                                 debug_log_exception("DOUBAO_ADAPTER_INTERNAL", execution_id, f"Doubao 404 Error: {e.response.text}") # #DEBUG_CLEAN
 
+                            # Log 404 error to enhanced logger
+                            try:
+                                log_detailed_response(
+                                    question=prompt,
+                                    response="",  # No content in case of failure
+                                    platform=self.platform_type.value,
+                                    model=self.model_name,
+                                    success=False,
+                                    error_message=error_message,
+                                    error_type=error_type.value,
+                                    latency_ms=int(latency * 1000),  # Convert to milliseconds
+                                    execution_id=execution_id,
+                                    **kwargs  # Pass any additional context from kwargs
+                                )
+                            except Exception as log_error:
+                                # Don't let logging errors affect the main response
+                                api_logger.warning(f"Failed to log 404 error to enhanced logger: {log_error}")
+
                             exception_log(f"Doubao 404 Error - This usually indicates an incorrect API key or endpoint: {e.response.text}")
                         elif status_code == 429:
                             error_type = AIErrorType.RATE_LIMIT_EXCEEDED
@@ -335,6 +409,24 @@ class DoubaoAdapter(AIClient):
                 import traceback
                 error_msg = f"Unexpected error: {str(e)}\n{traceback.format_exc()}"
                 debug_log_exception("DOUBAO_ADAPTER_INTERNAL", execution_id, error_msg) # #DEBUG_CLEAN
+
+            # Log failed response to enhanced logger with context
+            try:
+                log_detailed_response(
+                    question=prompt,
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type="UNEXPECTED_ERROR",
+                    latency_ms=int(latency * 1000),  # Convert to milliseconds
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+            except Exception as log_error:
+                # Don't let logging errors affect the main response
+                api_logger.warning(f"Failed to log unexpected error to enhanced logger: {log_error}")
 
             # For non-requests exceptions, check if it's a timeout-related error
             should_propagate = isinstance(e, (ConnectionError, TimeoutError))
