@@ -119,7 +119,7 @@ class ZhipuAdapter(AIClient):
                 success=False,
                 error_message=error_message,
                 error_type=AIErrorType.UNKNOWN_ERROR,
-                model=self_model_name,
+                model=self.model_name,
                 platform=self.platform_type.value,
                 latency=latency
             )
