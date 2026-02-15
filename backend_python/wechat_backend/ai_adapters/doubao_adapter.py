@@ -9,19 +9,19 @@ from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from ..network.request_wrapper import get_ai_request_wrapper
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from config_manager import Config as PlatformConfigManager
+from ..config_manager import Config as PlatformConfigManager
 from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
 from utils.debug_manager import ai_io_log, exception_log, debug_log
 
 # Import the new DEBUG_AI_CODE logger
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-from backend_python.utils.logger import debug_log_ai_io, debug_log_exception, ENABLE_DEBUG_AI_CODE
+from utils.logger import debug_log_ai_io, debug_log_exception, ENABLE_DEBUG_AI_CODE
 
 # Import the enhanced AI response logger
-from ...utils.ai_response_wrapper import log_detailed_response
+from utils.ai_response_wrapper import log_detailed_response
 
 
 class DoubaoAdapter(AIClient):
@@ -283,7 +283,7 @@ class DoubaoAdapter(AIClient):
                         model=self.model_name,
                         success=False,
                         error_message=error_message,
-                        error_type=error_type.value if error_type else "UNKNOWN_ERROR",
+                        error_type=error_type if error_type else AIErrorType.UNKNOWN_ERROR,
                         latency_ms=int(latency * 1000),  # Convert to milliseconds
                         execution_id=execution_id,
                         **kwargs  # Pass any additional context from kwargs
@@ -323,7 +323,7 @@ class DoubaoAdapter(AIClient):
                     model=self.model_name,
                     success=False,
                     error_message=error_message,
-                    error_type="REQUEST_EXCEPTION",
+                    error_type=AIErrorType.REQUEST_EXCEPTION,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
                     **kwargs  # Pass any additional context from kwargs
@@ -373,7 +373,7 @@ class DoubaoAdapter(AIClient):
                                     model=self.model_name,
                                     success=False,
                                     error_message=error_message,
-                                    error_type=error_type.value,
+                                    error_type=error_type,
                                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                                     execution_id=execution_id,
                                     **kwargs  # Pass any additional context from kwargs
@@ -390,7 +390,7 @@ class DoubaoAdapter(AIClient):
                         else:
                             error_message = f"Doubao API HTTP {status_code}: {e.response.text}"
 
-                record_error("doubao", error_type.value, str(e))
+                record_error("doubao", error_type, str(e))
                 return AIResponse(
                     success=False,
                     error_message=error_message,
@@ -419,7 +419,7 @@ class DoubaoAdapter(AIClient):
                     model=self.model_name,
                     success=False,
                     error_message=error_message,
-                    error_type="UNEXPECTED_ERROR",
+                    error_type=AIErrorType.UNEXPECTED_ERROR,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
                     **kwargs  # Pass any additional context from kwargs

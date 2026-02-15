@@ -55,9 +55,19 @@ class TestScheduler:
     ) -> Dict[str, Any]:
         start_time = time.time()
         
-        if self.strategy == ExecutionStrategy.CONCURRENT:
+        if self.strategy == ExecutionStrategy.SEQUENTIAL:
+            api_logger.info(f"Executing {len(test_tasks)} tests using SEQUENTIAL strategy - Each AI platform request will be processed independently")
+            results = self._execute_sequential(test_tasks, callback)
+        elif self.strategy == ExecutionStrategy.CONCURRENT:
+            api_logger.info(f"Executing {len(test_tasks)} tests using CONCURRENT strategy with max_workers={self.max_workers}")
             results = self._execute_concurrent(test_tasks, callback)
-        else: # Default to sequential for simplicity
+        elif self.strategy == ExecutionStrategy.BATCH:
+            api_logger.info(f"Executing {len(test_tasks)} tests using BATCH strategy")
+            # For now, batch strategy defaults to sequential for reliability
+            results = self._execute_sequential(test_tasks, callback)
+        else:
+            # Default to sequential for safety
+            api_logger.warning(f"Unknown strategy {self.strategy}, defaulting to SEQUENTIAL execution")
             results = self._execute_sequential(test_tasks, callback)
         
         total_time = time.time() - start_time
@@ -71,7 +81,7 @@ class TestScheduler:
             'results': results
         }
         
-        api_logger.info(f"Test execution completed. Success: {stats['completed_tasks']}, Failed: {stats['failed_tasks']}, Time: {total_time:.2f}s")
+        api_logger.info(f"Test execution completed. Strategy: {self.strategy.value}, Success: {stats['completed_tasks']}, Failed: {stats['failed_tasks']}, Time: {total_time:.2f}s")
         return stats
     
     def _execute_sequential(

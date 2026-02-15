@@ -142,13 +142,14 @@ def test_api():
     return jsonify({'message': 'Backend is working correctly!', 'status': 'success'})
 
 @wechat_bp.route('/api/perform-brand-test', methods=['POST', 'OPTIONS'])
-@require_auth_optional  # 可选身份验证，支持微信会话
+@require_auth_optional  # 恢复认证装饰器
 @rate_limit(limit=5, window=60, per='endpoint')  # 限制每个端点每分钟最多5个请求
 @monitored_endpoint('/api/perform-brand-test', require_auth=False, validate_inputs=True)
 def perform_brand_test():
     """Perform brand cognition test across multiple AI platforms (Async) with Multi-Brand Support"""
     # 【调试】记录请求信息
     api_logger.info(f"[DEBUG] perform_brand_test called with method: {request.method}")
+    api_logger.info(f"[DEBUG] Headers: {dict(request.headers)}")
     api_logger.info(f"[DEBUG] Headers: {dict(request.headers)}")
     
     # 【修复】处理CORS预检请求(OPTIONS)
@@ -272,6 +273,13 @@ def perform_brand_test():
         from .ai_adapters.factory import AIAdapterFactory
         from .ai_adapters.base_adapter import AIPlatformType
 
+        # 添加运行时调试信息
+        api_logger.info(f"=== Runtime Adapter Status Check ===")
+        api_logger.info(f"Selected models: {selected_models}")
+        api_logger.info(f"All registered adapters: {[pt.value for pt in AIAdapterFactory._adapters.keys()]}")
+        api_logger.info(f"MODEL_NAME_MAP: {AIAdapterFactory.MODEL_NAME_MAP}")
+        api_logger.info(f"=== End Runtime Adapter Status Check ===")
+        
         for model in selected_models:
             model_name = model['name'] if isinstance(model, dict) else model
             # 使用AIAdapterFactory的标准化方法
@@ -357,49 +365,11 @@ def perform_brand_test():
 
             api_logger.info(f"Starting async brand test '{execution_id}' for brands: {brand_list} (User: {user_id}, Level: {user_level.value}) - Total test cases: {len(all_test_cases)}")
 
-            # 【优化】智能检测平台组合，动态调整并发策略
-            platform_stats = {}
-            for model in selected_models:
-                model_name = model.get('name', '') if isinstance(model, dict) else model
-                normalized_name = AIAdapterFactory.get_normalized_model_name(model_name)
-                
-                # 统计各平台类型
-                if normalized_name not in platform_stats:
-                    platform_stats[normalized_name] = 0
-                platform_stats[normalized_name] += 1
-            
-            # 检查是否包含慢速平台（如豆包）
-            has_slow_platform = any(
-                'doubao' in normalized_name or 
-                'wenxin' in normalized_name or  # 文心一言也可能较慢
-                'spark' in normalized_name      # 讯飞星火可能较慢
-                for normalized_name in platform_stats.keys()
-            )
-            
-            # 根据平台组合和数量动态调整并发策略
-            total_models = len(selected_models)
-            if has_slow_platform:
-                # 如果包含慢速平台，降低并发度以避免超时
-                if total_models <= 2:
-                    max_workers = 1  # 少量模型时顺序执行
-                    strategy = ExecutionStrategy.SEQUENTIAL
-                elif total_models <= 4:
-                    max_workers = 2  # 中等数量时适度并发
-                    strategy = ExecutionStrategy.CONCURRENT
-                else:
-                    max_workers = 2  # 大量模型时仍需控制并发
-                    strategy = ExecutionStrategy.CONCURRENT
-                api_logger.info(f"[ExecutionStrategy] Detected slow platform, using {strategy.value} execution with max_workers={max_workers}")
-            else:
-                # 不包含慢速平台时，可以使用更高并发度
-                if total_models <= 3:
-                    max_workers = 3
-                elif total_models <= 6:
-                    max_workers = 4
-                else:
-                    max_workers = 5  # 设置上限避免过度并发
-                strategy = ExecutionStrategy.CONCURRENT
-                api_logger.info(f"[ExecutionStrategy] Using CONCURRENT execution with max_workers={max_workers}")
+            # 【串行执行策略】为确保所有AI平台请求都能成功完成，强制使用串行执行
+            # 这样可以避免并发请求导致的资源竞争和超时问题
+            max_workers = 1
+            strategy = ExecutionStrategy.SEQUENTIAL
+            api_logger.info(f"[ExecutionStrategy] Using forced SEQUENTIAL execution with max_workers=1 for stability")
             
             executor = TestExecutor(max_workers=max_workers, strategy=strategy)
 
@@ -2361,16 +2331,10 @@ def submit_brand_test():
 
             api_logger.info(f"Starting async brand test '{task_id}' for brands: {brand_list} - Total test cases: {len(all_test_cases)}")
 
-            # 【修复】检测是否包含豆包平台，如果是则使用顺序执行避免超时
-            has_doubao = any('doubao' in model.get('name', '').lower() or '豆包' in model.get('name', '') 
-                           for model in selected_models)
-            
-            if has_doubao:
-                executor = TestExecutor(max_workers=1, strategy=ExecutionStrategy.SEQUENTIAL)
-                api_logger.info(f"[ExecutionStrategy] Detected Doubao, using SEQUENTIAL execution for stability")
-            else:
-                executor = TestExecutor(max_workers=3, strategy=ExecutionStrategy.CONCURRENT)
-                api_logger.info(f"[ExecutionStrategy] Using CONCURRENT execution with max_workers=3")
+            # 【串行执行策略】为确保所有AI平台请求都能成功完成，强制使用串行执行
+            # 这样可以避免并发请求导致的资源竞争和超时问题
+            executor = TestExecutor(max_workers=1, strategy=ExecutionStrategy.SEQUENTIAL)
+            api_logger.info(f"[ExecutionStrategy] Using forced SEQUENTIAL execution with max_workers=1 for stability")
 
             def progress_callback(exec_id, progress):
                 # 计算进度百分比

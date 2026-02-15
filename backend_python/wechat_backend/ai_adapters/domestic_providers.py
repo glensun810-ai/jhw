@@ -11,7 +11,7 @@ from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from ..network.request_wrapper import get_ai_request_wrapper
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from config_manager import Config as PlatformConfigManager
+from ..config_manager import Config as PlatformConfigManager
 
 
 class TongyiAdapter(AIClient):

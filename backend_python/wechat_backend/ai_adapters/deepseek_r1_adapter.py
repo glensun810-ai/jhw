@@ -11,7 +11,7 @@ from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from ..network.request_wrapper import get_ai_request_wrapper
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from config_manager import Config as PlatformConfigManager
+from ..config_manager import Config as PlatformConfigManager
 
 
 class DeepSeekR1Adapter(AIClient):
@@ -40,7 +40,7 @@ class DeepSeekR1Adapter(AIClient):
             base_url: API 基础 URL
             enable_reasoning_extraction: 是否启用推理链提取
         """
-        super().__init__(AIPlatformType.DEEPSEEK, model_name, api_key)
+        super().__init__(AIPlatformType.DEEPSEEKR1, model_name, api_key)
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.base_url = base_url

@@ -50,6 +50,7 @@ class ConfigurationManager:
         """
         platform_models = {
             'deepseek': 'deepseek-chat',
+            'deepseekr1': 'deepseek-chat',  # deepseekr1 使用相同的默认模型
             'doubao': 'doubao-lite',
             'qwen': 'qwen-max',
             'kimi': 'kimi-large',

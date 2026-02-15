@@ -236,37 +236,50 @@ def require_auth_optional(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user_id = None
-
-        # 尝试JWT认证
-        if jwt:
-            auth_header = request.headers.get('Authorization')
-            if auth_header and auth_header.startswith('Bearer '):
-                token = auth_header.split(' ')[1]
-                try:
-                    payload = jwt_manager.decode_token(token)
-                    user_id = payload.get('user_id') or payload.get('openid')
-                except AuthenticationError:
-                    pass  # JWT验证失败，继续
-
-        # 尝试微信会话认证
-        if not user_id:
-            wechat_openid = request.headers.get('X-WX-OpenID') or request.headers.get('X-OpenID') or request.headers.get('X-Wechat-OpenID')
-            if wechat_openid:
-                user_id = wechat_openid
-
-        # 尝试从请求体获取用户信息（某些情况下前端可能传递）
-        if not user_id and request.is_json:
-            data = request.get_json()
-            if data and 'userOpenid' in data:
-                user_id = data['userOpenid']
-
-        # 设置用户ID（如果为None，则标记为anonymous）
-        g.user_id = user_id if user_id is not None else 'anonymous'
-        g.is_authenticated = user_id is not None
-        g.auth_method = 'jwt' if jwt and request.headers.get('Authorization', '').startswith('Bearer ') else 'wechat_session' if user_id else 'anonymous'
-
+        
+        try:
+            # 尝试JWT认证
+            if jwt:
+                auth_header = request.headers.get('Authorization')
+                if auth_header and auth_header.startswith('Bearer '):
+                    token = auth_header.split(' ')[1]
+                    try:
+                        payload = jwt_manager.decode_token(token)
+                        user_id = payload.get('user_id') or payload.get('openid')
+                    except AuthenticationError:
+                        pass  # JWT验证失败，继续
+            
+            # 尝试微信会话认证
+            if not user_id:
+                wechat_openid = request.headers.get('X-WX-OpenID') or request.headers.get('X-OpenID') or request.headers.get('X-Wechat-OpenID')
+                if wechat_openid:
+                    user_id = wechat_openid
+            
+            # 尝试从请求体获取用户信息
+            if not user_id and request.is_json:
+                data = request.get_json()
+                if data and 'userOpenid' in data:
+                    user_id = data['userOpenid']
+                    
+        except Exception as e:
+            # 记录认证过程中的任何异常，但不阻断执行
+            logger.warning(f"认证过程异常: {e}")
+        
+        # 确保g对象正确设置
+        try:
+            g.user_id = user_id if user_id is not None else 'anonymous'
+            g.is_authenticated = user_id is not None
+            g.auth_method = 'jwt' if user_id and jwt and request.headers.get('Authorization', '').startswith('Bearer ') else 'wechat_session' if user_id else 'anonymous'
+        except Exception as e:
+            # 如果g对象设置失败，使用默认值
+            logger.error(f"g对象设置失败: {e}")
+            # 直接在函数内部设置默认值
+            setattr(g, 'user_id', 'anonymous')
+            setattr(g, 'is_authenticated', False)
+            setattr(g, 'auth_method', 'fallback')
+        
         return f(*args, **kwargs)
-
+    
     return decorated_function
 
 

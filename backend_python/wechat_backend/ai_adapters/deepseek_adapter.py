@@ -1,13 +1,12 @@
 import time
 import requests
-from typing import Dict, Any, Optional
 from ..logging_config import api_logger
 from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from ..network.request_wrapper import get_ai_request_wrapper
-from ..monitoring.metrics_collector import record_api_call, record_error
-from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from config_manager import Config as PlatformConfigManager
-from ...utils.ai_response_wrapper import log_detailed_response
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from utils.ai_response_wrapper import log_detailed_response
 
 
 class DeepSeekAdapter(AIClient):
@@ -134,7 +133,7 @@ class DeepSeekAdapter(AIClient):
                         model=self.model_name,
                         success=False,
                         error_message=error_message,
-                        error_type="SERVER_ERROR",
+                        error_type=AIErrorType.SERVER_ERROR,
                         latency_ms=int(latency * 1000),  # Convert to milliseconds
                         execution_id=execution_id,
                         **kwargs  # Pass any additional context from kwargs
@@ -210,7 +209,7 @@ class DeepSeekAdapter(AIClient):
                     model=self.model_name,
                     success=False,
                     error_message="请求超时",
-                    error_type="TIMEOUT_ERROR",
+                    error_type=AIErrorType.SERVER_ERROR,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
                     **kwargs  # Pass any additional context from kwargs
@@ -243,7 +242,7 @@ class DeepSeekAdapter(AIClient):
                     model=self.model_name,
                     success=False,
                     error_message=f"请求异常: {str(e)}",
-                    error_type=error_type.value if error_type else "REQUEST_EXCEPTION",
+                    error_type=error_type if error_type else AIErrorType.UNKNOWN_ERROR,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
                     **kwargs  # Pass any additional context from kwargs
@@ -275,7 +274,7 @@ class DeepSeekAdapter(AIClient):
                     model=self.model_name,
                     success=False,
                     error_message=str(e),
-                    error_type=AIErrorType.INVALID_API_KEY.value,
+                    error_type=AIErrorType.INVALID_API_KEY,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
                     **kwargs  # Pass any additional context from kwargs
@@ -307,7 +306,7 @@ class DeepSeekAdapter(AIClient):
                     model=self.model_name,
                     success=False,
                     error_message=f"未知错误: {str(e)}",
-                    error_type="UNEXPECTED_ERROR",
+                    error_type=AIErrorType.UNKNOWN_ERROR,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
                     **kwargs  # Pass any additional context from kwargs
