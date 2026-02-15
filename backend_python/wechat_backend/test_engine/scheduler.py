@@ -218,7 +218,11 @@ class TestScheduler:
                 last_error = str(e)
                 api_logger.error(f"Task {task.id} failed on attempt {attempt + 1} with exception: {last_error}")
 
-            time.sleep(2 ** attempt) # Exponential backoff
+            # 【优化】改进重试逻辑，减少对总时间的影响
+            # 使用较短的指数退避策略，避免长时间等待
+            if attempt < task.max_retries - 1:  # 不在最后一次尝试后等待
+                sleep_time = min(2 ** attempt, 5)  # 最多等待5秒，避免长时间阻塞
+                time.sleep(sleep_time)
 
         api_logger.error(f"All {task.max_retries} attempts failed for task {task.id}. Last error: {last_error}")
         
@@ -349,7 +353,11 @@ class TestScheduler:
                 last_error = str(e)
                 api_logger.error(f"Task {task.id} failed on attempt {attempt + 1} with exception: {last_error}")
 
-            time.sleep(2 ** attempt) # Exponential backoff
+            # 【优化】改进重试逻辑，减少对总时间的影响
+            # 使用较短的指数退避策略，避免长时间等待
+            if attempt < task.max_retries - 1:  # 不在最后一次尝试后等待
+                sleep_time = min(2 ** attempt, 5)  # 最多等待5秒，避免长时间阻塞
+                time.sleep(sleep_time)
 
         api_logger.error(f"All {task.max_retries} attempts failed for task {task.id}. Last error: {last_error}")
         
@@ -388,6 +396,7 @@ class TestScheduler:
         # Handle exact matches first to avoid substring conflicts
         exact_matches = {
             'DeepSeek': 'deepseek',
+            'deepseek': 'deepseek',
             '豆包': 'doubao',
             'doubao': 'doubao',
             'Doubao': 'doubao',
@@ -396,7 +405,9 @@ class TestScheduler:
             'hunyuan': 'yuanbao',
             '通义千问': 'qwen',
             'TongyiQianwen': 'qwen',
+            '千问': 'qwen',
             '智谱AI': 'zhipu',
+            '智谱': 'zhipu',
             'zhipu': 'zhipu',
             'glm': 'zhipu',
             '文心一言': 'wenxin',
@@ -420,7 +431,7 @@ class TestScheduler:
             return 'doubao'
         if '元宝' in model_name or 'hunyuan' in model_name_lower:
             return 'yuanbao'
-        if '通义千问' in model_name or 'qwen' in model_name_lower:
+        if '通义千问' in model_name or '千问' in model_name or 'qwen' in model_name_lower:
             return 'qwen'
         if '文心一言' in model_name:
             return 'wenxin'
@@ -434,7 +445,7 @@ class TestScheduler:
             return 'doubao'
         if 'yuanbao' in model_name_lower:
             return 'yuanbao'
-        if '智谱' in model_name or 'zhipu' in model_name_lower or 'glm' in model_name_lower:
+        if '智谱' in model_name or '智谱ai' in model_name_lower or 'zhipu' in model_name_lower or 'glm' in model_name_lower:
             return 'zhipu'
         if 'gpt' in model_name_lower:
             return 'openai'

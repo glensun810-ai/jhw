@@ -63,22 +63,41 @@ class AIAdapterFactory:
     # 名称映射引擎：在类中注入或更新映射表
     MODEL_NAME_MAP = {
         "豆包": "doubao",
+        "doubao": "doubao",
+        "doubao-pro": "doubao",
         "qwen": "qwen",
         "千问": "qwen",
         "通义千问": "qwen",
+        "tongyi": "qwen",
+        "aliyun-qwen": "qwen",
         "deepseek": "deepseek",
+        "deepseekr1": "deepseekr1",
+        "deepseek-r1": "deepseekr1",
         "文心一言": "wenxin",
+        "wenxin": "wenxin",
+        "ernie": "wenxin",
         "Kimi": "kimi",
+        "月之暗面": "kimi",
+        "moonshot": "kimi",
         "元宝": "yuanbao",
+        "bytedance-yuanbao": "yuanbao",
         "讯飞星火": "spark",
+        "xinghuo": "spark",
+        "iFlytek": "spark",
         "智谱AI": "zhipu",
         "智谱": "zhipu",
-        "DeepSeek": "deepseek",
+        "zhipu": "zhipu",
+        "chatglm": "zhipu",
+        "OpenAI": "openai",
         "ChatGPT": "chatgpt",
+        "GPT": "chatgpt",
         "Claude": "claude",
+        "Anthropic": "claude",
         "Gemini": "gemini",
+        "Google": "gemini",
         "Perplexity": "perplexity",
-        "Grok": "grok"
+        "Grok": "grok",
+        "xAI": "grok"
     }
 
     _adapters: Dict[AIPlatformType, Type[AIClient]] = {}
