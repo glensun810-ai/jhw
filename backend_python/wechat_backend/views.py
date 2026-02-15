@@ -746,6 +746,591 @@ def timeout_handler(signum, frame):
     raise TimeoutError("Operation timed out")
 
 
+@wechat_bp.route('/api/mvp/deepseek-test', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=3, window=60, per='endpoint')
+@monitored_endpoint('/api/mvp/deepseek-test', require_auth=False, validate_inputs=True)
+def mvp_deepseek_test():
+    """
+    DeepSeek MVP测试接口 - 同步顺序执行，确保每个问题都拿到结果
+    参考豆包MVP成功经验，使用30秒超时
+    """
+    data = request.get_json(force=True)
+    
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+    
+    try:
+        # 提取参数
+        brand_list = data.get('brand_list', [])
+        questions = data.get('customQuestions', [])
+        
+        if not brand_list or not questions:
+            return jsonify({'error': 'brand_list and customQuestions are required'}), 400
+        
+        main_brand = brand_list[0]
+        
+        # 生成执行ID
+        execution_id = str(uuid.uuid4())
+        
+        # 初始化状态
+        execution_store[execution_id] = {
+            'progress': 0,
+            'completed': 0,
+            'total': len(questions),
+            'status': 'processing',
+            'stage': 'ai_testing',
+            'results': [],
+            'start_time': datetime.now().isoformat(),
+            'platform': 'deepseek'
+        }
+        
+        api_logger.info(f"[DeepSeek MVP] Starting brand test for {main_brand} with {len(questions)} questions")
+        
+        # DeepSeek配置（从环境变量或配置管理器获取）
+        api_key = os.getenv('DEEPSEEK_API_KEY') or config_manager.get_api_key('deepseek')
+        model_id = os.getenv('DEEPSEEK_MODEL_ID') or config_manager.get_platform_model('deepseek') or 'deepseek-chat'
+        
+        if not api_key:
+            raise ValueError("DeepSeek API密钥未配置")
+        
+        api_logger.info(f"[DeepSeek MVP] Using model_id: {model_id}")
+        
+        # 顺序执行每个问题（同步执行，确保拿到结果）
+        results = []
+        for idx, question in enumerate(questions):
+            try:
+                # 更新进度
+                progress = int((idx / len(questions)) * 100)
+                execution_store[execution_id].update({
+                    'progress': progress,
+                    'completed': idx,
+                    'status': f'Processing question {idx + 1}/{len(questions)}'
+                })
+                
+                # 替换品牌占位符
+                actual_question = question.replace('{brandName}', main_brand)
+                if len(brand_list) > 1:
+                    actual_question = actual_question.replace('{competitorBrand}', brand_list[1])
+                
+                api_logger.info(f"[DeepSeek MVP] Q{idx + 1}: {actual_question[:50]}...")
+                
+                # 调用DeepSeek API
+                adapter = AIAdapterFactory.create(AIPlatformType.DEEPSEEK, api_key, model_id)
+                
+                start_time = time.time()
+                ai_response = adapter.send_prompt(actual_question, timeout=30)  # DeepSeek使用30秒超时
+                latency = time.time() - start_time
+                
+                # 导入AI响应记录器（增强版V2）
+                from utils.ai_response_logger_v2 import log_ai_response
+                
+                if ai_response.success:
+                    result_item = {
+                        'question': actual_question,
+                        'response': ai_response.content,
+                        'platform': 'DeepSeek',
+                        'model': model_id,
+                        'latency': round(latency * 1000),  # 转换为毫秒
+                        'success': True,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    api_logger.info(f"[DeepSeek MVP] Q{idx + 1} success in {latency:.2f}s, response length: {len(ai_response.content)}")
+                    
+                    # 自动记录成功的AI响应
+                    try:
+                        log_ai_response(
+                            question=actual_question,
+                            response=ai_response.content,
+                            platform='DeepSeek',
+                            model=model_id,
+                            brand=main_brand,
+                            competitor=brand_list[1] if len(brand_list) > 1 else None,
+                            industry='汽车改装',
+                            question_category='品牌搜索',
+                            latency_ms=round(latency * 1000),
+                            tokens_used=getattr(ai_response, 'tokens_used', None),
+                            prompt_tokens=getattr(ai_response, 'prompt_tokens', None),
+                            completion_tokens=getattr(ai_response, 'completion_tokens', None),
+                            success=True,
+                            temperature=0.7,
+                            max_tokens=1000,
+                            timeout_seconds=30,
+                            execution_id=execution_id,
+                            question_index=idx + 1,
+                            total_questions=len(questions),
+                            session_id=request.headers.get('X-Session-ID'),
+                            user_id=getattr(g, 'user_id', None),
+                            raw_response=getattr(ai_response, 'metadata', None),
+                            metadata={
+                                'source': 'deepseek_mvp_test_v2',
+                                'api_version': 'v1',
+                                'response_length': len(ai_response.content) if ai_response.content else 0
+                            }
+                        )
+                        api_logger.info(f"[DeepSeek MVP] Q{idx + 1} AI响应已记录到训练数据集")
+                    except Exception as log_error:
+                        api_logger.warning(f"[DeepSeek MVP] Q{idx + 1} 记录AI响应失败: {log_error}")
+                else:
+                    result_item = {
+                        'question': actual_question,
+                        'response': f'API调用失败: {ai_response.error_message}',
+                        'platform': 'DeepSeek',
+                        'model': model_id,
+                        'latency': round(latency * 1000),
+                        'success': False,
+                        'error': ai_response.error_message,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    api_logger.warning(f"[DeepSeek MVP] Q{idx + 1} failed: {ai_response.error_message}")
+                    
+                    # 记录失败的调用
+                    try:
+                        log_ai_response(
+                            question=actual_question,
+                            response='',
+                            platform='DeepSeek',
+                            model=model_id,
+                            brand=main_brand,
+                            latency_ms=round(latency * 1000),
+                            success=False,
+                            error_message=ai_response.error_message,
+                            error_type=getattr(ai_response, 'error_type', 'unknown'),
+                            execution_id=execution_id,
+                            question_index=idx + 1,
+                            total_questions=len(questions),
+                            metadata={'source': 'deepseek_mvp_test_v2', 'error_phase': 'api_call'}
+                        )
+                    except Exception:
+                        pass
+                
+                results.append(result_item)
+                execution_store[execution_id]['results'].append(result_item)
+                
+            except Exception as e:
+                api_logger.error(f"[DeepSeek MVP] Q{idx + 1} exception: {str(e)}")
+                results.append({
+                    'question': actual_question if 'actual_question' in locals() else question,
+                    'response': f'处理异常: {str(e)}',
+                    'platform': 'DeepSeek',
+                    'success': False,
+                    'error': str(e),
+                    'timestamp': datetime.now().isoformat()
+                })
+        
+        # 完成
+        execution_store[execution_id].update({
+            'progress': 100,
+            'completed': len(questions),
+            'status': 'completed',
+            'stage': 'completed',
+            'is_completed': True
+        })
+        
+        api_logger.info(f"[DeepSeek MVP] Test completed for {main_brand}, {len([r for r in results if r.get('success')])}/{len(results)} successful")
+        
+        return jsonify({
+            'status': 'success',
+            'execution_id': execution_id,
+            'message': 'DeepSeek test completed',
+            'results': results
+        })
+        
+    except Exception as e:
+        api_logger.error(f"[DeepSeek MVP] Test failed: {str(e)}")
+        return jsonify({'error': f'Test failed: {str(e)}'}), 500
+
+
+@wechat_bp.route('/api/mvp/qwen-test', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=3, window=60, per='endpoint')
+@monitored_endpoint('/api/mvp/qwen-test', require_auth=False, validate_inputs=True)
+def mvp_qwen_test():
+    """
+    通义千问(Qwen) MVP测试接口 - 同步顺序执行，确保每个问题都拿到结果
+    参考豆包MVP成功经验，使用45秒超时
+    """
+    data = request.get_json(force=True)
+    
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+    
+    try:
+        # 提取参数
+        brand_list = data.get('brand_list', [])
+        questions = data.get('customQuestions', [])
+        
+        if not brand_list or not questions:
+            return jsonify({'error': 'brand_list and customQuestions are required'}), 400
+        
+        main_brand = brand_list[0]
+        
+        # 生成执行ID
+        execution_id = str(uuid.uuid4())
+        
+        # 初始化状态
+        execution_store[execution_id] = {
+            'progress': 0,
+            'completed': 0,
+            'total': len(questions),
+            'status': 'processing',
+            'stage': 'ai_testing',
+            'results': [],
+            'start_time': datetime.now().isoformat(),
+            'platform': 'qwen'
+        }
+        
+        api_logger.info(f"[Qwen MVP] Starting brand test for {main_brand} with {len(questions)} questions")
+        
+        # Qwen配置（从环境变量或配置管理器获取）
+        api_key = os.getenv('QWEN_API_KEY') or config_manager.get_api_key('qwen')
+        model_id = os.getenv('QWEN_MODEL_ID') or config_manager.get_platform_model('qwen') or 'qwen-max'
+        
+        if not api_key:
+            raise ValueError("通义千问API密钥未配置")
+        
+        api_logger.info(f"[Qwen MVP] Using model_id: {model_id}")
+        
+        # 顺序执行每个问题（同步执行，确保拿到结果）
+        results = []
+        for idx, question in enumerate(questions):
+            try:
+                # 更新进度
+                progress = int((idx / len(questions)) * 100)
+                execution_store[execution_id].update({
+                    'progress': progress,
+                    'completed': idx,
+                    'status': f'Processing question {idx + 1}/{len(questions)}'
+                })
+                
+                # 替换品牌占位符
+                actual_question = question.replace('{brandName}', main_brand)
+                if len(brand_list) > 1:
+                    actual_question = actual_question.replace('{competitorBrand}', brand_list[1])
+                
+                api_logger.info(f"[Qwen MVP] Q{idx + 1}: {actual_question[:50]}...")
+                
+                # 调用Qwen API
+                adapter = AIAdapterFactory.create(AIPlatformType.QWEN, api_key, model_id)
+                
+                start_time = time.time()
+                ai_response = adapter.send_prompt(actual_question, timeout=45)  # Qwen使用45秒超时
+                latency = time.time() - start_time
+                
+                # 导入AI响应记录器（增强版V2）
+                from utils.ai_response_logger_v2 import log_ai_response
+                
+                if ai_response.success:
+                    result_item = {
+                        'question': actual_question,
+                        'response': ai_response.content,
+                        'platform': '通义千问',
+                        'model': model_id,
+                        'latency': round(latency * 1000),  # 转换为毫秒
+                        'success': True,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    api_logger.info(f"[Qwen MVP] Q{idx + 1} success in {latency:.2f}s, response length: {len(ai_response.content)}")
+                    
+                    # 自动记录成功的AI响应
+                    try:
+                        log_ai_response(
+                            question=actual_question,
+                            response=ai_response.content,
+                            platform='通义千问',
+                            model=model_id,
+                            brand=main_brand,
+                            competitor=brand_list[1] if len(brand_list) > 1 else None,
+                            industry='汽车改装',
+                            question_category='品牌搜索',
+                            latency_ms=round(latency * 1000),
+                            tokens_used=getattr(ai_response, 'tokens_used', None),
+                            prompt_tokens=getattr(ai_response, 'prompt_tokens', None),
+                            completion_tokens=getattr(ai_response, 'completion_tokens', None),
+                            success=True,
+                            temperature=0.7,
+                            max_tokens=1000,
+                            timeout_seconds=45,
+                            execution_id=execution_id,
+                            question_index=idx + 1,
+                            total_questions=len(questions),
+                            session_id=request.headers.get('X-Session-ID'),
+                            user_id=getattr(g, 'user_id', None),
+                            raw_response=getattr(ai_response, 'metadata', None),
+                            metadata={
+                                'source': 'qwen_mvp_test_v2',
+                                'api_version': 'v1',
+                                'response_length': len(ai_response.content) if ai_response.content else 0
+                            }
+                        )
+                        api_logger.info(f"[Qwen MVP] Q{idx + 1} AI响应已记录到训练数据集")
+                    except Exception as log_error:
+                        api_logger.warning(f"[Qwen MVP] Q{idx + 1} 记录AI响应失败: {log_error}")
+                else:
+                    result_item = {
+                        'question': actual_question,
+                        'response': f'API调用失败: {ai_response.error_message}',
+                        'platform': '通义千问',
+                        'model': model_id,
+                        'latency': round(latency * 1000),
+                        'success': False,
+                        'error': ai_response.error_message,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    api_logger.warning(f"[Qwen MVP] Q{idx + 1} failed: {ai_response.error_message}")
+                    
+                    # 记录失败的调用
+                    try:
+                        log_ai_response(
+                            question=actual_question,
+                            response='',
+                            platform='通义千问',
+                            model=model_id,
+                            brand=main_brand,
+                            latency_ms=round(latency * 1000),
+                            success=False,
+                            error_message=ai_response.error_message,
+                            error_type=getattr(ai_response, 'error_type', 'unknown'),
+                            execution_id=execution_id,
+                            question_index=idx + 1,
+                            total_questions=len(questions),
+                            metadata={'source': 'qwen_mvp_test_v2', 'error_phase': 'api_call'}
+                        )
+                    except Exception:
+                        pass
+                
+                results.append(result_item)
+                execution_store[execution_id]['results'].append(result_item)
+                
+            except Exception as e:
+                api_logger.error(f"[Qwen MVP] Q{idx + 1} exception: {str(e)}")
+                results.append({
+                    'question': actual_question if 'actual_question' in locals() else question,
+                    'response': f'处理异常: {str(e)}',
+                    'platform': '通义千问',
+                    'success': False,
+                    'error': str(e),
+                    'timestamp': datetime.now().isoformat()
+                })
+        
+        # 完成
+        execution_store[execution_id].update({
+            'progress': 100,
+            'completed': len(questions),
+            'status': 'completed',
+            'stage': 'completed',
+            'is_completed': True
+        })
+        
+        api_logger.info(f"[Qwen MVP] Test completed for {main_brand}, {len([r for r in results if r.get('success')])}/{len(results)} successful")
+        
+        return jsonify({
+            'status': 'success',
+            'execution_id': execution_id,
+            'message': 'Qwen test completed',
+            'results': results
+        })
+        
+    except Exception as e:
+        api_logger.error(f"[Qwen MVP] Test failed: {str(e)}")
+        return jsonify({'error': f'Test failed: {str(e)}'}), 500
+
+
+@wechat_bp.route('/api/mvp/zhipu-test', methods=['POST'])
+@require_auth_optional
+@rate_limit(limit=3, window=60, per='endpoint')
+@monitored_endpoint('/api/mvp/zhipu-test', require_auth=False, validate_inputs=True)
+def mvp_zhipu_test():
+    """
+    智谱AI(Zhipu) MVP测试接口 - 同步顺序执行，确保每个问题都拿到结果
+    参考豆包MVP成功经验，使用45秒超时
+    """
+    data = request.get_json(force=True)
+    
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+    
+    try:
+        # 提取参数
+        brand_list = data.get('brand_list', [])
+        questions = data.get('customQuestions', [])
+        
+        if not brand_list or not questions:
+            return jsonify({'error': 'brand_list and customQuestions are required'}), 400
+        
+        main_brand = brand_list[0]
+        
+        # 生成执行ID
+        execution_id = str(uuid.uuid4())
+        
+        # 初始化状态
+        execution_store[execution_id] = {
+            'progress': 0,
+            'completed': 0,
+            'total': len(questions),
+            'status': 'processing',
+            'stage': 'ai_testing',
+            'results': [],
+            'start_time': datetime.now().isoformat(),
+            'platform': 'zhipu'
+        }
+        
+        api_logger.info(f"[Zhipu MVP] Starting brand test for {main_brand} with {len(questions)} questions")
+        
+        # Zhipu配置（从环境变量或配置管理器获取）
+        api_key = os.getenv('ZHIPU_API_KEY') or config_manager.get_api_key('zhipu')
+        model_id = os.getenv('ZHIPU_MODEL_ID') or config_manager.get_platform_model('zhipu') or 'glm-4'
+        
+        if not api_key:
+            raise ValueError("智谱AI API密钥未配置")
+        
+        api_logger.info(f"[Zhipu MVP] Using model_id: {model_id}")
+        
+        # 顺序执行每个问题（同步执行，确保拿到结果）
+        results = []
+        for idx, question in enumerate(questions):
+            try:
+                # 更新进度
+                progress = int((idx / len(questions)) * 100)
+                execution_store[execution_id].update({
+                    'progress': progress,
+                    'completed': idx,
+                    'status': f'Processing question {idx + 1}/{len(questions)}'
+                })
+                
+                # 替换品牌占位符
+                actual_question = question.replace('{brandName}', main_brand)
+                if len(brand_list) > 1:
+                    actual_question = actual_question.replace('{competitorBrand}', brand_list[1])
+                
+                api_logger.info(f"[Zhipu MVP] Q{idx + 1}: {actual_question[:50]}...")
+                
+                # 调用Zhipu API
+                adapter = AIAdapterFactory.create(AIPlatformType.ZHIPU, api_key, model_id)
+                
+                start_time = time.time()
+                ai_response = adapter.send_prompt(actual_question, timeout=45)  # Zhipu使用45秒超时
+                latency = time.time() - start_time
+                
+                # 导入AI响应记录器（增强版V2）
+                from utils.ai_response_logger_v2 import log_ai_response
+                
+                if ai_response.success:
+                    result_item = {
+                        'question': actual_question,
+                        'response': ai_response.content,
+                        'platform': '智谱AI',
+                        'model': model_id,
+                        'latency': round(latency * 1000),  # 转换为毫秒
+                        'success': True,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    api_logger.info(f"[Zhipu MVP] Q{idx + 1} success in {latency:.2f}s, response length: {len(ai_response.content)}")
+                    
+                    # 自动记录成功的AI响应
+                    try:
+                        log_ai_response(
+                            question=actual_question,
+                            response=ai_response.content,
+                            platform='智谱AI',
+                            model=model_id,
+                            brand=main_brand,
+                            competitor=brand_list[1] if len(brand_list) > 1 else None,
+                            industry='汽车改装',
+                            question_category='品牌搜索',
+                            latency_ms=round(latency * 1000),
+                            tokens_used=getattr(ai_response, 'tokens_used', None),
+                            prompt_tokens=getattr(ai_response, 'prompt_tokens', None),
+                            completion_tokens=getattr(ai_response, 'completion_tokens', None),
+                            success=True,
+                            temperature=0.7,
+                            max_tokens=1000,
+                            timeout_seconds=45,
+                            execution_id=execution_id,
+                            question_index=idx + 1,
+                            total_questions=len(questions),
+                            session_id=request.headers.get('X-Session-ID'),
+                            user_id=getattr(g, 'user_id', None),
+                            raw_response=getattr(ai_response, 'metadata', None),
+                            metadata={
+                                'source': 'zhipu_mvp_test_v2',
+                                'api_version': 'v1',
+                                'response_length': len(ai_response.content) if ai_response.content else 0
+                            }
+                        )
+                        api_logger.info(f"[Zhipu MVP] Q{idx + 1} AI响应已记录到训练数据集")
+                    except Exception as log_error:
+                        api_logger.warning(f"[Zhipu MVP] Q{idx + 1} 记录AI响应失败: {log_error}")
+                else:
+                    result_item = {
+                        'question': actual_question,
+                        'response': f'API调用失败: {ai_response.error_message}',
+                        'platform': '智谱AI',
+                        'model': model_id,
+                        'latency': round(latency * 1000),
+                        'success': False,
+                        'error': ai_response.error_message,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    api_logger.warning(f"[Zhipu MVP] Q{idx + 1} failed: {ai_response.error_message}")
+                    
+                    # 记录失败的调用
+                    try:
+                        log_ai_response(
+                            question=actual_question,
+                            response='',
+                            platform='智谱AI',
+                            model=model_id,
+                            brand=main_brand,
+                            latency_ms=round(latency * 1000),
+                            success=False,
+                            error_message=ai_response.error_message,
+                            error_type=getattr(ai_response, 'error_type', 'unknown'),
+                            execution_id=execution_id,
+                            question_index=idx + 1,
+                            total_questions=len(questions),
+                            metadata={'source': 'zhipu_mvp_test_v2', 'error_phase': 'api_call'}
+                        )
+                    except Exception:
+                        pass
+                
+                results.append(result_item)
+                execution_store[execution_id]['results'].append(result_item)
+                
+            except Exception as e:
+                api_logger.error(f"[Zhipu MVP] Q{idx + 1} exception: {str(e)}")
+                results.append({
+                    'question': actual_question if 'actual_question' in locals() else question,
+                    'response': f'处理异常: {str(e)}',
+                    'platform': '智谱AI',
+                    'success': False,
+                    'error': str(e),
+                    'timestamp': datetime.now().isoformat()
+                })
+        
+        # 完成
+        execution_store[execution_id].update({
+            'progress': 100,
+            'completed': len(questions),
+            'status': 'completed',
+            'stage': 'completed',
+            'is_completed': True
+        })
+        
+        api_logger.info(f"[Zhipu MVP] Test completed for {main_brand}, {len([r for r in results if r.get('success')])}/{len(results)} successful")
+        
+        return jsonify({
+            'status': 'success',
+            'execution_id': execution_id,
+            'message': 'Zhipu test completed',
+            'results': results
+        })
+        
+    except Exception as e:
+        api_logger.error(f"[Zhipu MVP] Test failed: {str(e)}")
+        return jsonify({'error': f'Test failed: {str(e)}'}), 500
+
+
 @wechat_bp.route('/api/mvp/brand-test', methods=['POST'])
 @require_auth_optional
 @rate_limit(limit=3, window=60, per='endpoint')
