@@ -49,6 +49,19 @@ class Config:
         Returns:
             API密钥或None
         """
+        # 平台别名映射，处理不同的平台名称变体
+        platform_aliases = {
+            '豆包': 'doubao',
+            'doubao-cn': 'doubao',
+            'Doubao': 'doubao',
+            'DOUBAO': 'doubao',
+            'deepseekr1': 'deepseek',
+            'deepseek-r1': 'deepseek',
+        }
+        
+        # 检查是否是别名，如果是则转换为主名称
+        normalized_platform = platform_aliases.get(platform.lower(), platform.lower())
+        
         platform_keys = {
             'doubao': cls.DOUBAO_API_KEY,
             'deepseek': cls.DEEPSEEK_API_KEY,
@@ -60,7 +73,7 @@ class Config:
             'wenxin': cls.WENXIN_API_KEY
         }
 
-        return platform_keys.get(platform.lower())
+        return platform_keys.get(normalized_platform)
 
     @classmethod
     def is_api_key_configured(cls, platform: str) -> bool:
@@ -73,5 +86,18 @@ class Config:
         Returns:
             bool: 是否已配置API密钥
         """
-        api_key = cls.get_api_key(platform)
+        # 平台别名映射，处理不同的平台名称变体
+        platform_aliases = {
+            '豆包': 'doubao',
+            'doubao-cn': 'doubao',
+            'Doubao': 'doubao',
+            'DOUBAO': 'doubao',
+            'deepseekr1': 'deepseek',
+            'deepseek-r1': 'deepseek',
+        }
+        
+        # 检查是否是别名，如果是则转换为主名称
+        normalized_platform = platform_aliases.get(platform.lower(), platform.lower())
+        
+        api_key = cls.get_api_key(normalized_platform)
         return bool(api_key and api_key.strip() != '' and not api_key.startswith('sk-') and not api_key.endswith('[在此粘贴你的Key]'))

@@ -16,19 +16,20 @@ from ..database import save_test_record
 class TestExecutor:
     """Main executor that coordinates test execution with progress tracking"""
 
-    def __init__(self, max_workers: int = 3, strategy: ExecutionStrategy = ExecutionStrategy.CONCURRENT):
+    def __init__(self, max_workers: int = 1, strategy: ExecutionStrategy = ExecutionStrategy.SEQUENTIAL):
         """
         Initialize the test executor
 
         Args:
-            max_workers: Maximum number of concurrent workers (reduced to 3 to prevent API timeouts)
-            strategy: Execution strategy to use
+            max_workers: Maximum number of concurrent workers (set to 1 for sequential execution)
+            strategy: Execution strategy to use (SEQUENTIAL for guaranteed order execution)
         """
-        self.scheduler = TestScheduler(max_workers=max_workers, strategy=strategy)
+        # 强制使用串行执行策略以确保每个AI平台请求都能完成
+        self.scheduler = TestScheduler(max_workers=1, strategy=ExecutionStrategy.SEQUENTIAL)
         self.progress_tracker = ProgressTracker()
         self.ai_adapter_factory = AIAdapterFactory
 
-        api_logger.warning(f"Initialized TestExecutor with strategy {strategy.value}, max_workers {max_workers} - REDUCED CONCURRENCY TO PREVENT TIMEOUT")
+        api_logger.info(f"Initialized TestExecutor with SEQUENTIAL strategy, max_workers=1 - SERIAL EXECUTION FOR STABILITY")
     
     def execute_tests(
         self,
@@ -141,20 +142,35 @@ class TestExecutor:
         import concurrent.futures
         from functools import partial
 
-        # Execute the tests with timeout using ThreadPoolExecutor
+        # Execute the tests with timeout handling
+        import time
+        start_time = time.time()
+        
         if timeout > 0:
-            # Create a partial function with the arguments
-            execute_func = partial(self.scheduler.schedule_tests, test_tasks, progress_callback)
-
-            # Use ThreadPoolExecutor with timeout
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(execute_func)
-                try:
-                    results = future.result(timeout=timeout)
-                except concurrent.futures.TimeoutError:
-                    # 即使超时也要确保已保存的结果不会丢失
-                    api_logger.warning(f"Test execution timed out after {timeout} seconds, but individual results were saved")
+            if self.scheduler.strategy == ExecutionStrategy.SEQUENTIAL:
+                # For sequential execution, run directly without additional threading overhead
+                api_logger.info(f"Running sequential execution without ThreadPoolExecutor overhead for stability")
+                results = self.scheduler.schedule_tests(test_tasks, progress_callback)
+                
+                # Apply timeout manually by checking execution time
+                elapsed_time = time.time() - start_time
+                if elapsed_time > timeout:
+                    api_logger.warning(f"Sequential execution exceeded timeout of {timeout} seconds, but results were saved")
                     raise TimeoutError(f"Test execution timed out after {timeout} seconds")
+            else:
+                # For concurrent execution, use ThreadPoolExecutor with timeout
+                # Create a partial function with the arguments
+                execute_func = partial(self.scheduler.schedule_tests, test_tasks, progress_callback)
+
+                # Use ThreadPoolExecutor with timeout
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(execute_func)
+                    try:
+                        results = future.result(timeout=timeout)
+                    except concurrent.futures.TimeoutError:
+                        # 即使超时也要确保已保存的结果不会丢失
+                        api_logger.warning(f"Test execution timed out after {timeout} seconds, but individual results were saved")
+                        raise TimeoutError(f"Test execution timed out after {timeout} seconds")
         else:
             # Execute without timeout
             results = self.scheduler.schedule_tests(test_tasks, progress_callback)

@@ -21,7 +21,7 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    # 直接运行时的配置
+    # 直接运行时的配置 - 使用5000端口
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_DEBUG', '1').lower() in ('1', 'true', 'yes')
 

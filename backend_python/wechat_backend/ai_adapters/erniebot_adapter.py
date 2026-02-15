@@ -6,7 +6,11 @@ from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from ..network.request_wrapper import get_ai_request_wrapper
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from config_manager import Config as PlatformConfigManager
+from ..config_manager import Config as PlatformConfigManager
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from utils.ai_response_wrapper import log_detailed_response
 
 class ErnieBotAdapter(AIClient):
     """
@@ -104,6 +108,25 @@ class ErnieBotAdapter(AIClient):
                 tokens_used = (response_data.get("usage", {}).get("total_tokens", 0) 
                               if response_data.get("usage") else 0)
                 api_logger.info(f"ErnieBot response success. Tokens: {tokens_used}, Latency: {latency:.2f}s")
+                
+                # Log response to enhanced logger with context
+                try:
+                    execution_id = kwargs.get('execution_id', 'unknown')
+                    log_detailed_response(
+                        question=prompt,
+                        response=content,
+                        platform=self.platform_type.value,
+                        model=self.model_name,
+                        success=True,
+                        latency_ms=int(latency * 1000),  # Convert to milliseconds
+                        tokens_used=tokens_used,
+                        execution_id=execution_id,
+                        **kwargs  # Pass any additional context from kwargs
+                    )
+                except Exception as log_error:
+                    # Don't let logging errors affect the main response
+                    api_logger.warning(f"Failed to log response to enhanced logger: {log_error}")
+                
                 return AIResponse(
                     success=True,
                     content=content,
@@ -118,6 +141,26 @@ class ErnieBotAdapter(AIClient):
                 error_code = response_data.get("error_code", 0)
                 error_type = self._map_error_code(error_code)
                 api_logger.error(f"ErnieBot API returned error: {error_message}")
+                
+                # Log failed response to enhanced logger with context
+                try:
+                    execution_id = kwargs.get('execution_id', 'unknown')
+                    log_detailed_response(
+                        question=prompt,
+                        response="",  # No content in case of failure
+                        platform=self.platform_type.value,
+                        model=self.model_name,
+                        success=False,
+                        error_message=error_message,
+                        error_type=error_type if error_type else AIErrorType.UNKNOWN_ERROR,
+                        latency_ms=int(latency * 1000),  # Convert to milliseconds
+                        execution_id=execution_id,
+                        **kwargs  # Pass any additional context from kwargs
+                    )
+                except Exception as log_error:
+                    # Don't let logging errors affect the main response
+                    api_logger.warning(f"Failed to log failed response to enhanced logger: {log_error}")
+                
                 return AIResponse(
                     success=False,
                     error_message=error_message,
@@ -141,6 +184,25 @@ class ErnieBotAdapter(AIClient):
                 elif status_code >= 500:
                     error_type = AIErrorType.SERVER_ERROR
 
+            # Log failed response to enhanced logger with context
+            try:
+                execution_id = kwargs.get('execution_id', 'unknown')
+                log_detailed_response(
+                    question=prompt,
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type=error_type if error_type else AIErrorType.REQUEST_EXCEPTION,
+                    latency_ms=int(latency * 1000),  # Convert to milliseconds
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+            except Exception as log_error:
+                # Don't let logging errors affect the main response
+                api_logger.warning(f"Failed to log request exception to enhanced logger: {log_error}")
+            
             record_error("wenxin", error_type.value, str(e))
             return AIResponse(
                 success=False,
@@ -154,6 +216,26 @@ class ErnieBotAdapter(AIClient):
             error_message = f"An unexpected error occurred with ErnieBot API: {e}"
             api_logger.error(error_message)
             latency = time.time() - start_time
+            
+            # Log failed response to enhanced logger with context
+            try:
+                execution_id = kwargs.get('execution_id', 'unknown')
+                log_detailed_response(
+                    question=prompt,
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type=AIErrorType.UNEXPECTED_ERROR,
+                    latency_ms=int(latency * 1000),  # Convert to milliseconds
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+            except Exception as log_error:
+                # Don't let logging errors affect the main response
+                api_logger.warning(f"Failed to log unexpected error to enhanced logger: {log_error}")
+            
             record_error("wenxin", "UNKNOWN_ERROR", str(e))
             return AIResponse(
                 success=False,

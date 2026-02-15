@@ -6,8 +6,11 @@ from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from ..network.request_wrapper import get_ai_request_wrapper
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from config_manager import Config as PlatformConfigManager
-from ...utils.ai_response_wrapper import log_detailed_response
+from ..config_manager import Config as PlatformConfigManager
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from utils.ai_response_wrapper import log_detailed_response
 
 class ZhipuAdapter(AIClient):
     """
@@ -109,7 +112,7 @@ class ZhipuAdapter(AIClient):
                         model=self.model_name,
                         success=False,
                         error_message=error_message,
-                        error_type=error_type.value if error_type else "UNKNOWN_ERROR",
+                        error_type=error_type if error_type else AIErrorType.UNKNOWN_ERROR,
                         latency_ms=int(latency * 1000),  # Convert to milliseconds
                         execution_id=execution_id,
                         **kwargs  # Pass any additional context from kwargs
@@ -151,7 +154,7 @@ class ZhipuAdapter(AIClient):
                     model=self.model_name,
                     success=False,
                     error_message=error_message,
-                    error_type=error_type.value if error_type else "REQUEST_EXCEPTION",
+                    error_type=error_type if error_type else AIErrorType.REQUEST_EXCEPTION,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
                     **kwargs  # Pass any additional context from kwargs
@@ -160,7 +163,7 @@ class ZhipuAdapter(AIClient):
                 # Don't let logging errors affect the main response
                 api_logger.warning(f"Failed to log request exception to enhanced logger: {log_error}")
 
-            record_error("zhipu", error_type.value, str(e))
+            record_error("zhipu", error_type, str(e))
             return AIResponse(
                 success=False,
                 error_message=error_message,
@@ -184,7 +187,7 @@ class ZhipuAdapter(AIClient):
                     model=self.model_name,
                     success=False,
                     error_message=error_message,
-                    error_type="UNEXPECTED_ERROR",
+                    error_type=AIErrorType.UNEXPECTED_ERROR,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
                     **kwargs  # Pass any additional context from kwargs
