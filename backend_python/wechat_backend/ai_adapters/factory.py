@@ -96,14 +96,24 @@ class AIAdapterFactory:
         "doubao-cn": "doubao",  # 添加额外的豆包映射
         "Doubao": "doubao",     # 添加大小写变体
         "DOUBAO": "doubao",
+        "doubao-pro-5b": "doubao",
+        "doubao-pro-7b": "doubao",
+        "doubao-lite": "doubao",
+        "doubao-pro": "doubao",
         "qwen": "qwen",
         "千问": "qwen",
         "通义千问": "qwen",
         "tongyi": "qwen",
         "aliyun-qwen": "qwen",
-        "deepseek": "deepseekr1",  # Fix: Map 'deepseek' to 'deepseekr1' to match registered adapter
+        "qwen-max": "qwen",
+        "qwen-plus": "qwen",
+        "qwen-turbo": "qwen",
+        "deepseek": "deepseek",  # 修正：将deepseek映射回自身，而不是deepseekr1
+        "deepseek-chat": "deepseek",  # 添加具体的deepseek模型映射
+        "deepseek-coder": "deepseek",
         "deepseekr1": "deepseekr1",
         "deepseek-r1": "deepseekr1",
+        "deepseek-r1-distill": "deepseekr1",
         "文心一言": "wenxin",
         "wenxin": "wenxin",
         "ernie": "wenxin",
@@ -119,6 +129,9 @@ class AIAdapterFactory:
         "智谱": "zhipu",
         "zhipu": "zhipu",
         "chatglm": "zhipu",
+        "glm-4": "zhipu",
+        "glm-4-air": "zhipu",
+        "glm-4-plus": "zhipu",
         "OpenAI": "openai",
         "ChatGPT": "chatgpt",
         "GPT": "chatgpt",

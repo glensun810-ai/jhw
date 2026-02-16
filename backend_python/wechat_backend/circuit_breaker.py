@@ -275,6 +275,29 @@ def reset_circuit_breaker(platform_name: str, model_name: str = None):
         api_logger.info(f"Circuit breaker for {name} reset to CLOSED state")
 
 
+def reset_all_circuit_breakers():
+    """
+    Reset all circuit breakers to CLOSED state
+    """
+    for name, circuit_breaker in _circuit_breakers.items():
+        circuit_breaker._to_closed()
+        api_logger.info(f"Circuit breaker '{name}' reset to CLOSED state")
+    api_logger.info(f"All {len(_circuit_breakers)} circuit breakers have been reset")
+
+
+def get_all_circuit_breaker_states():
+    """
+    Get the state of all circuit breakers
+    
+    Returns:
+        dict: Dictionary containing state information for all circuit breakers
+    """
+    states = {}
+    for name, circuit_breaker in _circuit_breakers.items():
+        states[name] = circuit_breaker.get_state_info()
+    return states
+
+
 # Decorator for easy integration
 def circuit_breaker(platform_name: str, model_name: str = None):
     """

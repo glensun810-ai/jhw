@@ -160,15 +160,15 @@ class WebhookManager:
                 return False
 
         except requests.exceptions.Timeout:
-            exception_log(task_id, "TIMEOUT_ERROR", f"Webhook request timed out for {webhook_url} (task {task_id})")
+            exception_log(f"Webhook request timed out for {webhook_url} (task {task_id})")
             # 超时应该传播给断路器以触发熔断
             raise requests.exceptions.Timeout(f"Webhook request to {webhook_url} timed out")
         except requests.exceptions.RequestException as e:
-            exception_log(task_id, "REQUEST_ERROR", f"Webhook request failed for {webhook_url} (task {task_id}): {str(e)}")
+            exception_log(f"Webhook request failed for {webhook_url} (task {task_id}): {str(e)}")
             # 其他请求异常也应传播给断路器
             raise e
         except Exception as e:
-            exception_log(task_id, "UNEXPECTED_ERROR", f"Unexpected error sending webhook to {webhook_url} (task {task_id}): {str(e)}")
+            exception_log(f"Unexpected error sending webhook to {webhook_url} (task {task_id}): {str(e)}")
             return False
 
 
@@ -203,7 +203,7 @@ class WorkflowManager:
                 except queue.Empty:
                     continue
                 except Exception as e:
-                    exception_log("BACKGROUND_PROCESSOR", "PROCESSOR_ERROR", f"Error in background processor: {str(e)}")
+                    exception_log(f"Error in background processor: {str(e)}")
 
         # 启动后台线程
         debug_log("WORKFLOW_MANAGER", "SYSTEM", "Starting background processor thread")
@@ -229,7 +229,7 @@ class WorkflowManager:
                     # 每秒检查一次
                     time.sleep(1)
                 except Exception as e:
-                    exception_log("RETRY_PROCESSOR", "PROCESSOR_ERROR", f"Error in retry processor: {str(e)}")
+                    exception_log(f"Error in retry processor: {str(e)}")
                     time.sleep(1)
 
         # 启动重试处理线程

@@ -1,7 +1,10 @@
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict
 from enum import Enum
 from typing import Optional, Dict, Any
+from ..logging_config import api_logger
+from ..optimization.request_frequency_optimizer import optimize_request_frequency, RequestPriority
 
 class AIPlatformType(Enum):
     """支持的AI平台枚举"""
@@ -58,6 +61,18 @@ class AIClient(ABC):
         self.platform_type = platform_type
         self.model_name = model_name
         self.api_key = api_key
+        # 应用请求频率优化装饰器
+        self._apply_frequency_control()
+
+    def _apply_frequency_control(self):
+        """应用请求频率控制"""
+        # 为send_prompt方法应用频率控制装饰器
+        original_send_prompt = self.send_prompt
+        decorated_send_prompt = optimize_request_frequency(
+            self.platform_type.value, 
+            RequestPriority.MEDIUM
+        )(original_send_prompt)
+        self.send_prompt = decorated_send_prompt
 
     @abstractmethod
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:

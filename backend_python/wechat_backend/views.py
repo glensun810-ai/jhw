@@ -49,25 +49,45 @@ execution_store = {}
 
 def verify_wechat_signature(token, signature, timestamp, nonce):
     """Verify the signature from WeChat server"""
-    sorted_params = sorted([token, timestamp, nonce])
-    concatenated_str = ''.join(sorted_params)
+    # 微信签名算法：将token、timestamp、nonce三个参数进行字典序排序，然后拼接成字符串，再进行SHA1加密
+    params = [token, timestamp, nonce]
+    params.sort()  # 字典序排序
+    concatenated_str = ''.join(params)
     calculated_signature = hashlib.sha1(concatenated_str.encode('utf-8')).hexdigest()
     return calculated_signature == signature
 
 @wechat_bp.route('/wechat/verify', methods=['GET', 'POST'])
 def wechat_verify():
     """Handle WeChat server verification"""
+    # 记录请求信息用于调试
+    from .logging_config import api_logger
+    api_logger.info(f"WeChat verification request: {request.method}, URL: {request.url}, Args: {request.args}")
+    
     if request.method == 'GET':
         signature = request.args.get('signature')
         timestamp = request.args.get('timestamp')
         nonce = request.args.get('nonce')
         echostr = request.args.get('echostr')
+        
+        api_logger.info(f"Received signature: {signature}, timestamp: {timestamp}, nonce: {nonce}")
+        
         token = Config.WECHAT_TOKEN
+        api_logger.info(f"Using token: {token}")
+        
         if verify_wechat_signature(token, signature, timestamp, nonce):
+            api_logger.info("Signature verification passed")
             return echostr
         else:
+            api_logger.error(f"Signature verification failed. Expected signature for token={token}, timestamp={timestamp}, nonce={nonce}")
+            # 计算预期的签名用于调试
+            params = [token, timestamp, nonce]
+            params.sort()
+            concatenated_str = ''.join(params)
+            expected_signature = hashlib.sha1(concatenated_str.encode('utf-8')).hexdigest()
+            api_logger.error(f"Expected signature: {expected_signature}, received: {signature}")
             return 'Verification failed', 403
     elif request.method == 'POST':
+        api_logger.info("Received POST request to wechat/verify endpoint")
         return 'success'
 
 @wechat_bp.route('/api/login', methods=['POST'])
@@ -324,6 +344,7 @@ def perform_brand_test():
         'completed': 0,
         'total': 0,  # 会在异步线程中更新
         'status': 'initializing',
+        'stage': 'init',  # 设置初始阶段为 'init' 以匹配前端期望
         'results': [],
         'start_time': datetime.now().isoformat()
     }
@@ -331,24 +352,32 @@ def perform_brand_test():
     def run_async_test():
         try:
             # 在异步线程中进行所有耗时的操作
+            api_logger.info(f"[AsyncTest] Initializing QuestionManager and TestCaseGenerator for execution_id: {execution_id}")
             question_manager = QuestionManager()
             test_case_generator = TestCaseGenerator()
+            api_logger.info(f"[AsyncTest] Successfully initialized managers for execution_id: {execution_id}")
 
             cleaned_custom_questions_for_validation = [q.strip() for q in custom_questions if q.strip()]
 
             if cleaned_custom_questions_for_validation:
+                api_logger.info(f"[AsyncTest] Validating custom questions for execution_id: {execution_id}, questions: {cleaned_custom_questions_for_validation}")
                 validation_result = question_manager.validate_custom_questions(cleaned_custom_questions_for_validation)
+                api_logger.info(f"[AsyncTest] Question validation result for execution_id: {execution_id}, result: {validation_result}")
+                
                 if not validation_result['valid']:
+                    api_logger.error(f"[AsyncTest] Question validation failed for execution_id: {execution_id}, errors: {validation_result['errors']}")
                     if execution_id in execution_store:
                         execution_store[execution_id].update({'status': 'failed', 'error': f"Invalid questions: {'; '.join(validation_result['errors'])}"})
                     return
                 raw_questions = validation_result['cleaned_questions']
+                api_logger.info(f"[AsyncTest] Successfully validated questions for execution_id: {execution_id}, raw_questions: {raw_questions}")
             else:
                 raw_questions = [
                     "介绍一下{brandName}",
                     "{brandName}的主要产品是什么",
                     "{brandName}和竞品有什么区别"
                 ]
+                api_logger.info(f"[AsyncTest] Using default questions for execution_id: {execution_id}")
 
             all_test_cases = []
             for brand in brand_list:
@@ -714,9 +743,11 @@ def perform_brand_test():
                 execution_store[execution_id].update(stripped_data)
 
         except Exception as e:
-            api_logger.error(f"Async test execution failed: {e}")
+            import traceback
+            error_traceback = traceback.format_exc()
+            api_logger.error(f"Async test execution failed for execution_id {execution_id}: {e}\nTraceback: {error_traceback}")
             if execution_id in execution_store:
-                execution_store[execution_id].update({'status': 'failed', 'error': str(e)})
+                execution_store[execution_id].update({'status': 'failed', 'error': f"{str(e)}\nTraceback: {error_traceback}"})
 
     thread = Thread(target=run_async_test)
     thread.start()

@@ -93,11 +93,11 @@ class OptimizedProgressTracker:
 
     def _calculate_poll_interval(self, poll_count: int) -> int:
         """计算建议的轮询间隔（智能轮询策略）"""
-        if poll_count <= 10:
-            return 1  # 前10次每秒轮询
+        if poll_count <= 5:
+            return 2  # 前5次每2秒轮询
+        elif poll_count <= 15:
+            return 3  # 接下来每3秒轮询
         elif poll_count <= 30:
-            return 2  # 接下来每2秒轮询
-        elif poll_count <= 60:
             return 5  # 再接下来每5秒轮询
         else:
             return min(10, self.max_poll_interval)  # 最大不超过10秒
