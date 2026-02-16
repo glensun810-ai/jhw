@@ -28,12 +28,14 @@ class ProgressPoller {
             const data = await response.json();
             
             // Dynamic interval adjustment based on progress
-            if (data.progress < 30) {
-                this.currentInterval = 2000;  // Early stage: 2 seconds
-            } else if (data.progress < 70) {
-                this.currentInterval = 3000;  // Mid stage: 3 seconds
+            if (data.progress < 20) {
+                this.currentInterval = 3000;  // Early stage: 3 seconds
+            } else if (data.progress < 50) {
+                this.currentInterval = 4000;  // Mid stage: 4 seconds
+            } else if (data.progress < 80) {
+                this.currentInterval = 5000;  // Later stage: 5 seconds
             } else if (data.progress < 100) {
-                this.currentInterval = 4000;  // Late stage: 4 seconds
+                this.currentInterval = 6000;  // Near completion: 6 seconds
             } else {
                 console.log('测试完成，停止轮询');
                 this.completed = true;

@@ -198,8 +198,15 @@ Page({
       debugLog('POLLING_START', this.executionId, `Starting polling for task ${this.executionId}`); // #DEBUG_CLEAN
     }
 
-    // 开始轮询
-    this.pollInterval = setInterval(async () => {
+    // 添加轮询间隔管理
+    this.currentPollInterval = 3000; // 初始间隔3秒
+    this.pollAttemptCount = 0; // 轮询尝试计数
+    this.maxPollAttempts = 100; // 最大轮询次数
+
+    // 创建一个辅助函数来处理轮询逻辑
+    const performPoll = async () => {
+      if (this.pollInterval === null) return; // 如果轮询已停止，则退出
+      
       try {
         const statusData = await this.fetchTaskStatus(this.executionId);
 
@@ -207,9 +214,29 @@ Page({
           // 使用服务层解析任务状态数据
           const parsedStatus = parseTaskStatus(statusData);
 
+          // 动态调整轮询间隔基于进度
+          let newInterval = this.currentPollInterval;
+          if (statusData.progress < 20) {
+            newInterval = 3000; // 前20%进度，3秒轮询一次
+          } else if (statusData.progress < 50) {
+            newInterval = 4000; // 20%-50%进度，4秒轮询一次
+          } else if (statusData.progress < 80) {
+            newInterval = 5000; // 50%-80%进度，5秒轮询一次
+          } else {
+            newInterval = 6000; // 80%以上进度，6秒轮询一次
+          }
+
+          // 如果间隔发生变化，重新设置轮询
+          if (newInterval !== this.currentPollInterval) {
+            this.currentPollInterval = newInterval;
+            clearInterval(this.pollInterval);
+            this.pollInterval = setInterval(performPoll, this.currentPollInterval);
+            return; // 重新设置轮询后退出当前执行
+          }
+
           // Log polling response with DEBUG_AI_CODE
           if (ENABLE_DEBUG_AI_CODE) {
-            debugLog('POLLING_RESPONSE', this.executionId, `Received status: progress=${statusData.progress}, is_completed=${statusData.is_completed}`); // #DEBUG_CLEAN
+            debugLog('POLLING_RESPONSE', this.executionId, `Received status: progress=${statusData.progress}, is_completed=${statusData.is_completed}, interval=${this.currentPollInterval}ms`); // #DEBUG_CLEAN
           }
 
           // 检查任务是否完成
@@ -218,56 +245,77 @@ Page({
 
           if (isCompleted) {
             clearInterval(this.pollInterval);
+            this.pollInterval = null;
 
-            // Log completion with DEBUG_AI_CODE
-            if (ENABLE_DEBUG_AI_CODE) {
-              debugLog('POLLING_COMPLETED', this.executionId, `Task completed with status: ${JSON.stringify(statusData)}`); // #DEBUG_CLEAN
-            }
+            // 更新界面显示结果
+            this.setData({
+              progress: 100,
+              statusText: '分析完成',
+              isLoading: false
+            });
 
-            // 计算实际耗时
-            const actualTime = Math.round((Date.now() - this.startTime) / 1000);
-
-            // 处理完成的数据
-            this.handleTaskCompletion(statusData, actualTime);
-          } else {
-            // 更新进度信息
-            this.updateProgress(statusData);
-
-            // 检测进度停滞
-            this.checkProgressStagnation(statusData.progress);
-
-            // 数据防御：即使任务未完成，也要检查是否有可用的结果数据
-            if (statusData.results && Array.isArray(statusData.results) && statusData.results.length > 0) {
-              // 如果已经有结果数据，可以提前处理部分数据显示
-              console.log('检测到部分结果数据，准备更新界面...');
-
-              // Log results received with DEBUG_AI_CODE
-              if (ENABLE_DEBUG_AI_CODE) {
-                debugLogResults(this.executionId, statusData.results.length, JSON.stringify(statusData.results[0]).substring(0, 100)); // #DEBUG_CLEAN
-              }
-            }
+            // 跳转到结果页面
+            wx.navigateTo({
+              url: `/pages/results/index?executionId=${this.executionId}`
+            });
+            return;
           }
+
+          // 检查任务是否失败
+          if (statusData.status === 'failed') {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+
+            // 更新界面显示失败状态
+            this.setData({
+              progress: statusData.progress || 0,
+              statusText: '任务失败',
+              isLoading: false
+            });
+
+            // 显示失败信息
+            const errorMessage = statusData.error || '任务执行失败';
+            wx.showToast({
+              title: '任务失败',
+              icon: 'none',
+              duration: 3000
+            });
+
+            console.error('任务执行失败:', errorMessage);
+            return;
+          }
+
+          // 更新进度和状态
+          this.setData({
+            progress: statusData.progress,
+            statusText: statusData.statusText || this.getStatusTextByProgress(statusData.progress)
+          });
+          
+          // 检测进度停滞
+          this.checkProgressStagnation(statusData.progress);
         }
       } catch (error) {
-        // Log polling error with DEBUG_AI_CODE
-        if (ENABLE_DEBUG_AI_CODE) {
-          debugLogException(this.executionId, `Polling error: ${JSON.stringify(error)}`); // #DEBUG_CLEAN
-        }
-
         console.error('轮询错误:', error);
-        clearInterval(this.pollInterval);
-
-        // 出错时显示模拟数据
-        this.setData({
-          isLoading: false,
-          showSkeleton: false
-        });
-        wx.showToast({
-          title: '数据加载失败，显示模拟数据',
-          icon: 'none'
-        });
+        this.pollAttemptCount++;
+        
+        // 如果错误次数过多，停止轮询
+        if (this.pollAttemptCount >= this.maxPollAttempts) {
+          clearInterval(this.pollInterval);
+          this.pollInterval = null;
+          this.setData({
+            statusText: '获取进度失败',
+            isLoading: false
+          });
+          wx.showToast({
+            title: '获取进度失败，请稍后重试',
+            icon: 'none'
+          });
+        }
       }
-    }, 2000); // 每2秒轮询一次
+    };
+
+    // 开始轮询
+    this.pollInterval = setInterval(performPoll, this.currentPollInterval);
   },
 
   /**
@@ -1099,6 +1147,25 @@ Page({
       return 'AI 正在生成最终报告...';
     } else {
       return '战略报告生成完毕';
+    }
+  },
+  
+  /**
+   * 根据进度获取状态文本
+   */
+  getStatusTextByProgress: function(progress) {
+    if (progress <= 20) {
+      return 'AI 正在连接全网大模型...';
+    } else if (progress <= 40) {
+      return 'AI 正在收集多维度数据...';
+    } else if (progress <= 60) {
+      return 'AI 正在进行深度语义分析...';
+    } else if (progress <= 80) {
+      return 'AI 正在聚合战略对阵矩阵...';
+    } else if (progress < 100) {
+      return 'AI 正在生成最终报告...';
+    } else {
+      return '研判完成';
     }
   }
 })

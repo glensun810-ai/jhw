@@ -1,6 +1,9 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/mvp-index/mvp-index",
+    "pages/mvp-results/mvp-results",
+    "pages/mvp-platform-selector/mvp-platform-selector",
     "pages/detail/index",
     "pages/results/results",
     "pages/history/history",

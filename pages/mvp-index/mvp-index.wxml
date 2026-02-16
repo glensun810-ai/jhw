@@ -1,0 +1,89 @@
+<view class="mvp-container">
+  <!-- 头部 -->
+  <view class="header">
+    <text class="title">品牌AI诊断 MVP</text>
+    <text class="subtitle">快速体验AI品牌分析能力</text>
+  </view>
+
+  <!-- 核心输入区 -->
+  <view class="input-section">
+    <view class="input-group">
+      <text class="label">品牌名称 *</text>
+      <input 
+        class="input" 
+        placeholder="请输入您的品牌名称" 
+        value="{{brandName}}"
+        bindinput="onBrandInput"
+        maxlength="50"
+      />
+    </view>
+
+    <view class="input-group">
+      <text class="label">竞品名称（可选）</text>
+      <input 
+        class="input" 
+        placeholder="请输入竞品品牌名称" 
+        value="{{competitorBrand}}"
+        bindinput="onCompetitorInput"
+        maxlength="50"
+      />
+    </view>
+  </view>
+
+  <!-- 问题设置 -->
+  <view class="questions-section">
+    <view class="section-header">
+      <text class="section-title">诊断问题</text>
+      <text class="section-hint">支持 {brandName} 和 {competitorBrand} 占位符</text>
+    </view>
+    <view class="question-list">
+      <view class="question-item" wx:for="{{questions}}" wx:key="index">
+        <text class="question-number">{{index + 1}}</text>
+        <textarea 
+          class="question-input"
+          data-index="{{index}}"
+          value="{{item}}"
+          bindinput="onQuestionChange"
+          maxlength="500"
+          auto-height
+        />
+      </view>
+    </view>
+  </view>
+
+  <!-- 平台选择（仅展示） -->
+  <view class="platform-section">
+    <text class="section-title">AI分析平台</text>
+    <view class="platform-tag">
+      <text class="platform-name">豆包</text>
+      <text class="platform-badge">MVP专用</text>
+    </view>
+  </view>
+
+  <!-- 启动按钮 -->
+  <button 
+    class="start-btn {{isTesting ? 'disabled' : ''}}" 
+    bindtap="{{isTesting ? '' : 'startTest'}}"
+    disabled="{{isTesting}}"
+  >
+    <text wx:if="{{!isTesting}}">启动AI诊断</text>
+    <text wx:else>诊断中 {{progress}}%</text>
+  </button>
+
+  <!-- 进度展示 -->
+  <view class="progress-section" wx:if="{{isTesting}}">
+    <progress 
+      percent="{{progress}}" 
+      stroke-width="6" 
+      color="#07c160" 
+      active
+      active-mode="forwards"
+    />
+    <text class="status-text">{{statusText}}</text>
+  </view>
+
+  <!-- 底部导航 -->
+  <view class="footer">
+    <text class="footer-link" bindtap="goToStandardIndex">前往完整版首页 →</text>
+  </view>
+</view>

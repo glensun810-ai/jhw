@@ -462,25 +462,30 @@ Page({
       // 错误捕获防御：彻底重写 catch(err) 块
       // 要求：第一时间执行 wx.hideLoading()
       wx.hideLoading();
-
+    
       console.error("Diagnostic Error:", err);
       console.error("Error details:", err.errMsg, err.data);
-
+    
       // 要求：使用 err.data?.error || err.data?.message || err.errMsg 提取信息
       let extractedError = err.data?.error || err.data?.message || err.errMsg || "任务创建失败";
-
+    
       // 如果错误信息包含网络相关错误，提供更友好的提示
       if (extractedError && (extractedError.includes('request:fail') || extractedError.includes('network'))) {
         extractedError = '网络连接失败，请检查网络设置或稍后重试';
       }
-
+            
+      // 如果是400错误，特别处理AI模型未配置的情况
+      if (typeof extractedError === 'string' && (extractedError.includes('not registered or not configured') || extractedError.includes('API key'))) {
+        extractedError = '所选AI模型未正确配置，请检查API密钥设置或选择其他AI模型\n\n请确保：\n1. 已在 .env 文件中配置相应API密钥\n2. 后端服务已重启加载新配置\n3. API密钥格式正确且有效';
+      }
+    
       // 要求：使用 wx.showModal 弹出提取到的真实错误信息
       wx.showModal({
         title: '启动失败',
         content: String(extractedError),
         showCancel: false
       });
-
+    
       this.setData({ isTesting: false });
     } finally {
       // 交互修复：确保在所有情况下都隐藏加载提示

@@ -23,7 +23,18 @@ const checkServerConnectionApi = () => {
  * @returns {Promise}
  */
 const startBrandTestApi = (data) => {
-  return post(API_ENDPOINTS.BRAND.TEST, data);
+  // 确保参数格式正确 - 后端期望 custom_question 为字符串，而不是数组
+  const payload = {
+    ...data,
+    // 将 customQuestions 数组转换为字符串格式，以匹配后端期望
+    custom_question: Array.isArray(data.customQuestions) 
+      ? data.customQuestions.join(' ') 
+      : (data.custom_question || ''),
+    // 确保 selectedModels 格式正确
+    selectedModels: Array.isArray(data.selectedModels) ? data.selectedModels : []
+  };
+  
+  return post(API_ENDPOINTS.BRAND.TEST, payload);
 };
 
 /**
