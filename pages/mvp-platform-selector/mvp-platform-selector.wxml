@@ -1,0 +1,85 @@
+<!-- MVP 平台选择器页面 -->
+<view class="container">
+  <!-- 页面标题 -->
+  <view class="header">
+    <text class="title">AI平台品牌诊断</text>
+    <text class="subtitle">选择不同AI平台进行品牌分析对比</text>
+  </view>
+
+  <!-- 平台选择区域 -->
+  <view class="section">
+    <text class="section-title">选择AI平台</text>
+    <radio-group bindchange="onPlatformChange" class="platform-selector">
+      <label wx:for="{{platformOptions}}" wx:key="value" class="platform-option">
+        <radio value="{{item.value}}" checked="{{item.checked}}"/>
+        <text>{{item.label}}</text>
+      </label>
+    </radio-group>
+  </view>
+
+  <!-- 品牌输入区域 -->
+  <view class="section">
+    <text class="section-title">品牌信息</text>
+    <view class="input-group">
+      <input 
+        placeholder="请输入主品牌名称，如：小米" 
+        value="{{brandName}}"
+        bindinput="onBrandInput"
+        class="input"
+        maxlength="50"
+      />
+      <input 
+        placeholder="请输入竞品品牌（可选），如：华为" 
+        value="{{competitorBrand}}"
+        bindinput="onCompetitorInput"
+        class="input"
+        maxlength="50"
+      />
+    </view>
+  </view>
+
+  <!-- 问题设置区域 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">自定义问题</text>
+      <button bindtap="resetQuestions" class="reset-btn">重置</button>
+    </view>
+    <view class="questions-container">
+      <view wx:for="{{questions}}" wx:key="index" class="question-item">
+        <text class="question-label">问题 {{index + 1}}</text>
+        <textarea 
+          value="{{item}}"
+          bindinput="onQuestionChange"
+          data-index="{{index}}"
+          class="question-input"
+          placeholder="请输入问题，如：XX品牌的产品怎么样？"
+          maxlength="500"
+          auto-height
+        />
+      </view>
+    </view>
+  </view>
+
+  <!-- 测试按钮区域 -->
+  <view class="action-section">
+    <button 
+      bindtap="startTest" 
+      class="start-btn {{isTesting ? 'disabled' : ''}}"
+      disabled="{{isTesting}}"
+    >
+      {{isTesting ? statusText : '开始分析'}}
+    </button>
+    <button 
+      bindtap="goToStandardIndex" 
+      class="back-btn"
+    >
+      返回首页
+    </button>
+  </view>
+
+  <!-- 进度显示 -->
+  <view wx:if="{{isTesting}}" class="progress-section">
+    <progress percent="{{progress}}" activeColor="#1890ff" />
+    <text class="progress-text">{{statusText}}</text>
+  </view>
+</view>

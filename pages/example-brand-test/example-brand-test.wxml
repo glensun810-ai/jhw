@@ -1,0 +1,80 @@
+<!-- pages/example-brand-test/example-brand-test.wxml -->
+<view class="container">
+  <!-- 页面标题 -->
+  <view class="header">
+    <text class="title">品牌AI认知测试</text>
+  </view>
+
+  <!-- 品牌列表输入 -->
+  <view class="section">
+    <text class="section-title">品牌列表</text>
+    <input 
+      class="input" 
+      placeholder="请输入品牌名称，用逗号分隔" 
+      bindinput="onBrandListChange"
+      value="{{ brandList.join(',') }}"
+    />
+  </view>
+
+  <!-- AI模型选择 -->
+  <view class="section">
+    <text class="section-title">选择AI模型</text>
+    <view class="model-list">
+      <label class="model-item" wx:for="{{ selectedModels }}" wx:key="index">
+        <checkbox 
+          checked="{{ item.checked }}" 
+          data-index="{{ index }}"
+          bindchange="onModelToggle"
+        />
+        <text>{{ item.name }}</text>
+      </label>
+    </view>
+  </view>
+
+  <!-- 自定义问题输入 -->
+  <view class="section">
+    <text class="section-title">自定义问题</text>
+    <textarea 
+      class="textarea" 
+      placeholder="请输入您的问题，支持多个问题，用句号、问号、感叹号等分隔" 
+      bindinput="onQuestionChange"
+      value="{{ customQuestion }}"
+      maxlength="2000"
+    />
+    <text class="hint">支持输入多个问题，系统将自动解析并分发给各AI平台</text>
+  </view>
+
+  <!-- 错误信息显示 -->
+  <view wx:if="{{ errorMessage }}" class="error-message">
+    <text>{{ errorMessage }}</text>
+  </view>
+
+  <!-- 测试进度显示 -->
+  <view wx:if="{{ testStatus !== 'init' }}" class="progress-section">
+    <view class="progress-info">
+      <text class="status-text">{{ testStatus }}</text>
+      <text class="progress-text">{{ progress }}%</text>
+    </view>
+    <progress percent="{{ progress }}" activeColor="#007AFF" backgroundColor="#E0E0E0" />
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="button-container">
+    <button 
+      class="submit-btn" 
+      bindtap="startBrandTest" 
+      loading="{{ showLoading }}"
+      disabled="{{ showLoading }}"
+    >
+      {{ showLoading ? '测试中...' : '开始测试' }}
+    </button>
+  </view>
+
+  <!-- 加载遮罩 -->
+  <view wx:if="{{ showLoading }}" class="loading-overlay">
+    <view class="loading-content">
+      <loading />
+      <text>正在处理中...</text>
+    </view>
+  </view>
+</view>

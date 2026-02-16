@@ -126,7 +126,7 @@ def start_flask_server():
         # 检查进程是否还在运行
         if process.poll() is None:
             print("   ✅ Flask服务器启动成功")
-            print(f"   🌐 访问地址: http://localhost:5000")
+            print(f"   🌐 访问地址: http://localhost:5001")
             return process
         else:
             stdout, stderr = process.communicate()

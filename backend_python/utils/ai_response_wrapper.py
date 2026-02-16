@@ -7,7 +7,33 @@ AI响应日志记录包装器
 from typing import Optional, Dict, Any
 from utils.ai_response_logger_enhanced import log_enhanced_response
 from wechat_backend.security.auth import get_current_user_id
-from wechat_backend.app import get_execution_context
+
+
+def get_execution_context():
+    """
+    获取当前执行上下文信息
+    """
+    # 从Flask g对象获取上下文信息
+    try:
+        from flask import g, request
+        context = {}
+        
+        # 获取请求相关信息
+        if request:
+            context['request_id'] = getattr(request, 'id', None)
+            context['request_method'] = request.method
+            context['request_url'] = request.url
+            context['remote_addr'] = request.remote_addr
+        
+        # 获取用户相关信息
+        user_id = get_current_user_id()
+        if user_id:
+            context['user_id'] = user_id
+            
+        return context
+    except:
+        # 如果无法获取上下文，返回空字典
+        return {}
 
 
 def log_ai_response_with_context(
@@ -32,7 +58,7 @@ def log_ai_response_with_context(
 ):
     """
     使用上下文信息记录AI响应
-    
+
     Args:
         question: 问题内容
         response: 响应内容
@@ -59,16 +85,16 @@ def log_ai_response_with_context(
         if not user_id:
             # 如果无法获取用户ID，使用执行ID或标记为匿名
             user_id = execution_id or 'anonymous'
-    
+
     # 如果metadata为空，初始化为空字典
     if metadata is None:
         metadata = {}
-    
+
     # 添加执行上下文信息
     context_info = get_execution_context()
     if context_info:
         metadata.update(context_info)
-    
+
     # 调用增强版日志记录器
     return log_enhanced_response(
         question=question,

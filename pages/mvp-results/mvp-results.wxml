@@ -1,0 +1,101 @@
+<view class="results-container">
+  <!-- 加载状态 -->
+  <view class="loading-state" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载结果中...</text>
+  </view>
+
+  <!-- 结果内容 -->
+  <block wx:if="{{!loading}}">
+    <!-- 头部 -->
+    <view class="header">
+      <view class="brand-badge">AI诊断报告</view>
+      <text class="brand-name">{{brandName}}</text>
+      <text class="subtitle">基于豆包AI平台的品牌分析</text>
+    </view>
+
+    <!-- 摘要卡片 -->
+    <view class="summary-card">
+      <view class="summary-item">
+        <text class="summary-value">{{summary.totalQuestions}}</text>
+        <text class="summary-label">问题总数</text>
+      </view>
+      <view class="summary-divider"></view>
+      <view class="summary-item">
+        <text class="summary-value">{{summary.completedQuestions}}</text>
+        <text class="summary-label">成功响应</text>
+      </view>
+      <view class="summary-divider"></view>
+      <view class="summary-item">
+        <text class="summary-value">{{summary.averageResponseLength}}</text>
+        <text class="summary-label">平均字数</text>
+      </view>
+    </view>
+
+    <!-- 结果列表 -->
+    <view class="results-section">
+      <view class="section-title">详细分析结果</view>
+      
+      <view class="result-list">
+        <view class="result-card" wx:for="{{results}}" wx:key="id">
+          <!-- 问题头部 -->
+          <view class="card-header">
+            <view class="question-badge">Q{{index + 1}}</view>
+            <text class="question-text">{{item.question}}</text>
+          </view>
+          
+          <!-- AI回答 -->
+          <view class="response-block">
+            <view class="response-header">
+              <view class="platform-tag">
+                <text class="platform-icon">🤖</text>
+                <text class="platform-name">{{item.platform}}</text>
+              </view>
+              <text class="response-time" wx:if="{{item.latency}}">{{item.latency}}ms</text>
+            </view>
+            
+            <view class="response-content {{item.expanded ? 'expanded' : ''}}">
+              <text class="response-text">{{item.response}}</text>
+            </view>
+            
+            <!-- 展开/收起按钮（当内容较长时显示） -->
+            <view 
+              class="expand-btn" 
+              wx:if="{{item.response.length > 200}}"
+              bindtap="toggleExpand"
+              data-index="{{index}}"
+            >
+              <text>{{item.expanded ? '收起内容' : '展开全部'}}</text>
+              <text class="expand-icon">{{item.expanded ? '↑' : '↓'}}</text>
+            </view>
+          </view>
+          
+          <!-- 操作栏 -->
+          <view class="action-bar">
+            <button 
+              class="action-btn" 
+              size="mini" 
+              plain
+              bindtap="copyResponse" 
+              data-content="{{item.response}}"
+            >
+              <text class="btn-icon">📋</text>
+              <text>复制</text>
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部提示 -->
+    <view class="footer-tip">
+      <text class="tip-text">💡 以上为AI生成的品牌分析内容，仅供参考</text>
+    </view>
+
+    <!-- 底部操作 -->
+    <view class="footer-actions">
+      <button class="back-btn" bindtap="goBack">返回重新诊断</button>
+      <button class="share-btn" open-type="share">分享结果</button>
+    </view>
+  </block>
+</view>
