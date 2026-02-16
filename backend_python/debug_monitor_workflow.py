@@ -28,7 +28,7 @@ def monitor_test_progress(execution_id, max_duration=120):
     while time.time() - start_time < max_duration:
         try:
             response = requests.get(
-                f"http://127.0.0.1:5001/api/test-progress?executionId={execution_id}",
+                f"http://127.0.0.1:5000/api/test-progress?executionId={execution_id}",
                 timeout=10
             )
             
@@ -94,7 +94,7 @@ def run_complete_workflow_test():
     print("\n2️⃣ 发送品牌测试请求...")
     try:
         response = requests.post(
-            "http://127.0.0.1:5001/api/perform-brand-test",
+            "http://127.0.0.1:5000/api/perform-brand-test",
             json=test_data,
             headers={'content-type': 'application/json'},
             timeout=30
@@ -144,7 +144,7 @@ def test_specific_scenario():
     
     try:
         response = requests.post(
-            "http://127.0.0.1:5001/api/perform-brand-test",
+            "http://127.0.0.1:5000/api/perform-brand-test",
             json=test_data,
             headers={'content-type': 'application/json'},
             timeout=30

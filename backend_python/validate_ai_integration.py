@@ -27,7 +27,7 @@ def test_ai_integration():
     }
     
     # 发送测试请求
-    url = "http://127.0.0.1:5001/api/perform-brand-test"
+    url = "http://127.0.0.1:5000/api/perform-brand-test"
     print(f"📤 发送品牌测试请求到: {url}")
     
     try:
@@ -43,7 +43,7 @@ def test_ai_integration():
                 print(f"🆔 执行ID: {execution_id}")
                 
                 # 轮询进度
-                progress_url = f"http://127.0.0.1:5001/api/test-progress?executionId={execution_id}"
+                progress_url = f"http://127.0.0.1:5000/api/test-progress?executionId={execution_id}"
                 print(f"\n🔄 开始轮询进度: {progress_url}")
                 
                 for i in range(30):  # 最多轮询30次

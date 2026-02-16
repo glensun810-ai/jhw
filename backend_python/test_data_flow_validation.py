@@ -11,7 +11,7 @@ import time
 from typing import Dict, Any
 
 # Configuration
-BACKEND_URL = "http://127.0.0.1:5001"
+BACKEND_URL = "http://127.0.0.1:5000"
 TIMEOUT = 30  # seconds for longer operations
 
 def validate_request_response_formats():
