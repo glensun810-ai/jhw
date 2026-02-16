@@ -26,9 +26,9 @@ const API_ENDPOINTS = {
     LIST: '/api/test-history'
   },
   BRAND: {
-    TEST: '/api/perform-brand-test',
-    PROGRESS: '/api/test-progress',
-    STATUS: '/test/status'
+    TEST: '/api/perform-brand-test',      // 品牌测试接口（支持问题解析与分发）
+    PROGRESS: '/api/test-progress',       // 测试进度查询
+    STATUS: '/test/status'               // 测试状态查询（注意：实际调用时需要附加task_id，如 /test/status/{taskId}）
   },
   COMPETITIVE: {
     ANALYSIS: '/action/recommendations'   // Matches existing backend endpoint
@@ -43,7 +43,7 @@ const ENV_CONFIG = {
   develop: {
     // 使用 127.0.0.1 作为默认开发地址，支持模拟器调试
     // 真机调试时，在微信开发者工具中设置"不校验合法域名"即可使用本地服务
-    // 注意：确保后端服务运行在相同端口（默认5001），与 backend_python/run.py 中的端口保持一致
+    // 注意：确保后端服务运行在相同端口（默认5000），与 backend_python/run.py 中的端口保持一致
     baseURL: 'http://127.0.0.1:5001', // 开发环境 API 地址
     timeout: 30000, // 30秒超时
     env: 'dev'

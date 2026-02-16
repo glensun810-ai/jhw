@@ -83,7 +83,7 @@ App({
 
   // 清理所有保存的文件
   clearSavedFiles: function() {
-    wx.getSavedFileList({
+    wx.getFileSystemManager().getSavedFileList({
       success: (res) => {
         const fileList = res.fileList;
         if (fileList && fileList.length > 0) {

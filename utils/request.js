@@ -9,7 +9,7 @@ const { debugLog, debugLogAiIo, debugLogStatusFlow, debugLogResults, debugLogExc
 // 环境配置
 const ENV_CONFIG = {
   develop: {
-    baseURL: 'http://127.0.0.1:5001', // 开发环境 API 地址 - corrected to 5001
+    baseURL: 'http://127.0.0.1:5001', // 开发环境 API 地址 - 与后端实际运行端口保持一致
     timeout: 30000 // 30秒超时
   },
   trial: {
@@ -94,8 +94,14 @@ const request = (options = {}) => {
     }
 
     // 构建请求参数
+    const baseUrl = getBaseUrl();
+    const fullUrl = url.startsWith('http') ? url : baseUrl + url; // 支持绝对路径和相对路径，优先使用自定义URL
+    
+    // 确保URL格式正确，避免双重斜杠等问题
+    const normalizedUrl = fullUrl.replace(/([^:])\/\//g, '$1/'); // 替换多余的双斜杠，但保留协议部分的双斜杠
+    
     const requestParams = {
-      url: url.startsWith('http') ? url : getBaseUrl() + url, // 支持绝对路径和相对路径，优先使用自定义URL
+      url: normalizedUrl,
       method: method.toUpperCase(),
       data: data,
       header: {

@@ -17,7 +17,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 测试配置
-BASE_URL = "http://127.0.0.1:5000"
+BASE_URL = "http://127.0.0.1:5001"
 TIMEOUT = 30  # 默认超时时间
 LONG_TIMEOUT = 120  # 长耗时接口超时
 
