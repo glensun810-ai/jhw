@@ -61,7 +61,7 @@ def test_perform_brand_test():
         }
     ]
     
-    base_url = "http://127.0.0.1:5001"
+    base_url = "http://127.0.0.1:5000"
     endpoint = f"{base_url}/api/perform-brand-test"
     
     all_tests_passed = True
@@ -146,7 +146,7 @@ def test_provider_availability():
     }
     
     response = requests.post(
-        "http://127.0.0.1:5001/api/perform-brand-test",
+        "http://127.0.0.1:5000/api/perform-brand-test",
         json=payload,
         headers={'Content-Type': 'application/json'},
         timeout=10
@@ -172,7 +172,7 @@ def main():
     
     # 首先检查服务是否运行
     try:
-        health_resp = requests.get("http://127.0.0.1:5001/health", timeout=5)
+        health_resp = requests.get("http://127.0.0.1:5000/health", timeout=5)
         if health_resp.status_code == 200:
             print("✅ 后端服务正在运行")
         else:

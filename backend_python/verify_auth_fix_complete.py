@@ -20,7 +20,7 @@ def start_test_server():
     from wechat_backend.app import app
     
     def run_server():
-        app.run(debug=False, host='127.0.0.1', port=5001, threaded=True)
+        app.run(debug=False, host='127.0.0.1', port=5000, threaded=True)
     
     # 在单独线程中启动服务器
     server_thread = threading.Thread(target=run_server, daemon=True)
@@ -38,20 +38,20 @@ def test_api_endpoints():
     
     # 测试不需要认证的端点
     try:
-        response = requests.get('http://127.0.0.1:5001/', timeout=5)
+        response = requests.get('http://127.0.0.1:5000/', timeout=5)
         print(f"   ✅ 首页端点: {response.status_code}")
     except Exception as e:
         print(f"   ❌ 首页端点失败: {e}")
     
     try:
-        response = requests.get('http://127.0.0.1:5001/api/test', timeout=5)
+        response = requests.get('http://127.0.0.1:5000/api/test', timeout=5)
         print(f"   ✅ 测试端点: {response.status_code}")
     except Exception as e:
         print(f"   ❌ 测试端点失败: {e}")
     
     # 测试配置端点（现在应该不需要认证）
     try:
-        response = requests.get('http://127.0.0.1:5001/api/config', timeout=5)
+        response = requests.get('http://127.0.0.1:5000/api/config', timeout=5)
         print(f"   ✅ 配置端点: {response.status_code}")
     except Exception as e:
         print(f"   ❌ 配置端点失败: {e}")
@@ -66,7 +66,7 @@ def test_api_endpoints():
     try:
         # 不带认证头的请求（现在应该不会返回401）
         response = requests.post(
-            'http://127.0.0.1:5001/api/perform-brand-test',
+            'http://127.0.0.1:5000/api/perform-brand-test',
             json=test_data,
             headers={'Content-Type': 'application/json'},
             timeout=10
@@ -75,7 +75,7 @@ def test_api_endpoints():
         
         # 带模拟微信会话头的请求
         response_with_session = requests.post(
-            'http://127.0.0.1:5001/api/perform-brand-test',
+            'http://127.0.0.1:5000/api/perform-brand-test',
             json=test_data,
             headers={
                 'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ def test_api_endpoints():
     
     # 测试平台状态端点
     try:
-        response = requests.get('http://127.0.0.1:5001/api/platform-status', timeout=5)
+        response = requests.get('http://127.0.0.1:5000/api/platform-status', timeout=5)
         print(f"   ✅ 平台状态端点: {response.status_code}")
     except Exception as e:
         print(f"   ❌ 平台状态端点失败: {e}")

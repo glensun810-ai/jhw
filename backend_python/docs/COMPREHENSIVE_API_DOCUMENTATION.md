@@ -5,7 +5,7 @@ This document provides a comprehensive overview of all API endpoints available i
 
 ## Base URL
 ```
-http://localhost:5001/api
+http://localhost:5000/api
 ```
 
 ## Authentication

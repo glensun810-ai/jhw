@@ -99,7 +99,7 @@ def test_backend_api_endpoint():
     try:
         print("📡 发送品牌测试请求...")
         response = requests.post(
-            "http://127.0.0.1:5001/api/perform-brand-test",
+            "http://127.0.0.1:5000/api/perform-brand-test",
             json=test_data,
             headers={'content-type': 'application/json'},
             timeout=10  # 较短的超时时间
@@ -115,7 +115,7 @@ def test_backend_api_endpoint():
                 
                 # 立即检查进度
                 progress_response = requests.get(
-                    f"http://127.0.0.1:5001/api/test-progress?executionId={execution_id}",
+                    f"http://127.0.0.1:5000/api/test-progress?executionId={execution_id}",
                     timeout=5
                 )
                 

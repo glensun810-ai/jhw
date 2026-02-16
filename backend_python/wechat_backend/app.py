@@ -220,4 +220,5 @@ def get_config():
 
 if __name__ == '__main__':
     # Explicitly specify host and port to align with frontend contract
-    app.run(debug=Config.DEBUG, host='0.0.0.0', port=5001)
+    # Using standard Flask port 5000 for consistency
+    app.run(debug=Config.DEBUG, host='0.0.0.0', port=5000)

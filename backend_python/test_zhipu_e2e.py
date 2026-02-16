@@ -4,7 +4,7 @@ import json
 import sys
 
 # 配置
-BASE_URL = 'http://127.0.0.1:5001'
+BASE_URL = 'http://127.0.0.1:5000'
 BRAND_NAME = "清华大学"
 PLATFORM_NAME = "智谱AI"
 

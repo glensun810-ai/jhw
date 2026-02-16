@@ -9,7 +9,7 @@
 | 后端版本 | Flask Backend |
 | 前端版本 | WeChat Mini Program |
 | 测试环境 | 本地开发环境 |
-| 基础URL | http://127.0.0.1:5001 |
+| 基础URL | http://127.0.0.1:5000 |
 
 ## 测试执行摘要
 
