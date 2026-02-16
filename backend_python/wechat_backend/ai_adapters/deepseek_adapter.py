@@ -3,6 +3,7 @@ import requests
 from ..logging_config import api_logger
 from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from ..network.request_wrapper import get_ai_request_wrapper
+from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -55,7 +56,10 @@ class DeepSeekAdapter(AIClient):
             max_retries=3
         )
         
-        api_logger.info(f"DeepSeekAdapter initialized for model: {model_name} with unified request wrapper")
+        # 初始化电路断路器
+        self.circuit_breaker = get_circuit_breaker(platform_name="deepseek", model_name=model_name)
+        
+        api_logger.info(f"DeepSeekAdapter initialized for model: {model_name} with unified request wrapper and circuit breaker")
 
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
         """
@@ -66,6 +70,49 @@ class DeepSeekAdapter(AIClient):
 
         Returns:
             AIResponse: 包含 DeepSeek 响应的统一数据结构
+        """
+        # 记录请求开始时间以计算延迟
+        start_time = time.time()
+
+        # 使用电路断路器保护API调用
+        try:
+            response = self.circuit_breaker.call(self._make_request_internal, prompt, **kwargs)
+            return response
+        except CircuitBreakerOpenError as e:
+            error_message = f"DeepSeek 服务暂时不可用（熔断器开启）: {e}"
+            api_logger.warning(error_message)
+            
+            # Log failed response to enhanced logger with context
+            try:
+                execution_id = kwargs.get('execution_id', 'unknown')
+                log_detailed_response(
+                    question=prompt,  # 使用原始prompt
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type=AIErrorType.SERVICE_UNAVAILABLE,
+                    latency_ms=0,  # No latency since no actual request was made
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+            except Exception as log_error:
+                # Don't let logging errors affect the main response
+                api_logger.warning(f"Failed to log failed response to enhanced logger: {log_error}")
+            
+            return AIResponse(
+                success=False,
+                error_message=error_message,
+                error_type=AIErrorType.SERVICE_UNAVAILABLE,
+                model=self.model_name,
+                platform=self.platform_type.value,
+                latency=0.0
+            )
+
+    def _make_request_internal(self, prompt: str, **kwargs) -> AIResponse:
+        """
+        实际的API请求逻辑
         """
         # 记录请求开始时间以计算延迟
         start_time = time.time()
@@ -218,14 +265,8 @@ class DeepSeekAdapter(AIClient):
                 # Don't let logging errors affect the main response
                 api_logger.warning(f"Failed to log timeout error to enhanced logger: {log_error}")
             
-            return AIResponse(
-                success=False,
-                error_message="请求超时",
-                error_type=AIErrorType.SERVER_ERROR,
-                model=self.model_name,
-                platform=self.platform_type.value,
-                latency=latency
-            )
+            # Re-raise the exception to trigger circuit breaker
+            raise requests.exceptions.Timeout("Request timed out")
 
         except requests.exceptions.RequestException as e:
             # 处理其他请求相关异常
@@ -250,6 +291,10 @@ class DeepSeekAdapter(AIClient):
             except Exception as log_error:
                 # Don't let logging errors affect the main response
                 api_logger.warning(f"Failed to log request exception to enhanced logger: {log_error}")
+            
+            # Re-raise the exception to trigger circuit breaker for connection-related errors
+            if isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
+                raise e
             
             return AIResponse(
                 success=False,
@@ -314,6 +359,10 @@ class DeepSeekAdapter(AIClient):
             except Exception as log_error:
                 # Don't let logging errors affect the main response
                 api_logger.warning(f"Failed to log unexpected error to enhanced logger: {log_error}")
+            
+            # Re-raise the exception to trigger circuit breaker for critical errors
+            if isinstance(e, (ConnectionError, TimeoutError)):
+                raise e
             
             return AIResponse(
                 success=False,

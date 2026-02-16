@@ -79,14 +79,24 @@ class DoubaoAdapter(AIClient):
                 "max_tokens": 1  # 只生成1个token，快速响应
             }
 
-            debug_log("HEALTH_CHECK", f"Performing health check for Doubao API with model: {self.model_name}")
+            # Determine the correct endpoint URL based on model name for health check too
+            base_url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+            if self.model_name and ('ep-' in self.model_name or '.' in self.model_name):
+                # If model name contains dots, it might already be a full endpoint
+                if '.' in self.model_name:
+                    base_url = f"https://{self.model_name}/api/v3/chat/completions"
+                else:
+                    # If it's a deployment ID without domain, construct the full URL
+                    base_url = f"https://{self.model_name}.ark.cn-beijing.volces.com/api/v3/chat/completions"
+
+            debug_log("HEALTH_CHECK", f"Performing health check for Doubao API with model: {self.model_name}, URL: {base_url}")
 
             start = time.time()
             response = self.session.post(
-                "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+                base_url,
                 headers=headers,
                 json=payload,
-                timeout=30  # 偞康检查超时增加到30秒
+                timeout=30  # 偒康检查超时增加到30秒
             )
             latency = time.time() - start
 
@@ -174,17 +184,28 @@ class DoubaoAdapter(AIClient):
             "max_tokens": max_tokens
         }
 
+        # Determine the correct endpoint URL based on model name
+        # If model name looks like a deployment ID (contains 'ep-' and '.'), use it as subdomain
+        base_url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+        if self.model_name and ('ep-' in self.model_name or '.' in self.model_name):
+            # If model name contains dots, it might already be a full endpoint
+            if '.' in self.model_name:
+                base_url = f"https://{self.model_name}/api/v3/chat/completions"
+            else:
+                # If it's a deployment ID without domain, construct the full URL
+                base_url = f"https://{self.model_name}.ark.cn-beijing.volces.com/api/v3/chat/completions"
+
         start_time = time.time()
         try:
             # 使用会话发送请求以复用连接
-            debug_log("AI_IO", f"Making request to Doubao API with payload: {payload}")
+            debug_log("AI_IO", f"Making request to Doubao API with payload: {payload}, URL: {base_url}")
 
             # Log with DEBUG_AI_CODE system
             if ENABLE_DEBUG_AI_CODE:
                 debug_log_ai_io("DOUBAO_ADAPTER_INTERNAL", execution_id, str(payload)[:100], "Sending request to API") # #DEBUG_CLEAN
 
             response = self.session.post(
-                "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+                base_url,
                 headers=self._get_headers(),
                 json=payload,
                 timeout=timeout
@@ -472,7 +493,7 @@ class DoubaoAdapter(AIClient):
                 'p95_latency': 0,
                 'sample_size': 0
             }
-        
+
         return {
             'avg_latency': statistics.mean(self.latency_history),
             'min_latency': min(self.latency_history),

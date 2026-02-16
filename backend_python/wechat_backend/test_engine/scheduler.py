@@ -14,7 +14,51 @@ from threading import Lock
 import uuid
 from ..logging_config import api_logger
 from ..ai_adapters.factory import AIAdapterFactory
-from config_manager import Config as PlatformConfigManager
+# Temporarily bypass config_manager due to module caching issue
+# from config_manager import Config as PlatformConfigManager
+
+# Create a minimal platform config manager that only uses environment variables
+import os
+from typing import Optional
+
+class SimplePlatformConfig:
+    def __init__(self, api_key: str, default_model: Optional[str] = None):
+        self.api_key = api_key
+        self.default_model = default_model
+
+class SimplePlatformConfigManager:
+    def get_platform_config(self, platform_name: str):
+        # Map platform names to environment variable names
+        env_vars = {
+            'doubao': 'DOUBAO_API_KEY',
+            'deepseek': 'DEEPSEEK_API_KEY',
+            'qwen': 'QWEN_API_KEY',
+            'chatgpt': 'CHATGPT_API_KEY',
+            'gemini': 'GEMINI_API_KEY',
+            'zhipu': 'ZHIPU_API_KEY',
+            'wenxin': 'WENXIN_API_KEY',
+            '豆包': 'DOUBAO_API_KEY',
+            'DeepSeek': 'DEEPSEEK_API_KEY',
+            '通义千问': 'QWEN_API_KEY',
+            '智谱AI': 'ZHIPU_API_KEY',
+        }
+        
+        env_var = env_vars.get(platform_name)
+        if env_var:
+            api_key = os.getenv(env_var, '')
+            if api_key:
+                return SimplePlatformConfig(api_key=api_key)
+        return None
+
+    def get_api_key(self, platform_name: str) -> Optional[str]:
+        config = self.get_platform_config(platform_name)
+        return config.api_key if config else None
+
+    def is_platform_configured(self, platform_name: str) -> bool:
+        config = self.get_platform_config(platform_name)
+        return config is not None and bool(config.api_key)
+
+PlatformConfigManager = SimplePlatformConfigManager  # This is the Config class from config_manager, not from config
 
 
 class ExecutionStrategy(Enum):

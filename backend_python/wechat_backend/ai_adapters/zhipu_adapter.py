@@ -7,6 +7,7 @@ from ..network.request_wrapper import get_ai_request_wrapper
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
 from ..config_manager import Config as PlatformConfigManager
+from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -28,11 +29,54 @@ class ZhipuAdapter(AIClient):
             max_retries=3
         )
         
-        api_logger.info(f"ZhipuAdapter initialized for model: {model_name} with unified request wrapper")
+        # 初始化电路断路器
+        self.circuit_breaker = get_circuit_breaker(platform_name="zhipu", model_name=model_name)
+        
+        api_logger.info(f"ZhipuAdapter initialized for model: {model_name} with unified request wrapper and circuit breaker")
 
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
         """
         向 Zhipu API 发送请求
+        """
+        # 使用电路断路器保护API调用
+        try:
+            response = self.circuit_breaker.call(self._make_request_internal, prompt, **kwargs)
+            return response
+        except CircuitBreakerOpenError as e:
+            error_message = f"Zhipu 服务暂时不可用（熔断器开启）: {e}"
+            api_logger.warning(error_message)
+            
+            # Log failed response to enhanced logger with context
+            try:
+                execution_id = kwargs.get('execution_id', 'unknown')
+                log_detailed_response(
+                    question=prompt,  # 使用原始prompt
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type=AIErrorType.SERVICE_UNAVAILABLE,
+                    latency_ms=0,  # No latency since no actual request was made
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+            except Exception as log_error:
+                # Don't let logging errors affect the main response
+                api_logger.warning(f"Failed to log failed response to enhanced logger: {log_error}")
+            
+            return AIResponse(
+                success=False,
+                error_message=error_message,
+                error_type=AIErrorType.SERVICE_UNAVAILABLE,
+                model=self.model_name,
+                platform=self.platform_type.value,
+                latency=0.0
+            )
+
+    def _make_request_internal(self, prompt: str, **kwargs) -> AIResponse:
+        """
+        实际的API请求逻辑
         """
         messages = [{"role": "user", "content": prompt}]
 
@@ -163,6 +207,10 @@ class ZhipuAdapter(AIClient):
                 # Don't let logging errors affect the main response
                 api_logger.warning(f"Failed to log request exception to enhanced logger: {log_error}")
 
+            # Re-raise the exception to trigger circuit breaker for connection-related errors
+            if isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
+                raise e
+
             record_error("zhipu", error_type, str(e))
             return AIResponse(
                 success=False,
@@ -195,6 +243,10 @@ class ZhipuAdapter(AIClient):
             except Exception as log_error:
                 # Don't let logging errors affect the main response
                 api_logger.warning(f"Failed to log unexpected error to enhanced logger: {log_error}")
+            
+            # Re-raise the exception to trigger circuit breaker for critical errors
+            if isinstance(e, (ConnectionError, TimeoutError)):
+                raise e
             
             record_error("zhipu", "UNKNOWN_ERROR", str(e))
             return AIResponse(

@@ -10,6 +10,7 @@ import os
 from config import Config
 
 # Initialize logging before other imports to capture all logs
+#
 from .logging_config import setup_logging
 setup_logging(
     log_level=Config.LOG_LEVEL,
@@ -102,7 +103,7 @@ def get_access_token():
 
 # Create Flask app with security enhancements
 app = Flask(__name__)
-app.config.from_object(Config)
+#app.config.from_object(Config)
 
 # Enable CORS BEFORE registering blueprints
 # 配置支持微信小程序的跨域请求，包括OPTIONS预检请求
