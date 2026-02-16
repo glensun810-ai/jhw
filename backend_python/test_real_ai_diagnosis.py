@@ -16,7 +16,7 @@ def test_brand_diagnosis():
     print("=== 测试品牌诊断功能 ===\n")
     
     # 测试端点
-    url = "http://127.0.0.1:5001/api/perform-brand-test"
+    url = "http://127.0.0.1:5000/api/perform-brand-test"
     
     # 测试数据
     test_data = {
@@ -50,7 +50,7 @@ def test_brand_diagnosis():
                 print(f"执行ID: {execution_id}")
                 
                 # 获取进度
-                progress_url = f"http://127.0.0.1:5001/api/test-progress?executionId={execution_id}"
+                progress_url = f"http://127.0.0.1:5000/api/test-progress?executionId={execution_id}"
                 print("\n开始轮询进度...")
                 
                 for i in range(30):  # 最多等待30次轮询
@@ -117,7 +117,7 @@ def test_individual_platforms():
     for platform in platforms:
         print(f"测试 {platform['display']} 平台...")
         try:
-            test_url = f"http://127.0.0.1:5001{platform['endpoint']}"
+            test_url = f"http://127.0.0.1:5000{platform['endpoint']}"
             response = requests.post(test_url, json={"prompt": "你好，请简单介绍一下自己"}, timeout=30)
             print(f"{platform['display']} 响应状态: {response.status_code}")
             if response.status_code == 200:

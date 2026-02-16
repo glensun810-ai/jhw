@@ -37,7 +37,7 @@ def test_minimal_workflow():
     try:
         print("📡 发送请求...")
         response = requests.post(
-            "http://127.0.0.1:5001/api/perform-brand-test",
+            "http://127.0.0.1:5000/api/perform-brand-test",
             json=test_data,
             headers={'content-type': 'application/json'},
             timeout=30
@@ -56,7 +56,7 @@ def test_minimal_workflow():
                 # 立即检查进度
                 print("\n🔍 立即检查初始进度...")
                 progress_response = requests.get(
-                    f"http://127.0.0.1:5001/api/test-progress?executionId={execution_id}",
+                    f"http://127.0.0.1:5000/api/test-progress?executionId={execution_id}",
                     timeout=10
                 )
                 
@@ -73,7 +73,7 @@ def test_minimal_workflow():
                     
                     while time.time() - start_time < max_wait_time:
                         progress_response = requests.get(
-                            f"http://127.0.0.1:5001/api/test-progress?executionId={execution_id}",
+                            f"http://127.0.0.1:5000/api/test-progress?executionId={execution_id}",
                             timeout=10
                         )
                         
@@ -133,7 +133,7 @@ def check_backend_logs():
     
     # 尝试访问后端的健康检查端点
     try:
-        health_response = requests.get("http://127.0.0.1:5001/health", timeout=5)
+        health_response = requests.get("http://127.0.0.1:5000/health", timeout=5)
         if health_response.status_code == 200:
             print("✅ 后端服务健康状态正常")
         else:
@@ -143,7 +143,7 @@ def check_backend_logs():
     
     # 尝试获取配置信息
     try:
-        config_response = requests.get("http://127.0.0.1:5001/api/config", timeout=5)
+        config_response = requests.get("http://127.0.0.1:5000/api/config", timeout=5)
         if config_response.status_code == 200:
             config_data = config_response.json()
             print(f"✅ 后端配置正常，应用ID: {config_data.get('app_id', 'N/A')}")

@@ -10,7 +10,7 @@ import time
 from typing import Dict, Any
 
 # Configuration
-BACKEND_URL = "http://127.0.0.1:5001"
+BACKEND_URL = "http://127.0.0.1:5000"
 TIMEOUT = 10  # seconds
 
 def test_security_headers():

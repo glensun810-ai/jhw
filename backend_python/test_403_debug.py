@@ -7,7 +7,7 @@ import requests
 import json
 
 # 测试不同的请求方式
-base_url = "http://127.0.0.1:5001"
+base_url = "http://127.0.0.1:5000"
 
 # 1. 测试简单的GET请求
 print("=" * 60)
