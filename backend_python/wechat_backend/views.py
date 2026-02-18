@@ -2221,7 +2221,7 @@ def get_platform_status():
     """获取所有AI平台的状态信息"""
     try:
         # 从配置管理器获取平台状态
-        from config_manager import Config as PlatformConfigManager
+        from .config_manager import ConfigurationManager as PlatformConfigManager
         config_manager = PlatformConfigManager()
 
         status_info = {}

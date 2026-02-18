@@ -100,4 +100,4 @@ class Config:
         normalized_platform = platform_aliases.get(platform.lower(), platform.lower())
         
         api_key = cls.get_api_key(normalized_platform)
-        return bool(api_key and api_key.strip() != '' and not api_key.endswith('[在此粘贴你的 Key]'))  # Fixed: removed sk- check
+        return bool(api_key and api_key.strip() != '' and not api_key.startswith('sk-') and not api_key.endswith('[在此粘贴你的Key]'))

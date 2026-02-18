@@ -7,7 +7,7 @@ from ..network.request_wrapper import get_ai_request_wrapper
 from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from ..config_manager import Config as PlatformConfigManager
+from ..config_manager import ConfigurationManager as PlatformConfigManager
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
