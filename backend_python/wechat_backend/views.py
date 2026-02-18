@@ -1800,18 +1800,28 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                                 # 如果评分失败，使用默认值
                                 scoring_result = None
 
+                            # P0-2 修复：即使没有 AI judge，也要使用 ResponseEvaluator 的评分结果
+                            authority_score = scoring_result.accuracy if scoring_result and isinstance(scoring_result.accuracy, (int, float)) else 0
+                            visibility_score = scoring_result.completeness if scoring_result and isinstance(scoring_result.completeness, (int, float)) else 0
+                            # 将 relevance 映射为 sentiment (好感度)
+                            sentiment_score = scoring_result.relevance if scoring_result and isinstance(scoring_result.relevance, (int, float)) else 50
+                            # 使用 coherence 作为 purity 和 consistency 的参考
+                            purity_score = scoring_result.coherence if scoring_result and isinstance(scoring_result.coherence, (int, float)) else 0
+                            consistency_score = scoring_result.coherence if scoring_result and isinstance(scoring_result.coherence, (int, float)) else 0
+                            score = scoring_result.overall_score if scoring_result and isinstance(scoring_result.overall_score, (int, float)) else 0
+
                             detailed_result = {
                                 'success': True,
                                 'brand': current_brand,
                                 'aiModel': result.get('model', result.get('ai_model', 'unknown')),
                                 'question': question,
                                 'response': ai_response_content,
-                                'authority_score': 0,  # Default score when no AI judge
-                                'visibility_score': 0,
-                                'sentiment_score': 0,
-                                'purity_score': 0,
-                                'consistency_score': 0,
-                                'score': 0,  # Default score when no AI judge
+                                'authority_score': authority_score,  # P0-2 修复：使用 evaluator 的评分
+                                'visibility_score': visibility_score,
+                                'sentiment_score': sentiment_score,
+                                'purity_score': purity_score,
+                                'consistency_score': consistency_score,
+                                'score': score,  # P0-2 修复：使用 evaluator 的总分
                                 # 【任务 A：数据入库】将 ScoringResult 结构化存入对应 TestCase 的结果对象中
                                 'quality_metrics': {
                                     'accuracy_score': scoring_result.accuracy if scoring_result and isinstance(scoring_result.accuracy, (int, float)) else 0,
@@ -1822,8 +1832,8 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                                     'detailed_feedback': scoring_result.detailed_feedback if scoring_result else {}
                                 } if scoring_result else None,
                                 'enhanced_scores': {
-                                    'geo_score': 0,
-                                    'cognitive_confidence': 0.0,
+                                    'geo_score': score,
+                                    'cognitive_confidence': 0.5,
                                     'bias_indicators': [],
                                     'detailed_analysis': {},
                                     'recommendations': []
@@ -1831,14 +1841,14 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
                                 'misunderstanding_analysis': None,  # No analysis when AI judge is not available
                                 'category': '国内' if result.get('model', result.get('ai_model', '')) in ['通义千问', '文心一言', '豆包', 'Kimi', '元宝', 'DeepSeek', '讯飞星火'] else '海外'
                             }
-                            # Add a basic judge result with default scores for scoring calculations
+                            # Add a basic judge result with scores from evaluator for scoring calculations
                             basic_judge_result = JudgeResult(
-                                accuracy_score=0,
-                                completeness_score=0,
-                                sentiment_score=50,  # Neutral sentiment
-                                purity_score=0,
-                                consistency_score=0,
-                                judgement="AI evaluation skipped",
+                                accuracy_score=authority_score,
+                                completeness_score=visibility_score,
+                                sentiment_score=sentiment_score,
+                                purity_score=purity_score,
+                                consistency_score=consistency_score,
+                                judgement="Auto-evaluated by ResponseEvaluator",
                                 confidence_level=ConfidenceLevel.MEDIUM
                             )
                             brand_results_map[current_brand].append(basic_judge_result)
