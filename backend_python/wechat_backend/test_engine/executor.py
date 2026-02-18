@@ -104,11 +104,18 @@ class TestExecutor:
                     model_display_name = model_name
                 
                 # 创建一个单独的测试结果记录并保存到数据库
+                # 注意：result['result'] 是 AIResponse.to_dict() 返回的字典，需要提取 content 字段
+                result_dict = result.get('result', {})
+                if isinstance(result_dict, dict):
+                    response_content = result_dict.get('content', '')
+                else:
+                    response_content = ''
+                    
                 single_test_result = {
                     'brand_name': task.brand_name,
                     'question': task.question,
                     'ai_model': model_display_name,
-                    'response': result.get('result', ''),
+                    'response': response_content,  # 修复：提取 content 字段而不是整个字典
                     'success': result.get('success', False),
                     'error': result.get('error', '') if not result.get('success', False) else '',
                     'timestamp': datetime.now().isoformat(),

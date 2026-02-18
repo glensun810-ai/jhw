@@ -6,7 +6,7 @@ from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from ..network.request_wrapper import get_ai_request_wrapper
 from ..monitoring.metrics_collector import record_api_call, record_error
 from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from ..config_manager import Config as PlatformConfigManager
+from ..config_manager import ConfigurationManager as PlatformConfigManager
 from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 import sys
 import os
@@ -23,7 +23,7 @@ class ZhipuAdapter(AIClient):
         # 使用统一请求封装器
         self.request_wrapper = get_ai_request_wrapper(
             platform_name="zhipu",
-            base_url=base_url or "https://open.bigmodel.cn/api/paas/v4",
+            base_url=base_url or "https://open.bigmodel.cn/api/paas/v4/",
             api_key=api_key,
             timeout=30,
             max_retries=3
