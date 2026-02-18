@@ -79,15 +79,9 @@ class DoubaoAdapter(AIClient):
                 "max_tokens": 1  # 只生成1个token，快速响应
             }
 
-            # Determine the correct endpoint URL based on model name for health check too
+            # 修复：豆包 API 使用固定的 endpoint，部署点 ID 在 model 参数中指定
+            # 不要将部署点 ID 作为子域名
             base_url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
-            if self.model_name and ('ep-' in self.model_name or '.' in self.model_name):
-                # If model name contains dots, it might already be a full endpoint
-                if '.' in self.model_name:
-                    base_url = f"https://{self.model_name}/api/v3/chat/completions"
-                else:
-                    # If it's a deployment ID without domain, construct the full URL
-                    base_url = f"https://{self.model_name}.ark.cn-beijing.volces.com/api/v3/chat/completions"
 
             debug_log("HEALTH_CHECK", "INIT", f"Performing health check for Doubao API with model: {self.model_name}, URL: {base_url}")
 
@@ -184,16 +178,10 @@ class DoubaoAdapter(AIClient):
             "max_tokens": max_tokens
         }
 
-        # Determine the correct endpoint URL based on model name
-        # If model name looks like a deployment ID (contains 'ep-' and '.'), use it as subdomain
+        # 修复：豆包 API 使用固定的 endpoint，部署点 ID 在 model 参数中指定
+        # URL 格式：https://ark.cn-beijing.volces.com/api/v3/chat/completions
+        # model 参数：部署点 ID (如 ep-20260212000000-gd5tq)
         base_url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
-        if self.model_name and ('ep-' in self.model_name or '.' in self.model_name):
-            # If model name contains dots, it might already be a full endpoint
-            if '.' in self.model_name:
-                base_url = f"https://{self.model_name}/api/v3/chat/completions"
-            else:
-                # If it's a deployment ID without domain, construct the full URL
-                base_url = f"https://{self.model_name}.ark.cn-beijing.volces.com/api/v3/chat/completions"
 
         start_time = time.time()
         try:

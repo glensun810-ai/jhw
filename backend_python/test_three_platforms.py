@@ -110,21 +110,23 @@ def test_doubao_api():
         print("❌ ERROR: Doubao API key is empty or too short")
         return False
     
-    # Doubao uses VolcEngine endpoint
+    # Doubao uses VolcEngine endpoint - fixed URL, deployment ID in model parameter
     url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    # 修复：使用部署点 ID 而不是通用模型名称
+    model_id = os.getenv('DOUBAO_MODEL_ID', 'ep-20260212000000-gd5tq')
     payload = {
-        "model": "doubao-lite",  # Using doubao-lite model
+        "model": model_id,  # 使用部署点 ID
         "messages": [{"role": "user", "content": TEST_PROMPT}],
         "temperature": 0.7,
         "max_tokens": 100
     }
     
     print(f"Endpoint: {url}")
-    print(f"Model: doubao-lite")
+    print(f"Model: {model_id}")
     print(f"Request Payload: {json.dumps(payload, ensure_ascii=False)[:200]}...")
     
     try:
