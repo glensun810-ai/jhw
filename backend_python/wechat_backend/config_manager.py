@@ -6,47 +6,59 @@ from typing import Optional
 from config import Config
 
 
+class ConfigData:
+    """配置数据类"""
+    def __init__(self, api_key: str, default_model: Optional[str] = None, 
+                 default_temperature: float = 0.7, default_max_tokens: int = 1000,
+                 timeout: int = 60):
+        self.api_key = api_key
+        self.default_model = default_model
+        self.default_temperature = default_temperature
+        self.default_max_tokens = default_max_tokens
+        self.timeout = timeout
+
+
 class ConfigurationManager:
     """
-    配置管理器 - 统一管理API密钥和其他配置
+    配置管理器 - 统一管理 API 密钥和其他配置
     """
-    
+
     @staticmethod
     def get_api_key(platform_name: str) -> Optional[str]:
         """
-        根据平台名称获取API密钥
-        
+        根据平台名称获取 API 密钥
+
         Args:
             platform_name: 平台名称 (e.g., 'deepseek', 'doubao', 'qwen')
-            
+
         Returns:
-            API密钥字符串或None
+            API 密钥字符串或 None
         """
         return Config.get_api_key(platform_name)
-    
+
     @staticmethod
     def is_platform_configured(platform_name: str) -> bool:
         """
-        检查指定平台是否已配置API密钥
-        
+        检查指定平台是否已配置 API 密钥
+
         Args:
             platform_name: 平台名称
-            
+
         Returns:
             bool: 平台是否已配置
         """
         return Config.is_api_key_configured(platform_name)
-    
+
     @staticmethod
     def get_platform_model(platform_name: str) -> Optional[str]:
         """
         获取平台的默认模型名称
-        
+
         Args:
             platform_name: 平台名称
-            
+
         Returns:
-            默认模型名称或None
+            默认模型名称或 None
         """
         platform_models = {
             'deepseek': 'deepseek-chat',
@@ -60,6 +72,24 @@ class ConfigurationManager:
             'wenxin': 'ernie-bot-4.5'
         }
         return platform_models.get(platform_name.lower())
+
+    @staticmethod
+    def get_platform_config(platform_name: str) -> Optional[ConfigData]:
+        """
+        获取平台完整配置
+
+        Args:
+            platform_name: 平台名称
+
+        Returns:
+            ConfigData 对象或 None
+        """
+        api_key = Config.get_api_key(platform_name)
+        if not api_key:
+            return None
+        
+        model = ConfigurationManager.get_platform_model(platform_name)
+        return ConfigData(api_key=api_key, default_model=model)
 
 
 # Create a singleton instance
