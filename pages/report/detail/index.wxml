@@ -1,0 +1,163 @@
+<!-- 问题深度诊断详情页 - 麦肯锡归因分析风格 -->
+<view class="detail-container" wx:if="{{questionText}}">
+  <!-- 顶部：问题展示区 -->
+  <view class="q-header-section">
+    <view class="q-number-badge">Q{{questionIndex + 1}}</view>
+    <view class="q-content">
+      <text class="q-label">诊断问题：</text>
+      <text class="q-title">{{questionText}}</text>
+    </view>
+  </view>
+
+  <!-- 模型切换标签（横向滚动） -->
+  <scroll-view scroll-x class="model-tabs" enable-flex>
+    <view 
+      wx:for="{{modelResults}}" 
+      wx:key="model" 
+      class="tab-item {{currentModelIndex === index ? 'active' : ''}}"
+      bindtap="switchModel" 
+      data-index="{{index}}"
+    >
+      <view class="tab-model-name">{{item.model}}</view>
+      <view class="tab-rank {{item.geo_data?.rank > 0 ? 'ranked' : 'unranked'}}">
+        {{item.geo_data?.rank > 0 ? '#' + item.geo_data.rank : '未上榜'}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 归因诊断卡片 -->
+  <view class="diagnosis-card">
+    <view class="card-title">
+      <text class="title-icon">🔍</text>
+      <text class="title-text">归因诊断：为什么排在这里？</text>
+    </view>
+    
+    <!-- 情感定性 -->
+    <view class="insight-section">
+      <view class="insight-item">
+        <view class="insight-header">
+          <text class="insight-icon">📊</text>
+          <text class="insight-label">情感定性</text>
+        </view>
+        <view class="insight-content">
+          <text class="value {{currentModelData?.geo_data?.sentiment > 0.3 ? 'pos' : currentModelData?.geo_data?.sentiment < -0.3 ? 'neg' : 'neu'}}">
+            {{currentModelData?.geo_data?.sentiment > 0.3 ? '正面评价' : currentModelData?.geo_data?.sentiment < -0.3 ? '存在负面' : '中性评价'}}
+          </text>
+          <text class="sub-value">得分：{{currentModelData?.geo_data?.sentiment}}</text>
+        </view>
+      </view>
+
+      <!-- 排名情况 -->
+      <view class="insight-item">
+        <view class="insight-header">
+          <text class="insight-icon">🏆</text>
+          <text class="insight-label">排名情况</text>
+        </view>
+        <view class="insight-content">
+          <text class="value {{currentModelData?.geo_data?.rank > 0 && currentModelData?.geo_data?.rank <= 3 ? 'good' : currentModelData?.geo_data?.rank > 5 ? 'bad' : 'normal'}}">
+            {{currentModelData?.geo_data?.rank > 0 ? '第' + currentModelData?.geo_data?.rank + '名' : '未进入榜单'}}
+          </text>
+          <text class="sub-value">共{{modelResults.length}}个模型参与排名</text>
+        </view>
+      </view>
+
+      <!-- 品牌提及 -->
+      <view class="insight-item">
+        <view class="insight-header">
+          <text class="insight-icon">📢</text>
+          <text class="insight-label">品牌提及</text>
+        </view>
+        <view class="insight-content">
+          <text class="value {{currentModelData?.geo_data?.brand_mentioned ? 'pos' : 'neg'}}">
+            {{currentModelData?.geo_data?.brand_mentioned ? '已提及' : '未提及'}}
+          </text>
+          <text class="sub-value">{{currentModelData?.geo_data?.brand_mentioned ? 'AI 认知中存在' : 'AI 未识别品牌'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 信源侦探 -->
+    <view class="source-detective">
+      <view class="detective-header">
+        <text class="detective-icon">🕵️</text>
+        <text class="detective-label">影响力的信源证据</text>
+        <text class="detective-count">{{(currentModelData?.geo_data?.cited_sources || []).length}} 个信源</text>
+      </view>
+
+      <view wx:if="{{(currentModelData?.geo_data?.cited_sources || []).length === 0}}" class="empty-sources">
+        <text class="empty-icon">📭</text>
+        <text class="empty-text">未检测到引用信源</text>
+        <text class="empty-sub">AI 基于内部知识生成回答</text>
+      </view>
+
+      <view wx:for="{{currentModelData?.geo_data?.cited_sources}}" wx:key="url" class="source-box">
+        <view class="source-header">
+          <view class="source-info">
+            <text class="site-name">{{item.site_name || '未知来源'}}</text>
+            <text class="attitude-tag {{item.attitude}}">{{item.attitude === 'positive' ? '✅ 加分项' : item.attitude === 'negative' ? '⚠️ 减分项' : '➖ 中性'}}</text>
+          </view>
+        </view>
+        <text class="source-url">{{item.url}}</text>
+        <view class="source-impact">
+          <text class="impact-label">影响力评估：</text>
+          <text class="impact-value {{item.attitude}}">{{item.attitude === 'positive' ? '提升排名' : item.attitude === 'negative' ? '降低排名' : '无明显影响'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 竞品拦截分析 -->
+    <view class="interception-analysis" wx:if="{{currentModelData?.geo_data?.interception}}">
+      <view class="interception-header">
+        <text class="interception-icon">⚠️</text>
+        <text class="interception-label">竞品拦截预警</text>
+      </view>
+      <view class="interception-content">
+        <text class="interception-text">AI 推荐了竞品 <text class="competitor-name">{{currentModelData?.geo_data?.interception}}</text> 而非本品牌</text>
+        <view class="interception-suggestion">
+          <text class="suggestion-icon">💡</text>
+          <text class="suggestion-text">建议：加强品牌与竞品的差异化定位，提升 AI 认知中的独特性</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- AI 原文对话（分片渲染） -->
+  <view class="raw-response">
+    <view class="card-title">
+      <text class="title-icon">💬</text>
+      <text class="title-text">AI 原文对话</text>
+      <text class="title-sub">{{currentModelData?.model}} · {{currentModelData?.latency}}s</text>
+    </view>
+    
+    <view class="content-box">
+      <view class="rich-content">
+        <rich-text nodes="{{renderedText}}"></rich-text>
+      </view>
+      
+      <!-- 渲染中加载提示 -->
+      <view wx:if="{{isRendering}}" class="rendering-loader">
+        <view class="loader-spinner"></view>
+        <text class="loader-text">AI 正在深度分析中...</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <button class="btn-secondary" bindtap="copyContent">复制内容</button>
+    <button class="btn-primary" bindtap="shareAnalysis">分享分析</button>
+  </view>
+</view>
+
+<!-- 加载状态 -->
+<view class="loading-container" wx:if="{{!questionText && !loadError}}">
+  <view class="loading-spinner"></view>
+  <view class="loading-text">正在加载诊断详情...</view>
+</view>
+
+<!-- 错误状态 -->
+<view class="error-container" wx:if="{{loadError}}">
+  <view class="error-icon">⚠️</view>
+  <view class="error-text">{{loadError}}</view>
+  <button class="btn-retry" bindtap="retry">重新加载</button>
+</view>
