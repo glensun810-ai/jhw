@@ -28,7 +28,13 @@ Page({
     // 状态
     loading: true,
     loadError: null,
-    executionId: null
+    executionId: null,
+    
+    // 【新增】详情抽屉状态
+    showDrawer: false,
+    currentQuestionData: null,
+    brandName: '',
+    competitors: []
   },
 
   /**
@@ -259,7 +265,7 @@ Page({
   },
 
   /**
-   * 跳转到问题详情页
+   * 打开详情抽屉（替代页面跳转）
    */
   goToQuestionDetail: function(e) {
     const index = e.currentTarget.dataset.index;
@@ -267,24 +273,64 @@ Page({
 
     if (!questionCard) return;
 
-    // 保存选中的问题数据到全局
-    app.globalData.selectedQuestion = {
-      index: index,
-      data: questionCard,
-      fullResults: this.data.rawResults.filter(r => r.question_id === index)
+    // 触发触感反馈
+    wx.vibrateShort({ type: 'light' });
+
+    // 获取该问题的完整模型数据
+    const fullResults = this.data.rawResults.filter(r => r.question_id === index);
+    
+    // 构建抽屉组件需要的数据结构
+    const questionData = {
+      question_id: index,
+      question_text: questionCard.text,
+      models: fullResults,
+      avg_rank: questionCard.avgRank,
+      avg_sentiment: questionCard.avgSentiment,
+      mention_count: questionCard.mentionCount,
+      total_models: questionCard.totalModels
     };
 
-    // 跳转到问题详情页（第四阶段：深度诊断）
-    wx.navigateTo({
-      url: `/pages/report/detail/index?index=${index}`,
-      fail: (err) => {
-        console.error('跳转到问题详情失败:', err);
-        wx.showToast({
-          title: '跳转失败',
-          icon: 'none'
-        });
-      }
+    // 打开抽屉
+    this.setData({
+      showDrawer: true,
+      currentQuestionData: questionData,
+      brandName: this.data.dashboardData?.summary?.brandName || '',
+      competitors: this.data.competitors
     });
+
+    logger.info(`打开详情抽屉：问题 ${index + 1}`);
+  },
+
+  /**
+   * 关闭抽屉回调
+   */
+  onDrawerClose: function() {
+    this.setData({
+      showDrawer: false,
+      currentQuestionData: null
+    });
+    logger.info('详情抽屉已关闭');
+  },
+
+  /**
+   * 保存抽屉数据回调
+   */
+  onDrawerSave: function(e) {
+    const { questionData, modelId } = e.detail;
+    
+    // 保存到历史记录
+    const savedData = {
+      question: questionData,
+      model: modelId,
+      savedAt: new Date().toISOString()
+    };
+    
+    // 保存到本地存储
+    const history = wx.getStorageSync('savedQuestions') || [];
+    history.unshift(savedData);
+    wx.setStorageSync('savedQuestions', history);
+    
+    logger.info('详情数据已保存');
   },
 
   /**

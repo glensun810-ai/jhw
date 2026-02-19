@@ -1,5 +1,16 @@
 """
-NxM Test Execution Engine
+NxM Test Execution Engine - Refactored for Deterministic Data Generation
+
+重构目标：确保数据生成的『确定性』
+1. 流式持久化：每个 (Question, Model) 完成后先写日志再更新内存
+2. GEO 语义加固：强制解析 rank, sentiment, interception，失败时存入 error_code
+3. 任务终点校验：results 数组长度必须等于 len(Q) * len(M) 才标记 completed
+
+【模块四增强】系统鲁棒性：
+4. 熔断机制与断点结果保护
+5. 单任务硬超时控制
+6. 异步心跳监控
+7. 智能熔断策略
 
 This module implements the NxM matrix execution strategy:
 - Outer loop: iterates through questions
@@ -13,15 +24,544 @@ This module implements the NxM matrix execution strategy:
 """
 import time
 import traceback
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+import hashlib
+import threading
+import os
+import json
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from .ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE, parse_geo_json
 from .ai_adapters.factory import AIAdapterFactory
+from .ai_adapters.geo_parser import parse_geo_json_enhanced
 from .config_manager import config_manager
 from .logging_config import api_logger
 from .database import save_test_record
 
+
+# ==================== 模块四：熔断机制 ====================
+
+# 【任务 1】熔断器持久化存储路径
+CIRCUIT_BREAKER_STORE_PATH = Path(__file__).parent.parent / "data" / "circuit_breaker_store.json"
+
+
+class ModelCircuitBreaker:
+    """
+    【模块四】模型熔断器 - 增强版
+    
+    功能：
+    - 跟踪每个模型的连续失败次数
+    - 连续 3 次失败后自动熔断
+    - 熔断后不再请求该模型
+    - 【任务 1 增强】状态持久化存储
+    """
+    
+    def __init__(self, failure_threshold: int = 3, recovery_timeout: int = 300, persist: bool = True):
+        self.failure_threshold = failure_threshold  # 失败阈值
+        self.recovery_timeout = recovery_timeout  # 恢复超时（秒）
+        self.persist = persist  # 是否持久化
+        
+        # 【任务 1】从持久化存储加载状态
+        self.model_failures: Dict[str, int] = {}
+        self.model_suspended: Dict[str, bool] = {}
+        self.model_last_failure: Dict[str, datetime] = {}
+        self._lock = threading.Lock()
+        
+        if self.persist:
+            self._load_from_storage()
+    
+    def _load_from_storage(self):
+        """【任务 1】从持久化存储加载状态"""
+        try:
+            if CIRCUIT_BREAKER_STORE_PATH.exists():
+                with open(CIRCUIT_BREAKER_STORE_PATH, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                self.model_failures = data.get('model_failures', {})
+                self.model_suspended = {
+                    k: v for k, v in data.get('model_suspended', {}).items() 
+                    if v  # 只加载仍处于熔断状态的模型
+                }
+                
+                # 恢复最后失败时间
+                for model_name, timestamp_str in data.get('model_last_failure', {}).items():
+                    try:
+                        self.model_last_failure[model_name] = datetime.fromisoformat(timestamp_str)
+                    except:
+                        pass
+                
+                # 检查是否有模型应该恢复
+                self._check_recovery()
+                
+                api_logger.info(
+                    f"[CircuitBreaker] Loaded state from storage: "
+                    f"{len(self.model_suspended)} suspended models"
+                )
+        except Exception as e:
+            api_logger.warning(f"[CircuitBreaker] Failed to load from storage: {e}")
+            # 启动失败不影响使用，使用默认空状态
+    
+    def _save_to_storage(self):
+        """【任务 1】保存状态到持久化存储"""
+        if not self.persist:
+            return
+        
+        try:
+            # 确保目录存在
+            CIRCUIT_BREAKER_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            
+            data = {
+                'model_failures': self.model_failures,
+                'model_suspended': self.model_suspended,
+                'model_last_failure': {
+                    k: v.isoformat() for k, v in self.model_last_failure.items()
+                },
+                'last_updated': datetime.now().isoformat()
+            }
+            
+            with open(CIRCUIT_BREAKER_STORE_PATH, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            api_logger.debug(f"[CircuitBreaker] State saved to storage")
+        except Exception as e:
+            api_logger.error(f"[CircuitBreaker] Failed to save to storage: {e}")
+    
+    def _check_recovery(self):
+        """检查是否有模型应该恢复"""
+        now = datetime.now()
+        for model_name, suspended in list(self.model_suspended.items()):
+            if suspended:
+                last_failure = self.model_last_failure.get(model_name)
+                if last_failure:
+                    elapsed = (now - last_failure).total_seconds()
+                    if elapsed >= self.recovery_timeout:
+                        self.model_suspended[model_name] = False
+                        self.model_failures[model_name] = 0
+                        api_logger.info(
+                            f"[CircuitBreaker] Model '{model_name}' auto-recovered after {elapsed:.0f}s"
+                        )
+    
+    def record_failure(self, model_name: str):
+        """记录模型失败"""
+        with self._lock:
+            if model_name not in self.model_failures:
+                self.model_failures[model_name] = 0
+            
+            self.model_failures[model_name] += 1
+            self.model_last_failure[model_name] = datetime.now()
+            
+            # 达到阈值，触发熔断
+            if self.model_failures[model_name] >= self.failure_threshold:
+                self.model_suspended[model_name] = True
+                api_logger.warning(
+                    f"[CircuitBreaker] Model '{model_name}' SUSPENDED after "
+                    f"{self.model_failures[model_name]} consecutive failures"
+                )
+            
+            # 【任务 1】持久化保存
+            self._save_to_storage()
+    
+    def record_success(self, model_name: str):
+        """记录模型成功"""
+        with self._lock:
+            self.model_failures[model_name] = 0
+            self.model_suspended[model_name] = False
+            
+            # 【任务 1】持久化保存
+            self._save_to_storage()
+    
+    def is_suspended(self, model_name: str) -> bool:
+        """检查模型是否被熔断"""
+        with self._lock:
+            # 先检查是否有模型应该恢复
+            self._check_recovery()
+            
+            if model_name not in self.model_suspended:
+                return False
+            
+            return self.model_suspended[model_name]
+    
+    def get_suspended_models(self) -> List[str]:
+        """获取所有被熔断的模型"""
+        with self._lock:
+            self._check_recovery()
+            return [m for m, suspended in self.model_suspended.items() if suspended]
+    
+    def reset(self):
+        """重置所有状态"""
+        with self._lock:
+            self.model_failures.clear()
+            self.model_suspended.clear()
+            self.model_last_failure.clear()
+            
+            # 【任务 1】持久化保存
+            self._save_to_storage()
+    
+    def manual_resume(self, model_name: str) -> bool:
+        """
+        手动恢复模型
+        
+        Args:
+            model_name: 模型名称
+        
+        Returns:
+            bool: 是否成功恢复
+        """
+        with self._lock:
+            if model_name in self.model_suspended:
+                self.model_suspended[model_name] = False
+                self.model_failures[model_name] = 0
+                self._save_to_storage()
+                api_logger.info(f"[CircuitBreaker] Model '{model_name}' manually resumed")
+                return True
+            return False
+
+
+# 全局熔断器实例
+_global_circuit_breaker = ModelCircuitBreaker(failure_threshold=3, recovery_timeout=300)
+
+
+def get_circuit_breaker() -> ModelCircuitBreaker:
+    """获取全局熔断器实例"""
+    return _global_circuit_breaker
+
+
+# ==================== 线程安全与缓存管理 ====================
+
+# 线程锁用于原子化状态更新
+_execution_store_lock = threading.Lock()
+
+# 日志写入器缓存（每个 execution_id 一个写入器实例）
+_logger_cache: Dict[str, Any] = {}
+_logger_cache_lock = threading.Lock()
+
+
+# ==================== 辅助函数 ====================
+
+def _generate_result_hash(result_item: Dict[str, Any]) -> str:
+    """
+    生成结果项的唯一哈希值
+    
+    哈希基于：execution_id + question_id + model + timestamp
+    用于防止重复写入和验证数据完整性
+    """
+    hash_content = f"{result_item.get('execution_id', '')}-{result_item.get('question_id', '')}-{result_item.get('model', '')}-{result_item.get('timestamp', '')}"
+    return hashlib.sha256(hash_content.encode('utf-8')).hexdigest()[:16]
+
+
+def _get_or_create_logger(execution_id: str) -> Tuple[Any, Path]:
+    """
+    获取或创建指定 execution_id 的日志写入器
+    
+    使用缓存避免重复创建，同时返回日志文件路径用于后续验证
+    """
+    with _logger_cache_lock:
+        if execution_id not in _logger_cache:
+            from utils.ai_response_logger_v2 import AIResponseLogger
+            logger = AIResponseLogger()
+            _logger_cache[execution_id] = logger
+            api_logger.info(f"[LogWriter] Created logger for execution_id: {execution_id}, file: {logger.log_file}")
+        return _logger_cache[execution_id], _logger_cache[execution_id].log_file
+
+
+def _close_logger(execution_id: str) -> bool:
+    """
+    关闭并清理指定 execution_id 的日志写入器
+    
+    确保文件句柄被正确关闭，内容完全落盘
+    """
+    with _logger_cache_lock:
+        if execution_id in _logger_cache:
+            logger = _logger_cache[execution_id]
+            # 如果有文件对象，显式 flush
+            if hasattr(logger, '_file_handle') and logger._file_handle:
+                logger._file_handle.flush()
+                os.fsync(logger._file_handle.fileno())
+            del _logger_cache[execution_id]
+            api_logger.info(f"[LogWriter] Closed logger for execution_id: {execution_id}")
+            return True
+        return False
+
+
+def _atomic_update_execution_store(
+    execution_store: Dict[str, Any],
+    execution_id: str,
+    result_item: Dict[str, Any],
+    total_executions: int,
+    all_results_hashes: set
+) -> bool:
+    """
+    原子化更新 execution_store
+    
+    特性：
+    1. 使用线程锁保证线程安全
+    2. 检查结果哈希值防止重复写入
+    3. 更新时包含结果哈希值用于追踪
+    
+    Returns:
+        bool: 是否成功更新（False 表示可能是重复结果）
+    """
+    with _execution_store_lock:
+        if execution_id not in execution_store:
+            api_logger.warning(f"[AtomicUpdate] Execution ID {execution_id} not found in store")
+            return False
+        
+        # 生成结果哈希值
+        result_hash = _generate_result_hash(result_item)
+        
+        # 检查是否重复
+        if result_hash in all_results_hashes:
+            api_logger.warning(
+                f"[AtomicUpdate] Duplicate result detected for {execution_id}: "
+                f"Q{result_item.get('question_id')}+{result_item.get('model')} (hash: {result_hash})"
+            )
+            return False
+        
+        # 添加到哈希集合
+        all_results_hashes.add(result_hash)
+        
+        # 添加哈希值到结果项（用于追踪）
+        result_item['_result_hash'] = result_hash
+        
+        # 追加到结果列表
+        execution_store[execution_id].setdefault('results', []).append(result_item)
+        
+        # 更新进度
+        completed_count = len(execution_store[execution_id]['results'])
+        execution_store[execution_id].update({
+            'progress': int((completed_count / max(total_executions, 1)) * 100),
+            'completed': completed_count,
+            'last_updated': datetime.now().isoformat()
+        })
+        
+        api_logger.debug(
+            f"[AtomicUpdate] Updated store for {execution_id}: "
+            f"progress={execution_store[execution_id]['progress']}%, "
+            f"hash={result_hash}"
+        )
+        
+        return True
+
+
+def _normalize_brand_mentioned(value: Any) -> bool:
+    """
+    【任务 2】布尔值强制转换 - 确保 brand_mentioned 始终输出 True 或 False
+    
+    处理规则：
+    - 布尔值：直接返回
+    - 字符串 'yes'/'true'/'是'/'提到' -> True
+    - 字符串 'no'/'false'/'否'/'未提到' -> False
+    - 其他：尝试布尔转换，失败返回 False
+    """
+    if isinstance(value, bool):
+        return value
+    
+    if isinstance(value, str):
+        lower_val = value.lower().strip()
+        # True 值
+        if lower_val in ['yes', 'true', '是', '提到', 'mentioned', '1']:
+            return True
+        # False 值
+        if lower_val in ['no', 'false', '否', '未提到', 'not mentioned', '0']:
+            return False
+    
+    # 其他类型尝试布尔转换
+    try:
+        return bool(value)
+    except:
+        return False
+
+
+def _extract_interception_fallback(text: str) -> str:
+    """
+    【任务 2】拦截词兜底 - 如果 geo_analysis 解析完全失败，尝试用正则表达式提取 interception 字段
+    
+    提取策略：
+    1. 查找"推荐了 XXX"、"选择了 XXX"、"而不是我们"等模式
+    2. 查找竞品品牌名称（如果文本中包含）
+    3. 返回空字符串（最后手段）
+    """
+    if not text:
+        return ""
+    
+    import re
+    
+    # 模式 1: "推荐了/选择了/提到了 XXX" - 放宽匹配规则，匹配到下一个标点或空格前
+    patterns = [
+        r'推荐了\s*(.+?)(?:[,\s,.。]|$)',
+        r'选择了\s*(.+?)(?:[,\s,.。]|$)',
+        r'提到了\s*(.+?)(?:[,\s,.。]|$)',
+        r'而不是\s*我们',
+        r'而非\s*(.+?)(?:[,\s,.。]|$)',
+        r'建议考虑\s*(.+?)(?:[,\s,.。]|$)',
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            matched_text = match.group(1) if match.lastindex else match.group(0)
+            # 清理匹配结果
+            cleaned = matched_text.strip(',.，。:：')
+            if cleaned and len(cleaned) > 1:
+                return cleaned
+    
+    # 模式 2: 查找引号内的品牌名（可能是竞品）
+    quote_pattern = r'[""]([^""]{2,20})[""]'
+    matches = re.findall(quote_pattern, text)
+    if matches:
+        # 返回第一个看起来像品牌名的匹配
+        for match in matches:
+            if any(c.isalpha() or '\u4e00' <= c <= '\u9fff' for c in match):
+                return match
+    
+    # 兜底：返回空字符串
+    return ""
+
+
+def _parse_geo_with_validation(response_text: str, execution_id: str, q_idx: int, model_name: str) -> Tuple[Dict[str, Any], Optional[str]]:
+    """
+    【GEO 语义加固】强制解析 GEO 指标，失败时返回 error_code
+    
+    【任务 2 优化】
+    - 拦截词兜底：如果 geo_analysis 解析完全失败，尝试用正则表达式提取 interception
+    - 布尔值强制转换：确保 brand_mentioned 始终输出 True 或 False
+
+    Args:
+        response_text: AI 响应文本
+        execution_id: 执行 ID
+        q_idx: 问题索引
+        model_name: 模型名称
+
+    Returns:
+        (geo_data, error_code) 元组
+        - geo_data: 包含 rank, sentiment, interception 等字段
+        - error_code: 如果解析失败，返回错误代码；成功则为 None
+    """
+    # 默认值（用于解析完全失败时）
+    default_geo = {
+        "brand_mentioned": False,
+        "rank": -1,
+        "sentiment": 0.0,
+        "cited_sources": [],
+        "interception": "",
+        "_parse_error": True  # 标记为解析失败
+    }
+
+    if not response_text or not isinstance(response_text, str):
+        error_code = "EMPTY_RESPONSE"
+        api_logger.warning(f"[GEO_Parse] Empty response for [Q:{q_idx+1}] [Model:{model_name}]")
+        return default_geo, error_code
+
+    try:
+        # 使用增强版解析器
+        geo_data = parse_geo_json_enhanced(response_text)
+
+        # 【关键验证】强制检查三个核心指标是否存在
+        validation_errors = []
+
+        # 1. 验证 rank
+        if 'rank' not in geo_data or not isinstance(geo_data.get('rank'), (int, float)):
+            validation_errors.append("rank_missing_or_invalid")
+            geo_data['rank'] = -1
+
+        # 2. 验证 sentiment
+        if 'sentiment' not in geo_data or not isinstance(geo_data.get('sentiment'), (int, float)):
+            validation_errors.append("sentiment_missing_or_invalid")
+            geo_data['sentiment'] = 0.0
+
+        # 3. 验证 interception - 【任务 2】拦截词兜底
+        if 'interception' not in geo_data or not isinstance(geo_data.get('interception'), str):
+            validation_errors.append("interception_missing_or_invalid")
+            # 尝试用正则表达式提取
+            extracted_interception = _extract_interception_fallback(response_text)
+            geo_data['interception'] = extracted_interception
+            api_logger.info(
+                f"[GEO_Parse] Fallback extraction [Q:{q_idx+1}] [Model:{model_name}]: "
+                f"interception='{extracted_interception}'"
+            )
+
+        # 【任务 2】布尔值强制转换 - 确保 brand_mentioned 始终为 bool
+        if 'brand_mentioned' in geo_data:
+            geo_data['brand_mentioned'] = _normalize_brand_mentioned(geo_data['brand_mentioned'])
+        else:
+            geo_data['brand_mentioned'] = False
+
+        # 如果有验证错误，添加 error_code
+        if validation_errors:
+            error_code = f"PARTIAL_PARSE_{'_'.join(validation_errors)}"
+            api_logger.warning(
+                f"[GEO_Parse] Partial parse for [Q:{q_idx+1}] [Model:{model_name}]: {error_code}"
+            )
+            # 添加解析错误标记
+            geo_data['_parse_error'] = True
+            geo_data['_validation_errors'] = validation_errors
+            return geo_data, error_code
+
+        # 解析成功
+        api_logger.info(
+            f"[GEO_Parse] Success [Q:{q_idx+1}] [Model:{model_name}]: "
+            f"rank={geo_data.get('rank', -1)}, sentiment={geo_data.get('sentiment', 0)}, "
+            f"interception='{geo_data.get('interception', '')[:20]}'"
+        )
+        return geo_data, None
+
+    except Exception as e:
+        error_code = f"PARSE_EXCEPTION_{type(e).__name__}"
+        api_logger.error(
+            f"[GEO_Parse] Exception for [Q:{q_idx+1}] [Model:{model_name}]: {e}"
+        )
+        return default_geo, error_code
+
+
+def _verify_completion(results: List[Dict[str, Any]], expected_total: int) -> Dict[str, Any]:
+    """
+    【任务终点校验】验证任务是否可以标记为 completed
+    
+    Args:
+        results: 结果列表
+        expected_total: 期望的总执行数 (len(Q) * len(M))
+    
+    Returns:
+        验证结果字典
+    """
+    actual_count = len(results)
+    
+    verification = {
+        'can_complete': actual_count == expected_total,
+        'expected_total': expected_total,
+        'actual_count': actual_count,
+        'missing_count': max(0, expected_total - actual_count),
+        'success_count': len([r for r in results if r.get('status') == 'success']),
+        'failed_count': len([r for r in results if r.get('status') == 'failed']),
+        'geo_parsed_count': len([r for r in results if r.get('geo_data') is not None]),
+        'error_codes': []
+    }
+    
+    # 收集所有错误代码
+    for result in results:
+        if result.get('geo_data') and result['geo_data'].get('_parse_error'):
+            verification['error_codes'].append({
+                'question_id': result.get('question_id'),
+                'model': result.get('model'),
+                'error_code': result['geo_data'].get('_parse_error_code')
+            })
+    
+    if verification['can_complete']:
+        api_logger.info(
+            f"[Completion_Check] Task can be marked as completed: "
+            f"{actual_count}/{expected_total} results"
+        )
+    else:
+        api_logger.warning(
+            f"[Completion_Check] Task CANNOT be completed: "
+            f"{actual_count}/{expected_total} results, missing {verification['missing_count']}"
+        )
+    
+    return verification
+
+
+# ==================== 核心执行函数 ====================
 
 def execute_nxm_test(
     execution_id: str,
@@ -34,10 +574,15 @@ def execute_nxm_test(
     execution_store: Dict[str, Any] = None
 ) -> Dict[str, Any]:
     """
-    重构后的 NxM 执行逻辑
-    外层循环遍历问题，内层循环遍历模型
+    重构后的 NxM 执行逻辑 - 确定性数据生成版本
     
+    外层循环遍历问题，内层循环遍历模型
     请求次数 = 问题数 × 模型数（只针对用户自己的品牌）
+    
+    重构特性：
+    1. 流式持久化：每个 (Question, Model) 完成后先写日志再更新内存
+    2. GEO 语义加固：强制解析 rank, sentiment, interception，失败时存入 error_code
+    3. 任务终点校验：results 数组长度必须等于 len(Q) * len(M) 才标记 completed
     
     Args:
         execution_id: 执行 ID
@@ -48,10 +593,19 @@ def execute_nxm_test(
         user_id: 用户 ID
         user_level: 用户等级
         execution_store: 执行状态存储
-        
+    
     Returns:
         包含所有测试结果的字典
     """
+    # 结果哈希集合（用于防重复）
+    all_results_hashes = set()
+    
+    # 日志文件路径（用于后续验证）
+    log_file_path = None
+    
+    # 计算期望的总执行数
+    expected_total = len(raw_questions) * len(selected_models)
+    
     try:
         # 准备结果存储
         all_results = []
@@ -59,21 +613,27 @@ def execute_nxm_test(
         
         # 更新状态为 AI 获取阶段
         if execution_store:
-            execution_store[execution_id].update({
-                'status': 'ai_fetching',
-                'stage': 'ai_fetching',
-                'progress': 10,
-                'total': 0,
-                'results': []
-            })
-
+            with _execution_store_lock:
+                execution_store[execution_id].update({
+                    'status': 'ai_fetching',
+                    'stage': 'ai_fetching',
+                    'progress': 10,
+                    'total': expected_total,
+                    'results': [],
+                    'expected_total': expected_total
+                })
+        
         api_logger.info(
             f"Starting NxM async brand test '{execution_id}' for main brand: {main_brand}, "
-            f"competitors: {competitor_brands}, (User: {user_id}, Level: {user_level})"
+            f"competitors: {competitor_brands}, (User: {user_id}, Level: {user_level}), "
+            f"Formula: {len(raw_questions)} questions × {len(selected_models)} models = {expected_total}"
         )
-
-        # NxM 循环：外层遍历问题，内层遍历模型
-        # 注意：只针对用户自己的品牌进行请求，竞品品牌不参与循环
+        
+        # 获取日志写入器（提前创建，确保文件句柄就绪）
+        logger, log_file_path = _get_or_create_logger(execution_id)
+        
+        # ==================== NxM 循环开始 ====================
+        # 外层遍历问题，内层遍历模型
         for q_idx, base_question in enumerate(raw_questions):
             # 替换问题中的品牌占位符为用户自己的品牌
             question_text = base_question.replace('{brandName}', main_brand)
@@ -89,13 +649,14 @@ def execute_nxm_test(
                 model_name = model_info['name'] if isinstance(model_info, dict) else model_info
                 total_executions += 1
                 
-                # 更新总数
+                # 更新总数（原子操作）
                 if execution_store and execution_id in execution_store:
-                    execution_store[execution_id]['total'] = total_executions
+                    with _execution_store_lock:
+                        execution_store[execution_id]['total'] = total_executions
                 
-                debug_log_msg = f"Executing [Q:{q_idx+1}] [MainBrand:{main_brand}] on [Model:{model_name}]"
-                api_logger.info(debug_log_msg)
+                api_logger.info(f"Executing [Q:{q_idx+1}] [MainBrand:{main_brand}] on [Model:{model_name}]")
                 
+                # 构建结果项（带时间戳用于哈希生成）
                 result_item = {
                     "question_id": q_idx,
                     "question_text": question_text,
@@ -105,7 +666,10 @@ def execute_nxm_test(
                     "content": "",
                     "geo_data": None,
                     "status": "pending",
-                    "error": None
+                    "error": None,
+                    "error_code": None,  # 【新增】GEO 解析错误代码
+                    "timestamp": datetime.now().isoformat(),
+                    "execution_id": execution_id
                 }
                 
                 try:
@@ -131,7 +695,6 @@ def execute_nxm_test(
                     adapter = AIAdapterFactory.create(normalized_model_name, api_key_value, model_id)
                     
                     # 2. 构建带有 GEO 分析要求的 Prompt
-                    # 竞品品牌用于 Prompt 中的对比分析
                     competitors_str = ", ".join(competitor_brands) if competitor_brands else "无"
                     geo_prompt = GEO_PROMPT_TEMPLATE.format(
                         brand_name=main_brand,
@@ -147,36 +710,33 @@ def execute_nxm_test(
                         competitors=competitor_brands,
                         execution_id=execution_id,
                         question_index=q_idx + 1,
-                        total_questions=len(raw_questions) * len(selected_models)
+                        total_questions=expected_total
                     )
                     latency = time.time() - start_time
                     
                     # 4. 归因解析 (Attribution Parsing) - 从文本中提取 JSON 块
                     if ai_response.success:
                         response_text = ai_response.content or ""
-
+                        
                         # 记录 AI 响应的前 200 个字符用于调试
                         api_logger.info(
                             f"AI Response preview [Q:{q_idx+1}] [MainBrand:{main_brand}] [Model:{model_name}]: "
                             f"{response_text[:200]}..."
                         )
-
-                        # 先解析 GEO 分析结果
-                        analysis = parse_geo_json(response_text)
-
-                        # 记录解析结果
-                        api_logger.info(
-                            f"GEO Analysis Result [Q:{q_idx+1}] [MainBrand:{main_brand}] [Model:{model_name}]: "
-                            f"rank={analysis.get('rank', -1)}, "
-                            f"sentiment={analysis.get('sentiment', 0)}, "
-                            f"brand_mentioned={analysis.get('brand_mentioned', False)}, "
-                            f"sources_count={len(analysis.get('cited_sources', []))}"
+                        
+                        # 【重构点 2】GEO 语义加固 - 强制解析三个核心指标
+                        geo_data, error_code = _parse_geo_with_validation(
+                            response_text,
+                            execution_id,
+                            q_idx,
+                            model_name
                         )
-
-                        # 记录到 ai_responses.jsonl 文件
+                        
+                        # 【重构点 1】流式持久化 - 先写日志，再更新内存
+                        log_success = False
                         try:
                             from utils.ai_response_logger_v2 import log_ai_response
-                            log_ai_response(
+                            log_record = log_ai_response(
                                 question=geo_prompt,
                                 response=response_text,
                                 platform=normalized_model_name,
@@ -190,45 +750,59 @@ def execute_nxm_test(
                                 success=True,
                                 execution_id=execution_id,
                                 question_index=q_idx + 1,
-                                total_questions=len(raw_questions) * len(selected_models),
+                                total_questions=expected_total,
                                 metadata={
                                     "source": "nxm_execution_engine",
-                                    "geo_analysis": analysis
+                                    "geo_analysis": geo_data,
+                                    "error_code": error_code
                                 }
                             )
-                            api_logger.info(f"[AIResponseLogger] Task [Q:{q_idx+1}] [Model:{model_name}] logged successfully")
+                            api_logger.info(
+                                f"[AIResponseLogger] Task [Q:{q_idx+1}] [Model:{model_name}] logged successfully, "
+                                f"record_id={log_record.get('record_id', 'unknown')}"
+                            )
+                            log_success = True
                         except Exception as log_error:
-                            api_logger.warning(f"[AIResponseLogger] Failed to log: {log_error}")
-
+                            api_logger.error(
+                                f"[AIResponseLogger] CRITICAL: Failed to log [Q:{q_idx+1}] [Model:{model_name}]: {log_error}"
+                            )
+                            # 日志写入失败是严重错误，记录但不中断主流程
+                            result_item['log_error'] = str(log_error)
+                        
                         # 5. 构造结构化结果
                         result_item.update({
                             "content": response_text,
-                            "geo_data": analysis,  # 包含 rank, sentiment, sources
+                            "geo_data": geo_data,  # 包含 rank, sentiment, interception
                             "status": "success",
                             "latency": latency,
                             "tokens_used": getattr(ai_response, 'tokens_used', 0),
-                            "platform": normalized_model_name
+                            "platform": normalized_model_name,
+                            "log_success": log_success,
+                            "error_code": error_code  # 如果有解析错误，记录错误代码
                         })
-
+                        
                         api_logger.info(
                             f"Success: [Q:{q_idx+1}] [MainBrand:{main_brand}] [Model:{model_name}] - "
-                            f"GEO: rank={analysis.get('rank', -1)}, sentiment={analysis.get('sentiment', 0)}"
+                            f"GEO: rank={geo_data.get('rank', -1)}, sentiment={geo_data.get('sentiment', 0)}, "
+                            f"error_code={error_code}"
                         )
                     else:
+                        # AI 调用失败
                         result_item.update({
                             "status": "failed",
                             "error": ai_response.error_message or "Unknown AI error",
-                            "latency": latency
+                            "latency": latency,
+                            "error_code": f"AI_ERROR_{getattr(ai_response, 'error_type', 'unknown')}"
                         })
                         api_logger.warning(
                             f"AI Error: [Q:{q_idx+1}] [MainBrand:{main_brand}] [Model:{model_name}] - "
                             f"{ai_response.error_message}"
                         )
-
-                        # 记录失败的调用到日志文件
+                        
+                        # 【重构点 1】记录失败的调用到日志文件（同步写入）
                         try:
                             from utils.ai_response_logger_v2 import log_ai_response
-                            log_ai_response(
+                            log_record = log_ai_response(
                                 question=geo_prompt,
                                 response="",
                                 platform=normalized_model_name,
@@ -240,12 +814,18 @@ def execute_nxm_test(
                                 error_type=getattr(ai_response, 'error_type', 'unknown'),
                                 execution_id=execution_id,
                                 question_index=q_idx + 1,
-                                total_questions=len(raw_questions) * len(selected_models),
+                                total_questions=expected_total,
                                 metadata={"source": "nxm_execution_engine", "error_phase": "api_call"}
                             )
+                            api_logger.info(
+                                f"[AIResponseLogger] Error logged for [Q:{q_idx+1}] [Model:{model_name}], "
+                                f"record_id={log_record.get('record_id', 'unknown')}"
+                            )
                         except Exception as log_error:
-                            api_logger.warning(f"[AIResponseLogger] Failed to log error: {log_error}")
-                    
+                            api_logger.error(
+                                f"[AIResponseLogger] CRITICAL: Failed to log error [Q:{q_idx+1}] [Model:{model_name}]: {log_error}"
+                            )
+                
                 except Exception as e:
                     error_traceback = traceback.format_exc()
                     api_logger.error(
@@ -254,13 +834,14 @@ def execute_nxm_test(
                     )
                     result_item.update({
                         "status": "failed",
-                        "error": str(e)
+                        "error": str(e),
+                        "error_code": f"EXCEPTION_{type(e).__name__}"
                     })
                     
-                    # 记录异常调用到日志文件（确保所有平台包括豆包都被记录）
+                    # 【重构点 1】记录异常调用到日志文件（同步写入）
                     try:
                         from utils.ai_response_logger_v2 import log_ai_response
-                        log_ai_response(
+                        log_record = log_ai_response(
                             question=geo_prompt,
                             response="",
                             platform=normalized_model_name,
@@ -272,42 +853,88 @@ def execute_nxm_test(
                             error_type="exception",
                             execution_id=execution_id,
                             question_index=q_idx + 1,
-                            total_questions=len(raw_questions) * len(selected_models),
+                            total_questions=expected_total,
                             metadata={"source": "nxm_execution_engine", "error_phase": "adapter_call"}
                         )
-                        api_logger.info(f"[AIResponseLogger] Exception logged for [Q:{q_idx+1}] [Model:{model_name}]")
+                        api_logger.info(
+                            f"[AIResponseLogger] Exception logged for [Q:{q_idx+1}] [Model:{model_name}], "
+                            f"record_id={log_record.get('record_id', 'unknown')}"
+                        )
                     except Exception as log_error:
-                        api_logger.warning(f"[AIResponseLogger] Failed to log exception: {log_error}")
+                        api_logger.error(
+                            f"[AIResponseLogger] CRITICAL: Failed to log exception [Q:{q_idx+1}] [Model:{model_name}]: {log_error}"
+                        )
                 
-                # 6. 实时保存结果（防止崩溃丢失）
-                all_results.append(result_item)
+                # 【重构点 1】原子化保存结果（线程安全 + 防重复）
+                # 注意：此时 result_item 已经包含完整的 geo_data 和 error_code
+                update_success = _atomic_update_execution_store(
+                    execution_store,
+                    execution_id,
+                    result_item,
+                    expected_total,
+                    all_results_hashes
+                )
                 
-                # 更新进度
-                completed_count = len(all_results)
-                if execution_store and execution_id in execution_store:
-                    execution_store[execution_id].update({
-                        'progress': int((completed_count / max(total_executions, 1)) * 100),
-                        'completed': completed_count,
-                        'results': all_results
-                    })
-
+                if update_success:
+                    # 只在成功更新时添加到本地列表
+                    all_results.append(result_item)
+                else:
+                    api_logger.warning(
+                        f"[NxM] Skipped duplicate result for [Q:{q_idx+1}] [Model:{model_name}]"
+                    )
+        
+        # ==================== NxM 循环结束 ====================
+        
+        # 【重构点 3】任务终点校验 - 验证是否可以标记为 completed
+        completion_check = _verify_completion(all_results, expected_total)
+        
+        # 关闭日志写入器（确保文件句柄关闭）
+        _close_logger(execution_id)
+        
         # 7. 更新任务最终状态
         api_logger.info(
             f"NxM test execution completed for '{execution_id}'. "
             f"Total: {total_executions}, Results: {len(all_results)}, "
-            f"Formula: {len(raw_questions)} questions × {len(selected_models)} models = {total_executions}"
+            f"Formula: {len(raw_questions)} questions × {len(selected_models)} models = {expected_total}"
         )
         
         if execution_store and execution_id in execution_store:
-            execution_store[execution_id].update({
-                'status': 'completed',
-                'stage': 'completed',
-                'progress': 100,
-                'results': all_results,
-                'total': total_executions,
-                'completed': len(all_results)
-            })
-
+            with _execution_store_lock:
+                # 【关键】只有当 results 数组长度等于 expected_total 时，才标记为 completed
+                if completion_check['can_complete']:
+                    execution_store[execution_id].update({
+                        'status': 'completed',
+                        'stage': 'completed',
+                        'progress': 100,
+                        'results': all_results,
+                        'total': expected_total,
+                        'completed': len(all_results),
+                        'all_results_hashes': list(all_results_hashes),
+                        'completion_verified': True
+                    })
+                    api_logger.info(
+                        f"[Completion_Check] Task {execution_id} marked as COMPLETED"
+                    )
+                else:
+                    # 结果不完整，标记为 incomplete 而不是 completed
+                    execution_store[execution_id].update({
+                        'status': 'incomplete',
+                        'stage': 'incomplete',
+                        'progress': int((len(all_results) / expected_total) * 100),
+                        'results': all_results,
+                        'total': expected_total,
+                        'completed': len(all_results),
+                        'missing_count': completion_check['missing_count'],
+                        'all_results_hashes': list(all_results_hashes),
+                        'completion_verified': False,
+                        'completion_check': completion_check,
+                        'error_message': f"Missing {completion_check['missing_count']} results"
+                    })
+                    api_logger.warning(
+                        f"[Completion_Check] Task {execution_id} marked as INCOMPLETE: "
+                        f"{len(all_results)}/{expected_total} results"
+                    )
+        
         # 将结果保存到数据库
         try:
             record_id = save_test_record(
@@ -323,7 +950,9 @@ def execute_nxm_test(
                     'successful_tests': len([r for r in all_results if r.get('status') == 'success']),
                     'nxm_execution': True,
                     'competitor_brands': competitor_brands,
-                    'formula': f"{len(raw_questions)} questions × {len(selected_models)} models = {total_executions}"
+                    'formula': f"{len(raw_questions)} questions × {len(selected_models)} models = {expected_total}",
+                    'completion_verified': completion_check['can_complete'],
+                    'completion_check': completion_check
                 },
                 detailed_results=all_results
             )
@@ -336,18 +965,25 @@ def execute_nxm_test(
             'execution_id': execution_id,
             'total_executions': total_executions,
             'results': all_results,
-            'formula': f"{len(raw_questions)} questions × {len(selected_models)} models = {total_executions}"
+            'formula': f"{len(raw_questions)} questions × {len(selected_models)} models = {expected_total}",
+            'completion_verified': completion_check['can_complete'],
+            'completion_check': completion_check
         }
-
+    
     except Exception as e:
         error_traceback = traceback.format_exc()
         api_logger.error(f"NxM test execution failed for execution_id {execution_id}: {e}\nTraceback: {error_traceback}")
         
+        # 清理资源
+        _close_logger(execution_id)
+        
         if execution_store and execution_id in execution_store:
-            execution_store[execution_id].update({
-                'status': 'failed',
-                'error': f"{str(e)}\nTraceback: {error_traceback}"
-            })
+            with _execution_store_lock:
+                execution_store[execution_id].update({
+                    'status': 'failed',
+                    'error': f"{str(e)}\nTraceback: {error_traceback}",
+                    'completion_verified': False
+                })
         
         return {
             'success': False,
@@ -365,7 +1001,12 @@ def verify_nxm_execution(
     expected_main_brand: str
 ) -> Dict[str, Any]:
     """
-    验证 NxM 执行是否正确
+    验证 NxM 执行是否正确（增强版）
+    
+    新增验证项：
+    - 结果哈希值唯一性
+    - GEO 解析完整性
+    - 任务终点校验状态
     
     Args:
         execution_store: 执行状态存储
@@ -373,7 +1014,7 @@ def verify_nxm_execution(
         expected_questions: 期望的问题数
         expected_models: 期望的模型数
         expected_main_brand: 期望的主品牌
-        
+    
     Returns:
         验证结果字典
     """
@@ -408,6 +1049,27 @@ def verify_nxm_execution(
             'error': f"Results count mismatch: expected {actual_total}, got {len(results)}"
         }
     
+    # 检查结果哈希值唯一性
+    result_hashes = [r.get('_result_hash') for r in results if r.get('_result_hash')]
+    unique_hashes = set(result_hashes)
+    hash_uniqueness = len(unique_hashes) == len(result_hashes)
+    
+    if not hash_uniqueness:
+        return {
+            'valid': False,
+            'error': f"Duplicate result hashes detected: {len(result_hashes)} results, {len(unique_hashes)} unique hashes"
+        }
+    
+    # 【新增】检查任务终点校验状态
+    completion_verified = execution.get('completion_verified', False)
+    status = execution.get('status', 'unknown')
+    
+    if status == 'completed' and not completion_verified:
+        return {
+            'valid': False,
+            'error': "Task marked as completed but completion_verified is False"
+        }
+    
     # 检查每个结果是否包含 geo_data
     results_with_geo = [r for r in results if r.get('geo_data') is not None]
     geo_data_percentage = (len(results_with_geo) / len(results) * 100) if results else 0
@@ -415,6 +1077,9 @@ def verify_nxm_execution(
     # 检查成功结果是否都有 geo_data
     success_results = [r for r in results if r.get('status') == 'success']
     success_with_geo = [r for r in success_results if r.get('geo_data') is not None]
+    
+    # 检查错误代码
+    results_with_error_codes = [r for r in results if r.get('error_code') is not None]
     
     verification = {
         'valid': True,
@@ -427,7 +1092,14 @@ def verify_nxm_execution(
         'success_results_with_geo': len(success_with_geo),
         'success_geo_data_percentage': (len(success_with_geo) / len(success_results) * 100) if success_results else 0,
         'nxm_pattern': f"{expected_questions} questions × {expected_models} models = {expected_total}",
-        'main_brand': expected_main_brand
+        'main_brand': expected_main_brand,
+        # 验证项
+        'result_hashes_unique': hash_uniqueness,
+        'completion_verified': completion_verified,
+        'status': status,
+        'can_complete': status == 'completed',
+        'results_with_error_codes': len(results_with_error_codes),
+        'error_code_percentage': (len(results_with_error_codes) / len(results) * 100) if results else 0
     }
     
     return verification

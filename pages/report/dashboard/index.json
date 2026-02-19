@@ -3,5 +3,7 @@
   "navigationBarBackgroundColor": "#1a1a2e",
   "navigationBarTextStyle": "white",
   "backgroundColor": "#f5f6fa",
-  "usingComponents": {}
+  "usingComponents": {
+    "diagnostic-drawer": "/components/diagnostic-drawer/index"
+  }
 }
