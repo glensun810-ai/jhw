@@ -19,7 +19,7 @@ def test_brand_diagnosis():
         "custom_question": "介绍一下{brandName}"
     }
     
-    url = "http://127.0.0.1:5001/api/perform-brand-test"
+    url = "http://127.0.0.1:5000/api/perform-brand-test"
     
     print(f"📤 发送请求到: {url}")
     print(f"📋 请求数据: {json.dumps(test_data, indent=2, ensure_ascii=False)}")
@@ -65,7 +65,7 @@ def test_task_status(execution_id):
     
     print(f"\n🔍 测试任务状态查询，ID: {execution_id}")
     
-    url = f"http://127.0.0.1:5001/test/status/{execution_id}"
+    url = f"http://127.0.0.1:5000/test/status/{execution_id}"
     
     try:
         response = requests.get(url, timeout=10)

@@ -241,7 +241,7 @@ Prefix dict has been built succesfully.
 2026-02-15 16:24:27,910 - wechat_backend.api - INFO - app.py:178 - warm_up_adapters() - Adapter warm-up completed
  * Debug mode: on
 2026-02-15 16:24:27,939 - werkzeug - INFO - _internal.py:97 - _log() - WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
- * Running on http://127.0.0.1:5001
+ * Running on http://127.0.0.1:5000
 2026-02-15 16:24:27,939 - werkzeug - INFO - _internal.py:97 - _log() - Press CTRL+C to quit
 2026-02-15 16:24:27,940 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
 Logging initialized with level: INFO, file: logs/app.log
@@ -1297,7 +1297,7 @@ Prefix dict has been built succesfully.
 2026-02-15 16:28:26,761 - wechat_backend.api - WARNING - app.py:173 - warm_up_adapters() - Adapter wenxin has no API key configured, skipping warm-up
 2026-02-15 16:28:26,761 - wechat_backend.api - INFO - app.py:178 - warm_up_adapters() - Adapter warm-up completed
 2026-02-15 16:28:26,787 - werkzeug - INFO - _internal.py:97 - _log() - WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
- * Running on http://127.0.0.1:5001
+ * Running on http://127.0.0.1:5000
 2026-02-15 16:28:26,787 - werkzeug - INFO - _internal.py:97 - _log() - Press CTRL+C to quit
 2026-02-15 16:28:26,788 - werkzeug - INFO - _internal.py:97 - _log() -  * Restarting with stat
 Logging initialized with level: INFO, file: logs/app.log

@@ -6,6 +6,8 @@
     "pages/mvp-platform-selector/mvp-platform-selector",
     "pages/detail/index",
     "pages/results/results",
+    "pages/report/dashboard/index",
+    "pages/report/history/index",
     "pages/history/history",
     "pages/history-detail/history-detail",
     "pages/config-manager/config-manager",

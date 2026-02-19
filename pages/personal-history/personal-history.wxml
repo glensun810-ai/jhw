@@ -70,9 +70,4 @@
   <view class="loading-state" wx:if="{{isLoading}}">
     <text>正在加载...</text>
   </view>
-
-  <!-- 权限提示 -->
-  <auth-wrapper requiredPermission="history" showLoginPrompt="{{true}}" promptText="登录后可查看个人历史记录">
-    <!-- 这里放置需要权限的内容 -->
-  </auth-wrapper>
 </view>

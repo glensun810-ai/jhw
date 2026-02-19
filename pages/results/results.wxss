@@ -745,3 +745,1187 @@
   background: linear-gradient(to right, #00F5A0, #00D18C);
   color: #141414;
 }
+
+/* P0-3 竞争分析区样式 */
+.competitive-analysis-section {
+  margin-bottom: 60rpx;
+}
+
+.competitive-analysis-section .section-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+.subsection-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #00F5A0;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+/* 品牌排名 */
+.brand-ranking-section {
+  margin-bottom: 40rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.ranking-item:last-child {
+  border-bottom: none;
+}
+
+.ranking-position {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00A9FF, #00F5A0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  margin-right: 20rpx;
+}
+
+.ranking-item:nth-child(1) .ranking-position {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+}
+
+.ranking-item:nth-child(2) .ranking-position {
+  background: linear-gradient(135deg, #C0C0C0, #808080);
+}
+
+.ranking-item:nth-child(3) .ranking-position {
+  background: linear-gradient(135deg, #CD7F32, #8B4513);
+}
+
+.ranking-brand {
+  font-size: 30rpx;
+  color: #FFFFFF;
+}
+
+.ranking-brand.main-brand {
+  color: #00F5A0;
+  font-weight: bold;
+}
+
+/* 首次提及率 */
+.first-mention-section {
+  margin-bottom: 40rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.mention-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.mention-item {
+  background: rgba(0, 169, 255, 0.2);
+  border-radius: 12rpx;
+  padding: 20rpx 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 200rpx;
+}
+
+.mention-platform {
+  font-size: 26rpx;
+  color: #8c8c8c;
+  margin-bottom: 10rpx;
+}
+
+.mention-rate {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #00F5A0;
+}
+
+/* 拦截风险 */
+.interception-risk-section {
+  margin-bottom: 40rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.risk-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.risk-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.risk-item:last-child {
+  border-bottom: none;
+}
+
+.risk-type {
+  font-size: 30rpx;
+  color: #FFFFFF;
+}
+
+.risk-level {
+  font-size: 26rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+}
+
+.risk-level.low {
+  background-color: rgba(0, 245, 160, 0.2);
+  color: #00F5A0;
+}
+
+.risk-level.medium {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #FFC107;
+}
+
+.risk-level.high {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #F44336;
+}
+
+/* 竞品对比详情 */
+.competitor-comparison-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.comparison-list {
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+.comparison-item {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12rpx;
+  padding: 30rpx;
+}
+
+.comparison-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.comparison-competitor {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.comparison-score {
+  font-size: 26rpx;
+  color: #00F5A0;
+  background: rgba(0, 245, 160, 0.1);
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+}
+
+.comparison-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.comparison-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.comparison-label {
+  font-size: 26rpx;
+  color: #8c8c8c;
+}
+
+.comparison-value {
+  font-size: 28rpx;
+  color: #FFFFFF;
+  line-height: 1.5;
+}
+
+/* P1-1 语义偏移可视化样式 */
+.semantic-drift-section {
+  margin-bottom: 60rpx;
+}
+
+.semantic-drift-section .section-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+/* 语义偏移概览 */
+.drift-overview-section {
+  margin-bottom: 40rpx;
+}
+
+.drift-score-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 40rpx;
+  display: flex;
+  align-items: center;
+  gap: 30rpx;
+}
+
+.score-circle {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 6rpx solid;
+  position: relative;
+}
+
+.score-circle.low {
+  border-color: #00F5A0;
+  background: rgba(0, 245, 160, 0.1);
+}
+
+.score-circle.medium {
+  border-color: #FFC107;
+  background: rgba(255, 193, 7, 0.1);
+}
+
+.score-circle.high {
+  border-color: #F44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.score-number {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.score-label {
+  font-size: 22rpx;
+  color: #8c8c8c;
+  margin-top: 8rpx;
+}
+
+.drift-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.drift-severity {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.drift-severity.low {
+  color: #00F5A0;
+}
+
+.drift-severity.medium {
+  color: #FFC107;
+}
+
+.drift-severity.high {
+  color: #F44336;
+}
+
+.drift-similarity {
+  font-size: 26rpx;
+  color: #8c8c8c;
+}
+
+/* 关键词对比 */
+.keyword-comparison-section {
+  margin-bottom: 40rpx;
+}
+
+.keyword-group {
+  margin-bottom: 30rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.keyword-group-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.keyword-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15rpx;
+}
+
+.keyword-tag {
+  background: rgba(0, 169, 255, 0.2);
+  border-radius: 12rpx;
+  padding: 15rpx 25rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 120rpx;
+}
+
+.keyword-tag.official {
+  background: rgba(0, 245, 160, 0.2);
+}
+
+.keyword-tag.AI_Generated_Positive {
+  background: rgba(0, 169, 255, 0.2);
+}
+
+.keyword-tag.AI_Generated_Risky {
+  background: rgba(244, 67, 54, 0.2);
+}
+
+.keyword-name {
+  font-size: 26rpx;
+  color: #FFFFFF;
+  margin-bottom: 8rpx;
+}
+
+.keyword-value {
+  font-size: 22rpx;
+  color: #00F5A0;
+  font-weight: bold;
+}
+
+/* 偏移详情 */
+.drift-details-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.drift-detail-item {
+  margin-bottom: 25rpx;
+  padding-bottom: 25rpx;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.drift-detail-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.drift-detail-label {
+  font-size: 28rpx;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: 15rpx;
+}
+
+.keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.keyword-list.negative .keyword-item {
+  background: rgba(244, 67, 54, 0.2);
+  color: #F44336;
+}
+
+.keyword-list.positive .keyword-item {
+  background: rgba(0, 245, 160, 0.2);
+  color: #00F5A0;
+}
+
+.keyword-item {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  padding: 10rpx 20rpx;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+}
+
+/* P1-2 信源纯净度可视化样式 */
+.source-purity-section {
+  margin-bottom: 60rpx;
+}
+
+.source-purity-section .section-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+/* 信源纯净度概览 */
+.purity-overview-section {
+  margin-bottom: 40rpx;
+}
+
+.purity-score-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 40rpx;
+  display: flex;
+  align-items: center;
+  gap: 30rpx;
+}
+
+.purity-circle {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 6rpx solid;
+  position: relative;
+}
+
+.purity-circle.high {
+  border-color: #00F5A0;
+  background: rgba(0, 245, 160, 0.1);
+}
+
+.purity-circle.medium {
+  border-color: #FFC107;
+  background: rgba(255, 193, 7, 0.1);
+}
+
+.purity-circle.low {
+  border-color: #FF9800;
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.purity-circle.critical {
+  border-color: #F44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.purity-number {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.purity-label {
+  font-size: 22rpx;
+  color: #8c8c8c;
+  margin-top: 8rpx;
+}
+
+.purity-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.purity-level {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.purity-level.high {
+  color: #00F5A0;
+}
+
+.purity-level.medium {
+  color: #FFC107;
+}
+
+.purity-level.low {
+  color: #FF9800;
+}
+
+.purity-level.critical {
+  color: #F44336;
+}
+
+.purity-high-weight {
+  font-size: 26rpx;
+  color: #00F5A0;
+}
+
+.purity-pollution {
+  font-size: 26rpx;
+  color: #F44336;
+}
+
+/* 信源类别分布 */
+.source-category-section {
+  margin-bottom: 40rpx;
+}
+
+.category-chart {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.category-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.category-bar {
+  width: 100%;
+  height: 24rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12rpx;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 12rpx;
+  transition: width 0.3s ease;
+}
+
+.category-bar.social .bar-fill {
+  background: linear-gradient(90deg, #FF6B6B, #FF8E8E);
+}
+
+.category-bar.wiki .bar-fill {
+  background: linear-gradient(90deg, #4ECDC4, #7EDDD6);
+}
+
+.category-bar.tech .bar-fill {
+  background: linear-gradient(90deg, #45B7D1, #6BC7E1);
+}
+
+.category-bar.news .bar-fill {
+  background: linear-gradient(90deg, #96CEB4, #B0DDCB);
+}
+
+.category-bar.official .bar-fill {
+  background: linear-gradient(90deg, #FFEAA7, #FFF3CD);
+}
+
+.category-bar.finance .bar-fill {
+  background: linear-gradient(90deg, #A8E6CF, #C4F0D9);
+}
+
+.category-bar.risk .bar-fill {
+  background: linear-gradient(90deg, #F44336, #FF6B6B);
+}
+
+.category-bar.other .bar-fill {
+  background: linear-gradient(90deg, #BDBDBD, #E0E0E0);
+}
+
+.category-name {
+  font-size: 28rpx;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.category-count {
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+/* 信源权重排名 */
+.source-weight-section {
+  margin-bottom: 40rpx;
+}
+
+.weight-list {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.weight-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 15rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.weight-item:last-child {
+  border-bottom: none;
+}
+
+.weight-rank {
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00A9FF, #00F5A0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.weight-item:nth-child(1) .weight-rank {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+}
+
+.weight-item:nth-child(2) .weight-rank {
+  background: linear-gradient(135deg, #C0C0C0, #808080);
+}
+
+.weight-item:nth-child(3) .weight-rank {
+  background: linear-gradient(135deg, #CD7F32, #8B4513);
+}
+
+.weight-name {
+  flex: 1;
+  font-size: 28rpx;
+  color: #FFFFFF;
+}
+
+.weight-name.high-weight {
+  color: #00F5A0;
+  font-weight: bold;
+}
+
+.weight-value {
+  font-size: 26rpx;
+  color: #00F5A0;
+  font-weight: bold;
+  min-width: 60rpx;
+  text-align: right;
+}
+
+/* 污染源警示 */
+.pollution-warning-section {
+  background: rgba(244, 67, 54, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  border: 1rpx solid rgba(244, 67, 54, 0.3);
+}
+
+.pollution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.pollution-item {
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 12rpx;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.pollution-name {
+  font-size: 28rpx;
+  color: #F44336;
+  font-weight: bold;
+}
+
+.pollution-reason {
+  font-size: 24rpx;
+  color: #FF8E8E;
+}
+/* P1-3 优化建议列表样式 */
+.recommendation-section {
+  margin-bottom: 60rpx;
+}
+
+.recommendation-section .section-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+/* 建议概览 */
+.recommendation-overview {
+  margin-bottom: 40rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  display: flex;
+  justify-content: space-around;
+  gap: 20rpx;
+}
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.overview-number {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.overview-number.high {
+  color: #F44336;
+}
+
+.overview-number.medium {
+  color: #FF9800;
+}
+
+.overview-number.low {
+  color: #00F5A0;
+}
+
+.overview-label {
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+/* 建议列表 */
+.recommendation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.recommendation-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 20rpx 30rpx;
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.card-header.high {
+  background: rgba(244, 67, 54, 0.2);
+}
+
+.card-header.medium {
+  background: rgba(255, 152, 0, 0.2);
+}
+
+.card-header.low {
+  background: rgba(0, 245, 160, 0.2);
+}
+
+.priority-tag {
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  font-weight: bold;
+}
+
+.priority-tag.high {
+  background: #F44336;
+  color: #FFFFFF;
+}
+
+.priority-tag.medium {
+  background: #FF9800;
+  color: #FFFFFF;
+}
+
+.priority-tag.low {
+  background: #00F5A0;
+  color: #141414;
+}
+
+.type-tag {
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+}
+
+.type-tag.content_correction {
+  background: #2196F3;
+  color: #FFFFFF;
+}
+
+.type-tag.brand_strengthening {
+  background: #9C27B0;
+  color: #FFFFFF;
+}
+
+.type-tag.source_attack {
+  background: #F44336;
+  color: #FFFFFF;
+}
+
+.type-tag.risk_mitigation {
+  background: #FF9800;
+  color: #FFFFFF;
+}
+
+.urgency-score {
+  margin-left: auto;
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+/* 卡片内容 */
+.card-body {
+  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.card-description {
+  font-size: 26rpx;
+  color: #CCCCCC;
+  line-height: 1.6;
+}
+
+/* 行动步骤 */
+.action-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.steps-title {
+  font-size: 26rpx;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 15rpx;
+}
+
+.step-number {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00A9FF, #00F5A0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.step-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #CCCCCC;
+  line-height: 1.5;
+}
+
+/* 目标对象 */
+.target-info {
+  display: flex;
+  gap: 15rpx;
+  align-items: center;
+}
+
+.target-label {
+  font-size: 26rpx;
+  color: #8c8c8c;
+}
+
+.target-value {
+  font-size: 26rpx;
+  color: #00A9FF;
+}
+
+/* 预估影响 */
+.impact-info {
+  display: flex;
+  gap: 15rpx;
+  align-items: center;
+}
+
+.impact-label {
+  font-size: 26rpx;
+  color: #8c8c8c;
+}
+
+.impact-value {
+  font-size: 26rpx;
+  font-weight: bold;
+}
+
+.impact-value.high {
+  color: #F44336;
+}
+
+.impact-value.medium {
+  color: #FF9800;
+}
+
+.impact-value.low {
+  color: #00F5A0;
+}
+
+
+/* P2-2 雷达图样式 */
+.radar-chart-container {
+  margin: 20rpx 0;
+  padding: 30rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.radar-canvas-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.radar-chart-canvas {
+  width: 300px;
+  height: 300px;
+}
+
+.radar-placeholder {
+  width: 300rpx;
+  height: 300rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #8c8c8c;
+  font-size: 26rpx;
+}
+
+/* 图例 */
+.radar-legend {
+  display: flex;
+  justify-content: center;
+  gap: 40rpx;
+  margin-top: 20rpx;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.legend-color {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 4rpx;
+}
+
+.legend-color.my-brand {
+  background: #00F5A0;
+}
+
+.legend-color.competitor {
+  background: #00A9FF;
+}
+
+.legend-text {
+  font-size: 24rpx;
+  color: #FFFFFF;
+}
+
+
+/* P2-3 关键词云样式 */
+.keyword-cloud-section {
+  margin-bottom: 60rpx;
+}
+
+.keyword-cloud-section .section-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+/* 词云容器 */
+.word-cloud-container {
+  margin-bottom: 30rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400rpx;
+}
+
+.word-cloud-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.word-cloud-canvas {
+  width: 350px;
+  height: 350px;
+}
+
+.word-cloud-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #8c8c8c;
+  font-size: 26rpx;
+}
+
+/* 关键词统计 */
+.keyword-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 30rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.stat-number {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.stat-number.positive {
+  color: #00F5A0;
+}
+
+.stat-number.neutral {
+  color: #00A9FF;
+}
+
+.stat-number.negative {
+  color: #F44336;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+/* 高频词列表 */
+.top-keywords-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.top-keywords-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15rpx;
+  margin-top: 20rpx;
+}
+
+.top-keyword-item {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10rpx 20rpx;
+  border-radius: 8rpx;
+}
+
+.keyword-word {
+  font-size: 26rpx;
+  font-weight: bold;
+}
+
+.keyword-word.positive {
+  color: #00F5A0;
+}
+
+.keyword-word.neutral {
+  color: #00A9FF;
+}
+
+.keyword-word.negative {
+  color: #F44336;
+}
+
+.keyword-count {
+  font-size: 22rpx;
+  color: #8c8c8c;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4rpx 10rpx;
+  border-radius: 4rpx;
+}
+
+/* 隐藏的 Canvas 用于生成报告图片 */
+.report-canvas-hidden {
+  position: fixed;
+  left: -9999rpx;
+  top: -9999rpx;
+  width: 750rpx;
+  height: 1200rpx;
+}

@@ -4,7 +4,7 @@
 
 如果您在前端看到类似以下错误：
 ```
-GET http://127.0.0.1:5001/api/test net::ERR_CONNECTION_REFUSED
+GET http://127.0.0.1:5000/api/test net::ERR_CONNECTION_REFUSED
 ```
 
 这意味着前端无法连接到后端服务。这通常是因为后端服务没有启动。
@@ -59,12 +59,12 @@ chmod +x start_server.sh
 🚀 Starting WeChat Backend API server on port 5000
 🔧 Debug mode: on
 📝 Log file: logs/app.log
- * Running on http://127.0.0.1:5001
+ * Running on http://127.0.0.1:5000
 ```
 
 验证服务是否正常运行：
 ```bash
-curl http://127.0.0.1:5001/
+curl http://127.0.0.1:5000/
 ```
 
 预期响应：
@@ -106,7 +106,7 @@ kill -9 $(lsof -ti:5000)
 
 一旦后端服务成功启动，前端应该能够：
 
-1. 连接到 `http://127.0.0.1:5001`
+1. 连接到 `http://127.0.0.1:5000`
 2. 执行品牌诊断测试
 3. 正确轮询任务状态
 
