@@ -1,0 +1,178 @@
+<!--
+  详情抽屉组件 - 诊断问题详情展示
+  
+  特性：
+  - 从底部滑出的抽屉效果
+  - 分片渲染长文本（每 100ms 渲染 200 字）
+  - 关键词语义化高亮
+  - 信源引用关联
+  - 多模型横向对比
+  - 手势下拉关闭
+  - 触感反馈
+-->
+
+<view class="drawer-mask {{showDrawer ? 'show' : ''}}" catchtouchmove="preventDefault" bindtap="closeDrawer"></view>
+
+<view 
+  class="drawer-container {{showDrawer ? 'show' : ''}}" 
+  style="transform: translateY({{drawerOffset}}%)"
+  catchtouchmove="onDrawerTouchMove"
+  bindtouchstart="onDrawerTouchStart"
+  bindtouchend="onDrawerTouchEnd"
+>
+  <!-- 粘性头部：核心指标摘要 -->
+  <view class="drawer-header sticky-header">
+    <view class="header-content">
+      <view class="header-metrics">
+        <view class="metric-item">
+          <text class="metric-label">平均排名</text>
+          <text class="metric-value {{avgRank > 5 ? 'critical' : avgRank > 3 ? 'warning' : 'safe'}}">{{avgRank}}</text>
+        </view>
+        <view class="metric-item">
+          <text class="metric-label">情感指数</text>
+          <text class="metric-value sentiment-{{sentimentStatus}}">{{sentimentValue}}</text>
+        </view>
+        <view class="metric-item">
+          <text class="metric-label">风险等级</text>
+          <text class="metric-value risk-{{riskLevel}}">{{riskLevelText}}</text>
+        </view>
+      </view>
+      
+      <!-- 关闭按钮 -->
+      <view class="close-btn" bindtap="closeDrawer" hover-class="close-btn-hover">
+        <text class="close-icon">✕</text>
+      </view>
+    </view>
+    
+    <!-- 拖动手柄 -->
+    <view class="drag-handle"></view>
+  </view>
+  
+  <!-- 多模型切换 Segmented Control -->
+  <view class="model-segmented-control">
+    <scroll-view scroll-x class="model-scroll" scroll-into-view="model-{{currentModelId}}">
+      <view class="model-list">
+        <view 
+          wx:for="{{modelList}}" 
+          wx:key="id"
+          id="model-{{item.id}}"
+          class="model-tab {{currentModelId === item.id ? 'active' : ''}} {{item.isAnomaly ? 'anomaly' : ''}}"
+          bindtap="switchModel"
+          data-model="{{item}}"
+          hover-class="model-tab-hover"
+        >
+          <text class="model-name">{{item.name}}</text>
+          <text class="model-rank" wx:if="{{item.rank}}">排名：{{item.rank}}</text>
+          <view class="anomaly-badge" wx:if="{{item.isAnomaly}}">
+            <text class="anomaly-icon">⚠️</text>
+            <text class="anomaly-text">异常</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+  
+  <!-- 内容区域：分片渲染的 AI 回答 -->
+  <view class="drawer-content">
+    <view class="content-scroll">
+      <!-- 问题文本 -->
+      <view class="question-section">
+        <text class="question-label">诊断问题：</text>
+        <text class="question-text">{{currentQuestionData.question_text}}</text>
+      </view>
+      
+      <!-- AI 回答内容：分片渲染 -->
+      <view class="answer-section">
+        <view class="answer-header">
+          <text class="answer-model">{{currentModelName}} AI 分析</text>
+          <view class="rendering-indicator {{isRendering ? 'active' : ''}}">
+            <text class="cursor-blink">|</text>
+            <text class="rendering-text">{{renderingText}}</text>
+          </view>
+        </view>
+        
+        <!-- 【任务 2】骨架屏占位 -->
+        <view class="skeleton-container {{showSkeleton ? 'show' : 'hide'}}">
+          <view class="skeleton-line"></view>
+          <view class="skeleton-line"></view>
+          <view class="skeleton-line short"></view>
+          <view class="skeleton-line"></view>
+          <view class="skeleton-line"></view>
+          <view class="skeleton-line short"></view>
+        </view>
+        
+        <!-- 分片渲染的内容节点 -->
+        <view class="answer-content {{showSkeleton ? 'hidden' : ''}}">
+          <view wx:for="{{renderedNodes}}" wx:key="index" class="content-chunk">
+            <rich-text 
+              nodes="{{item.html}}" 
+              class="chunk-text"
+              bindtap="onContentTap"
+            ></rich-text>
+          </view>
+        </view>
+        
+        <!-- 信源证据区 -->
+        <view class="sources-section" wx:if="{{sourceList.length > 0}}">
+          <view class="section-title">
+            <text class="title-icon">📚</text>
+            <text class="title-text">信源证据 ({{sourceList.length}})</text>
+          </view>
+          
+          <view class="source-list">
+            <view 
+              wx:for="{{sourceList}}" 
+              wx:key="url"
+              class="source-card attitude-{{item.attitude}}"
+              bindtap="onSourceTap"
+              data-source="{{item}}"
+              hover-class="source-card-hover"
+            >
+              <view class="source-header">
+                <text class="source-site">{{item.site_name}}</text>
+                <text class="source-badge {{item.attitude}}">{{attitudeTextMap[item.attitude]}}</text>
+              </view>
+              <text class="source-url">{{item.url}}</text>
+              <view class="source-meta" wx:if="{{item.mention_count}}">
+                <text class="meta-item">提及 {{item.mention_count}} 次</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 图片懒加载容器（优雅降级） -->
+        <view class="image-container" wx:if="{{imageList.length > 0}}">
+          <image 
+            wx:for="{{imageList}}" 
+            wx:key="url"
+            src="{{item.url}}" 
+            mode="widthFix"
+            lazy-load="{{true}}"
+            class="lazy-image"
+            style="height: {{item.height || 200}}px"
+            binderror="onImageError"
+            bindload="onImageLoad"
+          ></image>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 底部操作区 -->
+  <view class="drawer-footer">
+    <view class="footer-actions">
+      <view class="action-btn" bindtap="onCopyLink" hover-class="action-btn-hover">
+        <text class="action-icon">📋</text>
+        <text class="action-text">复制链接</text>
+      </view>
+      <view class="action-btn" bindtap="onShare" hover-class="action-btn-hover">
+        <text class="action-icon">📤</text>
+        <text class="action-text">分享</text>
+      </view>
+      <view class="action-btn" bindtap="onSave" hover-class="action-btn-hover">
+        <text class="action-icon">💾</text>
+        <text class="action-text">保存</text>
+      </view>
+    </view>
+  </view>
+</view>
