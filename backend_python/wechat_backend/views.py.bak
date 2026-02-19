@@ -269,24 +269,8 @@ def perform_brand_test():
             # 优先处理新的 custom_question 字段（字符串）
             if not isinstance(data['custom_question'], str):
                 return jsonify({"status": "error", "error": 'custom_question must be a string', "code": 400, 'received': type(data['custom_question']).__name__, 'received_value': data['custom_question']}), 400
-            
-            # 智能分割多个问题（按问号、句号、换行或空格分割）
-            question_text = data['custom_question'].strip()
-            if question_text:
-                # 使用正则表达式分割多个问题
-                import re
-                # 按中文问号、英文问号、句号、换行或空格分割
-                raw_questions = re.split(r'[？?.\n\s]+', question_text)
-                # 过滤空字符串并添加问号
-                custom_questions = [q.strip() + ('?' if not q.strip().endswith('?') else '') for q in raw_questions if q.strip()]
-                
-                # 记录分割后的问题
-                api_logger.info(f"[QuestionSplit] 原始问题：{question_text}")
-                api_logger.info(f"[QuestionSplit] 分割后问题数：{len(custom_questions)}")
-                for i, q in enumerate(custom_questions):
-                    api_logger.info(f"[QuestionSplit] 问题{i+1}: {q}")
-            else:
-                custom_questions = []
+            # 将字符串转换为数组
+            custom_questions = [data['custom_question']] if data['custom_question'].strip() else []
         elif 'customQuestions' in data:
             # 保持对旧格式的兼容（数组格式）
             if not isinstance(data['customQuestions'], list):
@@ -371,9 +355,7 @@ def perform_brand_test():
         """
         重构后的 NxM 执行逻辑
         外层循环遍历问题，内层循环遍历模型
-        
-        请求次数 = 问题数 × 模型数（只针对用户自己的品牌）
-        竞品品牌仅用于对比分析，不参与 API 请求
+        使用 execute_nxm_test 函数执行实际测试
         """
         try:
             # 在异步线程中进行所有耗时的操作
@@ -403,32 +385,24 @@ def perform_brand_test():
                 ]
                 api_logger.info(f"[AsyncTest] Using default questions for execution_id: {execution_id}")
 
-            # 分离主品牌和竞品品牌
-            # brand_list[0] 是用户自己的品牌，其余是竞品品牌
-            main_brand = brand_list[0] if brand_list else ""
-            competitor_brands = brand_list[1:] if len(brand_list) > 1 else []
-            
-            api_logger.info(f"Main brand: {main_brand}, Competitor brands: {competitor_brands}")
-
-            # 使用 NxM 执行引擎执行测试
-            api_logger.info(f"Starting NxM execution engine for '{execution_id}'")
-
-            # 调用 NxM 执行函数
-            result = execute_nxm_test(
-                execution_id=execution_id,
-                main_brand=main_brand,                # 用户自己的品牌
-                competitor_brands=competitor_brands,   # 竞品品牌列表（仅用于对比分析）
-                selected_models=selected_models,
-                raw_questions=raw_questions,
-                user_id=user_id or "anonymous",
-                user_level=user_level.value,
-                execution_store=execution_store
-            )
-
-            if result.get('success'):
-                api_logger.info(f"NxM execution completed successfully for '{execution_id}', formula: {result.get('formula')}")
-            else:
-                api_logger.error(f"NxM execution failed for '{execution_id}': {result.get('error')}")
+        # 使用 NxM 执行引擎执行测试
+        api_logger.info(f"Starting NxM execution engine for '{execution_id}'")
+        
+        # 调用 NxM 执行函数
+        result = execute_nxm_test(
+            execution_id=execution_id,
+            brand_list=brand_list,
+            selected_models=selected_models,
+            raw_questions=raw_questions,
+            user_id=user_id or "anonymous",
+            user_level=user_level.value,
+            execution_store=execution_store
+        )
+        
+        if result.get('success'):
+            api_logger.info(f"NxM execution completed successfully for '{execution_id}'")
+        else:
+            api_logger.error(f"NxM execution failed for '{execution_id}': {result.get('error')}")
 
         except Exception as e:
             import traceback

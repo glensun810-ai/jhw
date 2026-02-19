@@ -1,10 +1,48 @@
 import time
+import json
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from ..logging_config import api_logger
 from ..optimization.request_frequency_optimizer import optimize_request_frequency, RequestPriority
+from .geo_parser import parse_geo_json_enhanced
+
+# 保持向后兼容
+parse_geo_json = parse_geo_json_enhanced
+
+# GEO Analysis Prompt Template with self-audit instructions
+GEO_PROMPT_TEMPLATE = """
+用户品牌：{brand_name}
+竞争对手：{competitors}
+
+请回答以下用户问题：
+{question}
+
+---
+重要要求：
+1. 请以专业顾问的身份客观回答。
+2. 在回答结束后，必须另起一行，以严格的 JSON 格式输出以下字段（不要包含在 Markdown 代码块中）：
+{{
+  "geo_analysis": {{
+    "brand_mentioned": boolean,
+    "rank": number,
+    "sentiment": number,
+    "cited_sources": [
+      {{"url": "string", "site_name": "string", "attitude": "positive/negative/neutral"}}
+    ],
+    "interception": "string"
+  }}
+}}
+
+字段说明：
+- brand_mentioned: 品牌是否被提到 (true/false)
+- rank: 品牌在推荐列表中的排名（1-10），若未提到或未排名则为 -1
+- sentiment: 对品牌的情感评分（-1.0 到 1.0）
+- cited_sources: 提到的或暗示的信源/网址列表
+- interception: 如果推荐了竞品而没推荐我，写下竞品名
+"""
 
 class AIPlatformType(Enum):
     """支持的AI平台枚举"""
