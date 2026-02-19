@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>战略战局中心 - 演示版</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0D1117;
+      color: #e8e8e8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 动态粒子背景 */
+    .particle-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.3;
+    }
+
+    .page-container {
+      position: relative;
+      z-index: 1;
+      padding: 40px;
+      min-height: 100vh;
+    }
+
+    .content-wrapper {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    /* 标题区域 */
+    .title-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .main-title {
+      font-size: 48px;
+      font-weight: bold;
+      color: #00F2FF;
+      letter-spacing: 4px;
+      display: block;
+      text-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
+    }
+
+    .subtitle {
+      font-size: 28px;
+      color: #8c8c8c;
+      margin-top: 20px;
+      display: block;
+    }
+
+    /* 控制面板 */
+    .control-panel {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      padding: 15px 30px;
+      background: linear-gradient(135deg, rgba(0, 242, 255, 0.1) 0%, rgba(0, 242, 255, 0.2) 100%);
+      border: 1px solid rgba(0, 242, 255, 0.3);
+      border-radius: 12px;
+      color: #00F2FF;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .control-btn:hover {
+      background: linear-gradient(135deg, rgba(0, 242, 255, 0.2) 0%, rgba(0, 242, 255, 0.3) 100%);
+      box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .control-btn.active {
+      background: linear-gradient(135deg, #00F2FF 0%, #00C853 100%);
+      color: #0D1117;
+      font-weight: bold;
+    }
+
+    .control-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 状态指示器 */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #8c8c8c;
+      animation: pulse-status 2s infinite;
+    }
+
+    .status-dot.connecting {
+      background: #FFD600;
+    }
+
+    .status-dot.connected {
+      background: #00C853;
+    }
+
+    .status-dot.error {
+      background: #FF1744;
+    }
+
+    @keyframes pulse-status {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .status-text {
+      font-size: 24px;
+      color: #8c8c8c;
+    }
+
+    .status-text.connected {
+      color: #00C853;
+    }
+
+    /* 时间预估区域 */
+    .time-estimation-section {
+      width: 100%;
+      margin-bottom: 40px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      display: none;
+    }
+
+    .time-estimation-section.show {
+      display: block;
+    }
+
+    .time-estimate {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .estimate-label {
+      font-size: 26px;
+      color: #8c8c8c;
+    }
+
+    .estimate-value {
+      font-size: 32px;
+      color: #00F2FF;
+      font-weight: bold;
+      margin-left: 10px;
+      font-family: 'Courier New', 'DIN', monospace;
+    }
+
+    /* 进度条 */
+    .progress-container {
+      width: 100%;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+
+    .progress-inner {
+      height: 100%;
+      background: linear-gradient(90deg, #0066FF 0%, #00F2FF 100%);
+      border-radius: 6px;
+      transition: width 0.3s ease;
+      width: 0%;
+      position: relative;
+    }
+
+    .progress-inner::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-text-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .progress-text {
+      font-size: 24px;
+      color: #8c8c8c;
+    }
+
+    .progress-percentage {
+      font-size: 28px;
+      color: #00F2FF;
+      font-weight: bold;
+      font-family: 'Courier New', 'DIN', monospace;
+    }
+
+    /* 惊喜消息 */
+    .surprise-message {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 242, 255, 0.1);
+      border: 1px solid #00F2FF;
+      border-radius: 12px;
+      text-align: center;
+      animation: pulse-glow 2s infinite;
+      display: none;
+    }
+
+    .surprise-message.show {
+      display: block;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 10px rgba(0, 242, 255, 0.3); }
+      50% { box-shadow: 0 0 20px rgba(0, 242, 255, 0.6); }
+    }
+
+    .surprise-text {
+      font-size: 26px;
+      color: #00F2FF;
+      font-weight: bold;
+    }
+
+    /* 数据流动画 */
+    .data-flow-animation {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      background: #00F2FF;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+
+    .dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.4;
+        transform: scale(0.8);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.2);
+      }
+    }
+
+    /* 视图切换器 */
+    .view-switcher {
+      position: relative;
+      width: 100%;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 40px;
+      backdrop-filter: blur(10px);
+      display: flex;
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+
+    .switcher-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      z-index: 2;
+      color: #8c8c8c;
+      font-size: 28px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    .switcher-option.active {
+      color: #00F2FF;
+    }
+
+    .switcher-slider {
+      position: absolute;
+      top: 4px;
+      height: calc(100% - 8px);
+      width: calc(33.33% - 20px);
+      background: linear-gradient(135deg, #00F2FF 0%, #00C853 100%);
+      border-radius: 36px;
+      transition: transform 0.3s ease;
+      z-index: 1;
+      left: 4px;
+    }
+
+    /* 品牌选择器 */
+    .selector-container {
+      width: 100%;
+      margin-bottom: 40px;
+      padding: 0 20px;
+      display: none;
+    }
+
+    .selector-container.show {
+      display: block;
+    }
+
+    .picker-view {
+      display: flex;
+      align-items: center;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 0 30px;
+      backdrop-filter: blur(10px);
+    }
+
+    .picker-label {
+      font-size: 26px;
+      color: #8c8c8c;
+      margin-right: 10px;
+    }
+
+    .picker-value {
+      font-size: 28px;
+      color: #00F2FF;
+      font-weight: bold;
+      flex: 1;
+    }
+
+    .picker-icon {
+      font-size: 24px;
+      color: #8c8c8c;
+    }
+
+    /* 战略对阵矩阵 */
+    .battlefield-matrix-container {
+      width: 100%;
+      margin-bottom: 40px;
+      overflow-x: auto;
+      min-height: 600px;
+    }
+
+    .matrix-scroll {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .matrix-grid {
+      display: inline-block;
+      min-width: 100%;
+    }
+
+    .grid-header,
+    .grid-row {
+      display: flex;
+      width: fit-content;
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 180px;
+      height: 120px;
+      padding: 20px;
+      box-sizing: border-box;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background-color: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 8px;
+      margin-right: -1px;
+      margin-bottom: -1px;
+    }
+
+    .header-cell {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.15) 100%);
+      font-weight: bold;
+      color: #00F2FF;
+      font-size: 24px;
+    }
+
+    .corner-cell {
+      min-width: 250px;
+      background: linear-gradient(135deg, rgba(0, 242, 255, 0.1) 0%, rgba(0, 242, 255, 0.2) 100%);
+    }
+
+    .question-cell {
+      min-width: 250px;
+      background: linear-gradient(135deg, rgba(0, 242, 255, 0.05) 0%, rgba(0, 242, 255, 0.1) 100%);
+      align-items: flex-start;
+      text-align: left;
+      position: sticky;
+      left: 0;
+      z-index: 5;
+    }
+
+    .question-text {
+      font-size: 24px;
+      color: #e8e8e8;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      text-align: left;
+      word-break: break-all;
+    }
+
+    .score-cell {
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .score-cell:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+    }
+
+    .score-number {
+      font-size: 32px;
+      font-weight: bold;
+      color: #e8e8e8;
+      font-family: 'Courier New', 'DIN', monospace;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 分数颜色 */
+    .score-high {
+      background: linear-gradient(135deg, rgba(0, 200, 83, 0.2) 0%, rgba(0, 200, 83, 0.3) 100%);
+    }
+
+    .score-medium {
+      background: linear-gradient(135deg, rgba(255, 214, 0, 0.2) 0%, rgba(255, 214, 0, 0.3) 100%);
+    }
+
+    .score-low {
+      background: linear-gradient(135deg, rgba(255, 23, 68, 0.2) 0%, rgba(255, 23, 68, 0.3) 100%);
+    }
+
+    .score-null {
+      background: linear-gradient(135deg, transparent 25%, rgba(142, 142, 147, 0.2) 25%, rgba(142, 142, 147, 0.2) 50%, transparent 50%, transparent 75%, rgba(142, 142, 147, 0.2) 75%);
+    }
+
+    /* 品牌标签呼吸动画 */
+    .brand-label {
+      animation: breathe 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes breathe {
+      0% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    /* 统计概览 */
+    .stats-overview {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      margin-top: 40px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      display: none;
+    }
+
+    .stats-overview.show {
+      display: flex;
+    }
+
+    .stat-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-label {
+      font-size: 24px;
+      color: #8c8c8c;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: bold;
+      color: #00F2FF;
+    }
+
+    .number-font {
+      font-family: 'Courier New', 'DIN', monospace;
+      font-weight: bold;
+    }
+
+    /* 日志面板 */
+    .log-panel {
+      margin-top: 40px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(0, 242, 255, 0.2);
+      border-radius: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .log-title {
+      font-size: 20px;
+      color: #00F2FF;
+    }
+
+    .log-clear-btn {
+      padding: 8px 16px;
+      background: rgba(255, 23, 68, 0.2);
+      border: 1px solid rgba(255, 23, 68, 0.5);
+      border-radius: 8px;
+      color: #FF1744;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .log-content {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .log-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .log-entry.info {
+      color: #00F2FF;
+    }
+
+    .log-entry.success {
+      color: #00C853;
+    }
+
+    .log-entry.warning {
+      color: #FFD600;
+    }
+
+    .log-entry.error {
+      color: #FF1744;
+    }
+
+    /* 滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 242, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 242, 255, 0.5);
+    }
+
+    /* 空状态 */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      color: #8c8c8c;
+    }
+
+    .empty-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .empty-text {
+      font-size: 28px;
+    }
+  </style>
+</head>
+<body>
+  <!-- 动态粒子背景 -->
+  <canvas id="particle-canvas" class="particle-canvas"></canvas>
+
+  <div class="page-container">
+    <div class="content-wrapper">
+      <!-- 标题区域 -->
+      <div class="title-section">
+        <span class="main-title">🎯 战略战局中心 - 演示版</span>
+        <span class="subtitle">高信息密度决策仪表盘 · 实时数据推送演示</span>
+      </div>
+
+      <!-- 控制面板 -->
+      <div class="control-panel">
+        <button class="control-btn" id="btnStartDemo" onclick="startDemo()">▶️ 开始演示</button>
+        <button class="control-btn" id="btnStopDemo" onclick="stopDemo()" disabled>⏹️ 停止演示</button>
+        <button class="control-btn" onclick="resetDemo()">🔄 重置</button>
+        <button class="control-btn" onclick="toggleLogs()">📋 日志</button>
+      </div>
+
+      <!-- 状态指示器 -->
+      <div class="status-indicator">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-text" id="statusText">等待开始...</span>
+      </div>
+
+      <!-- 时间预估区域 -->
+      <div class="time-estimation-section" id="timeEstimationSection">
+        <div class="time-estimate">
+          <span class="estimate-label">📊 深度研判启动：</span>
+          <span class="estimate-value number-font" id="estimateValue">预计耗时 45s</span>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-container">
+          <div class="progress-inner" id="progressInner"></div>
+        </div>
+
+        <!-- 进度文本 -->
+        <div class="progress-text-container">
+          <span class="progress-text" id="progressText">AI 正在连接全网大模型...</span>
+          <span class="progress-percentage number-font" id="progressPercentage">0%</span>
+        </div>
+
+        <!-- 惊喜消息 -->
+        <div class="surprise-message" id="surpriseMessage">
+          <span class="surprise-text">⚡ 算力调度成功，研判提前完成！</span>
+        </div>
+
+        <!-- 数据流动画 -->
+        <div class="data-flow-animation">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+      </div>
+
+      <!-- 视图切换器 -->
+      <div class="view-switcher" id="viewSwitcher" style="display: none;">
+        <div class="switcher-slider" id="viewSlider"></div>
+        <div class="switcher-option active" onclick="switchView('panorama', 0)">全景透视</div>
+        <div class="switcher-option" onclick="switchView('model', 1)">模型对比</div>
+        <div class="switcher-option" onclick="switchView('question', 2)">问题诊断</div>
+      </div>
+
+      <!-- 品牌选择器 -->
+      <div class="selector-container" id="selectorContainer">
+        <div class="picker-view">
+          <span class="picker-label">选择品牌:</span>
+          <span class="picker-value" id="selectedBrandValue">元若曦</span>
+          <span class="picker-icon">▼</span>
+        </div>
+      </div>
+
+      <!-- 战略对阵矩阵 -->
+      <div class="battlefield-matrix-container">
+        <div class="matrix-scroll">
+          <div class="matrix-grid" id="matrixGrid">
+            <div class="empty-state">
+              <div class="empty-icon">📊</div>
+              <div class="empty-text">点击"开始演示"按钮启动数据推送</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 统计概览 -->
+      <div class="stats-overview" id="statsOverview">
+        <div class="stat-card">
+          <span class="stat-label">参测品牌</span>
+          <span class="stat-value number-font" id="statBrandCount">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">诊断问题</span>
+          <span class="stat-value number-font" id="statQuestionCount">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">数据密度</span>
+          <span class="stat-value number-font" id="statDensity">0%</span>
+        </div>
+      </div>
+
+      <!-- 日志面板 -->
+      <div class="log-panel" id="logPanel" style="display: none;">
+        <div class="log-header">
+          <span class="log-title">📡 数据推送日志</span>
+          <button class="log-clear-btn" onclick="clearLogs()">清空日志</button>
+        </div>
+        <div class="log-content" id="logContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== 配置 ====================
+    const CONFIG = {
+      brands: ['元若曦', '养生堂', '固生堂', '同仁堂', '胡庆余堂'],
+      questions: [
+        '养生茶哪家好',
+        '养生茶品牌推荐',
+        '哪个品牌的养生茶最有效',
+        '养生茶如何选择',
+        '养生茶的功效与作用',
+        '适合送礼的养生茶品牌'
+      ],
+      models: ['DeepSeek', '豆包', '通义千问', '文心一言', 'Kimi'],
+      progressMessages: [
+        'AI 正在连接全网大模型...',
+        'AI 正在进行深度语义研判...',
+        'AI 正在聚合战略对阵矩阵...',
+        '正在生成品牌认知报告...',
+        '正在计算多维度评分...',
+        '正在整合信源数据...'
+      ]
+    };
+
+    // ==================== 状态变量 ====================
+    let state = {
+      isRunning: false,
+      currentView: 'panorama',
+      selectedBrandIndex: 0,
+      progress: 0,
+      matrixData: null,
+      pushInterval: null,
+      progressInterval: null
+    };
+
+    // ==================== 日志功能 ====================
+    function addLog(message, type = 'info') {
+      const logContent = document.getElementById('logContent');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${type}`;
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      logContent.appendChild(logEntry);
+      logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('logContent').innerHTML = '';
+      addLog('日志已清空', 'info');
+    }
+
+    function toggleLogs() {
+      const logPanel = document.getElementById('logPanel');
+      logPanel.style.display = logPanel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // ==================== 状态更新 ====================
+    function updateStatus(status, text) {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      
+      statusDot.className = `status-dot ${status}`;
+      statusText.textContent = text;
+      statusText.className = `status-text ${status === 'connected' ? 'connected' : ''}`;
+    }
+
+    // ==================== 进度条动画 ====================
+    function startProgressAnimation(estimatedTime) {
+      const timeEstimationSection = document.getElementById('timeEstimationSection');
+      timeEstimationSection.classList.add('show');
+      
+      document.getElementById('estimateValue').textContent = `预计耗时 ${estimatedTime}s`;
+      
+      const totalSteps = 10;
+      const stepSize = 80 / totalSteps;
+      let currentStep = 0;
+      
+      state.progressInterval = setInterval(() => {
+        currentStep++;
+        const newProgress = Math.min(80, Math.round(currentStep * stepSize));
+        
+        let progressText = CONFIG.progressMessages[Math.floor(currentStep / 3)] || CONFIG.progressMessages[0];
+        
+        document.getElementById('progressInner').style.width = `${newProgress}%`;
+        document.getElementById('progressText').textContent = progressText;
+        document.getElementById('progressPercentage').textContent = `${newProgress}%`;
+        
+        addLog(`进度更新：${newProgress}% - ${progressText}`, 'info');
+        
+        if (currentStep >= totalSteps) {
+          clearInterval(state.progressInterval);
+        }
+      }, 1000);
+    }
+
+    function rapidFinishAnimation() {
+      const startProgress = state.progress;
+      const targetProgress = 100;
+      const duration = 1500;
+      const steps = 30;
+      const intervalTime = duration / steps;
+      const stepSize = (targetProgress - startProgress) / steps;
+      
+      let step = 0;
+      
+      const finishInterval = setInterval(() => {
+        step++;
+        const currentProgress = Math.min(targetProgress, startProgress + (step * stepSize));
+        
+        if (step >= steps) {
+          document.getElementById('progressInner').style.width = `${targetProgress}%`;
+          document.getElementById('progressText').textContent = '✅ 战略报告生成完毕';
+          document.getElementById('progressPercentage').textContent = `${targetProgress}%`;
+          document.getElementById('surpriseMessage').classList.add('show');
+          clearInterval(finishInterval);
+        } else {
+          document.getElementById('progressInner').style.width = `${currentProgress}%`;
+          document.getElementById('progressText').textContent = '🚀 极速冲刺中...';
+          document.getElementById('progressPercentage').textContent = `${Math.round(currentProgress)}%`;
+        }
+      }, intervalTime);
+    }
+
+    // ==================== 矩阵渲染 ====================
+    function renderMatrix(data, view = 'panorama') {
+      const matrixGrid = document.getElementById('matrixGrid');
+      
+      if (!data || !data.headers || !data.rows || data.rows.length === 0) {
+        matrixGrid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <div class="empty-text">暂无数据</div>
+          </div>
+        `;
+        return;
+      }
+      
+      let html = '<div class="grid-header">';
+      
+      // 渲染表头
+      const cornerText = view === 'model' ? '问题' : '问题';
+      html += `<div class="cell corner-cell">${cornerText}</div>`;
+      
+      data.headers.slice(1).forEach(header => {
+        html += `<div class="cell header-cell brand-label">${header}</div>`;
+      });
+      html += '</div>';
+      
+      // 渲染数据行
+      html += '<div class="grid-body">';
+      data.rows.forEach(row => {
+        html += '<div class="grid-row">';
+        
+        // 问题列
+        html += `<div class="cell question-cell sticky-left brand-label">`;
+        html += `<span class="question-text">${row[0]}</span>`;
+        html += `</div>`;
+        
+        // 评分列
+        row.slice(1).forEach(cell => {
+          const scoreClass = getScoreClass(cell.score);
+          const scoreDisplay = cell.score !== null ? cell.score : '-';
+          html += `<div class="cell score-cell brand-label ${scoreClass}">`;
+          html += `<span class="score-number number-font">${scoreDisplay}</span>`;
+          html += `</div>`;
+        });
+        
+        html += '</div>';
+      });
+      html += '</div>';
+      
+      matrixGrid.innerHTML = html;
+    }
+
+    function getScoreClass(score) {
+      if (score === null) return 'score-null';
+      if (score >= 80) return 'score-high';
+      if (score >= 60) return 'score-medium';
+      return 'score-low';
+    }
+
+    // ==================== 视图切换 ====================
+    function switchView(view, index) {
+      state.currentView = view;
+      
+      // 更新选项卡样式
+      const options = document.querySelectorAll('.switcher-option');
+      options.forEach((opt, i) => {
+        opt.classList.toggle('active', i === index);
+      });
+      
+      // 更新滑块位置
+      const slider = document.getElementById('viewSlider');
+      slider.style.transform = `translateX(${index * 100}%)`;
+      
+      // 更新品牌选择器显示
+      const selectorContainer = document.getElementById('selectorContainer');
+      if (view === 'model') {
+        selectorContainer.classList.add('show');
+      } else {
+        selectorContainer.classList.remove('show');
+      }
+      
+      // 重新渲染矩阵
+      if (state.matrixData) {
+        renderMatrix(transformMatrixData(state.matrixData, view), view);
+      }
+      
+      addLog(`视图切换：${view}`, 'info');
+    }
+
+    function transformMatrixData(data, view) {
+      if (view === 'panorama') {
+        return data;
+      }
+      
+      // 简化处理：模型对比和问题诊断视图暂时复用全景数据
+      // 实际项目中需要实现完整的转换逻辑
+      return data;
+    }
+
+    // ==================== 统计数据更新 ====================
+    function updateStats(data) {
+      if (!data || !data.headers || !data.rows) return;
+      
+      const brandCount = data.headers.length - 1;
+      const questionCount = data.rows.length;
+      const totalCells = brandCount * questionCount;
+      const filledCells = data.rows.reduce((sum, row) => {
+        return sum + row.slice(1).filter(cell => cell.score !== null).length;
+      }, 0);
+      const density = totalCells > 0 ? Math.round((filledCells / totalCells) * 100) : 0;
+      
+      document.getElementById('statBrandCount').textContent = brandCount;
+      document.getElementById('statQuestionCount').textContent = questionCount;
+      document.getElementById('statDensity').textContent = `${density}%`;
+      
+      document.getElementById('statsOverview').classList.add('show');
+    }
+
+    // ==================== 模拟数据生成 ====================
+    function generateMockMatrixData() {
+      const headers = ['问题', ...CONFIG.brands];
+      const rows = [];
+      
+      CONFIG.questions.forEach(question => {
+        const row = [question];
+        
+        CONFIG.brands.forEach(brand => {
+          // 模拟分数：元若曦分数较高，其他品牌随机
+          let baseScore;
+          if (brand === '元若曦') {
+            baseScore = 85 + Math.floor(Math.random() * 15);
+          } else {
+            baseScore = 60 + Math.floor(Math.random() * 35);
+          }
+          
+          // 小概率出现空数据
+          const score = Math.random() > 0.95 ? null : baseScore;
+          
+          row.push({
+            score: score,
+            answer: `${brand}在${question}方面${score !== null ? '表现' + (score >= 80 ? '优秀' : score >= 60 ? '良好' : '一般') : '暂无数据'}`,
+            brand: brand,
+            question: question
+          });
+        });
+        
+        rows.push(row);
+      });
+      
+      return { headers, rows };
+    }
+
+    // ==================== 模拟数据推送 ====================
+    function simulateDataPush() {
+      let pushCount = 0;
+      const maxPushes = CONFIG.questions.length;
+      
+      state.pushInterval = setInterval(() => {
+        pushCount++;
+        
+        // 模拟逐步推送数据
+        const partialData = {
+          headers: ['问题', ...CONFIG.brands],
+          rows: []
+        };
+        
+        for (let i = 0; i < Math.min(pushCount, maxPushes); i++) {
+          const question = CONFIG.questions[i];
+          const row = [question];
+          
+          CONFIG.brands.forEach(brand => {
+            let baseScore;
+            if (brand === '元若曦') {
+              baseScore = 85 + Math.floor(Math.random() * 15);
+            } else {
+              baseScore = 60 + Math.floor(Math.random() * 35);
+            }
+            
+            const score = Math.random() > 0.95 ? null : baseScore;
+            
+            row.push({
+              score: score,
+              answer: `${brand}在${question}方面${score !== null ? '表现' + (score >= 80 ? '优秀' : score >= 60 ? '良好' : '一般') : '暂无数据'}`,
+              brand: brand,
+              question: question
+            });
+          });
+          
+          partialData.rows.push(row);
+        }
+        
+        state.matrixData = partialData;
+        renderMatrix(partialData, state.currentView);
+        updateStats(partialData);
+        
+        addLog(`数据推送 #${pushCount}: 已推送 ${partialData.rows.length}/${CONFIG.questions.length} 个问题`, 'success');
+        
+        // 更新进度
+        state.progress = Math.round((pushCount / maxPushes) * 20) + 80;
+        document.getElementById('progressInner').style.width = `${state.progress}%`;
+        document.getElementById('progressPercentage').textContent = `${state.progress}%`;
+        
+        if (pushCount >= maxPushes) {
+          clearInterval(state.pushInterval);
+          completeDemo();
+        }
+      }, 800);
+    }
+
+    // ==================== 演示控制 ====================
+    function startDemo() {
+      if (state.isRunning) return;
+      
+      state.isRunning = true;
+      state.progress = 0;
+      
+      // 更新按钮状态
+      document.getElementById('btnStartDemo').disabled = true;
+      document.getElementById('btnStopDemo').disabled = false;
+      
+      // 更新状态
+      updateStatus('connecting', '正在连接数据源...');
+      addLog('开始演示：正在建立连接...', 'info');
+      
+      // 显示视图切换器
+      document.getElementById('viewSwitcher').style.display = 'flex';
+      
+      // 启动进度条动画
+      startProgressAnimation(45);
+      
+      // 模拟连接延迟
+      setTimeout(() => {
+        updateStatus('connected', '数据推送中...');
+        addLog('连接成功：开始接收数据', 'success');
+        
+        // 开始模拟数据推送
+        simulateDataPush();
+      }, 2000);
+    }
+
+    function stopDemo() {
+      if (!state.isRunning) return;
+      
+      // 清除定时器
+      if (state.pushInterval) {
+        clearInterval(state.pushInterval);
+        state.pushInterval = null;
+      }
+      if (state.progressInterval) {
+        clearInterval(state.progressInterval);
+        state.progressInterval = null;
+      }
+      
+      state.isRunning = false;
+      
+      // 更新按钮状态
+      document.getElementById('btnStartDemo').disabled = false;
+      document.getElementById('btnStopDemo').disabled = true;
+      
+      // 更新状态
+      updateStatus('error', '演示已停止');
+      addLog('演示已手动停止', 'warning');
+    }
+
+    function completeDemo() {
+      state.isRunning = false;
+      
+      // 更新按钮状态
+      document.getElementById('btnStartDemo').disabled = false;
+      document.getElementById('btnStopDemo').disabled = true;
+      
+      // 更新状态
+      updateStatus('connected', '数据推送完成');
+      addLog('演示完成：所有数据已推送完毕', 'success');
+      
+      // 冲刺动画
+      rapidFinishAnimation();
+    }
+
+    function resetDemo() {
+      stopDemo();
+      
+      // 重置状态
+      state.currentView = 'panorama';
+      state.selectedBrandIndex = 0;
+      state.progress = 0;
+      state.matrixData = null;
+      
+      // 重置 UI
+      document.getElementById('timeEstimationSection').classList.remove('show');
+      document.getElementById('viewSwitcher').style.display = 'none';
+      document.getElementById('selectorContainer').classList.remove('show');
+      document.getElementById('statsOverview').classList.remove('show');
+      document.getElementById('surpriseMessage').classList.remove('show');
+      
+      document.getElementById('matrixGrid').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-text">点击"开始演示"按钮启动数据推送</div>
+        </div>
+      `;
+      
+      // 重置视图切换器
+      const options = document.querySelectorAll('.switcher-option');
+      options.forEach((opt, i) => {
+        opt.classList.toggle('active', i === 0);
+      });
+      document.getElementById('viewSlider').style.transform = 'translateX(0)';
+      
+      updateStatus('', '等待开始...');
+      addLog('演示已重置', 'info');
+    }
+
+    // ==================== 粒子背景动画 ====================
+    function initParticleCanvas() {
+      const canvas = document.getElementById('particle-canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      const particles = [];
+      const particleCount = 50;
+      
+      class Particle {
+        constructor() {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+          this.size = Math.random() * 3 + 1;
+          this.speedX = Math.random() * 1 - 0.5;
+          this.speedY = Math.random() * 1 - 0.5;
+          this.opacity = Math.random() * 0.5 + 0.2;
+        }
+        
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+          
+          if (this.x > canvas.width || this.x < 0) this.speedX = -this.speedX;
+          if (this.y > canvas.height || this.y < 0) this.speedY = -this.speedY;
+        }
+        
+        draw() {
+          ctx.fillStyle = `rgba(0, 242, 255, ${this.opacity})`;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      
+      function init() {
+        for (let i = 0; i < particleCount; i++) {
+          particles.push(new Particle());
+        }
+      }
+      
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        for (let i = 0; i < particles.length; i++) {
+          particles[i].update();
+          particles[i].draw();
+          
+          for (let j = i; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 150) {
+              ctx.strokeStyle = `rgba(0, 242, 255, ${0.2 * (1 - distance / 150)})`;
+              ctx.lineWidth = 0.5;
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+        
+        requestAnimationFrame(animate);
+      }
+      
+      init();
+      animate();
+      
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+    }
+
+    // ==================== 初始化 ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      initParticleCanvas();
+      addLog('演示页面已加载', 'info');
+      addLog('等待用户启动演示...', 'info');
+    });
+  </script>
+</body>
+</html>

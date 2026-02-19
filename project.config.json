@@ -3,8 +3,20 @@
   "packOptions": {
     "ignore": [
       {
-        "type": "folder",
-        "value": "backend_python"
+        "value": "backend_python",
+        "type": "folder"
+      },
+      {
+        "value": ".venv",
+        "type": "folder"
+      },
+      {
+        "value": ".pytest_cache",
+        "type": "folder"
+      },
+      {
+        "value": "*.bak",
+        "type": "suffix"
       }
     ],
     "include": []
@@ -40,20 +52,19 @@
     "disableUseStrict": false,
     "minifyWXML": true,
     "showES6CompileOption": false,
-    "useCompilerPlugins": false
+    "useCompilerPlugins": false,
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "enhance": false,
+    "localPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true
   },
   "compileType": "miniprogram",
-  "libVersion": "3.3.4",
+  "libVersion": "3.14.2",
   "appid": "wx8876348e089bc261",
-  "projectname": "进化湾GEO",
-  "debugOptions": {
-    "hidedInDevtools": []
-  },
-  "scripts": {},
-  "staticServerOptions": {
-    "baseURL": "",
-    "servePath": ""
-  },
+  "projectname": "进化湾 GEO",
   "isGameTourist": false,
   "condition": {
     "search": {
@@ -69,15 +80,9 @@
       "list": []
     },
     "miniprogram": {
-      "list": [
-        {
-          "id": -1,
-          "name": "pages/results/results",
-          "pathName": "pages/results/results",
-          "query": "",
-          "scene": null
-        }
-      ]
+      "list": []
     }
-  }
+  },
+  "simulatorPluginLibVersion": {},
+  "editorSetting": {}
 }
