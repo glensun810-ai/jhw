@@ -25,8 +25,18 @@ class Config:
     WECHAT_SEND_TEMPLATE_MSG_URL = 'https://api.weixin.qq.com/cgi-bin/message/wxopen/template/send'
 
     # AI Platform API Keys
+    # 豆包 API 配置（使用 ARK_API_KEY 格式）
+    ARK_API_KEY = os.environ.get('ARK_API_KEY') or ''
+    # 兼容旧配置
+    DOUBAO_ACCESS_KEY_ID = os.environ.get('DOUBAO_ACCESS_KEY_ID') or ''
+    DOUBAO_SECRET_ACCESS_KEY = os.environ.get('DOUBAO_SECRET_ACCESS_KEY') or ''
     DOUBAO_API_KEY = os.environ.get('DOUBAO_API_KEY') or ''
-    DOUBAO_MODEL_ID = os.environ.get('DOUBAO_MODEL_ID') or 'ep-default-model'
+    # 豆包多模型配置（按优先级顺序）
+    DOUBAO_MODEL_1 = os.environ.get('DOUBAO_MODEL_1', 'doubao-seed-1-8-251228')
+    DOUBAO_MODEL_2 = os.environ.get('DOUBAO_MODEL_2', 'doubao-seed-2-0-mini-260215')
+    DOUBAO_MODEL_3 = os.environ.get('DOUBAO_MODEL_3', 'doubao-seed-2-0-pro-260215')
+    DOUBAO_DEFAULT_MODEL = os.environ.get('DOUBAO_DEFAULT_MODEL', 'doubao-seed-1-8-251228')
+    DOUBAO_MODEL_ID = os.environ.get('DOUBAO_MODEL_ID') or DOUBAO_DEFAULT_MODEL
 
     DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY') or ''
     QWEN_API_KEY = os.environ.get('QWEN_API_KEY') or ''
@@ -63,7 +73,7 @@ class Config:
         normalized_platform = platform_aliases.get(platform.lower(), platform.lower())
         
         platform_keys = {
-            'doubao': cls.DOUBAO_API_KEY,
+            'doubao': cls.get_doubao_api_key(),  # 使用特殊方法处理豆包密钥
             'deepseek': cls.DEEPSEEK_API_KEY,
             'qwen': cls.QWEN_API_KEY,
             'kimi': cls.KIMI_API_KEY,
@@ -74,6 +84,36 @@ class Config:
         }
 
         return platform_keys.get(normalized_platform)
+
+    @classmethod
+    def get_doubao_api_key(cls) -> Optional[str]:
+        """
+        获取豆包 API Token（使用 ARK_API_KEY 格式）
+
+        Returns:
+            豆包 API Token 或 None
+        """
+        # 优先使用 ARK_API_KEY 格式（OpenAI SDK 兼容）
+        if cls.ARK_API_KEY and cls.ARK_API_KEY != "${ARK_API_KEY}":
+            return cls.ARK_API_KEY
+        # 回退到旧的单 Key 格式
+        elif cls.DOUBAO_API_KEY and cls.DOUBAO_API_KEY != "${DOUBAO_API_KEY}":
+            return cls.DOUBAO_API_KEY
+        return None
+
+    @staticmethod
+    def get_doubao_models() -> list:
+        """
+        获取豆包所有可用的模型列表（按优先级顺序）
+
+        Returns:
+            模型列表
+        """
+        return [
+            Config.DOUBAO_MODEL_1,  # doubao-seed-1-8-251228 (最高优先级)
+            Config.DOUBAO_MODEL_2,  # doubao-seed-2-0-mini-260215
+            Config.DOUBAO_MODEL_3,  # doubao-seed-2-0-pro-260215 (最低优先级)
+        ]
 
     @classmethod
     def is_api_key_configured(cls, platform: str) -> bool:
