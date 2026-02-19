@@ -22,7 +22,8 @@ def reset_all_circuit_breakers():
     platforms_to_reset = [
         ("doubao", "doubao-pro"),
         ("doubao", "doubao"),
-        ("doubao", "doubao-lite"),
+        # 豆包断路器（2026 年 2 月 19 日更新：使用新部署点）
+        ("doubao", "ep-20260212000000-gd5tq"),
         ("qwen", "qwen-max"),
         ("qwen", "qwen"),
         ("deepseek", "deepseek-chat"),

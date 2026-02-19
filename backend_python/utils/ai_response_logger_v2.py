@@ -274,11 +274,15 @@ class AIResponseLogger:
         return max(0.0, round(score, 2))
     
     def _clean_none_values(self, obj):
-        """递归清理字典中的None值"""
+        """递归清理字典中的 None 值和不可序列化的对象"""
         if isinstance(obj, dict):
             return {k: self._clean_none_values(v) for k, v in obj.items() if v is not None}
         elif isinstance(obj, list):
             return [self._clean_none_values(item) for item in obj if item is not None]
+        elif hasattr(obj, 'value'):  # 处理枚举对象 (如 AIErrorType)
+            return obj.value
+        elif hasattr(obj, 'isoformat'):  # 处理 datetime/date 对象
+            return obj.isoformat()
         return obj
     
     def get_recent_responses(

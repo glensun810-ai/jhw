@@ -39,12 +39,10 @@ class Config:
     DOUBAO_ACCESS_KEY_ID = os.environ.get('DOUBAO_ACCESS_KEY_ID') or ''
     DOUBAO_SECRET_ACCESS_KEY = os.environ.get('DOUBAO_SECRET_ACCESS_KEY') or ''
     DOUBAO_API_KEY = os.environ.get('DOUBAO_API_KEY') or ''
-    # 豆包多模型配置（按优先级顺序）
-    DOUBAO_MODEL_1 = os.environ.get('DOUBAO_MODEL_1', 'doubao-seed-1-8-251228')
-    DOUBAO_MODEL_2 = os.environ.get('DOUBAO_MODEL_2', 'doubao-seed-2-0-mini-260215')
-    DOUBAO_MODEL_3 = os.environ.get('DOUBAO_MODEL_3', 'doubao-seed-2-0-pro-260215')
-    DOUBAO_DEFAULT_MODEL = os.environ.get('DOUBAO_DEFAULT_MODEL', 'doubao-seed-1-8-251228')
-    DOUBAO_MODEL_ID = os.environ.get('DOUBAO_MODEL_ID') or DOUBAO_DEFAULT_MODEL
+    # 豆包部署点 ID 配置（2026 年 2 月更新）
+    # 默认使用新的有效部署点：ep-20260212000000-gd5tq
+    # 可通过环境变量 DOUBAO_MODEL_ID 覆盖
+    DOUBAO_MODEL_ID = os.environ.get('DOUBAO_MODEL_ID', 'ep-20260212000000-gd5tq')
 
     DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY') or ''
     QWEN_API_KEY = os.environ.get('QWEN_API_KEY') or ''
@@ -113,14 +111,14 @@ class Config:
     def get_doubao_models() -> list:
         """
         获取豆包所有可用的模型列表（按优先级顺序）
+        2026 年 2 月更新：使用新的部署点 ID
 
         Returns:
             模型列表
         """
+        # 返回新的有效部署点
         return [
-            Config.DOUBAO_MODEL_1,  # doubao-seed-1-8-251228 (最高优先级)
-            Config.DOUBAO_MODEL_2,  # doubao-seed-2-0-mini-260215
-            Config.DOUBAO_MODEL_3,  # doubao-seed-2-0-pro-260215 (最低优先级)
+            os.environ.get('DOUBAO_MODEL_ID', 'ep-20260212000000-gd5tq'),  # 新的部署点
         ]
 
     @classmethod

@@ -98,7 +98,8 @@ class AIAdapterFactory:
         "DOUBAO": "doubao",
         "doubao-pro-5b": "doubao",
         "doubao-pro-7b": "doubao",
-        "doubao-lite": "doubao",
+        # 豆包平台映射（2026 年 2 月 19 日更新：使用新部署点）
+        "ep-20260212000000-gd5tq": "doubao",
         "doubao-pro": "doubao",
         "qwen": "qwen",
         "千问": "qwen",

@@ -66,6 +66,7 @@ class ExecutionStrategy(Enum):
     SEQUENTIAL = "sequential"
     CONCURRENT = "concurrent"
     BATCH = "batch"
+    MATRIX = "matrix"  # N 个问题*M 个平台的矩阵遍历模式
 
 
 @dataclass
@@ -93,12 +94,12 @@ class TestScheduler:
         api_logger.warning(f"TestScheduler initialized with strategy {strategy.value}, max_workers {max_workers} - REDUCED CONCURRENCY TO PREVENT TIMEOUT")
     
     def schedule_tests(
-        self, 
-        test_tasks: List[TestTask], 
+        self,
+        test_tasks: List[TestTask],
         callback: Callable[[TestTask, Dict[str, Any]], None] = None
     ) -> Dict[str, Any]:
         start_time = time.time()
-        
+
         if self.strategy == ExecutionStrategy.SEQUENTIAL:
             api_logger.info(f"Executing {len(test_tasks)} tests using SEQUENTIAL strategy - Each AI platform request will be processed independently")
             results = self._execute_sequential(test_tasks, callback)
@@ -109,6 +110,9 @@ class TestScheduler:
             api_logger.info(f"Executing {len(test_tasks)} tests using BATCH strategy")
             # For now, batch strategy defaults to sequential for reliability
             results = self._execute_sequential(test_tasks, callback)
+        elif self.strategy == ExecutionStrategy.MATRIX:
+            api_logger.info(f"Executing {len(test_tasks)} tests using MATRIX strategy - N questions * M platforms")
+            results = self._execute_matrix(test_tasks, callback)
         else:
             # Default to sequential for safety
             api_logger.warning(f"Unknown strategy {self.strategy}, defaulting to SEQUENTIAL execution")
@@ -129,8 +133,8 @@ class TestScheduler:
         return stats
     
     def _execute_sequential(
-        self, 
-        test_tasks: List[TestTask], 
+        self,
+        test_tasks: List[TestTask],
         callback: Callable[[TestTask, Dict[str, Any]], None] = None
     ) -> List[Dict[str, Any]]:
         results = []
@@ -139,6 +143,77 @@ class TestScheduler:
             results.append(result)
             if callback:
                 callback(task, result)
+        return results
+    
+    def _execute_matrix(
+        self,
+        test_tasks: List[TestTask],
+        callback: Callable[[TestTask, Dict[str, Any]], None] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        N 个问题*M 个平台的矩阵遍历模式
+        
+        为每个问题遍历所有可用的 AI 平台，实现完整的 N*M 对应关系
+        """
+        results = []
+        
+        # 定义可用的 AI 平台列表
+        available_platforms = [
+            ('豆包', 'doubao'),
+            ('DeepSeek', 'deepseek'),
+            ('通义千问', 'qwen'),
+            ('智谱 AI', 'zhipu'),
+        ]
+        
+        # 过滤出已配置的平台
+        configured_platforms = []
+        for platform_name, platform_key in available_platforms:
+            if self.platform_config_manager.is_platform_configured(platform_key):
+                configured_platforms.append((platform_name, platform_key))
+                api_logger.info(f"Platform {platform_name} ({platform_key}) is configured and available")
+            else:
+                api_logger.warning(f"Platform {platform_name} ({platform_key}) is NOT configured, skipping")
+        
+        if not configured_platforms:
+            api_logger.error("No AI platforms are configured! Please set API keys in environment variables.")
+            return results
+        
+        api_logger.info(f"Matrix execution: {len(test_tasks)} questions * {len(configured_platforms)} platforms = {len(test_tasks) * len(configured_platforms)} total tasks")
+        
+        # 为每个问题遍历所有平台
+        total_tasks = 0
+        for task_idx, task in enumerate(test_tasks):
+            for platform_idx, (platform_name, platform_key) in enumerate(configured_platforms):
+                total_tasks += 1
+                
+                # 创建矩阵模式的 task 副本
+                matrix_task = TestTask(
+                    id=f"{task.id}_{platform_key}",
+                    brand_name=task.brand_name,
+                    ai_model=platform_name,
+                    question=task.question,
+                    priority=task.priority,
+                    timeout=task.timeout,
+                    max_retries=task.max_retries,
+                    metadata={
+                        **(task.metadata or {}),
+                        'matrix_mode': True,
+                        'question_index': task_idx + 1,
+                        'total_questions': len(test_tasks),
+                        'platform_index': platform_idx + 1,
+                        'total_platforms': len(configured_platforms),
+                        'original_task_id': task.id
+                    }
+                )
+                
+                api_logger.info(f"[Matrix] Task {total_tasks}/{len(test_tasks) * len(configured_platforms)}: Question {task_idx + 1}/{len(test_tasks)} on Platform {platform_idx + 1}/{len(configured_platforms)} ({platform_name})")
+                
+                result = self._execute_single_task(matrix_task)
+                results.append(result)
+                
+                if callback:
+                    callback(matrix_task, result)
+        
         return results
     
     def _execute_concurrent(
@@ -364,9 +439,28 @@ class TestScheduler:
                 ai_response = ai_client.send_prompt(task.question, timeout=api_timeout)
                 latency = time.time() - start_time
 
-                # 【新增】记录AI响应到日志（所有平台通用）
+                # 【新增】记录 AI 响应到日志（所有平台通用）
                 try:
                     from utils.ai_response_logger_v2 import log_ai_response
+                    
+                    # 构建 metadata，矩阵模式增加额外字段
+                    log_metadata = {
+                        'source': 'main_system_matrix' if task.metadata and task.metadata.get('matrix_mode') else 'main_system_sequential',
+                        'task_id': task.id,
+                        'attempt': attempt + 1,
+                        'platform_name': platform_name
+                    }
+                    
+                    # 如果是矩阵模式，添加 N*M 对应关系字段
+                    if task.metadata and task.metadata.get('matrix_mode'):
+                        log_metadata.update({
+                            'question_index': task.metadata.get('question_index', 1),
+                            'total_questions': task.metadata.get('total_questions', 1),
+                            'platform_index': task.metadata.get('platform_index', 1),
+                            'total_platforms': task.metadata.get('total_platforms', 1),
+                            'original_task_id': task.metadata.get('original_task_id', task.id)
+                        })
+                    
                     log_ai_response(
                         question=task.question,
                         response=ai_response.content if ai_response.success else '',
@@ -377,12 +471,7 @@ class TestScheduler:
                         tokens_used=getattr(ai_response, 'tokens_used', None),
                         success=ai_response.success,
                         error_message=ai_response.error_message if not ai_response.success else None,
-                        metadata={
-                            'source': 'main_system_sequential',
-                            'task_id': task.id,
-                            'attempt': attempt + 1,
-                            'platform_name': platform_name
-                        }
+                        metadata=log_metadata
                     )
                 except Exception as log_error:
                     api_logger.warning(f"[AIResponseLogger] Failed to log task {task.id}: {log_error}")
