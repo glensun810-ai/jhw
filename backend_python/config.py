@@ -12,11 +12,19 @@ class Config:
     DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
     SECRET_KEY = os.environ.get('SECRET_KEY') or ''
 
-    # Logging Configuration
+    # Logging Configuration (兼容旧配置和新配置)
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     LOG_FILE = os.environ.get('LOG_FILE') or 'logs/app.log'  # 默认日志文件
     LOG_MAX_BYTES = int(os.environ.get('LOG_MAX_BYTES', '10485760'))  # 10MB default
     LOG_BACKUP_COUNT = int(os.environ.get('LOG_BACKUP_COUNT', '5'))
+    
+    # 新日志系统配置
+    USE_UNIFIED_LOGGING = os.environ.get('USE_UNIFIED_LOGGING', 'true').lower() == 'true'
+    LOG_DIR = os.environ.get('LOG_DIR') or 'logs'
+    LOG_CONSOLE_LEVEL = os.environ.get('LOG_CONSOLE_LEVEL', 'INFO')
+    LOG_FILE_LEVEL = os.environ.get('LOG_FILE_LEVEL', 'DEBUG')
+    LOG_QUEUE_SIZE = int(os.environ.get('LOG_QUEUE_SIZE', '10000'))
+    LOG_ENABLE_AI_HANDLER = os.environ.get('LOG_ENABLE_AI_HANDLER', 'true').lower() == 'true'
 
     # WeChat API Endpoints
     WECHAT_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token'

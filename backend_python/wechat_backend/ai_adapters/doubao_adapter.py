@@ -260,6 +260,8 @@ class DoubaoAdapter(AIClient):
                         latency_ms=int(latency * 1000),  # Convert to milliseconds
                         tokens_used=tokens_used,
                         execution_id=execution_id,
+                        brand=kwargs.get('brand_name'),  # 传递品牌名称
+                        competitor=kwargs.get('competitors'),  # 传递竞品信息
                         **kwargs  # Pass any additional context from kwargs
                     )
                 except Exception as log_error:
@@ -295,6 +297,8 @@ class DoubaoAdapter(AIClient):
                         error_type=error_type if error_type else AIErrorType.UNKNOWN_ERROR,
                         latency_ms=int(latency * 1000),  # Convert to milliseconds
                         execution_id=execution_id,
+                        brand=kwargs.get('brand_name'),  # 传递品牌名称
+                        competitor=kwargs.get('competitors'),  # 传递竞品信息
                         **kwargs  # Pass any additional context from kwargs
                     )
                 except Exception as log_error:
@@ -335,6 +339,8 @@ class DoubaoAdapter(AIClient):
                     error_type=AIErrorType.REQUEST_EXCEPTION,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
+                    brand=kwargs.get('brand_name'),  # 传递品牌名称
+                    competitor=kwargs.get('competitors'),  # 传递竞品信息
                     **kwargs  # Pass any additional context from kwargs
                 )
             except Exception as log_error:
@@ -431,6 +437,8 @@ class DoubaoAdapter(AIClient):
                     error_type=AIErrorType.UNEXPECTED_ERROR,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
+                    brand=kwargs.get('brand_name'),  # 传递品牌名称
+                    competitor=kwargs.get('competitors'),  # 传递竞品信息
                     **kwargs  # Pass any additional context from kwargs
                 )
             except Exception as log_error:
