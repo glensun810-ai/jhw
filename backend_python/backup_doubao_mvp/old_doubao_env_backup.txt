@@ -1,0 +1,9 @@
+# 旧的豆包配置备份（2026-02-19 删除）
+# 豆包模型配置（按优先级顺序）
+# 1. doubao-seed-1-8-251228 (最高优先级)
+# 2. doubao-seed-2-0-mini-260215
+# 3. doubao-seed-2-0-pro-260215 (最低优先级)
+DOUBAO_MODEL_1="doubao-seed-1-8-251228"
+DOUBAO_MODEL_2="doubao-seed-2-0-mini-260215"
+DOUBAO_MODEL_3="doubao-seed-2-0-pro-260215"
+DOUBAO_DEFAULT_MODEL="doubao-seed-1-8-251228"
