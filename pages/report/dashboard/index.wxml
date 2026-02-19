@@ -1,5 +1,15 @@
 <!-- GEO 品牌战略诊断看板 - 麦肯锡三段式布局 -->
 <view class="container" wx:if="{{dashboardData}}">
+  
+  <!-- 详情抽屉组件 -->
+  <diagnostic-drawer
+    showDrawer="{{showDrawer}}"
+    currentQuestionData="{{currentQuestionData}}"
+    brandName="{{brandName}}"
+    competitors="{{competitors}}"
+    bind:close="onDrawerClose"
+    bind:save="onDrawerSave"
+  ></diagnostic-drawer>
   <!-- 第一段：概览评分卡片 -->
   <view class="header-card">
     <view class="brand-title">{{dashboardData.summary.brandName}} · GEO 品牌诊断报告</view>
