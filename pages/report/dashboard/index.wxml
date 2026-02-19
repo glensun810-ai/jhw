@@ -1,0 +1,133 @@
+<!-- GEO 品牌战略诊断看板 - 麦肯锡三段式布局 -->
+<view class="container" wx:if="{{dashboardData}}">
+  <!-- 第一段：概览评分卡片 -->
+  <view class="header-card">
+    <view class="brand-title">{{dashboardData.summary.brandName}} · GEO 品牌诊断报告</view>
+    
+    <view class="score-section">
+      <view class="score-box">
+        <text class="score-label">品牌健康度得分</text>
+        <text class="score-value {{dashboardData.summary.healthScore >= 80 ? 'excellent' : dashboardData.summary.healthScore >= 60 ? 'good' : 'warning'}}">{{dashboardData.summary.healthScore}}</text>
+        <text class="score-unit">分</text>
+      </view>
+      
+      <view class="metrics-row">
+        <view class="metric-item">
+          <view class="metric-value">{{dashboardData.summary.sov}}%</view>
+          <view class="metric-label">AI 声量占比</view>
+          <view class="metric-sub">{{dashboardData.summary.totalMentions}}/{{dashboardData.summary.totalTests}} 提及</view>
+        </view>
+        <view class="metric-divider"></view>
+        <view class="metric-item">
+          <view class="metric-value {{parseFloat(dashboardData.summary.avgSentiment) >= 0.3 ? 'positive' : parseFloat(dashboardData.summary.avgSentiment) <= -0.3 ? 'negative' : ''}}">{{dashboardData.summary.avgSentiment}}</view>
+          <view class="metric-label">情感均值</view>
+          <view class="metric-sub">-1 到 1 区间</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 第二段：核心问题诊断分析 -->
+  <view class="section">
+    <view class="section-header">
+      <view class="section-title">
+        <text class="title-icon">📊</text>
+        <text class="title-text">核心问题诊断分析</text>
+      </view>
+      <view class="section-subtitle">共 {{questionCards.length}} 个问题</view>
+    </view>
+    
+    <view class="question-list">
+      <block wx:for="{{questionCards}}" wx:key="index">
+        <view class="question-card {{item.status}}" bindtap="goToQuestionDetail" data-index="{{index}}">
+          <view class="q-header">
+            <view class="q-number">Q{{index + 1}}</view>
+            <text class="q-text">{{item.text}}</text>
+          </view>
+          
+          <view class="q-body">
+            <view class="q-metrics">
+              <view class="q-metric">
+                <text class="q-metric-label">平均排名</text>
+                <text class="q-metric-value {{item.avgRank === '未入榜' ? 'unranked' : ''}}">{{item.avgRank}}</text>
+              </view>
+              <view class="q-metric">
+                <text class="q-metric-label">提及率</text>
+                <text class="q-metric-value">{{item.mentionCount}}/{{item.totalModels}}</text>
+              </view>
+              <view class="q-metric">
+                <text class="q-metric-label">情感</text>
+                <text class="q-metric-value {{parseFloat(item.avgSentiment) >= 0.3 ? 'positive' : parseFloat(item.avgSentiment) <= -0.3 ? 'negative' : ''}}">{{item.avgSentiment}}</text>
+              </view>
+            </view>
+            
+            <view class="q-status {{item.status}}">
+              <text class="status-icon">{{item.status === 'safe' ? '✅' : '⚠️'}}</text>
+              <text class="status-text">{{item.status === 'safe' ? '安全' : '风险'}}</text>
+            </view>
+          </view>
+          
+          <view class="q-footer" wx:if="{{item.interceptedBy.length > 0}}">
+            <view class="warning-banner">
+              <text class="warning-icon">⚠️</text>
+              <text class="warning-text">被竞品拦截：<text class="warning-brand">{{item.interceptedBy}}</text></text>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 第三段：高风险负面信源 -->
+  <view class="section" wx:if="{{toxicSources && toxicSources.length > 0}}">
+    <view class="section-header">
+      <view class="section-title">
+        <text class="title-icon">🚨</text>
+        <text class="title-text">高风险负面信源</text>
+      </view>
+      <view class="section-subtitle">共 {{toxicSources.length}} 个危险信源</view>
+    </view>
+    
+    <view class="toxic-sources-list">
+      <block wx:for="{{toxicSources}}" wx:key="url">
+        <view class="toxic-source-card">
+          <view class="ts-header">
+            <view class="ts-site">{{item.site}}</view>
+            <view class="ts-tag negative">负面</view>
+          </view>
+          <view class="ts-url">{{item.url}}</view>
+          <view class="ts-footer">
+            <text class="ts-model">检测模型：{{item.model}}</text>
+            <text class="ts-impact">影响排名</text>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 空状态提示 -->
+  <view class="empty-state" wx:if="{{!toxicSources || toxicSources.length === 0}}">
+    <view class="empty-icon">✅</view>
+    <view class="empty-text">未发现高风险负面信源</view>
+    <view class="empty-sub">品牌声誉状况良好</view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <button class="btn-secondary" bindtap="viewHistory">📋 历史记录</button>
+    <button class="btn-primary" bindtap="exportReport">导出报告</button>
+  </view>
+</view>
+
+<!-- 加载中状态 -->
+<view class="loading-container" wx:if="{{!dashboardData && !loadError}}">
+  <view class="loading-spinner"></view>
+  <view class="loading-text">正在生成战略看板...</view>
+</view>
+
+<!-- 错误状态 -->
+<view class="error-container" wx:if="{{loadError}}">
+  <view class="error-icon">⚠️</view>
+  <view class="error-text">{{loadError}}</view>
+  <button class="btn-retry" bindtap="retry">重新加载</button>
+</view>

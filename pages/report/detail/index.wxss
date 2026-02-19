@@ -1,0 +1,591 @@
+/**
+ * 问题深度诊断详情页 - 麦肯锡归因分析风格
+ */
+
+/* 变量定义 */
+page {
+  --primary-color: #1a1a2e;
+  --secondary-color: #16213e;
+  --accent-color: #0f3460;
+  --success-color: #27ae60;
+  --warning-color: #f39c12;
+  --danger-color: #e74c3c;
+  --text-primary: #2c3e50;
+  --text-secondary: #7f8c8d;
+  --text-light: #ecf0f1;
+  --bg-color: #f5f6fa;
+  --card-bg: #ffffff;
+  --border-radius: 12rpx;
+  --shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+.detail-container {
+  padding: 24rpx;
+  padding-bottom: 140rpx;
+  background: var(--bg-color);
+  min-height: 100vh;
+}
+
+/* ====================
+   问题头部区域
+   ==================== */
+
+.q-header-section {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  border-radius: var(--border-radius);
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  display: flex;
+  align-items: flex-start;
+  box-shadow: 0 8rpx 32rpx rgba(26, 26, 46, 0.3);
+}
+
+.q-number-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-light);
+  font-size: 24rpx;
+  font-weight: 700;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.q-content {
+  flex: 1;
+}
+
+.q-label {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8rpx;
+}
+
+.q-title {
+  display: block;
+  font-size: 28rpx;
+  color: var(--text-light);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* ====================
+   模型切换标签
+   ==================== */
+
+.model-tabs {
+  white-space: nowrap;
+  margin-bottom: 24rpx;
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  padding: 16rpx 24rpx;
+  box-shadow: var(--shadow);
+}
+
+.tab-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12rpx 24rpx;
+  margin-right: 16rpx;
+  background: var(--bg-color);
+  border-radius: 8rpx;
+  transition: all 0.3s ease;
+}
+
+.tab-item.active {
+  background: var(--primary-color);
+}
+
+.tab-model-name {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4rpx;
+}
+
+.tab-item.active .tab-model-name {
+  color: var(--text-light);
+}
+
+.tab-rank {
+  font-size: 20rpx;
+  font-weight: 700;
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+}
+
+.tab-rank.ranked {
+  background: var(--success-color);
+  color: var(--text-light);
+}
+
+.tab-rank.unranked {
+  background: var(--text-secondary);
+  color: var(--text-light);
+}
+
+.tab-item.active .tab-rank.ranked {
+  background: var(--text-light);
+  color: var(--primary-color);
+}
+
+/* ====================
+   归因诊断卡片
+   ==================== */
+
+.diagnosis-card {
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx solid var(--bg-color);
+}
+
+.title-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.title-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.title-sub {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+/* 洞察部分 */
+.insight-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+}
+
+.insight-item {
+  background: var(--bg-color);
+  border-radius: 8rpx;
+  padding: 20rpx;
+}
+
+.insight-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.insight-icon {
+  font-size: 24rpx;
+  margin-right: 8rpx;
+}
+
+.insight-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.insight-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.insight-content .value {
+  font-size: 28rpx;
+  font-weight: 700;
+  margin-bottom: 4rpx;
+}
+
+.insight-content .value.pos {
+  color: var(--success-color);
+}
+
+.insight-content .value.neg {
+  color: var(--danger-color);
+}
+
+.insight-content .value.neu {
+  color: var(--text-secondary);
+}
+
+.insight-content .value.good {
+  color: var(--success-color);
+}
+
+.insight-content .value.bad {
+  color: var(--danger-color);
+}
+
+.insight-content .value.normal {
+  color: var(--warning-color);
+}
+
+.insight-content .sub-value {
+  font-size: 20rpx;
+  color: var(--text-secondary);
+}
+
+/* ====================
+   信源侦探
+   ==================== */
+
+.source-detective {
+  margin-top: 24rpx;
+}
+
+.detective-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.detective-icon {
+  font-size: 28rpx;
+  margin-right: 8rpx;
+}
+
+.detective-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.detective-count {
+  font-size: 20rpx;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.empty-sources {
+  text-align: center;
+  padding: 40rpx;
+  background: var(--bg-color);
+  border-radius: 8rpx;
+}
+
+.empty-icon {
+  font-size: 60rpx;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.empty-text {
+  display: block;
+  font-size: 26rpx;
+  color: var(--text-primary);
+  margin-bottom: 4rpx;
+}
+
+.empty-sub {
+  display: block;
+  font-size: 20rpx;
+  color: var(--text-secondary);
+}
+
+.source-box {
+  background: #f8f9fa;
+  border-left: 8rpx solid #dee2e6;
+  padding: 20rpx;
+  margin-top: 16rpx;
+  border-radius: 8rpx;
+}
+
+.source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.source-info {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.site-name {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.attitude-tag {
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid;
+}
+
+.attitude-tag.positive {
+  color: var(--success-color);
+  border-color: var(--success-color);
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.attitude-tag.negative {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.source-url {
+  display: block;
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  word-break: break-all;
+  line-height: 1.4;
+  margin-bottom: 12rpx;
+}
+
+.source-impact {
+  display: flex;
+  align-items: center;
+  padding-top: 12rpx;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.impact-label {
+  font-size: 20rpx;
+  color: var(--text-secondary);
+  margin-right: 8rpx;
+}
+
+.impact-value {
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.impact-value.positive {
+  color: var(--success-color);
+}
+
+.impact-value.negative {
+  color: var(--danger-color);
+}
+
+.impact-value.neutral {
+  color: var(--text-secondary);
+}
+
+/* ====================
+   竞品拦截分析
+   ==================== */
+
+.interception-analysis {
+  margin-top: 24rpx;
+  background: linear-gradient(135deg, rgba(243, 156, 18, 0.1) 0%, rgba(243, 156, 18, 0.05) 100%);
+  border: 2rpx solid var(--warning-color);
+  border-radius: var(--border-radius);
+  padding: 24rpx;
+}
+
+.interception-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.interception-icon {
+  font-size: 28rpx;
+  margin-right: 8rpx;
+}
+
+.interception-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.interception-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.interception-text {
+  font-size: 24rpx;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.competitor-name {
+  font-weight: 700;
+  color: var(--danger-color);
+}
+
+.interception-suggestion {
+  display: flex;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 12rpx 16rpx;
+  border-radius: 8rpx;
+  margin-top: 8rpx;
+}
+
+.suggestion-icon {
+  font-size: 24rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+
+.suggestion-text {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* ====================
+   AI 原文对话
+   ==================== */
+
+.raw-response {
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--shadow);
+}
+
+.content-box {
+  background: var(--bg-color);
+  border-radius: 8rpx;
+  padding: 24rpx;
+  min-height: 200rpx;
+}
+
+.rich-content {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #444;
+}
+
+.rich-content rich-text {
+  display: block;
+}
+
+/* 渲染加载器 */
+.rendering-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+}
+
+.loader-spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid rgba(26, 26, 46, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16rpx;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loader-text {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* ====================
+   底部操作栏
+   ==================== */
+
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  background: var(--card-bg);
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.08);
+  z-index: 100;
+}
+
+.btn-secondary,
+.btn-primary {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.btn-secondary {
+  background: var(--bg-color);
+  color: var(--text-primary);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+  color: var(--text-light);
+}
+
+/* ====================
+   加载和错误状态
+   ==================== */
+
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-color);
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid rgba(26, 26, 46, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 24rpx;
+}
+
+.loading-text,
+.error-text {
+  font-size: 28rpx;
+  color: var(--text-secondary);
+}
+
+.error-icon {
+  font-size: 100rpx;
+  margin-bottom: 24rpx;
+}
+
+.btn-retry {
+  margin-top: 32rpx;
+  padding: 16rpx 48rpx;
+  background: var(--primary-color);
+  color: var(--text-light);
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  border: none;
+}
