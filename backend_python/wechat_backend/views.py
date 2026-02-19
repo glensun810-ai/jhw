@@ -1672,33 +1672,6 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
 
         # Cancel the alarm before returning
         signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)  # Restore the old handler
-
-        # Prepare the final result
-        final_result = {
-            'detailed_results': detailed_results,
-            'main_brand': brand_scores.get(main_brand, {
-                'overallScore': 0,
-                'overallGrade': 'D',
-                'enhanced_data': {
-                    'cognitive_confidence': 0.0,
-                    'bias_indicators': [],
-                    'detailed_analysis': {},
-                    'recommendations': []
-                }
-            }),
-            'competitiveAnalysis': competitive_analysis,
-            'summary': {'total_tests': len(detailed_results), 'brands_tested': len(all_brands)}
-        }
-
-        # Print JSON sample for verification
-        import json
-        print("=== BACKEND FINAL JSON SAMPLE ===")
-        print(json.dumps(final_result, indent=2, ensure_ascii=False))
-        print("===============================")
-
-        # Cancel the alarm before returning
-        signal.alarm(0)
         if old_handler:
             signal.signal(signal.SIGALRM, old_handler)  # Restore the old handler
         return final_result
@@ -1882,6 +1855,220 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
         print("===============================")
 
         return default_result
+
+
+def convert_to_dashboard_format(aggregate_result, all_brands, main_brand):
+    """
+    将聚合引擎结果转换为 Dashboard 格式
+    
+    Args:
+        aggregate_result: process_and_aggregate_results_with_ai_judge 返回的结果
+        all_brands: 所有品牌列表
+        main_brand: 主品牌
+    
+    Returns:
+        Dashboard 格式的数据
+    """
+    try:
+        detailed_results = aggregate_result.get('detailed_results', [])
+        
+        # ========== 集成信源分析 ==========
+        try:
+            from .analytics.source_aggregator import SourceAggregator
+            
+            # 准备模型响应数据
+            model_responses = []
+            for result in detailed_results:
+                model_responses.append({
+                    'model_name': result.get('aiModel', 'unknown'),
+                    'ai_response': result.get('response', ''),
+                    'citations': result.get('quality_metrics', {}).get('detailed_feedback', {}).get('citations', []),
+                    'question': result.get('question', '')
+                })
+            
+            # 调用信源聚合引擎
+            aggregator = SourceAggregator()
+            source_data = aggregator.aggregate_multiple_models(model_responses)
+            
+            # 提取有毒信源 (负面信源)
+            toxic_sources = []
+            for source in source_data.get('source_pool', []):
+                # 根据引用次数和模型覆盖度判断信源质量
+                citation_count = source.get('citation_count', 0)
+                model_coverage = source.get('cross_model_coverage', 0)
+                domain_authority = source.get('domain_authority', 'Medium')
+                
+                # 低质量信源判断标准：
+                # 1. 被多个模型引用但权威度低
+                # 2. 或者只被一个模型引用且权威度低
+                if domain_authority == 'Low' or (citation_count > 2 and model_coverage == 1):
+                    toxic_sources.append({
+                        'url': source.get('url', ''),
+                        'site': source.get('site_name', ''),
+                        'model': list(model_coverage)[0] if isinstance(model_coverage, set) else 'multiple',
+                        'attitude': 'negative',
+                        'citation_count': citation_count,
+                        'domain_authority': domain_authority
+                    })
+                    
+        except Exception as source_error:
+            api_logger.warning(f"信源分析失败：{source_error}")
+            toxic_sources = []
+        
+        # ========== 集成排名分析 ==========
+        try:
+            from .analytics.rank_analyzer import RankAnalyzer
+            
+            # 按问题分组
+            question_map = {}
+            for result in detailed_results:
+                question = result.get('question', '未知问题')
+                if question not in question_map:
+                    question_map[question] = {
+                        'text': question,
+                        'results': [],
+                        'models': set()
+                    }
+                question_map[question]['results'].append(result)
+                question_map[question]['models'].add(result.get('aiModel', 'unknown'))
+            
+            # 生成问题卡片
+            question_cards = []
+            for question_text, q_data in question_map.items():
+                results = q_data['results']
+                
+                # 使用 RankAnalyzer 分析排名
+                analyzer = RankAnalyzer()
+                
+                # 合并所有模型的响应
+                combined_response = ' '.join([r.get('response', '') for r in results])
+                
+                # 分析排名
+                rank_analysis = analyzer.analyze(combined_response, all_brands)
+                
+                # 获取主品牌的排名
+                ranking_list = rank_analysis.get('ranking_list', [])
+                brand_rank = ranking_list.index(main_brand) + 1 if main_brand in ranking_list else -1
+                
+                # 计算平均排名 (基于 geo_score 和物理排名)
+                ranked_results = [r for r in results if r.get('enhanced_scores', {}).get('geo_score', 0) > 0]
+                if ranked_results:
+                    geo_avg_rank = sum(r['enhanced_scores']['geo_score'] for r in ranked_results) / len(ranked_results)
+                    geo_avg_rank = round(geo_avg_rank / 10, 1)  # 转换为 1-10 排名
+                    
+                    # 如果物理排名有效，结合物理排名和 GEO 排名
+                    if brand_rank > 0:
+                        avg_rank = round((geo_avg_rank + brand_rank) / 2, 1)
+                    else:
+                        avg_rank = geo_avg_rank
+                else:
+                    avg_rank = brand_rank if brand_rank > 0 else '未入榜'
+                
+                # 计算平均情感
+                sentiments = [r.get('sentiment_score', 0) for r in results if r.get('sentiment_score', 0) != 0]
+                avg_sentiment = round(sum(sentiments) / len(sentiments), 2) if sentiments else '0.00'
+                
+                # 检查竞品拦截
+                intercepted_by = []
+                for result in results:
+                    interception = result.get('interceptedBy', '')
+                    if interception:
+                        intercepted_by.append(interception)
+                
+                # 确定状态
+                has_risk = len(intercepted_by) > 0 or (isinstance(avg_sentiment, (int, float)) and avg_sentiment < -0.3)
+                
+                question_cards.append({
+                    'text': question_text,
+                    'avgRank': str(avg_rank) if isinstance(avg_rank, float) else avg_rank,
+                    'avgSentiment': str(avg_sentiment),
+                    'mentionCount': len(results),
+                    'totalModels': len(q_data['models']),
+                    'status': 'risk' if has_risk else 'safe',
+                    'interceptedBy': list(set(intercepted_by))
+                })
+                    
+        except Exception as rank_error:
+            api_logger.warning(f"排名分析失败：{rank_error}")
+            # 回退到简单逻辑
+            question_cards = []
+            question_map = {}
+            for result in detailed_results:
+                question = result.get('question', '未知问题')
+                if question not in question_map:
+                    question_map[question] = {'text': question, 'results': [], 'models': set()}
+                question_map[question]['results'].append(result)
+                question_map[question]['models'].add(result.get('aiModel', 'unknown'))
+            
+            for question_text, q_data in question_map.items():
+                results = q_data['results']
+                ranked_results = [r for r in results if r.get('enhanced_scores', {}).get('geo_score', 0) > 0]
+                if ranked_results:
+                    avg_rank = sum(r['enhanced_scores']['geo_score'] for r in ranked_results) / len(ranked_results)
+                    avg_rank = round(avg_rank / 10, 1)
+                else:
+                    avg_rank = '未入榜'
+                
+                sentiments = [r.get('sentiment_score', 0) for r in results if r.get('sentiment_score', 0) != 0]
+                avg_sentiment = round(sum(sentiments) / len(sentiments), 2) if sentiments else '0.00'
+                
+                intercepted_by = [r.get('interceptedBy', '') for r in results if r.get('interceptedBy', '')]
+                has_risk = len(intercepted_by) > 0 or (isinstance(avg_sentiment, (int, float)) and avg_sentiment < -0.3)
+                
+                question_cards.append({
+                    'text': question_text,
+                    'avgRank': str(avg_rank) if isinstance(avg_rank, float) else avg_rank,
+                    'avgSentiment': str(avg_sentiment),
+                    'mentionCount': len(results),
+                    'totalModels': len(q_data['models']),
+                    'status': 'risk' if has_risk else 'safe',
+                    'interceptedBy': list(set(intercepted_by))
+                })
+        
+        # 计算健康分
+        safe_questions = [q for q in question_cards if q['status'] == 'safe']
+        health_score = round((len(safe_questions) / len(question_cards)) * 100) if question_cards else 0
+        
+        # 计算 SOV
+        total_mentions = len(detailed_results)
+        main_brand_mentions = len([r for r in detailed_results if r.get('brand') == main_brand])
+        sov = round((main_brand_mentions / total_mentions) * 100) if total_mentions > 0 else 0
+        
+        # 计算平均情感
+        all_sentiments = [r.get('sentiment_score', 0) for r in detailed_results if r.get('sentiment_score', 0) != 0]
+        avg_sentiment = round(sum(all_sentiments) / len(all_sentiments), 2) if all_sentiments else '0.00'
+        
+        dashboard_data = {
+            'summary': {
+                'brandName': main_brand,
+                'healthScore': health_score,
+                'sov': sov,
+                'avgSentiment': str(avg_sentiment),
+                'totalMentions': total_mentions,
+                'totalTests': len(detailed_results)
+            },
+            'questionCards': question_cards,
+            'toxicSources': toxic_sources
+        }
+        
+        return dashboard_data
+        
+    except Exception as e:
+        api_logger.error(f"转换 Dashboard 格式失败：{e}")
+        # 返回默认数据
+        return {
+            'summary': {
+                'brandName': main_brand,
+                'healthScore': 0,
+                'sov': 0,
+                'avgSentiment': '0.00',
+                'totalMentions': 0,
+                'totalTests': 0
+            },
+            'questionCards': [],
+            'toxicSources': []
+        }
+
 
 def generate_mock_source_intelligence_map(brand_name):
     # This function is now replaced by the real processor, but we keep it for other potential uses
@@ -2306,6 +2493,105 @@ def get_test_history():
         return jsonify({'status': 'success', 'history': history, 'count': len(history)})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@wechat_bp.route('/api/dashboard/aggregate', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=30, window=60, per='endpoint')
+@monitored_endpoint('/api/dashboard/aggregate', require_auth=False, validate_inputs=True)
+def get_dashboard_aggregate():
+    """
+    获取 Dashboard 聚合数据
+    
+    查询参数:
+        executionId: 执行 ID (可选，如果提供则从数据库获取)
+        userOpenid: 用户 OpenID (可选)
+    
+    返回:
+        {
+            "success": true,
+            "dashboard": {
+                "summary": {
+                    "brandName": "品牌名称",
+                    "healthScore": 75,
+                    "sov": 50,
+                    "avgSentiment": 0.3,
+                    "totalMentions": 100,
+                    "totalTests": 200
+                },
+                "questionCards": [...],
+                "toxicSources": [...]
+            }
+        }
+    """
+    try:
+        execution_id = request.args.get('executionId')
+        user_openid = request.args.get('userOpenid', 'anonymous')
+        
+        api_logger.info(f"请求 Dashboard 聚合数据：executionId={execution_id}, userOpenid={user_openid}")
+        
+        # 如果有 executionId，从数据库获取测试结果
+        if execution_id:
+            # 从数据库获取测试结果
+            from .models import TestRecord
+            record = TestRecord.query.filter_by(execution_id=execution_id).first()
+            
+            if record and record.results:
+                # 使用已有的聚合结果
+                api_logger.info(f"从数据库获取执行 ID {execution_id} 的结果")
+                
+                # 检查是否已经是 Dashboard 格式
+                if 'dashboard' in record.results:
+                    return jsonify({
+                        'success': True,
+                        'dashboard': record.results['dashboard']
+                    })
+                else:
+                    # 转换为 Dashboard 格式
+                    dashboard_data = convert_to_dashboard_format(
+                        record.results,
+                        record.results.get('competitiveAnalysis', {}).get('brandScores', {}).keys(),
+                        record.results.get('main_brand', '未知品牌')
+                    )
+                    return jsonify({
+                        'success': True,
+                        'dashboard': dashboard_data
+                    })
+        
+        # 如果没有 executionId 或数据库中没有，尝试从最近的测试获取
+        try:
+            from .models import TestRecord
+            recent_record = TestRecord.query.filter_by(user_openid=user_openid).order_by(TestRecord.created_at.desc()).first()
+            
+            if recent_record and recent_record.results:
+                api_logger.info(f"使用最近的测试结果：{recent_record.id}")
+                
+                # 转换为 Dashboard 格式
+                dashboard_data = convert_to_dashboard_format(
+                    recent_record.results,
+                    recent_record.results.get('competitiveAnalysis', {}).get('brandScores', {}).keys(),
+                    recent_record.results.get('main_brand', '未知品牌')
+                )
+                return jsonify({
+                    'success': True,
+                    'dashboard': dashboard_data
+                })
+        except Exception as db_error:
+            api_logger.warning(f"数据库查询失败：{db_error}")
+        
+        # 如果没有历史数据，返回错误
+        api_logger.warning(f"未找到 Dashboard 数据：executionId={execution_id}")
+        return jsonify({
+            'success': False,
+            'error': '未找到测试数据，请先执行品牌测试',
+            'code': 'NO_DATA'
+        }), 404
+        
+    except Exception as e:
+        api_logger.error(f"获取 Dashboard 聚合数据失败：{e}")
+        return jsonify({
+            'success': False,
+            'error': f'服务器错误：{str(e)}'
+        }), 500
 
 @wechat_bp.route('/api/test-record/<int:record_id>', methods=['GET'])
 def get_test_record(record_id):
