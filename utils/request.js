@@ -9,7 +9,7 @@ const { debugLog, debugLogAiIo, debugLogStatusFlow, debugLogResults, debugLogExc
 // 环境配置
 const ENV_CONFIG = {
   develop: {
-    baseURL: 'http://127.0.0.1:5001', // 开发环境 API 地址 - 与后端实际运行端口保持一致
+    baseURL: 'http://127.0.0.1:5000', // 开发环境 API 地址 - 与后端实际运行端口保持一致
     timeout: 30000 // 30秒超时
   },
   trial: {

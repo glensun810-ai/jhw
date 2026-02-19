@@ -110,9 +110,29 @@
     </view>
     <view class="platform-content">
       <view class="radar-chart-container">
-        <!-- 雷达图占位 -->
-        <view class="radar-placeholder">
-          <text>雷达图展示平台认知对比</text>
+        <!-- P2-2 雷达图组件 -->
+        <view class="radar-canvas-wrapper" wx:if="{{radarChartData && radarChartData.length > 0}}">
+          <canvas 
+            type="2d" 
+            id="radarChartCanvas"
+            class="radar-chart-canvas"
+            style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+          ></canvas>
+        </view>
+        <view class="radar-placeholder" wx:else>
+          <text>暂无雷达图数据</text>
+        </view>
+      </view>
+      
+      <!-- 维度说明 -->
+      <view class="radar-legend" wx:if="{{radarChartData && radarChartData.length > 0}}">
+        <view class="legend-item">
+          <view class="legend-color my-brand"></view>
+          <text class="legend-text">{{targetBrand}}</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-color competitor"></view>
+          <text class="legend-text">竞品平均</text>
         </view>
       </view>
       <view class="platform-details">
@@ -123,6 +143,327 @@
       </view>
     </view>
   </view>
+
+  <!-- P0-3 竞争分析区 -->
+  <view class="competitive-analysis-section">
+    <text class="section-title">🔍 竞争分析</text>
+    
+    <!-- 品牌排名 -->
+    <view class="brand-ranking-section" wx:if="{{brandRankingList && brandRankingList.length > 0}}">
+      <text class="subsection-title">品牌曝光排名</text>
+      <view class="ranking-list">
+        <view class="ranking-item" wx:for="{{brandRankingList}}" wx:key="index" wx:for-item="brand">
+          <text class="ranking-position">{{index + 1}}</text>
+          <text class="ranking-brand {{brand === targetBrand ? 'main-brand' : ''}}">{{brand}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 首次提及率 -->
+    <view class="first-mention-section" wx:if="{{firstMentionByPlatform && firstMentionByPlatform.length > 0}}">
+      <text class="subsection-title">AI 平台首次提及率</text>
+      <view class="mention-list">
+        <view class="mention-item" wx:for="{{firstMentionByPlatform}}" wx:key="platform">
+          <text class="mention-platform">{{item.platform}}</text>
+          <text class="mention-rate">{{item.rate}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 拦截风险 -->
+    <view class="interception-risk-section" wx:if="{{interceptionRisks && interceptionRisks.length > 0}}">
+      <text class="subsection-title">流量拦截风险</text>
+      <view class="risk-list">
+        <view class="risk-item" wx:for="{{interceptionRisks}}" wx:key="type">
+          <text class="risk-type">{{item.type}}</text>
+          <text class="risk-level {{item.level}}">{{item.description}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 竞品对比详情 -->
+    <view class="competitor-comparison-section" wx:if="{{competitorComparisonData && competitorComparisonData.length > 0}}">
+      <text class="subsection-title">竞品对比详情</text>
+      <view class="comparison-list">
+        <view class="comparison-item" wx:for="{{competitorComparisonData}}" wx:key="competitor">
+          <view class="comparison-header">
+            <text class="comparison-competitor">🆚 {{item.competitor}}</text>
+            <text class="comparison-score">差异化评分：{{item.differentiationScore}}/100</text>
+          </view>
+          <view class="comparison-content">
+            <view class="comparison-section" wx:if="{{item.commonKeywords && item.commonKeywords.length > 0}}">
+              <text class="comparison-label">共同关键词:</text>
+              <text class="comparison-value">{{item.commonKeywords.join(', ')}}</text>
+            </view>
+            <view class="comparison-section" wx:if="{{item.uniqueToBrand && item.uniqueToBrand.length > 0}}">
+              <text class="comparison-label">我方优势:</text>
+              <text class="comparison-value">{{item.uniqueToBrand.join(', ')}}</text>
+            </view>
+            <view class="comparison-section" wx:if="{{item.uniqueToCompetitor && item.uniqueToCompetitor.length > 0}}">
+              <text class="comparison-label">对方优势:</text>
+              <text class="comparison-value">{{item.uniqueToCompetitor.join(', ')}}</text>
+            </view>
+            <view class="comparison-section" wx:if="{{item.differentiationGap}}">
+              <text class="comparison-label">差异化建议:</text>
+              <text class="comparison-value">{{item.differentiationGap}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- P1-1 语义偏移可视化 -->
+  <view class="semantic-drift-section">
+    <text class="section-title">🔀 语义偏移分析</text>
+    
+    <!-- 语义偏移概览 -->
+    <view class="drift-overview-section" wx:if="{{semanticDriftData}}">
+      <view class="drift-score-card">
+        <view class="score-circle {{semanticDriftData.driftSeverity}}">
+          <text class="score-number">{{semanticDriftData.driftScore}}</text>
+          <text class="score-label">偏移分数</text>
+        </view>
+        <view class="drift-info">
+          <text class="drift-severity {{semanticDriftData.driftSeverity}}">{{semanticDriftData.driftSeverityText}}</text>
+          <text class="drift-similarity">语义相似度：{{semanticDriftData.similarityScore}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 关键词对比 -->
+    <view class="keyword-comparison-section" wx:if="{{semanticContrastData && semanticContrastData.official_words}}">
+      <text class="subsection-title">📝 关键词对比</text>
+      
+      <!-- 官方关键词 -->
+      <view class="keyword-group">
+        <text class="keyword-group-title">🏢 官方关键词</text>
+        <view class="keyword-cloud">
+          <view class="keyword-tag official" wx:for="{{semanticContrastData.official_words}}" wx:key="name">
+            <text class="keyword-name">{{item.name}}</text>
+            <text class="keyword-value">{{item.value}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- AI 生成关键词 -->
+      <view class="keyword-group">
+        <text class="keyword-group-title">🤖 AI 生成关键词</text>
+        <view class="keyword-cloud">
+          <view class="keyword-tag {{item.category}}" wx:for="{{semanticContrastData.ai_generated_words}}" wx:key="name">
+            <text class="keyword-name">{{item.name}}</text>
+            <text class="keyword-value">{{item.value}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 偏移详情 -->
+    <view class="drift-details-section" wx:if="{{semanticDriftData && (semanticDriftData.missingKeywords || semanticDriftData.unexpectedKeywords)}}">
+      <text class="subsection-title">⚠️ 偏移详情</text>
+      
+      <!-- 缺失关键词 -->
+      <view class="drift-detail-item" wx:if="{{semanticDriftData.missingKeywords && semanticDriftData.missingKeywords.length > 0}}">
+        <text class="drift-detail-label">❌ 缺失关键词（官方有但 AI 未提及）</text>
+        <view class="keyword-list">
+          <text class="keyword-item" wx:for="{{semanticDriftData.missingKeywords}}" wx:key="*this">{{item}}</text>
+        </view>
+      </view>
+
+      <!-- 意外关键词 -->
+      <view class="drift-detail-item" wx:if="{{semanticDriftData.unexpectedKeywords && semanticDriftData.unexpectedKeywords.length > 0}}">
+        <text class="drift-detail-label">⚠️ 意外关键词（AI 提及但官方没有）</text>
+        <view class="keyword-list">
+          <text class="keyword-item" wx:for="{{semanticDriftData.unexpectedKeywords}}" wx:key="*this">{{item}}</text>
+        </view>
+      </view>
+
+      <!-- 负面术语 -->
+      <view class="drift-detail-item" wx:if="{{semanticDriftData.negativeTerms && semanticDriftData.negativeTerms.length > 0}}">
+        <text class="drift-detail-label">🚫 负面术语</text>
+        <view class="keyword-list negative">
+          <text class="keyword-item" wx:for="{{semanticDriftData.negativeTerms}}" wx:key="*this">{{item}}</text>
+        </view>
+      </view>
+
+      <!-- 正面术语 -->
+      <view class="drift-detail-item" wx:if="{{semanticDriftData.positiveTerms && semanticDriftData.positiveTerms.length > 0}}">
+        <text class="drift-detail-label">✅ 正面术语</text>
+        <view class="keyword-list positive">
+          <text class="keyword-item" wx:for="{{semanticDriftData.positiveTerms}}" wx:key="*this">{{item}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+    <!-- P1-3 优化建议列表 -->
+  <view class="recommendation-section" wx:if="{{recommendationData && recommendationData.recommendations && recommendationData.recommendations.length > 0}}">
+    <text class="section-title">💡 优化建议</text>
+    
+    <!-- 建议概览 -->
+    <view class="recommendation-overview">
+      <view class="overview-item">
+        <text class="overview-number">{{recommendationData.totalCount}}</text>
+        <text class="overview-label">建议总数</text>
+      </view>
+      <view class="overview-item">
+        <text class="overview-number high">{{recommendationData.highPriorityCount}}</text>
+        <text class="overview-label">高优先级</text>
+      </view>
+      <view class="overview-item">
+        <text class="overview-number medium">{{recommendationData.mediumPriorityCount}}</text>
+        <text class="overview-label">中优先级</text>
+      </view>
+      <view class="overview-item">
+        <text class="overview-number low">{{recommendationData.lowPriorityCount}}</text>
+        <text class="overview-label">低优先级</text>
+      </view>
+    </view>
+
+    <!-- 建议列表 -->
+    <view class="recommendation-list">
+      <view class="recommendation-card" wx:for="{{recommendationData.recommendations}}" wx:key="index">
+        <view class="card-header {{item.priority}}">
+          <text class="priority-tag {{item.priority}}">{{item.priorityText}}</text>
+          <text class="type-tag {{item.type}}">{{item.typeText}}</text>
+          <text class="urgency-score">紧急度：{{item.urgency}}/10</text>
+        </view>
+        <view class="card-body">
+          <text class="card-title">{{item.title}}</text>
+          <text class="card-description">{{item.description}}</text>
+          
+          <!-- 行动步骤 -->
+          <view class="action-steps" wx:if="{{item.actionSteps && item.actionSteps.length > 0}}">
+            <text class="steps-title">📋 行动步骤：</text>
+            <view class="step-item" wx:for="{{item.actionSteps}}" wx:key="index">
+              <text class="step-number">{{index + 1}}</text>
+              <text class="step-text">{{item}}</text>
+            </view>
+          </view>
+          
+          <!-- 目标对象 -->
+          <view class="target-info" wx:if="{{item.target}}">
+            <text class="target-label">🎯 目标对象：</text>
+            <text class="target-value">{{item.target}}</text>
+          </view>
+          
+          <!-- 预估影响 -->
+          <view class="impact-info">
+            <text class="impact-label">📊 预估影响：</text>
+            <text class="impact-value {{item.estimatedImpact}}">{{item.estimatedImpactText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- P2-3 关键词云 -->
+  <view class="keyword-cloud-section" wx:if="{{keywordCloudData && keywordCloudData.length > 0}}">
+    <text class="section-title">☁️ 品牌关键词云</text>
+    
+    <!-- 词云展示区 -->
+    <view class="word-cloud-container">
+      <view class="word-cloud-wrapper" wx:if="{{wordCloudRendered}}">
+        <canvas 
+          type="2d" 
+          id="wordCloudCanvas"
+          class="word-cloud-canvas"
+          style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
+        ></canvas>
+      </view>
+      <view class="word-cloud-placeholder" wx:else>
+        <text>正在生成词云...</text>
+      </view>
+    </view>
+    
+    <!-- 关键词统计 -->
+    <view class="keyword-stats">
+      <view class="stat-item">
+        <text class="stat-number">{{keywordCloudData.length}}</text>
+        <text class="stat-label">关键词数量</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-number positive">{{keywordStats.positiveCount}}</text>
+        <text class="stat-label">正面词</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-number neutral">{{keywordStats.neutralCount}}</text>
+        <text class="stat-label">中性词</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-number negative">{{keywordStats.negativeCount}}</text>
+        <text class="stat-label">负面词</text>
+      </view>
+    </view>
+    
+    <!-- 高频词列表 -->
+    <view class="top-keywords-section" wx:if="{{topKeywords && topKeywords.length > 0}}">
+      <text class="subsection-title">🔥 高频关键词</text>
+      <view class="top-keywords-list">
+        <view class="top-keyword-item" wx:for="{{topKeywords}}" wx:key="word">
+          <text class="keyword-word {{item.sentiment}}">{{item.word}}</text>
+          <text class="keyword-count">{{item.count}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+<!-- P1-2 信源纯净度展示 -->
+  <view class="source-purity-section" wx:if="{{sourcePurityData}}">
+    <text class="section-title">📊 信源纯净度分析</text>
+    
+    <!-- 信源纯净度概览 -->
+    <view class="purity-overview-section" wx:if="{{sourcePurityData}}">
+      <view class="purity-score-card">
+        <view class="purity-circle {{sourcePurityData.purityLevel}}">
+          <text class="purity-number">{{sourcePurityData.purityScore}}</text>
+          <text class="purity-label">纯净度</text>
+        </view>
+        <view class="purity-info">
+          <text class="purity-level {{sourcePurityData.purityLevel}}">{{sourcePurityData.purityLevelText}}</text>
+          <text class="purity-high-weight">高权重信源占比：{{sourcePurityData.highWeightRatio}}%</text>
+          <text class="purity-pollution">污染源数量：{{sourcePurityData.pollutionCount}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 信源类别分布 -->
+    <view class="source-category-section" wx:if="{{sourcePurityData && sourcePurityData.categoryDistribution}}">
+      <text class="subsection-title">🗂️ 信源类别分布</text>
+      <view class="category-chart">
+        <view class="category-item" wx:for="{{sourcePurityData.categoryDistribution}}" wx:key="category">
+          <view class="category-bar {{item.category}}">
+            <view class="bar-fill" style="width: {{item.percentage}}%;"></view>
+          </view>
+          <text class="category-name">{{item.categoryName}}</text>
+          <text class="category-count">{{item.count}} ({{item.percentage}}%)</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 信源权重排名 -->
+    <view class="source-weight-section" wx:if="{{sourcePurityData && sourcePurityData.topSources && sourcePurityData.topSources.length > 0}}">
+      <text class="subsection-title">🏆 信源权重排名</text>
+      <view class="weight-list">
+        <view class="weight-item" wx:for="{{sourcePurityData.topSources}}" wx:key="name">
+          <text class="weight-rank">{{index + 1}}</text>
+          <text class="weight-name {{item.isHighWeight ? 'high-weight' : ''}}">{{item.name}}</text>
+          <text class="weight-value">{{item.weight}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 污染源警示 -->
+    <view class="pollution-warning-section" wx:if="{{sourcePurityData && sourcePurityData.pollutionSources && sourcePurityData.pollutionSources.length > 0}}">
+      <text class="subsection-title">⚠️ 污染源警示</text>
+      <view class="pollution-list">
+        <view class="pollution-item" wx:for="{{sourcePurityData.pollutionSources}}" wx:key="name">
+          <text class="pollution-name">{{item.name}}</text>
+          <text class="pollution-reason">{{item.reason}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
 
   <!-- 信源情报展示 -->
   <view class="source-intelligence-section" wx:if="{{showSourceIntelligence}}">
@@ -297,4 +638,7 @@
       </view>
     </view>
   </view>
+
+  <!-- 隐藏的 Canvas 用于生成报告图片 -->
+  <canvas type="2d" id="report-canvas" class="report-canvas-hidden"></canvas>
 </view>

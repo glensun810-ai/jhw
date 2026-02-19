@@ -1,12 +1,12 @@
-const { checkLoginStatus, hasPermission } = require('../../utils/auth.js');
-const { getSearchResults, removeSearchResult, updateSearchResult } = require('../../utils/local-storage.js');
+// pages/personal-history/personal-history.js
+const { getSavedResults, deleteResult } = require('../../utils/saved-results-sync');
 
 Page({
   data: {
     searchKeyword: '',
     filteredHistory: [],
     isLoading: false,
-    
+
     // 筛选相关
     timeRange: 'all',
     timeRangeText: '全部时间',
@@ -14,7 +14,7 @@ Page({
     scoreRangeText: '全部分数',
     selectedCategory: 'all',
     categoryText: '全部分类',
-    
+
     // 筛选选项
     timeOptions: [
       { label: '全部时间', value: 'all' },
@@ -27,38 +27,6 @@ Page({
   },
 
   onLoad: function(options) {
-    if (!checkLoginStatus()) {
-      wx.showModal({
-        title: '需要登录',
-        content: '此功能需要登录后才能使用',
-        confirmText: '去登录',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
-            wx.redirectTo({
-              url: '/pages/login/login'
-            });
-          } else {
-            wx.navigateBack();
-          }
-        }
-      });
-      return;
-    }
-    
-    if (!hasPermission('history')) {
-      wx.showModal({
-        title: '权限不足',
-        content: '您没有访问此功能的权限',
-        showCancel: false,
-        confirmText: '确定',
-        success: () => {
-          wx.navigateBack();
-        }
-      });
-      return;
-    }
-    
     this.loadPersonalHistory();
   },
 
@@ -68,18 +36,25 @@ Page({
 
   // 加载个人历史记录
   loadPersonalHistory: function() {
-    try {
-      const searchResults = getSearchResults();
-      this.setData({
-        filteredHistory: searchResults
+    const that = this;
+    that.setData({ isLoading: true });
+
+    // 使用云端同步工具获取保存的结果（支持登录用户云端同步）
+    getSavedResults()
+      .then(searchResults => {
+        that.setData({
+          filteredHistory: searchResults,
+          isLoading: false
+        });
+      })
+      .catch(error => {
+        console.error('加载个人历史记录失败', error);
+        that.setData({ isLoading: false });
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        });
       });
-    } catch (e) {
-      console.error('加载个人历史记录失败', e);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-    }
   },
 
   // 搜索输入
@@ -96,18 +71,20 @@ Page({
 
   // 应用筛选
   applyFilters: function() {
-    let history = getSearchResults();
-    
+    const that = this;
+    const history = this.data.filteredHistory;
+
     // 搜索关键词过滤
+    let filtered = history;
     if (this.data.searchKeyword) {
       const keyword = this.data.searchKeyword.toLowerCase();
-      history = history.filter(item => 
-        item.brandName.toLowerCase().includes(keyword) ||
+      filtered = filtered.filter(item =>
+        (item.brandName && item.brandName.toLowerCase().includes(keyword)) ||
         (item.tags && item.tags.some(tag => tag.toLowerCase().includes(keyword))) ||
         (item.notes && item.notes.toLowerCase().includes(keyword))
       );
     }
-    
+
     // 时间范围过滤
     if (this.data.timeRange !== 'all') {
       const now = Date.now();
@@ -128,37 +105,43 @@ Page({
           break;
       }
 
-      history = history.filter(item => item.timestamp >= timeThreshold);
+      filtered = filtered.filter(item => item.timestamp >= timeThreshold);
     }
-    
+
     // 分数范围过滤
-    history = history.filter(item => 
-      item.results.overallScore >= this.data.scoreRange[0] && 
-      item.results.overallScore <= this.data.scoreRange[1]
-    );
-    
+    filtered = filtered.filter(item => {
+      const score = item.results?.overallScore || 0;
+      return score >= this.data.scoreRange[0] && score <= this.data.scoreRange[1];
+    });
+
     // 分类过滤
     if (this.data.selectedCategory !== 'all') {
-      history = history.filter(item => item.category === this.data.selectedCategory);
+      filtered = filtered.filter(item => item.category === this.data.selectedCategory);
     }
-    
+
     this.setData({
-      filteredHistory: history
+      filteredHistory: filtered
     });
   },
 
   // 显示时间筛选弹窗
   showTimeFilter: function() {
-    // 这期实现时间筛选弹窗
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
+    const that = this;
+    wx.showActionSheet({
+      itemList: this.data.timeOptions.map(opt => opt.label),
+      success: (res) => {
+        const option = that.data.timeOptions[res.tapIndex];
+        that.setData({
+          timeRange: option.value,
+          timeRangeText: option.label
+        });
+        that.applyFilters();
+      }
     });
   },
 
   // 显示分数筛选弹窗
   showScoreFilter: function() {
-    // 这期实现分数筛选弹窗
     wx.showToast({
       title: '功能开发中',
       icon: 'none'
@@ -167,20 +150,26 @@ Page({
 
   // 显示分类筛选弹窗
   showCategoryFilter: function() {
-    // 这期实现分类筛选弹窗
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
+    const that = this;
+    wx.showActionSheet({
+      itemList: that.data.categories,
+      success: (res) => {
+        const category = that.data.categories[res.tapIndex];
+        that.setData({
+          selectedCategory: category,
+          categoryText: category === 'all' ? '全部分类' : category
+        });
+        that.applyFilters();
+      }
     });
   },
 
   // 查看详情
   viewDetail: function(e) {
     const id = e.currentTarget.dataset.id;
-    // 这期实现查看详情功能
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
+    // 跳转到历史记录详情页面
+    wx.navigateTo({
+      url: `/pages/history-detail/history-detail?id=${id}`
     });
   },
 
@@ -195,19 +184,39 @@ Page({
   // 删除结果
   deleteResult: function(e) {
     const id = e.currentTarget.dataset.id;
-    
+    const that = this;
+
     wx.showModal({
       title: '确认删除',
       content: '确定要删除这条历史记录吗？',
       success: (res) => {
         if (res.confirm) {
-          removeSearchResult(id);
-          this.loadPersonalHistory(); // 重新加载数据
+          that.setData({ isLoading: true });
           
-          wx.showToast({
-            title: '删除成功',
-            icon: 'success'
-          });
+          deleteResult(id)
+            .then(success => {
+              if (success) {
+                that.loadPersonalHistory();
+                wx.showToast({
+                  title: '删除成功',
+                  icon: 'success'
+                });
+              } else {
+                that.setData({ isLoading: false });
+                wx.showToast({
+                  title: '删除失败',
+                  icon: 'none'
+                });
+              }
+            })
+            .catch(error => {
+              console.error('删除历史记录失败', error);
+              that.setData({ isLoading: false });
+              wx.showToast({
+                title: '删除失败',
+                icon: 'none'
+              });
+            });
         }
       }
     });
