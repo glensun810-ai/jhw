@@ -1,9 +1,75 @@
+# 环境变量和敏感配置
 .env
 .env.local
 .env.*.local
 *.env
+.env.secure
+.env.backup
+
+# 包含敏感信息的文档
+*_API_KEY*.md
+*_SECRET*.md
+*credentials*.md
+*.key
+*.pem
+*.crt
+
+# 数据库和存储
 database.db
+*.db
+*.sqlite
+*.sqlite3
+
+# 日志
 logs/
 *.log
+
+# 临时文件
 tmp/
 temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE 和编辑器
+.idea/
+.vscode/
+*.sublime-*
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# 微信开发者工具
+.wechat/
+.miniprogram-cache/
+
+# 忽略备份文件和清理脚本
+*.bak
+clean-sensitive-data.sh
