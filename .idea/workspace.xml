@@ -5,41 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DOUBAO_API_KEY_UPDATE_REPORT.md" beforeDir="false" afterPath="$PROJECT_DIR$/DOUBAO_API_KEY_UPDATE_REPORT.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DOUBAO_AUTH_ERROR_DIAGNOSIS_REPORT.md" beforeDir="false" afterPath="$PROJECT_DIR$/DOUBAO_AUTH_ERROR_DIAGNOSIS_REPORT.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/old_doubao_env_backup.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_brand_diagnosis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_fixes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_new_deployment.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_timeout_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/backup_doubao_mvp/test_doubao_timeout_fix_corrected.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/config_manager_backup.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_adapter.py.backup" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/config-manager/config-manager.json" beforeDir="false" afterPath="$PROJECT_DIR$/pages/config-manager/config-manager.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/data-manager/data-manager.json" beforeDir="false" afterPath="$PROJECT_DIR$/pages/data-manager/data-manager.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/data-manager/data-manager.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/data-manager/data-manager.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/edit-saved-result/edit-saved-result.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/edit-saved-result/edit-saved-result.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/login/login.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/login/login.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/permission-manager/permission-manager.json" beforeDir="false" afterPath="$PROJECT_DIR$/pages/permission-manager/permission-manager.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/permission-manager/permission-manager.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/permission-manager/permission-manager.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/personal-history/personal-history.json" beforeDir="false" afterPath="$PROJECT_DIR$/pages/personal-history/personal-history.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/personal-history/personal-history.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/personal-history/personal-history.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/public-history/public-history.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/public-history/public-history.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/register/register.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/register/register.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/results/results.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/results/results.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/saved-results/saved-results.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/saved-results/saved-results.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/user-guide/user-guide.json" beforeDir="false" afterPath="$PROJECT_DIR$/pages/user-guide/user-guide.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/user-guide/user-guide.wxml.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/user-guide/user-guide.wxss.bak" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/project.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/project.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project.private.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/project.private.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/request.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/detail/index.js.backup" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -81,7 +64,7 @@
     <SUITE FILE_PATH="coverage/PythonProject$app.coverage" NAME="app 覆盖结果" MODIFIED="1771057092427" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend_python/wechat_backend" />
     <SUITE FILE_PATH="coverage/PythonProject$Flask__wechat_backend_app_py_.coverage" NAME="Flask (wechat_backend/app.py) 覆盖结果" MODIFIED="1770981411087" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_wechat_backend_app_py_.coverage" NAME="Flask (backend_python/wechat_backend/app.py) 覆盖结果" MODIFIED="1771057103838" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
-    <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_run_py_.coverage" NAME="Flask (backend_python/run.py) 覆盖结果" MODIFIED="1771520967807" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_run_py_.coverage" NAME="Flask (backend_python/run.py) 覆盖结果" MODIFIED="1771521630358" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770933166725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$demo_main.coverage" NAME="demo_main 覆盖结果" MODIFIED="1770745116755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/PythonProject$qwen_adapter.coverage" NAME="qwen_adapter 覆盖结果" MODIFIED="1770828819857" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wechat_backend/ai_adapters" />
