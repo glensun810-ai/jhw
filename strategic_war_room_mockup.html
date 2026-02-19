@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>战略战局中心 - 品牌 GEO 战略对阵中心</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0D1117;
+      color: #e8e8e8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 动态粒子背景 */
+    .particle-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.3;
+    }
+
+    .page-container {
+      position: relative;
+      z-index: 1;
+      padding: 40px;
+      min-height: 100vh;
+    }
+
+    .content-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* 标题区域 */
+    .title-section {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .main-title {
+      font-size: 48px;
+      font-weight: bold;
+      color: #00F2FF;
+      letter-spacing: 4px;
+      display: block;
+      text-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
+    }
+
+    .subtitle {
+      font-size: 28px;
+      color: #8c8c8c;
+      margin-top: 20px;
+      display: block;
+    }
+
+    /* 时间预估区域 */
+    .time-estimation-section {
+      width: 100%;
+      margin-bottom: 40px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .time-estimate {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .estimate-label {
+      font-size: 26px;
+      color: #8c8c8c;
+    }
+
+    .estimate-value {
+      font-size: 32px;
+      color: #00F2FF;
+      font-weight: bold;
+      margin-left: 10px;
+      font-family: 'Courier New', 'DIN', monospace;
+    }
+
+    /* 进度条 */
+    .progress-container {
+      width: 100%;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+
+    .progress-inner {
+      height: 100%;
+      background: linear-gradient(90deg, #0066FF 0%, #00F2FF 100%);
+      border-radius: 6px;
+      transition: width 0.3s ease;
+      width: 65%;
+      position: relative;
+    }
+
+    .progress-inner::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-text-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .progress-text {
+      font-size: 24px;
+      color: #8c8c8c;
+    }
+
+    .progress-percentage {
+      font-size: 28px;
+      color: #00F2FF;
+      font-weight: bold;
+      font-family: 'Courier New', 'DIN', monospace;
+    }
+
+    /* 惊喜消息 */
+    .surprise-message {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 242, 255, 0.1);
+      border: 1px solid #00F2FF;
+      border-radius: 12px;
+      text-align: center;
+      animation: pulse-glow 2s infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 10px rgba(0, 242, 255, 0.3); }
+      50% { box-shadow: 0 0 20px rgba(0, 242, 255, 0.6); }
+    }
+
+    .surprise-text {
+      font-size: 26px;
+      color: #00F2FF;
+      font-weight: bold;
+    }
+
+    /* 数据流动画 */
+    .data-flow-animation {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      background: #00F2FF;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+
+    .dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.4;
+        transform: scale(0.8);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.2);
+      }
+    }
+
+    /* 视图切换器 */
+    .view-switcher {
+      position: relative;
+      width: 100%;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 40px;
+      backdrop-filter: blur(10px);
+      display: flex;
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+
+    .switcher-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      z-index: 2;
+      color: #8c8c8c;
+      font-size: 28px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    .switcher-option.active {
+      color: #00F2FF;
+    }
+
+    .switcher-slider {
+      position: absolute;
+      top: 4px;
+      height: calc(100% - 8px);
+      width: calc(33.33% - 20px);
+      background: linear-gradient(135deg, #00F2FF 0%, #00C853 100%);
+      border-radius: 36px;
+      transition: transform 0.3s ease;
+      z-index: 1;
+      left: 4px;
+    }
+
+    /* 品牌选择器 */
+    .selector-container {
+      width: 100%;
+      margin-bottom: 40px;
+      padding: 0 20px;
+    }
+
+    .picker-view {
+      display: flex;
+      align-items: center;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 0 30px;
+      backdrop-filter: blur(10px);
+    }
+
+    .picker-label {
+      font-size: 26px;
+      color: #8c8c8c;
+      margin-right: 10px;
+    }
+
+    .picker-value {
+      font-size: 28px;
+      color: #00F2FF;
+      font-weight: bold;
+      flex: 1;
+    }
+
+    .picker-icon {
+      font-size: 24px;
+      color: #8c8c8c;
+    }
+
+    /* 战略对阵矩阵 */
+    .battlefield-matrix-container {
+      width: 100%;
+      margin-bottom: 40px;
+      overflow-x: auto;
+    }
+
+    .matrix-scroll {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .matrix-grid {
+      display: inline-block;
+      min-width: 100%;
+    }
+
+    .grid-header,
+    .grid-row {
+      display: flex;
+      width: fit-content;
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 180px;
+      height: 120px;
+      padding: 20px;
+      box-sizing: border-box;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background-color: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 8px;
+      margin-right: -1px;
+      margin-bottom: -1px;
+    }
+
+    .header-cell {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.15) 100%);
+      font-weight: bold;
+      color: #00F2FF;
+      font-size: 24px;
+    }
+
+    .corner-cell {
+      min-width: 250px;
+      background: linear-gradient(135deg, rgba(0, 242, 255, 0.1) 0%, rgba(0, 242, 255, 0.2) 100%);
+    }
+
+    .question-cell {
+      min-width: 250px;
+      background: linear-gradient(135deg, rgba(0, 242, 255, 0.05) 0%, rgba(0, 242, 255, 0.1) 100%);
+      align-items: flex-start;
+      text-align: left;
+      position: sticky;
+      left: 0;
+      z-index: 5;
+    }
+
+    .question-text {
+      font-size: 24px;
+      color: #e8e8e8;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      text-align: left;
+      word-break: break-all;
+    }
+
+    .score-cell {
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .score-cell:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+    }
+
+    .score-number {
+      font-size: 32px;
+      font-weight: bold;
+      color: #e8e8e8;
+      font-family: 'Courier New', 'DIN', monospace;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 分数颜色 */
+    .score-high {
+      background: linear-gradient(135deg, rgba(0, 200, 83, 0.2) 0%, rgba(0, 200, 83, 0.3) 100%);
+    }
+
+    .score-medium {
+      background: linear-gradient(135deg, rgba(255, 214, 0, 0.2) 0%, rgba(255, 214, 0, 0.3) 100%);
+    }
+
+    .score-low {
+      background: linear-gradient(135deg, rgba(255, 23, 68, 0.2) 0%, rgba(255, 23, 68, 0.3) 100%);
+    }
+
+    .score-null {
+      background: linear-gradient(135deg, transparent 25%, rgba(142, 142, 147, 0.2) 25%, rgba(142, 142, 147, 0.2) 50%, transparent 50%, transparent 75%, rgba(142, 142, 147, 0.2) 75%);
+    }
+
+    /* 品牌标签呼吸动画 */
+    .brand-label {
+      animation: breathe 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes breathe {
+      0% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    /* 统计概览 */
+    .stats-overview {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      margin-top: 40px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .stat-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-label {
+      font-size: 24px;
+      color: #8c8c8c;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: bold;
+      color: #00F2FF;
+    }
+
+    .number-font {
+      font-family: 'Courier New', 'DIN', monospace;
+      font-weight: bold;
+    }
+
+    /* 滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 242, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 242, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <!-- 动态粒子背景 -->
+  <canvas id="particle-canvas" class="particle-canvas"></canvas>
+
+  <div class="page-container">
+    <div class="content-wrapper">
+      <!-- 标题区域 -->
+      <div class="title-section">
+        <span class="main-title">品牌 GEO 战略对阵中心</span>
+        <span class="subtitle">高信息密度决策仪表盘</span>
+      </div>
+
+      <!-- 时间预估区域（加载中显示） -->
+      <div class="time-estimation-section">
+        <div class="time-estimate">
+          <span class="estimate-label">📊 深度研判启动：</span>
+          <span class="estimate-value number-font">预计耗时 45s</span>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-container">
+          <div class="progress-inner" style="width: 65%;"></div>
+        </div>
+
+        <!-- 进度文本 -->
+        <div class="progress-text-container">
+          <span class="progress-text">AI 正在进行深度语义研判...</span>
+          <span class="progress-percentage number-font">65%</span>
+        </div>
+
+        <!-- 数据流动画 -->
+        <div class="data-flow-animation">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+      </div>
+
+      <!-- 视图切换器 -->
+      <div class="view-switcher">
+        <div class="switcher-slider" style="transform: translateX(0);"></div>
+        <div class="switcher-option active">全景透视</div>
+        <div class="switcher-option">模型对比</div>
+        <div class="switcher-option">问题诊断</div>
+      </div>
+
+      <!-- 品牌选择器（模型对比视图下显示） -->
+      <div class="selector-container" style="display: none;">
+        <div class="picker-view">
+          <span class="picker-label">选择品牌:</span>
+          <span class="picker-value">元若曦</span>
+          <span class="picker-icon">▼</span>
+        </div>
+      </div>
+
+      <!-- 战略对阵矩阵 -->
+      <div class="battlefield-matrix-container">
+        <div class="matrix-scroll">
+          <div class="matrix-grid">
+            <!-- 表头行 -->
+            <div class="grid-header">
+              <div class="cell corner-cell">问题</div>
+              <div class="cell header-cell brand-label">元若曦</div>
+              <div class="cell header-cell brand-label">养生堂</div>
+              <div class="cell header-cell brand-label">固生堂</div>
+              <div class="cell header-cell brand-label">同仁堂</div>
+            </div>
+
+            <!-- 数据行 1 -->
+            <div class="grid-row">
+              <div class="cell question-cell sticky-left brand-label">
+                <span class="question-text">养生茶哪家好</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">92</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">88</span>
+              </div>
+              <div class="cell score-cell brand-label score-medium">
+                <span class="score-number number-font">75</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">85</span>
+              </div>
+            </div>
+
+            <!-- 数据行 2 -->
+            <div class="grid-row">
+              <div class="cell question-cell sticky-left brand-label">
+                <span class="question-text">养生茶品牌推荐</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">89</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">91</span>
+              </div>
+              <div class="cell score-cell brand-label score-medium">
+                <span class="score-number number-font">72</span>
+              </div>
+              <div class="cell score-cell brand-label score-medium">
+                <span class="score-number number-font">78</span>
+              </div>
+            </div>
+
+            <!-- 数据行 3 -->
+            <div class="grid-row">
+              <div class="cell question-cell sticky-left brand-label">
+                <span class="question-text">哪个品牌的养生茶最有效</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">94</span>
+              </div>
+              <div class="cell score-cell brand-label score-medium">
+                <span class="score-number number-font">76</span>
+              </div>
+              <div class="cell score-cell brand-label score-low">
+                <span class="score-number number-font">58</span>
+              </div>
+              <div class="cell score-cell brand-label score-medium">
+                <span class="score-number number-font">69</span>
+              </div>
+            </div>
+
+            <!-- 数据行 4 -->
+            <div class="grid-row">
+              <div class="cell question-cell sticky-left brand-label">
+                <span class="question-text">养生茶如何选择</span>
+              </div>
+              <div class="cell score-cell brand-label score-medium">
+                <span class="score-number number-font">78</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">82</span>
+              </div>
+              <div class="cell score-cell brand-label score-medium">
+                <span class="score-number number-font">71</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">84</span>
+              </div>
+            </div>
+
+            <!-- 数据行 5 -->
+            <div class="grid-row">
+              <div class="cell question-cell sticky-left brand-label">
+                <span class="question-text">养生茶的功效与作用</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">87</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">90</span>
+              </div>
+              <div class="cell score-cell brand-label score-high">
+                <span class="score-number number-font">81</span>
+              </div>
+              <div class="cell score-cell brand-label score-medium">
+                <span class="score-number number-font">74</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 统计概览 -->
+      <div class="stats-overview">
+        <div class="stat-card">
+          <span class="stat-label">参测品牌</span>
+          <span class="stat-value number-font">4</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">诊断问题</span>
+          <span class="stat-value number-font">5</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">数据密度</span>
+          <span class="stat-value number-font">100%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 简单的粒子背景动画
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const particleCount = 50;
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 3 + 1;
+        this.speedX = Math.random() * 1 - 0.5;
+        this.speedY = Math.random() * 1 - 0.5;
+        this.opacity = Math.random() * 0.5 + 0.2;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x > canvas.width || this.x < 0) {
+          this.speedX = -this.speedX;
+        }
+        if (this.y > canvas.height || this.y < 0) {
+          this.speedY = -this.speedY;
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = `rgba(0, 242, 255, ${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function init() {
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw();
+
+        // 绘制连线
+        for (let j = i; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < 150) {
+            ctx.strokeStyle = `rgba(0, 242, 255, ${0.2 * (1 - distance / 150)})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    init();
+    animate();
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    // 视图切换器交互
+    const switcherOptions = document.querySelectorAll('.switcher-option');
+    const slider = document.querySelector('.switcher-slider');
+
+    switcherOptions.forEach((option, index) => {
+      option.addEventListener('click', () => {
+        switcherOptions.forEach(opt => opt.classList.remove('active'));
+        option.classList.add('active');
+        slider.style.transform = `translateX(${index * 100}%)`;
+      });
+    });
+  </script>
+</body>
+</html>

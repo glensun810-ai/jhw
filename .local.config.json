@@ -1,0 +1,9 @@
+{
+  "description": "本地配置文件（不提交到 Git）",
+  "generated_at": "2026-02-19T22:28:47+08:00",
+  "fixes_applied": [
+    "删除 miniprogram/pages 目录",
+    "清理缓存目录",
+    "更新 project.config.json"
+  ]
+}
