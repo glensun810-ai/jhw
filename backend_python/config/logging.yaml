@@ -1,0 +1,204 @@
+# =============================================================================
+# 统一日志配置文件
+# =============================================================================
+# 此文件定义日志系统的完整配置，包括:
+# - 日志级别
+# - 处理器配置 (Console, File, AI 专用，Error 专用)
+# - 日志格式
+# - 轮转策略
+# - 链路追踪设置
+#
+# 使用方式:
+#   from backend_python.logging import init_logging
+#   factory = init_logging_from_config('config/logging.yaml')
+# =============================================================================
+
+# 基础配置
+version: 1
+disable_existing_loggers: false
+
+# 日志级别配置
+log_level: INFO  # 根日志级别 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+console_level: INFO  # 控制台日志级别
+file_level: DEBUG  # 文件日志级别
+
+# 存储配置
+log_dir: logs  # 日志目录 (相对于 backend_python)
+encoding: utf-8
+
+# 队列配置 (异步日志核心)
+queue:
+  max_size: 10000  # 队列最大容量 (条)
+  timeout: 1.0  # 队列满时的等待时间 (秒)
+
+# 轮转策略
+rotation:
+  # 应用日志轮转
+  app_log:
+    max_bytes: 10485760  # 10MB
+    backup_count: 7  # 保留 7 个备份
+  
+  # AI 响应日志轮转
+  ai_log:
+    max_bytes: 104857600  # 100MB
+    backup_count: 30  # 保留 30 个备份
+  
+  # 错误日志轮转
+  error_log:
+    max_bytes: 10485760  # 10MB
+    backup_count: 15  # 保留 15 个备份
+
+# 格式化配置
+formatters:
+  # JSON 格式化器 (推荐用于生产环境)
+  json:
+    class: backend_python.logging.JSONFormatter
+    include_extra: true
+  
+  # 详细格式化器 (用于开发环境)
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(funcName)s() - %(message)s'
+  
+  # 简洁格式化器
+  simple:
+    format: '%(levelname)s - %(message)s'
+
+# 处理器配置
+handlers:
+  # 控制台处理器
+  console:
+    enabled: true
+    class: logging.StreamHandler
+    level: INFO
+    formatter: json
+    stream: ext://sys.stdout
+  
+  # 应用日志文件处理器
+  app_file:
+    enabled: true
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: json
+    filename: logs/app.log
+    maxBytes: 10485760
+    backupCount: 7
+    encoding: utf-8
+  
+  # AI 响应专用处理器
+  ai_file:
+    enabled: true
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: json
+    filename: logs/ai_responses.log
+    maxBytes: 104857600
+    backupCount: 30
+    encoding: utf-8
+    filter: ai_filter  # 只处理包含'ai'的日志
+  
+  # 错误日志专用处理器
+  error_file:
+    enabled: true
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: json
+    filename: logs/errors.log
+    maxBytes: 10485760
+    backupCount: 15
+    encoding: utf-8
+
+# 日志器配置
+loggers:
+  # 主应用日志器
+  wechat_backend:
+    level: DEBUG
+    handlers: [console, app_file]
+    propagate: false
+  
+  # API 模块日志器
+  wechat_backend.api:
+    level: INFO
+    handlers: [console, app_file]
+    propagate: false
+  
+  # AI 模块日志器
+  wechat_backend.ai:
+    level: INFO
+    handlers: [console, app_file, ai_file]
+    propagate: false
+  
+  # 数据库模块日志器
+  wechat_backend.database:
+    level: WARNING
+    handlers: [console, app_file]
+    propagate: false
+  
+  # 微信模块日志器
+  wechat_backend.wechat:
+    level: INFO
+    handlers: [console, app_file]
+    propagate: false
+  
+  # 安全审计日志器
+  wechat_backend.security:
+    level: WARNING
+    handlers: [console, app_file, error_file]
+    propagate: false
+
+# 根日志器配置
+root:
+  level: INFO
+  handlers: [console, app_file, error_file]
+
+# 第三方库日志抑制
+suppress_loggers:
+  - urllib3
+  - requests
+  - certifi
+  - charset_normalizer
+
+# 链路追踪配置
+tracing:
+  enabled: true
+  header_name: X-Trace-ID  # HTTP 请求头名称
+  generate_span_id: true
+
+# 采样配置 (用于高并发场景)
+sampling:
+  enabled: true
+  sample_rate: 0.1  # 10% 采样率 (DEBUG/INFO 级别)
+  level_threshold: WARNING  # 超过此级别不采样 (全部记录)
+  # 路径采样规则
+  always_sample_paths:
+    - /api/ai/*
+    - /api/payment/*
+  never_sample_paths:
+    - /health
+    - /metrics
+    - /favicon.ico
+
+# 链路追踪配置
+tracing:
+  enabled: true
+  header_name: X-Trace-ID  # HTTP 请求头名称
+  generate_span_id: true
+  # 采样配置
+  sampler:
+    sample_rate: 1.0  # 100% 采样 (生产环境建议降低)
+  # 导出配置
+  exporter:
+    type: logging  # logging, console, otlp
+  # 服务信息
+  service_name: wechat_backend
+  # 忽略的路径
+  skip_paths:
+    - /health
+    - /metrics
+    - /static/*
+    - /favicon.ico
+
+# 告警配置 (可选)
+alerting:
+  enabled: false
+  error_rate_threshold: 0.05  # 错误率超过 5% 触发告警
+  window_seconds: 60  # 统计窗口 (秒)
