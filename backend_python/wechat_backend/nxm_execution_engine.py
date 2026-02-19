@@ -161,6 +161,18 @@ def execute_nxm_test(
                             f"{response_text[:200]}..."
                         )
 
+                        # 先解析 GEO 分析结果
+                        analysis = parse_geo_json(response_text)
+
+                        # 记录解析结果
+                        api_logger.info(
+                            f"GEO Analysis Result [Q:{q_idx+1}] [MainBrand:{main_brand}] [Model:{model_name}]: "
+                            f"rank={analysis.get('rank', -1)}, "
+                            f"sentiment={analysis.get('sentiment', 0)}, "
+                            f"brand_mentioned={analysis.get('brand_mentioned', False)}, "
+                            f"sources_count={len(analysis.get('cited_sources', []))}"
+                        )
+
                         # 记录到 ai_responses.jsonl 文件
                         try:
                             from utils.ai_response_logger_v2 import log_ai_response
@@ -188,17 +200,6 @@ def execute_nxm_test(
                         except Exception as log_error:
                             api_logger.warning(f"[AIResponseLogger] Failed to log: {log_error}")
 
-                        analysis = parse_geo_json(response_text)
-
-                        # 记录解析结果
-                        api_logger.info(
-                            f"GEO Analysis Result [Q:{q_idx+1}] [MainBrand:{main_brand}] [Model:{model_name}]: "
-                            f"rank={analysis.get('rank', -1)}, "
-                            f"sentiment={analysis.get('sentiment', 0)}, "
-                            f"brand_mentioned={analysis.get('brand_mentioned', False)}, "
-                            f"sources_count={len(analysis.get('cited_sources', []))}"
-                        )
-
                         # 5. 构造结构化结果
                         result_item.update({
                             "content": response_text,
@@ -223,7 +224,7 @@ def execute_nxm_test(
                             f"AI Error: [Q:{q_idx+1}] [MainBrand:{main_brand}] [Model:{model_name}] - "
                             f"{ai_response.error_message}"
                         )
-                        
+
                         # 记录失败的调用到日志文件
                         try:
                             from utils.ai_response_logger_v2 import log_ai_response
@@ -239,6 +240,7 @@ def execute_nxm_test(
                                 error_type=getattr(ai_response, 'error_type', 'unknown'),
                                 execution_id=execution_id,
                                 question_index=q_idx + 1,
+                                total_questions=len(raw_questions) * len(selected_models),
                                 metadata={"source": "nxm_execution_engine", "error_phase": "api_call"}
                             )
                         except Exception as log_error:
@@ -254,6 +256,28 @@ def execute_nxm_test(
                         "status": "failed",
                         "error": str(e)
                     })
+                    
+                    # 记录异常调用到日志文件（确保所有平台包括豆包都被记录）
+                    try:
+                        from utils.ai_response_logger_v2 import log_ai_response
+                        log_ai_response(
+                            question=geo_prompt,
+                            response="",
+                            platform=normalized_model_name,
+                            model=model_id,
+                            brand=main_brand,
+                            latency_ms=int((time.time() - start_time) * 1000),
+                            success=False,
+                            error_message=str(e),
+                            error_type="exception",
+                            execution_id=execution_id,
+                            question_index=q_idx + 1,
+                            total_questions=len(raw_questions) * len(selected_models),
+                            metadata={"source": "nxm_execution_engine", "error_phase": "adapter_call"}
+                        )
+                        api_logger.info(f"[AIResponseLogger] Exception logged for [Q:{q_idx+1}] [Model:{model_name}]")
+                    except Exception as log_error:
+                        api_logger.warning(f"[AIResponseLogger] Failed to log exception: {log_error}")
                 
                 # 6. 实时保存结果（防止崩溃丢失）
                 all_results.append(result_item)

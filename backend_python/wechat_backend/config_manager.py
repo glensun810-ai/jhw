@@ -63,7 +63,8 @@ class ConfigurationManager:
         platform_models = {
             'deepseek': 'deepseek-chat',
             'deepseekr1': 'deepseek-chat',  # deepseekr1 使用相同的默认模型
-            'doubao': 'doubao-lite',
+            # 2026 年 2 月 19 日更新：使用新的豆包部署点 ID
+            'doubao': 'ep-20260212000000-gd5tq',
             'qwen': 'qwen-max',
             'kimi': 'kimi-large',
             'chatgpt': 'gpt-4',

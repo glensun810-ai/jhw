@@ -18,14 +18,14 @@ class DoubaoProvider(BaseAIProvider):
     """
     豆包 AI 平台提供者，实现BaseAIProvider接口
     用于将 豆包 API 接入 GEO 内容质量验证系统
-    支持两种模式：普通对话模式（doubao-lite）和深度推理模式（doubao-pro）
+    支持两种模式：普通对话模式和深度推理模式
     包含内部 Prompt 约束逻辑，可配置是否启用中文回答及事实性约束
     """
 
     def __init__(
         self,
         api_key: str,
-        model_name: str = "doubao-lite",  # 默认使用轻量级模型
+        model_name: str = None,  # 默认使用配置管理器的值
         mode: str = "chat",  # 新增 mode 参数，支持 "chat" 或 "reasoner"
         temperature: float = 0.7,
         max_tokens: int = 1000,
@@ -36,7 +36,7 @@ class DoubaoProvider(BaseAIProvider):
 
         Args:
             api_key: 豆包 API 密钥
-            model_name: 使用的模型名称，默认为 "doubao-lite"
+            model_name: 使用的模型名称，默认从配置管理器获取
             mode: 调用模式，"chat" 表示普通对话模式，"reasoner" 表示深度推理模式
             temperature: 温度参数，控制生成内容的随机性
             max_tokens: 最大生成 token 数
