@@ -3,7 +3,7 @@
 ## 服务状态
 
 ✅ **当前状态**: 服务正在运行
-✅ **访问地址**: http://127.0.0.1:5001
+✅ **访问地址**: http://127.0.0.1:5000
 ✅ **进程ID**: （动态）
 
 ## 启动服务
@@ -59,7 +59,7 @@ cd /Users/sgl/PycharmProjects/PythonProject
 
 ```javascript
 // app.js 或相应的配置文件
-const BACKEND_BASE_URL = 'http://127.0.0.1:5001';
+const BACKEND_BASE_URL = 'http://127.0.0.1:5000';
 
 // 示例API调用
 wx.request({

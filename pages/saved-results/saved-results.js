@@ -1,3 +1,6 @@
+// pages/saved-results/saved-results.js
+const { getSavedResults, deleteResult } = require('../../utils/saved-results-sync');
+
 Page({
   data: {
     savedResults: [],
@@ -26,7 +29,8 @@ Page({
       { label: '按时间正序', value: 'date_asc' },
       { label: '按品牌名称', value: 'brand_name' },
       { label: '按综合分数', value: 'overall_score' }
-    ]
+    ],
+    isLoading: false
   },
 
   onLoad: function() {
@@ -38,27 +42,34 @@ Page({
   },
 
   loadSavedResults: function() {
-    try {
-      const savedResults = wx.getStorageSync('savedSearchResults') || [];
-      this.setData({
-        savedResults: savedResults,
-        filteredResults: savedResults
+    const that = this;
+    this.setData({ isLoading: true });
+
+    // 使用云端同步工具获取保存的结果
+    getSavedResults()
+      .then(savedResults => {
+        that.setData({
+          savedResults: savedResults,
+          filteredResults: savedResults,
+          isLoading: false
+        });
+
+        // 提取所有分类
+        const categories = [...new Set(savedResults.map(item => item.category).filter(cat => cat))];
+        that.setData({
+          allCategories: ['全部分类', ...categories]
+        });
+
+        that.applyFilters();
+      })
+      .catch(error => {
+        console.error('加载保存的搜索结果失败', error);
+        that.setData({ isLoading: false });
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
+        });
       });
-      
-      // 提取所有分类
-      const categories = [...new Set(savedResults.map(item => item.category).filter(cat => cat))];
-      this.setData({
-        allCategories: ['全部分类', ...categories]
-      });
-      
-      this.applyFilters();
-    } catch (e) {
-      console.error('加载保存的搜索结果失败', e);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-    }
   },
 
   onSearchInput: function(e) {
@@ -236,33 +247,40 @@ Page({
 
   deleteResult: function(e) {
     const id = e.currentTarget.dataset.id;
-    
+    const that = this;
+
     wx.showModal({
       title: '确认删除',
       content: '确定要删除这条保存的搜索结果吗？',
       success: (res) => {
         if (res.confirm) {
-          let savedResults = this.data.savedResults;
-          savedResults = savedResults.filter(item => item.id !== id);
-          
-          try {
-            wx.setStorageSync('savedSearchResults', savedResults);
-            this.setData({
-              savedResults: savedResults
+          that.setData({ isLoading: true });
+
+          // 使用云端同步工具删除结果
+          deleteResult(id)
+            .then(success => {
+              if (success) {
+                that.loadSavedResults();
+                wx.showToast({
+                  title: '删除成功',
+                  icon: 'success'
+                });
+              } else {
+                that.setData({ isLoading: false });
+                wx.showToast({
+                  title: '删除失败',
+                  icon: 'none'
+                });
+              }
+            })
+            .catch(error => {
+              console.error('删除保存的搜索结果失败', error);
+              that.setData({ isLoading: false });
+              wx.showToast({
+                title: '删除失败',
+                icon: 'none'
+              });
             });
-            this.applyFilters();
-            
-            wx.showToast({
-              title: '删除成功',
-              icon: 'success'
-            });
-          } catch (e) {
-            console.error('删除保存的搜索结果失败', e);
-            wx.showToast({
-              title: '删除失败',
-              icon: 'none'
-            });
-          }
         }
       }
     });

@@ -254,9 +254,24 @@ Page({
               isLoading: false
             });
 
-            // 跳转到结果页面
+            // P0-1 修复：跳转到正确的结果页面路径，并传递完整数据
+            // 从 detailed_results 或 results 中提取数据
+            const resultsData = statusData.detailed_results || statusData.results || [];
+            
+            // 保存到本地存储，避免 URL 过长
+            wx.setStorageSync('latestTestResults_' + this.executionId, resultsData);
+            wx.setStorageSync('latestTargetBrand', this.brandList[0] || '');
+            wx.setStorageSync('latestCompetitorBrands', this.brandList.slice(1) || []);
+            
+            console.log('✅ 任务完成，测试结果已保存:', {
+              executionId: this.executionId,
+              resultsCount: resultsData.length,
+              brands: this.brandList
+            });
+
+            // 跳转到结果页面（修复路径）
             wx.navigateTo({
-              url: `/pages/results/index?executionId=${this.executionId}`
+              url: `/pages/results/results?executionId=${this.executionId}&brandName=${encodeURIComponent(this.brandList[0] || '')}`
             });
             return;
           }

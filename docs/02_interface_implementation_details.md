@@ -53,7 +53,7 @@ const API_ENDPOINTS = {
 
 | 环境 | baseURL | 超时时间 | 说明 |
 |------|---------|---------|------|
-| develop | `http://127.0.0.1:5001` | 30秒 | 开发环境，支持模拟器调试 |
+| develop | `http://127.0.0.1:5000` | 30秒 | 开发环境，支持模拟器调试 |
 | trial | `https://staging.api.yourdomain.com` | 20秒 | 体验版环境 |
 | release | `https://api.yourdomain.com` | 15秒 | 正式生产环境 |
 

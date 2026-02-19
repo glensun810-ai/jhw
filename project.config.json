@@ -22,7 +22,7 @@
     "checkInvalidKey": true,
     "checkSiteMap": true,
     "uploadWithSourceMap": true,
-    "compileHotReLoad": false,
+    "compileHotReLoad": true,
     "useMultiFrameRuntime": true,
     "useApiHook": true,
     "useApiHostProcess": true,
@@ -43,7 +43,7 @@
     "useCompilerPlugins": false
   },
   "compileType": "miniprogram",
-  "libVersion": "2.14.1",
+  "libVersion": "3.3.4",
   "appid": "wx8876348e089bc261",
   "projectname": "进化湾GEO",
   "debugOptions": {

@@ -1,3 +1,6 @@
+// pages/history-detail/history-detail.js
+const { getSavedResults } = require('../../utils/saved-results-sync');
+
 Page({
   data: {
     brandName: '',
@@ -13,58 +16,59 @@ Page({
   },
 
   onLoad: function(options) {
-    // 从参数获取历史记录ID
+    // 从参数获取历史记录 ID
     const recordId = options.id;
-    
+
     if (!recordId) {
       wx.showToast({
-        title: '缺少记录ID',
+        title: '缺少记录 ID',
         icon: 'none'
       });
       return;
     }
-    
-    // 从本地存储获取历史记录
+
+    // 从本地存储或云端获取历史记录
     this.loadHistoryRecord(recordId);
   },
 
   // 加载历史记录
   loadHistoryRecord: function(recordId) {
-    try {
-      // 从本地存储获取所有搜索结果
-      const searchResults = wx.getStorageSync('savedSearchResults') || [];
-      
-      // 查找指定ID的记录
-      const record = searchResults.find(item => item.id === recordId);
-      
-      if (!record) {
+    const that = this;
+    // 使用云端同步工具获取保存的结果
+    getSavedResults()
+      .then(searchResults => {
+        // 查找指定 ID 的记录
+        const record = searchResults.find(item => item.id === recordId);
+
+        if (!record) {
+          wx.showToast({
+            title: '未找到记录',
+            icon: 'none'
+          });
+          return;
+        }
+
+        // 设置页面数据
+        that.setData({
+          brandName: record.brandName,
+          timestamp: record.timestamp,
+          overallScore: record.results.overallScore || 0,
+          overallGrade: record.results.overallGrade || 'D',
+          overallSummary: record.results.overallSummary || '暂无评价',
+          overallAuthority: record.results.overallAuthority || 0,
+          overallVisibility: record.results.overallVisibility || 0,
+          overallPurity: record.results.overallPurity || 0,
+          overallConsistency: record.results.overallConsistency || 0,
+          detailedResults: record.results.detailed_results || []
+        });
+      })
+      .catch(error => {
+        console.error('加载历史记录失败', error);
         wx.showToast({
-          title: '未找到记录',
+          title: '加载失败',
           icon: 'none'
         });
-        return;
-      }
-      
-      // 设置页面数据
-      this.setData({
-        brandName: record.brandName,
-        timestamp: record.timestamp,
-        overallScore: record.results.overallScore || 0,
-        overallGrade: record.results.overallGrade || 'D',
-        overallSummary: record.results.overallSummary || '暂无评价',
-        overallAuthority: record.results.overallAuthority || 0,
-        overallVisibility: record.results.overallVisibility || 0,
-        overallPurity: record.results.overallPurity || 0,
-        overallConsistency: record.results.overallConsistency || 0,
-        detailedResults: record.results.detailed_results || []
       });
-    } catch (e) {
-      console.error('加载历史记录失败', e);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-    }
   },
 
   // 格式化日期
@@ -83,7 +87,8 @@ Page({
 
   // 查看历史
   viewHistory: function() {
-    wx.navigateTo({ url: '/pages/history/history' });
+    // 跳转到个人历史记录页面（查看本地保存的结果，无需登录）
+    wx.navigateTo({ url: '/pages/personal-history/personal-history' });
   },
 
   // 生成报告

@@ -2,7 +2,7 @@ App({
   globalData: {
     userInfo: null,
     openid: null,
-    serverUrl: 'http://127.0.0.1:5001' // 后端服务器地址
+    serverUrl: 'http://127.0.0.1:5000' // 后端服务器地址
   },
 
   onLaunch: function () {

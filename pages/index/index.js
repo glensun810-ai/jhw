@@ -8,6 +8,7 @@ const {
   isTestFailed
 } = require('../../services/homeService.js');
 const { parseTaskStatus } = require('../../services/taskStatusService');
+const { aggregateReport } = require('../../services/reportAggregator');
 
 const appid = 'wx8876348e089bc261'; // 您的 AppID
 
@@ -54,6 +55,7 @@ Page({
     testProgress: 0,
     progressText: '准备启动AI认知诊断...',
     testCompleted: false,
+    completedTime: null,
 
     // 高级设置控制
     showAdvancedSettings: false,
@@ -405,6 +407,8 @@ Page({
       testProgress: 0,
       progressText: '正在启动AI认知诊断...',
       testCompleted: false,
+      completedTime: null,
+    completedTime: null,
     });
 
     this.callBackendBrandTest(brand_list, selectedModels, customQuestions);
@@ -524,10 +528,14 @@ Page({
             // 使用数据防御机制处理报告数据
             const processedReportData = this.processReportData(reportData);
 
+            // 生成战略看板数据（第二阶段：聚合引擎）
+            const dashboardData = this.generateDashboardData(processedReportData);
+
             this.setData({
               reportData: processedReportData,
               isTesting: false,
               testCompleted: true,
+              completedTime: this.getCompletedTimeText(),
               progressText: '诊断完成，正在生成报告...',
               // 设置趋势图表数据
               trendChartData: this.generateTrendChartData(processedReportData),
@@ -538,11 +546,16 @@ Page({
               // 设置竞争分析数据
               competitionData: this.extractCompetitionData(processedReportData),
               // 设置信源列表数据
-              sourceListData: this.extractSourceListData(processedReportData)
+              sourceListData: this.extractSourceListData(processedReportData),
+              // 设置战略看板数据
+              dashboardData: dashboardData
             });
 
             wx.showToast({ title: '诊断完成', icon: 'success' });
             this.renderReport(); // 触发报告渲染
+            
+            // 自动跳转到战略看板（第三阶段：麦肯锡看板）
+            this.navigateToDashboard();
           }
         } else {
           console.error('获取任务状态失败:', res);
@@ -1033,7 +1046,8 @@ Page({
   },
 
   viewHistory: function() {
-    wx.navigateTo({ url: '/pages/history/history' });
+    // 跳转到个人历史记录页面（查看本地保存的结果，无需登录）
+    wx.navigateTo({ url: '/pages/personal-history/personal-history' });
   },
 
   // 显示保存配置模态框
@@ -1386,7 +1400,7 @@ Page({
     wx.showModal({
       title: '设置API服务器地址',
       editable: true,
-      placeholderText: '请输入API服务器地址，例如：http://192.168.1.100:5001',
+      placeholderText: '请输入API服务器地址，例如：http://192.168.1.100:5000',
       success: (res) => {
         if (res.cancel) {
           return;
@@ -1418,5 +1432,122 @@ Page({
         });
       }
     });
-  }
+  },
+
+  /**
+   * 生成战略看板数据（第二阶段：聚合引擎）
+   * @param {Object} processedReportData - 处理后的报告数据
+   * @returns {Object} 看板数据
+   */
+  generateDashboardData: function(processedReportData) {
+    try {
+      // 提取原始结果数组
+      const rawResults = Array.isArray(processedReportData) 
+        ? processedReportData 
+        : (processedReportData.detailed_results || processedReportData.results || []);
+      
+      if (!rawResults || rawResults.length === 0) {
+        console.warn('没有可用的原始结果数据');
+        return null;
+      }
+      
+      // 调用聚合引擎
+      const brandName = this.data.brandName;
+      const competitors = this.data.competitorBrands || [];
+      
+      const dashboardData = aggregateReport(rawResults, brandName, competitors);
+      
+      // 保存到全局存储（供 dashboard 页面使用）
+      const app = getApp();
+      app.globalData.lastReport = {
+        raw: rawResults,
+        dashboard: dashboardData,
+        competitors: competitors
+      };
+      
+      return dashboardData;
+    } catch (error) {
+      console.error('生成战略看板数据失败:', error);
+      return null;
+    }
+  },
+
+  /**
+   * 跳转到战略看板（第三阶段：麦肯锡看板）
+   */
+  navigateToDashboard: function() {
+    try {
+      // 延迟 500ms 跳转，让用户看到完成提示
+      setTimeout(() => {
+        wx.navigateTo({
+          url: '/pages/report/dashboard/index',
+          fail: (err) => {
+            console.error('跳转到战略看板失败:', err);
+            // 如果跳转失败，显示提示
+            wx.showToast({
+              title: '请前往"我的"查看报告',
+              icon: 'none'
+            });
+          }
+        });
+      }, 500);
+    } catch (error) {
+      console.error('导航到战略看板失败:', error);
+    }
+  },
+
+  /**
+   * 查看诊断报告（跳转到 Dashboard）
+   */
+  viewReport: function() {
+    if (this.data.reportData || this.data.dashboardData) {
+      wx.navigateTo({
+        url: '/pages/report/dashboard/index',
+        fail: (err) => {
+          console.error('跳转报告页面失败:', err);
+          wx.showToast({
+            title: '跳转失败',
+            icon: 'none'
+          });
+        }
+      });
+    } else {
+      wx.showToast({
+        title: '暂无报告数据',
+        icon: 'none'
+      });
+    }
+  },
+
+  /**
+   * 重新诊断
+   */
+  retryDiagnosis: function() {
+    wx.showModal({
+      title: '确认重新诊断',
+      content: '重新诊断将覆盖当前的诊断结果，是否继续？',
+      success: (res) => {
+        if (res.confirm) {
+          // 清空完成状态
+          this.setData({
+            testCompleted: false,
+            completedTime: null
+          });
+          // 开始新的诊断
+          this.startBrandTest();
+        }
+      }
+    });
+  },
+
+  /**
+   * 获取完成时间文本
+   */
+  getCompletedTimeText: function() {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    return `完成于 ${hours}:${minutes}`;
+  },
+
 });

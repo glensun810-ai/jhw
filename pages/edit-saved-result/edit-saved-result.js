@@ -1,3 +1,6 @@
+// pages/edit-saved-result/edit-saved-result.js
+const { getSavedResults, updateResult } = require('../../utils/saved-results-sync');
+
 Page({
   data: {
     id: '',
@@ -16,32 +19,40 @@ Page({
     this.setData({
       id: id
     });
-    
+
     this.loadResult(id);
   },
 
   loadResult: function(id) {
-    try {
-      const savedResults = wx.getStorageSync('savedSearchResults') || [];
-      const result = savedResults.find(item => item.id === id);
-      
-      if (result) {
-        this.setData({
-          brandName: result.brandName,
-          tags: result.tags || [],
-          selectedCategory: result.category || '未分类',
-          categoryIndex: this.data.categories.indexOf(result.category || '未分类'),
-          notes: result.notes || '',
-          isFavorite: result.isFavorite || false
+    const that = this;
+    // 使用云端同步工具获取保存的结果
+    getSavedResults()
+      .then(savedResults => {
+        const result = savedResults.find(item => item.id === id);
+
+        if (result) {
+          that.setData({
+            brandName: result.brandName,
+            tags: result.tags || [],
+            selectedCategory: result.category || '未分类',
+            categoryIndex: that.data.categories.indexOf(result.category || '未分类'),
+            notes: result.notes || '',
+            isFavorite: result.isFavorite || false
+          });
+        } else {
+          wx.showToast({
+            title: '未找到记录',
+            icon: 'none'
+          });
+        }
+      })
+      .catch(error => {
+        console.error('加载保存的搜索结果失败', error);
+        wx.showToast({
+          title: '加载失败',
+          icon: 'none'
         });
-      }
-    } catch (e) {
-      console.error('加载保存的搜索结果失败', e);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
       });
-    }
   },
 
   onBrandNameInput: function(e) {
@@ -105,42 +116,33 @@ Page({
       return;
     }
 
-    try {
-      const savedResults = wx.getStorageSync('savedSearchResults') || [];
-      const index = savedResults.findIndex(item => item.id === this.data.id);
-      
-      if (index !== -1) {
-        savedResults[index] = {
-          ...savedResults[index],
-          brandName: this.data.brandName.trim(),
-          tags: this.data.tags,
-          category: this.data.selectedCategory,
-          notes: this.data.notes,
-          isFavorite: this.data.isFavorite
-        };
-        
-        wx.setStorageSync('savedSearchResults', savedResults);
-        
+    const that = this;
+    const updateData = {
+      brandName: this.data.brandName.trim(),
+      tags: this.data.tags,
+      category: this.data.selectedCategory,
+      notes: this.data.notes,
+      isFavorite: this.data.isFavorite
+    };
+
+    // 使用云端同步工具更新结果
+    updateResult({ id: this.data.id, ...updateData })
+      .then(() => {
         wx.showToast({
           title: '保存成功',
           icon: 'success'
         });
-        
+
         // 返回上一页
         wx.navigateBack();
-      } else {
+      })
+      .catch(error => {
+        console.error('保存更改失败', error);
         wx.showToast({
-          title: '找不到对应记录',
+          title: '保存失败',
           icon: 'none'
         });
-      }
-    } catch (e) {
-      console.error('保存更改失败', e);
-      wx.showToast({
-        title: '保存失败',
-        icon: 'none'
       });
-    }
   },
 
   cancelEdit: function() {

@@ -148,11 +148,39 @@
     </view>
 
     <!-- 主操作按钮 -->
+    <!-- 主操作按钮 -->
     <view class="main-action-section">
-      <button class="scan-button" bindtap="startBrandTest" disabled="{{isTesting}}">
-        <text wx:if="{{!isTesting}}">AI品牌战略诊断</text>
-        <text wx:else>诊断中...</text>
+      <!-- 状态 1&2: 未诊断或诊断中 -->
+      <button class="scan-button {{testCompleted ? 'hidden' : ''}}"
+              bindtap="startBrandTest"
+              disabled="{{isTesting}}">
+        <text class="button-content">
+          <text class="button-icon" wx:if="{{!isTesting}}">🔍</text>
+          <text class="button-text">{{isTesting ? '诊断中...' : 'AI 品牌战略诊断'}}</text>
+        </text>
+        <text class="loading-spinner" wx:if="{{isTesting}}"></text>
       </button>
+
+      <!-- 状态 3: 已完成 -->
+      <view class="completed-actions {{testCompleted ? '' : 'hidden'}}">
+        <view class="completed-badge">
+          <text class="badge-icon">✅</text>
+          <text class="badge-text">诊断已完成</text>
+          <text class="badge-time" wx:if="{{completedTime}}">{{completedTime}}</text>
+        </view>
+        
+        <view class="completed-buttons">
+          <button class="btn-primary-view" bindtap="viewReport">
+            <text class="btn-icon">📊</text>
+            <text class="btn-text">查看诊断报告</text>
+          </button>
+          
+          <button class="btn-secondary-retry" bindtap="retryDiagnosis">
+            <text class="btn-icon">🔄</text>
+            <text class="btn-text">重新诊断</text>
+          </button>
+        </view>
+      </view>
     </view>
 
     <!-- Zone A: 决策驾驶舱 (The Commander View) -->
