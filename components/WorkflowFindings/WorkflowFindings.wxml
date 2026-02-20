@@ -1,0 +1,162 @@
+<!--components/WorkflowFindings/WorkflowFindings.wxml-->
+<!--
+  P0 级空缺修复：工作流发现列表组件
+  P1 修复：使用 safeStages 数据，避免复杂表达式
+
+  展示内容:
+  - 4 阶段工作流状态
+  - 各阶段关键发现
+  - 问题和建议列表
+-->
+<view class="workflow-findings">
+  <!-- 组件标题 -->
+  <view class="workflow-findings__header">
+    <view class="workflow-findings__title">
+      <text class="workflow-findings__icon">🔍</text>
+      <text class="workflow-findings__title-text">{{title}}</text>
+    </view>
+    <view class="workflow-findings__subtitle" wx:if="{{subtitle}}">{{subtitle}}</view>
+  </view>
+
+  <!-- 工作流阶段 -->
+  <view class="workflow-findings__stages">
+    <!-- 阶段 1: 评估 -->
+    <view class="workflow-findings__stage {{safeStages.intelligence_evaluating.status === 'completed' ? 'completed' : ''}}">
+      <view class="workflow-findings__stage-header">
+        <view class="workflow-findings__stage-icon">📋</view>
+        <view class="workflow-findings__stage-info">
+          <text class="workflow-findings__stage-name">评估阶段</text>
+          <text class="workflow-findings__stage-status">
+            {{safeStages.intelligence_evaluating.status === 'completed' ? '已完成' : '进行中'}}
+          </text>
+        </view>
+      </view>
+      <view class="workflow-findings__stage-content" wx:if="{{expandedStage === 'evaluating' || expandAll}}">
+        <view class="workflow-findings__metrics">
+          <view class="workflow-findings__metric-item">
+            <text class="workflow-findings__metric-label">权威性</text>
+            <text class="workflow-findings__metric-value {{getScoreClass(safeStages.intelligence_evaluating.metrics.authority_score)}}">
+              {{safeStages.intelligence_evaluating.metrics.authority_score.toFixed(0)}}
+            </text>
+          </view>
+          <view class="workflow-findings__metric-item">
+            <text class="workflow-findings__metric-label">完整度</text>
+            <text class="workflow-findings__metric-value {{getScoreClass(safeStages.intelligence_evaluating.metrics.completeness_score)}}">
+              {{safeStages.intelligence_evaluating.metrics.completeness_score.toFixed(0)}}
+            </text>
+          </view>
+          <view class="workflow-findings__metric-item">
+            <text class="workflow-findings__metric-label">时效性</text>
+            <text class="workflow-findings__metric-value {{getScoreClass(safeStages.intelligence_evaluating.metrics.timeliness_score)}}">
+              {{safeStages.intelligence_evaluating.metrics.timeliness_score.toFixed(0)}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 阶段 2: 分析 -->
+    <view class="workflow-findings__stage {{safeStages.intelligence_analyzing.status === 'completed' ? 'completed' : ''}}">
+      <view class="workflow-findings__stage-header">
+        <view class="workflow-findings__stage-icon">🧠</view>
+        <view class="workflow-findings__stage-info">
+          <text class="workflow-findings__stage-name">分析阶段</text>
+          <text class="workflow-findings__stage-status">
+            {{safeStages.intelligence_analyzing.status === 'completed' ? '已完成' : '进行中'}}
+          </text>
+        </view>
+      </view>
+      <view class="workflow-findings__stage-content" wx:if="{{expandedStage === 'analyzing' || expandAll}}">
+        <view class="workflow-findings__findings-list" wx:if="{{safeStages.intelligence_analyzing.findings.length > 0}}">
+          <view class="workflow-findings__finding" wx:for="{{safeStages.intelligence_analyzing.findings}}" wx:key="index">
+            <text class="workflow-findings__finding-icon">•</text>
+            <text class="workflow-findings__finding-text">{{item}}</text>
+          </view>
+        </view>
+        <view class="workflow-findings__discoveries" wx:if="{{safeStages.intelligence_analyzing.key_discoveries.length > 0}}">
+          <view class="workflow-findings__discoveries-title">关键发现</view>
+          <view class="workflow-findings__discovery" wx:for="{{safeStages.intelligence_analyzing.key_discoveries}}" wx:key="index">
+            <text class="workflow-findings__discovery-icon">💡</text>
+            <text class="workflow-findings__discovery-text">{{item}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 阶段 3: 竞争分析 -->
+    <view class="workflow-findings__stage {{safeStages.competition_analyzing.status === 'completed' ? 'completed' : ''}}">
+      <view class="workflow-findings__stage-header">
+        <view class="workflow-findings__stage-icon">⚔️</view>
+        <view class="workflow-findings__stage-info">
+          <text class="workflow-findings__stage-name">竞争分析</text>
+          <text class="workflow-findings__stage-status">
+            {{safeStages.competition_analyzing.status === 'completed' ? '已完成' : '进行中'}}
+          </text>
+        </view>
+      </view>
+      <view class="workflow-findings__stage-content" wx:if="{{expandedStage === 'competition' || expandAll}}">
+        <view class="workflow-findings__market-position" wx:if="{{safeStages.competition_analyzing.market_position.market_leader || safeStages.competition_analyzing.market_position.challenger}}">
+          <view class="workflow-findings__position-item">
+            <text class="workflow-findings__position-label">市场领导者</text>
+            <text class="workflow-findings__position-value">{{safeStages.competition_analyzing.market_position.market_leader}}</text>
+          </view>
+          <view class="workflow-findings__position-item">
+            <text class="workflow-findings__position-label">挑战者</text>
+            <text class="workflow-findings__position-value">{{safeStages.competition_analyzing.market_position.challenger}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 阶段 4: 信源追溯 -->
+    <view class="workflow-findings__stage {{safeStages.source_tracing.status === 'completed' ? 'completed' : ''}}">
+      <view class="workflow-findings__stage-header">
+        <view class="workflow-findings__stage-icon">🔗</view>
+        <view class="workflow-findings__stage-info">
+          <text class="workflow-findings__stage-name">信源追溯</text>
+          <text class="workflow-findings__stage-status">
+            {{safeStages.source_tracing.status === 'completed' ? '已完成' : '进行中'}}
+          </text>
+        </view>
+      </view>
+      <view class="workflow-findings__stage-content" wx:if="{{expandedStage === 'source' || expandAll}}">
+        <view class="workflow-findings__credibility">
+          <view class="workflow-findings__credibility-item">
+            <text class="workflow-findings__credibility-label">高可信度</text>
+            <text class="workflow-findings__credibility-value workflow-findings__credibility-value--high">
+              {{safeStages.source_tracing.credibility_analysis.high_credibility}}
+            </text>
+          </view>
+          <view class="workflow-findings__credibility-item">
+            <text class="workflow-findings__credibility-label">中可信度</text>
+            <text class="workflow-findings__credibility-value workflow-findings__credibility-value--medium">
+              {{safeStages.source_tracing.credibility_analysis.medium_credibility}}
+            </text>
+          </view>
+          <view class="workflow-findings__credibility-item">
+            <text class="workflow-findings__credibility-label">低可信度</text>
+            <text class="workflow-findings__credibility-value workflow-findings__credibility-value--low">
+              {{safeStages.source_tracing.credibility_analysis.low_credibility}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 汇总统计 -->
+  <view class="workflow-findings__summary" wx:if="{{summary}}">
+    <view class="workflow-findings__summary-item">
+      <text class="workflow-findings__summary-value">{{summary.total_findings}}</text>
+      <text class="workflow-findings__summary-label">总发现数</text>
+    </view>
+    <view class="workflow-findings__summary-item">
+      <text class="workflow-findings__summary-value workflow-findings__summary-value--critical">{{summary.critical_issues}}</text>
+      <text class="workflow-findings__summary-label">关键问题</text>
+    </view>
+    <view class="workflow-findings__summary-item">
+      <text class="workflow-findings__summary-value workflow-findings__summary-value--opportunity">{{summary.opportunities}}</text>
+      <text class="workflow-findings__summary-label">机会点</text>
+    </view>
+  </view>
+</view>

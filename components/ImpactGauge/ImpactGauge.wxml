@@ -1,0 +1,107 @@
+<!--components/ImpactGauge/ImpactGauge.wxml-->
+<!--
+  P0 级空缺修复：影响力仪表盘组件
+  
+  展示内容:
+  - 综合影响力评分
+  - 四个维度分项评分
+  - 仪表盘可视化
+-->
+<view class="impact-gauge">
+  <!-- 主仪表盘 -->
+  <view class="impact-gauge__main">
+    <view class="impact-gauge__circle">
+      <!-- 背景圆环 -->
+      <svg class="impact-gauge__svg" width="200" height="200" viewBox="0 0 200 200">
+        <!-- 背景圆环 -->
+        <circle
+          class="impact-gauge__bg-circle"
+          cx="100"
+          cy="100"
+          r="80"
+          fill="none"
+          stroke="#1a1a2e"
+          stroke-width="20"
+        />
+        <!-- 进度圆环 -->
+        <circle
+          class="impact-gauge__progress-circle"
+          cx="100"
+          cy="100"
+          r="80"
+          fill="none"
+          stroke="url(#gradient)"
+          stroke-width="20"
+          stroke-linecap="round"
+          stroke-dasharray="{{circumference}}"
+          stroke-dashoffset="{{dashOffset}}"
+          transform="rotate(-90 100 100)"
+        />
+        <!-- 渐变色定义 -->
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#00F5A0"/>
+            <stop offset="100%" stop-color="#00A9FF"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      
+      <!-- 中心分数 -->
+      <view class="impact-gauge__center">
+        <view class="impact-gauge__score">{{impactScores.overall_impact.toFixed(0)}}</view>
+        <view class="impact-gauge__label">综合影响力</view>
+        <view class="impact-gauge__level {{getLevelClass(impactScores.overall_impact)}}">
+          {{getLevelText(impactScores.overall_impact)}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 分项指标 -->
+  <view class="impact-gauge__metrics">
+    <view class="impact-gauge__metric">
+      <view class="impact-gauge__metric-bar">
+        <view 
+          class="impact-gauge__metric-fill impact-gauge__metric-fill--authority"
+          style="width: {{impactScores.authority_impact}}%;"
+        ></view>
+      </view>
+      <view class="impact-gauge__metric-info">
+        <text class="impact-gauge__metric-name">权威性</text>
+        <text class="impact-gauge__metric-value">{{impactScores.authority_impact.toFixed(0)}}</text>
+      </view>
+    </view>
+
+    <view class="impact-gauge__metric">
+      <view class="impact-gauge__metric-bar">
+        <view 
+          class="impact-gauge__metric-fill impact-gauge__metric-fill--visibility"
+          style="width: {{impactScores.visibility_impact}}%;"
+        ></view>
+      </view>
+      <view class="impact-gauge__metric-info">
+        <text class="impact-gauge__metric-name">可见度</text>
+        <text class="impact-gauge__metric-value">{{impactScores.visibility_impact.toFixed(0)}}</text>
+      </view>
+    </view>
+
+    <view class="impact-gauge__metric">
+      <view class="impact-gauge__metric-bar">
+        <view 
+          class="impact-gauge__metric-fill impact-gauge__metric-fill--sentiment"
+          style="width: {{impactScores.sentiment_impact}}%;"
+        ></view>
+      </view>
+      <view class="impact-gauge__metric-info">
+        <text class="impact-gauge__metric-name">情感</text>
+        <text class="impact-gauge__metric-value">{{impactScores.sentiment_impact.toFixed(0)}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 解读建议 -->
+  <view class="impact-gauge__insight" wx:if="{{showInsight}}">
+    <view class="impact-gauge__insight-icon">💡</view>
+    <view class="impact-gauge__insight-text">{{insightText}}</view>
+  </view>
+</view>

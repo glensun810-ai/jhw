@@ -1,0 +1,284 @@
+/* components/WorkflowFindings/WorkflowFindings.wxss */
+/* P0 级空缺修复：工作流发现列表样式 */
+
+.workflow-findings {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin: 24rpx 0;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+/* 头部 */
+.workflow-findings__header {
+  margin-bottom: 24rpx;
+}
+
+.workflow-findings__title {
+  display: flex;
+  align-items: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.workflow-findings__icon {
+  margin-right: 12rpx;
+  font-size: 36rpx;
+}
+
+.workflow-findings__title-text {
+  flex: 1;
+}
+
+.workflow-findings__subtitle {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 8rpx;
+}
+
+/* 工作流阶段 */
+.workflow-findings__stages {
+  margin-bottom: 24rpx;
+}
+
+.workflow-findings__stage {
+  border: 2rpx solid #f0f0f0;
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.workflow-findings__stage.completed {
+  border-color: #00F5A0;
+  background: rgba(0, 245, 160, 0.05);
+}
+
+.workflow-findings__stage-header {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  cursor: pointer;
+}
+
+.workflow-findings__stage-icon {
+  font-size: 32rpx;
+  margin-right: 16rpx;
+}
+
+.workflow-findings__stage-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.workflow-findings__stage-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.workflow-findings__stage-status {
+  font-size: 24rpx;
+  color: #00F5A0;
+  font-weight: 500;
+}
+
+.workflow-findings__stage-content {
+  padding: 0 24rpx 24rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+/* 评估指标 */
+.workflow-findings__metrics {
+  display: flex;
+  justify-content: space-around;
+  padding: 16rpx 0;
+}
+
+.workflow-findings__metric-item {
+  text-align: center;
+}
+
+.workflow-findings__metric-label {
+  display: block;
+  font-size: 22rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+}
+
+.workflow-findings__metric-value {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.workflow-findings__metric-value--high {
+  color: #00F5A0;
+}
+
+.workflow-findings__metric-value--medium {
+  color: #FFD700;
+}
+
+.workflow-findings__metric-value--low {
+  color: #FF6B6B;
+}
+
+/* 发现列表 */
+.workflow-findings__findings-list {
+  margin: 16rpx 0;
+}
+
+.workflow-findings__finding {
+  display: flex;
+  align-items: flex-start;
+  padding: 12rpx 0;
+  font-size: 26rpx;
+  color: #333;
+  line-height: 1.6;
+}
+
+.workflow-findings__finding-icon {
+  color: #667eea;
+  margin-right: 12rpx;
+  font-weight: 700;
+}
+
+.workflow-findings__finding-text {
+  flex: 1;
+}
+
+/* 关键发现 */
+.workflow-findings__discoveries {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-top: 16rpx;
+}
+
+.workflow-findings__discoveries-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #667eea;
+  margin-bottom: 16rpx;
+}
+
+.workflow-findings__discovery {
+  display: flex;
+  align-items: flex-start;
+  padding: 8rpx 0;
+  font-size: 24rpx;
+  color: #333;
+  line-height: 1.5;
+}
+
+.workflow-findings__discovery-icon {
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.workflow-findings__discovery-text {
+  flex: 1;
+}
+
+/* 市场定位 */
+.workflow-findings__market-position {
+  margin: 16rpx 0;
+}
+
+.workflow-findings__position-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx;
+  background: #f8f9fa;
+  border-radius: 8rpx;
+  margin-bottom: 12rpx;
+}
+
+.workflow-findings__position-label {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.workflow-findings__position-value {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+/* 可信度分析 */
+.workflow-findings__credibility {
+  display: flex;
+  justify-content: space-around;
+  padding: 16rpx 0;
+}
+
+.workflow-findings__credibility-item {
+  text-align: center;
+}
+
+.workflow-findings__credibility-label {
+  display: block;
+  font-size: 22rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+}
+
+.workflow-findings__credibility-value {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.workflow-findings__credibility-value--high {
+  color: #00F5A0;
+}
+
+.workflow-findings__credibility-value--medium {
+  color: #FFD700;
+}
+
+.workflow-findings__credibility-value--low {
+  color: #FF6B6B;
+}
+
+/* 汇总统计 */
+.workflow-findings__summary {
+  display: flex;
+  justify-content: space-around;
+  padding: 24rpx;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 12rpx;
+  margin-top: 16rpx;
+}
+
+.workflow-findings__summary-item {
+  text-align: center;
+}
+
+.workflow-findings__summary-value {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4rpx;
+}
+
+.workflow-findings__summary-value--critical {
+  color: #FF6B6B;
+}
+
+.workflow-findings__summary-value--opportunity {
+  color: #00F5A0;
+}
+
+.workflow-findings__summary-label {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.8);
+}

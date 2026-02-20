@@ -1,0 +1,116 @@
+<!--pages/report/history/history.wxml-->
+<!--
+  报告历史页
+  功能:
+  - 展示所有历史诊断报告
+  - 支持按时间、品牌筛选
+  - 支持跳转到报告详情
+  - 支持下拉刷新
+-->
+<view class="container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <skeleton type="list"></skeleton>
+  </view>
+
+  <!-- 数据内容 -->
+  <view wx:else-if="{{!loading && reports.length > 0}}" class="content-wrapper">
+    <!-- 统计信息 -->
+    <view class="stats-bar">
+      <text class="stats-text">共 {{reports.length}} 份诊断报告</text>
+      <text class="stats-hint">按时间倒序</text>
+    </view>
+
+    <!-- 筛选栏 -->
+    <view class="filter-bar">
+      <view class="filter-item {{sortBy === 'time' ? 'active' : ''}}" bindtap="changeSort" data-sort="time">
+        <text class="filter-icon">📅</text>
+        <text class="filter-text">时间</text>
+      </view>
+      <view class="filter-item {{sortBy === 'score' ? 'active' : ''}}" bindtap="changeSort" data-sort="score">
+        <text class="filter-icon">📊</text>
+        <text class="filter-text">评分</text>
+      </view>
+      <view class="filter-item {{sortBy === 'brand' ? 'active' : ''}}" bindtap="changeSort" data-sort="brand">
+        <text class="filter-icon">🏷️</text>
+        <text class="filter-text">品牌</text>
+      </view>
+    </view>
+
+    <!-- 报告列表 -->
+    <view class="reports-list">
+      <view
+        class="report-card"
+        wx:for="{{reports}}"
+        wx:key="executionId"
+        bindtap="viewDetail"
+        data-item="{{item}}"
+      >
+        <!-- 卡片头部 -->
+        <view class="card-header">
+          <view class="brand-info">
+            <text class="brand-name">{{item.brandName || item.brand || '品牌诊断'}}</text>
+            <text class="report-date">{{item.diagnoseTime || item.createdAt || '未知时间'}}</text>
+          </view>
+          <view class="report-badge {{item.healthScore >= 80 ? 'excellent' : item.healthScore >= 60 ? 'good' : 'normal'}}">
+            <text class="badge-score">{{item.healthScore || 0}}</text>
+            <text class="badge-label">分</text>
+          </view>
+        </view>
+
+        <!-- 卡片内容 -->
+        <view class="card-body">
+          <!-- 核心指标 -->
+          <view class="metrics-row">
+            <view class="metric-item">
+              <text class="metric-icon">📢</text>
+              <text class="metric-value">{{item.sov || 0}}%</text>
+              <text class="metric-label">AI 声量</text>
+            </view>
+            <view class="metric-divider"></view>
+            <view class="metric-item">
+              <text class="metric-icon">💬</text>
+              <text class="metric-value {{item.avgSentiment >= 0.3 ? 'positive' : item.avgSentiment <= -0.3 ? 'negative' : 'normal'}}">{{item.avgSentiment || 0}}</text>
+              <text class="metric-label">情感</text>
+            </view>
+            <view class="metric-divider"></view>
+            <view class="metric-item">
+              <text class="metric-icon">❓</text>
+              <text class="metric-value">{{item.questionCount || 0}}</text>
+              <text class="metric-label">问题数</text>
+            </view>
+          </view>
+
+          <!-- 执行 ID（用于调试） -->
+          <view class="execution-id" wx:if="{{showExecutionId}}">
+            <text class="id-label">ID:</text>
+            <text class="id-value">{{item.executionId}}</text>
+          </view>
+        </view>
+
+        <!-- 卡片底部 -->
+        <view class="card-footer">
+          <view class="view-detail-btn">
+            <text>查看详情</text>
+            <text class="arrow-icon">›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:else-if="{{!loading && reports.length === 0}}" class="empty-state">
+    <view class="empty-icon">📋</view>
+    <view class="empty-title">暂无历史报告</view>
+    <view class="empty-subtitle">完成首次品牌诊断后，报告将自动保存在这里</view>
+    <button class="go-home-btn" bindtap="goHome">去诊断</button>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:else-if="{{error}}" class="error-state">
+    <view class="error-icon">⚠️</view>
+    <view class="error-text">{{error}}</view>
+    <button class="retry-btn" bindtap="retry">重新加载</button>
+  </view>
+</view>

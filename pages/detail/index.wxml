@@ -11,6 +11,22 @@
 
     <!-- 时间预估与进度显示 -->
     <view class="time-estimation-section" wx:if="{{isLoading}}">
+      <!-- 【P2-9 新增】网络质量显示 -->
+      <view class="network-quality-display" wx:if="{{networkQuality}}">
+        <text class="quality-label">📶 网络质量：</text>
+        <text class="quality-value {{networkQuality}}">{{networkQualityText}}</text>
+      </view>
+      <!-- 【P2-8 新增】取消诊断按钮 -->
+      <view class="cancel-diagnosis-btn" bindtap="cancelDiagnosis">
+        <text class="cancel-icon">❌</text>
+        <text class="cancel-text">取消诊断</text>
+      </view>
+
+      <!-- 【P2-10 新增】订阅消息按钮 -->
+      <view class="subscribe-btn {{isSubscribed ? 'subscribed' : ''}}" bindtap="requestMessageSubscription" wx:if="{{!isSubscribed}}">
+        <text class="subscribe-icon">🔔</text>
+        <text class="subscribe-text">订阅完成通知</text>
+      </view>
       <view class="time-estimate">
         <text class="estimate-label">📊 深度研判启动：</text>
         <text class="estimate-value number-font">预计耗时 {{estimatedTime}}s</text>
@@ -24,7 +40,159 @@
       <!-- 进度文本 -->
       <view class="progress-text-container">
         <text class="progress-text">{{progressText}}</text>
-        <text class="progress-percentage number-font">{{Math.min(100, Math.round(progress))}}%</text>
+        <text class="progress-percentage number-font">{{progress}}%</text>
+      </view>
+      
+      <!--【P0 新增】详细进度显示 -->
+      <view class="progress-detail-container" wx:if="{{progressDetail}}">
+        <text class="progress-detail">{{progressDetail}}</text>
+      </view>
+      
+      <!--【阶段 1】实时统计显示 -->
+      <view class="realtime-stats-container" wx:if="{{realtimeStats && realtimeStats.completed > 0}}">
+        <view class="stats-header">
+          <text class="stats-title">📊 实时统计</text>
+          <text class="stats-subtitle">已处理 {{realtimeStats.completed}}/{{realtimeStats.total}}</text>
+        </view>
+        
+        <view class="stats-grid">
+          <view class="stat-item">
+            <text class="stat-value highlight">{{realtimeSov}}%</text>
+            <text class="stat-label">SOV</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value {{realtimeSentiment >= 0.5 ? 'positive' : realtimeSentiment >= 0.3 ? 'neutral' : 'negative'}}">{{realtimeSentiment}}</text>
+            <text class="stat-label">情感</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value">{{brandRankings.length}}</text>
+            <text class="stat-label">品牌已排名</text>
+          </view>
+        </view>
+        
+        <!-- 品牌实时排名 -->
+        <view class="brand-rankings-container" wx:if="{{brandRankings.length > 0}}">
+          <text class="rankings-title">🏆 品牌实时排名</text>
+          <view class="rankings-list">
+            <block wx:for="{{brandRankings}}" wx:key="brand">
+              <view class="ranking-item {{item.is_main_brand ? 'main-brand' : ''}}">
+                <view class="ranking-left">
+                  <text class="ranking-rank">#{{item.rank}}</text>
+                  <text class="ranking-brand">{{item.brand}}</text>
+                  <text class="ranking-main" wx:if="{{item.is_main_brand}}">主品牌</text>
+                </view>
+                <view class="ranking-right">
+                  <text class="ranking-responses">{{item.responses}}响应</text>
+                  <text class="ranking-sentiment">情感{{item.avg_sentiment}}</text>
+                </view>
+              </view>
+            </block>
+          </view>
+        </view>
+      </view>
+      
+      <!--【阶段 2】聚合结果显示 -->
+      <view class="aggregated-results-container" wx:if="{{aggregatedResults && aggregatedResults.summary}}">
+        <view class="results-header">
+          <text class="results-title">📈 聚合分析结果</text>
+          <text class="results-subtitle">健康度：{{healthScore}}分</text>
+        </view>
+        
+        <view class="results-grid">
+          <view class="result-item">
+            <view class="result-value {{healthScore >= 80 ? 'excellent' : healthScore >= 60 ? 'good' : 'warning'}}">{{healthScore}}</view>
+            <text class="result-label">健康度</text>
+          </view>
+          <view class="result-item">
+            <view class="result-value">{{aggregatedResults.summary.sov}}%</view>
+            <text class="result-label">SOV</text>
+          </view>
+          <view class="result-item">
+            <view class="result-value">{{aggregatedResults.summary.avgSentiment}}</view>
+            <text class="result-label">情感</text>
+          </view>
+          <view class="result-item">
+            <view class="result-value">{{aggregatedResults.summary.successRate}}%</view>
+            <text class="result-label">成功率</text>
+          </view>
+        </view>
+        
+        <!-- 品牌排名详情 -->
+        <view class="brand-rankings-detail" wx:if="{{aggregatedResults.brand_rankings && aggregatedResults.brand_rankings.length > 0}}">
+          <text class="rankings-detail-title">🏆 品牌排名详情</text>
+          <view class="rankings-detail-list">
+            <block wx:for="{{aggregatedResults.brand_rankings}}" wx:key="brand">
+              <view class="ranking-detail-item {{item.is_main_brand ? 'main-brand' : ''}}">
+                <view class="ranking-detail-header">
+                  <text class="ranking-detail-rank">#{{item.rank}}</text>
+                  <text class="ranking-detail-brand">{{item.brand}}</text>
+                  <text class="ranking-detail-main" wx:if="{{item.is_main_brand}}">主品牌</text>
+                </view>
+                <view class="ranking-detail-stats">
+                  <view class="detail-stat">
+                    <text class="detail-stat-label">响应数</text>
+                    <text class="detail-stat-value">{{item.responses}}</text>
+                  </view>
+                  <view class="detail-stat">
+                    <text class="detail-stat-label">SOV</text>
+                    <text class="detail-stat-value">{{item.sov_share}}%</text>
+                  </view>
+                  <view class="detail-stat">
+                    <text class="detail-stat-label">情感</text>
+                    <text class="detail-stat-value">{{item.avg_sentiment}}</text>
+                  </view>
+                  <view class="detail-stat" wx:if="{{item.avg_rank > 0}}">
+                    <text class="detail-stat-label">平均排名</text>
+                    <text class="detail-stat-value">{{item.avg_rank}}</text>
+                  </view>
+                </view>
+              </view>
+            </block>
+          </view>
+        </view>
+      </view>
+
+      <!-- 【P0 新增】预计剩余时间 -->
+      <view class="remaining-time" wx:if="{{remainingTime > 0 || smoothedRemainingTime}}">
+        <text class="remaining-label">⏱️ 预计剩余：</text>
+        <text class="remaining-value number-font">{{smoothedRemainingTime || formatTime(remainingTime)}}</text>
+      </view>
+
+      <!-- 【P1-4 新增】进度警告 -->
+      <view class="progress-warning" wx:if="{{progressWarnings.length > 0}}">
+        <text class="warning-icon">⚠️</text>
+        <text class="warning-text" wx:for="{{progressWarnings}}" wx:key="*this">{{item}}</text>
+      </view>
+
+      <!-- 【P1-6 新增】阶段说明 -->
+      <view class="stage-description" wx:if="{{stageDescription}}">
+        <text class="stage-label">📍 当前阶段：</text>
+        <text class="stage-value">{{stageDescription}}</text>
+      </view>
+
+      <!-- 【P0 新增】任务状态详情 -->
+      <view class="task-status-section">
+        <view class="status-row completed" wx:if="{{completedTasks > 0}}">
+          <text class="status-icon">✅</text>
+          <text class="status-label">已完成：</text>
+          <text class="status-value">{{completedTasks}}/{{totalTasks}}</text>
+        </view>
+        <view class="status-row current" wx:if="{{currentTask}}">
+          <text class="status-icon">🔄</text>
+          <text class="status-label">进行中：</text>
+          <text class="status-value">{{currentTask}}</text>
+        </view>
+        <view class="status-row pending" wx:if="{{pendingTasks > 0}}">
+          <text class="status-icon">⏳</text>
+          <text class="status-label">待执行：</text>
+          <text class="status-value">{{pendingTasks}} 任务</text>
+        </view>
+      </view>
+
+      <!-- 【P2-7 新增】进度解释文案 -->
+      <view class="progress-explanation" wx:if="{{progressExplanation}}">
+        <text class="explanation-icon">💡</text>
+        <text class="explanation-text">{{progressExplanation}}</text>
       </view>
 
       <!-- 惊喜消息 -->
@@ -37,6 +205,22 @@
         <view class="dot"></view>
         <view class="dot"></view>
         <view class="dot"></view>
+      </view>
+
+      <!-- 【P0 新增】后台运行按钮 -->
+      <view class="background-run-btn" bindtap="runInBackground">
+        <text class="btn-icon">🏠</text>
+        <text class="btn-text">后台运行</text>
+        <text class="btn-hint">完成会通知您</text>
+      </view>
+
+      <!-- 【P0 新增】诊断知识科普 -->
+      <view class="knowledge-section" wx:if="{{knowledgeTip}}">
+        <view class="knowledge-icon">💡</view>
+        <view class="knowledge-content">
+          <text class="knowledge-title">诊断小知识</text>
+          <text class="knowledge-text">{{knowledgeTip}}</text>
+        </view>
       </view>
     </view>
 

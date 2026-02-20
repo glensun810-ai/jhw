@@ -1,9 +1,12 @@
 {
-  "navigationBarTitleText": "GEO 品牌战略诊断看板",
+  "navigationBarTitleText": "GEO 品牌战略诊断看板 (P0 增强版)",
   "navigationBarBackgroundColor": "#1a1a2e",
   "navigationBarTextStyle": "white",
   "backgroundColor": "#f5f6fa",
   "usingComponents": {
-    "diagnostic-drawer": "/components/diagnostic-drawer/index"
+    "diagnostic-drawer": "/components/diagnostic-drawer/index",
+    "roi-card": "/components/ROICard/ROICard",
+    "impact-gauge": "/components/ImpactGauge/ImpactGauge",
+    "workflow-findings": "/components/WorkflowFindings/WorkflowFindings"
   }
 }

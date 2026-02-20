@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "原始数据详情",
+  "navigationBarBackgroundColor": "#1a1a2e",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f5f6fa",
+  "usingComponents": {
+    "count-up": "/components/CountUp/index"
+  }
+}

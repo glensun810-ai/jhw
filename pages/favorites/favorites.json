@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "我的收藏",
+  "navigationBarBackgroundColor": "#667eea",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f5f6fa",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "skeleton": "/components/Skeleton/index"
+  }
+}

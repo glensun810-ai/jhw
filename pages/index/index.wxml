@@ -148,10 +148,30 @@
     </view>
 
     <!-- 主操作按钮 -->
-    <!-- 主操作按钮 -->
     <view class="main-action-section">
-      <!-- 状态 1&2: 未诊断或诊断中 -->
-      <button class="scan-button {{testCompleted ? 'hidden' : ''}}"
+      <!-- 状态 1: 有上次诊断报告 -->
+      <view class="completed-actions {{hasLastReport && !isTesting ? '' : 'hidden'}}">
+        <view class="completed-badge">
+          <text class="badge-icon">✅</text>
+          <text class="badge-text">已有诊断报告</text>
+          <text class="badge-time" wx:if="{{completedTime}}">{{completedTime}}</text>
+        </view>
+
+        <view class="completed-buttons">
+          <button class="btn-primary-view" bindtap="viewReport">
+            <text class="btn-icon">📊</text>
+            <text class="btn-text">查看上次诊断报告</text>
+          </button>
+
+          <button class="btn-secondary-retry" bindtap="retryDiagnosis">
+            <text class="btn-icon">🔄</text>
+            <text class="btn-text">重新诊断</text>
+          </button>
+        </view>
+      </view>
+
+      <!-- 状态 2: 诊断中 -->
+      <button class="scan-button {{isTesting || hasLastReport || testCompleted ? 'hidden' : ''}}"
               bindtap="startBrandTest"
               disabled="{{isTesting}}">
         <text class="button-content">
@@ -161,20 +181,20 @@
         <text class="loading-spinner" wx:if="{{isTesting}}"></text>
       </button>
 
-      <!-- 状态 3: 已完成 -->
-      <view class="completed-actions {{testCompleted ? '' : 'hidden'}}">
+      <!-- 状态 3: 诊断完成（当次） -->
+      <view class="completed-actions {{testCompleted && !hasLastReport ? '' : 'hidden'}}">
         <view class="completed-badge">
           <text class="badge-icon">✅</text>
           <text class="badge-text">诊断已完成</text>
           <text class="badge-time" wx:if="{{completedTime}}">{{completedTime}}</text>
         </view>
-        
+
         <view class="completed-buttons">
           <button class="btn-primary-view" bindtap="viewReport">
             <text class="btn-icon">📊</text>
             <text class="btn-text">查看诊断报告</text>
           </button>
-          
+
           <button class="btn-secondary-retry" bindtap="retryDiagnosis">
             <text class="btn-icon">🔄</text>
             <text class="btn-text">重新诊断</text>

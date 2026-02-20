@@ -2,11 +2,65 @@
 const { getMatrixData, getColorByScore } = require('./utils/matrixHelper');
 const { getTaskStatusApi } = require('../../api/home');
 const { parseTaskStatus } = require('../../services/DiagnosisService');
+const TimeEstimator = require('../../utils/timeEstimator');
+const RemainingTimeCalculator = require('../../utils/remainingTimeCalculator');
+const ProgressValidator = require('../../utils/progressValidator');
+const StageEstimator = require('../../utils/stageEstimator');
+const NetworkMonitor = require('../../utils/networkMonitor');
+const ProgressNotifier = require('../../utils/progressNotifier');
+const TaskWeightProcessor = require('../../utils/taskWeightProcessor');
+const ProgressManager = require('../../utils/progressManager');
+const TaskResultWriter = require('../../utils/taskResultWriter');
 
 // 引入 DEBUG_AI_CODE 日志工具
 const { debugLog, debugLogStatusFlow, debugLogResults, debugLogException, ENABLE_DEBUG_AI_CODE } = require('../../utils/debug');
 
 Page({
+  /**
+   * 【P0 新增】时间预估器实例
+   */
+  timeEstimator: null,
+  
+  /**
+   * 【P0-3 新增】剩余时间计算器
+   */
+  remainingTimeCalc: null,
+  
+  /**
+   * 【P1-4 新增】进度验证器
+   */
+  progressValidator: null,
+  
+  /**
+   * 【P1-6 新增】分阶段预估器
+   */
+  stageEstimator: null,
+  
+  /**
+   * 【P2-9 新增】网络监测器
+   */
+  networkMonitor: null,
+  
+  /**
+   * 【P2-10 新增】进度通知器
+   */
+  progressNotifier: null,
+  
+  /**
+   * 【P2 新增】任务权重处理器
+   */
+  taskWeightProcessor: null,
+  
+  /**
+   * 【P0 新增】进度管理器
+   */
+  progressManager: null,
+  
+  /**
+   * 【P0 新增】任务结果写入器
+   */
+  taskResultWriter: null,
+
   data: {
     matrixData: null,
     isLoading: true,
@@ -34,8 +88,47 @@ Page({
     progressText: '正在启动AI认知诊断...',
     isCountdownActive: false,
     showSurpriseMessage: false,
-    surpriseMessage: ''
+    surpriseMessage: '',
+    //【P0 新增】进度详情
+    remainingTime: 0,
+    completedTasks: 0,
+    totalTasks: 0,
+    currentTask: '',
+    pendingTasks: 0,
+    taskStartTime: 0,
+    //【P0 新增】诊断知识
+    knowledgeTip: '',
+    knowledgeIndex: 0,
+    //【P0 新增】时间预估范围
+    timeEstimateRange: '',
+    timeEstimateConfidence: 0,
+    //【P0-3 新增】平滑剩余时间
+    smoothedRemainingTime: '',
+    //【P1-4 新增】进度验证状态
+    progressValidationStatus: 'normal',
+    progressWarnings: [],
+    //【P1-6 新增】阶段说明
+    stageDescription: '',
+    //【P2-7 新增】进度解释文案
+    progressExplanation: '',
+    //【P2-9 新增】网络质量
+    networkQuality: 'unknown',
+    networkQualityText: '',
+    //【P2-10 新增】订阅状态
+    isSubscribed: false
   },
+
+  //【P0 新增】诊断知识库
+  knowledgeTips: [
+    'GEO（Generative Engine Optimization）类似于 SEO，但针对的是 AI 模型而非搜索引擎。',
+    '品牌在 AI 模型中的提及率直接影响消费者的购买决策。',
+    '情感分析得分>0.2 表示正面评价，<-0.2 表示负面评价。',
+    'SOV（Share of Voice）>60% 表示市场领先地位。',
+    '被竞品拦截意味着 AI 模型更推荐竞品而非您的品牌。',
+    '负面信源的影响力是正面信源的 3 倍，需要及时处理。',
+    '多模型诊断可以避免单一 AI 模型的偏见。',
+    '排名 1-3 位可见度为 100%，4-6 位为 60%，7-10 位为 30%。'
+  ],
 
   onLoad: function(options) {
     // 检查是否传入了 executionId，如果有则启动轮询
@@ -47,7 +140,13 @@ Page({
       this.customQuestion = decodeURIComponent(options.question || '');
 
       // 计算预估时间：基础8秒 + (品牌数 * 模型数 * 1.5秒) * 1.3倍安全系数
-      const estimatedTime = Math.ceil((8 + (this.brandList.length * this.modelNames.length * 1.5)) * 1.3);
+      //【P0 重构】使用智能时间预估器
+      const timeEstimate = this.timeEstimator.estimate(
+        this.brandList.length,
+        this.modelNames.length,
+        this.customQuestion ? 1 : 3
+      );
+      const estimatedTime = timeEstimate.expected;
 
       // 更新标题显示当前诊断问题
       this.setData({
@@ -57,7 +156,9 @@ Page({
         estimatedTime: estimatedTime,
         currentTime: estimatedTime,
         progress: 0,
-        progressText: `📊 深度研判启动：预计耗时 ${estimatedTime}s`
+        progressText: `📊 深度研判启动：预计耗时 ${estimatedTime}s`,
+        timeEstimateRange: `${timeEstimate.min}-${timeEstimate.max}秒`,
+        timeEstimateConfidence: timeEstimate.confidence
       });
 
       // 启动进度条动画（10秒内平滑滑到80%）
@@ -65,6 +166,15 @@ Page({
 
       // 启动轮询
       this.startPolling();
+      
+      //【P0 新增】初始化工具类实例
+      this.timeEstimator = new TimeEstimator();
+      this.remainingTimeCalc = new RemainingTimeCalculator();
+      this.progressValidator = new ProgressValidator();
+      this.stageEstimator = new StageEstimator();
+      this.networkMonitor = new NetworkMonitor();
+      this.progressNotifier = new ProgressNotifier();
+      this.taskWeightProcessor = new TaskWeightProcessor();
     } else {
       // 如果没有executionId，使用原来的结果数据模式
       this.loadFromResults(options);
@@ -362,6 +472,240 @@ Page({
 
     // 更新上次进度值
     this.lastProgressValue = currentProgress;
+  },
+
+  /**
+   * 【P0 新增】更新进度详情
+   */
+  updateProgressDetails: function(statusData, parsedStatus) {
+    const totalTasks = this.brandList.length * this.modelNames.length;
+    const completedTasks = Math.floor((parsedStatus.progress / 100) * totalTasks);
+    const pendingTasks = totalTasks - completedTasks - 1;
+    
+    const elapsed = (Date.now() - this.startTime) / 1000;
+    const now = Date.now();
+    
+    //【P0-3 新增】使用平滑算法计算剩余时间
+    const remainingResult = this.remainingTimeCalc.calculate(
+      parsedStatus.progress,
+      elapsed
+    );
+    
+    //【P1-4 新增】验证进度真实性
+    const validationResult = this.progressValidator.validate(
+      parsedStatus.progress,
+      now
+    );
+    
+    // 根据验证结果显示警告
+    let progressStatus = 'normal';
+    let progressWarnings = [];
+    
+    if (validationResult.status === 'stalled') {
+      progressStatus = 'stalled';
+      progressWarnings.push('进度暂时停滞，正在加速处理...');
+    } else if (validationResult.status === 'slow') {
+      progressStatus = 'slow';
+      progressWarnings.push('网络较慢，请耐心等待...');
+    }
+    
+    // 获取当前任务描述
+    let currentTaskDesc = '';
+    if (parsedStatus.stage === 'analyzing') {
+      currentTaskDesc = '正在分析 AI 平台响应';
+    } else if (parsedStatus.stage === 'aggregating') {
+      currentTaskDesc = '正在聚合分析结果';
+    } else if (parsedStatus.stage === 'generating') {
+      currentTaskDesc = '正在生成诊断报告';
+    } else {
+      currentTaskDesc = parsedStatus.statusText || '诊断进行中';
+    }
+    
+    //【P1-6 新增】获取阶段说明
+    const stageDesc = this.stageEstimator.getStageDescription(parsedStatus.stage);
+    
+    //【P2-7 新增】生成进度解释文案
+    const explanation = this.generateProgressExplanation(parsedStatus, stageDesc);
+    
+    this.setData({
+      stageDescription: stageDesc,
+      progressExplanation: explanation
+    });
+    
+    this.setData({
+      remainingTime: remainingResult.seconds,
+      smoothedRemainingTime: remainingResult.display,
+      completedTasks: completedTasks,
+      totalTasks: totalTasks,
+      currentTask: currentTaskDesc,
+      pendingTasks: Math.max(0, pendingTasks),
+      progressValidationStatus: progressStatus,
+      progressWarnings: progressWarnings
+    });
+  },
+
+  /**
+   * 【P0 新增】启动知识轮换
+   */
+  startKnowledgeRotation: function() {
+    // 显示第一条知识
+    this.updateKnowledgeTip();
+    
+    // 每 10 秒切换一次
+    this.knowledgeInterval = setInterval(() => {
+      this.updateKnowledgeTip();
+    }, 10000);
+  },
+
+  /**
+   * 【P2-9 新增】获取网络质量
+   */
+  getNetworkQuality: function() {
+    wx.getNetworkType({
+      success: (res) => {
+        const networkType = res.networkType;
+        const quality = this.networkMonitor.getQualityLevel();
+        
+        this.setData({
+          networkQuality: quality.level,
+          networkQualityText: `${quality.text} (${networkType})`
+        });
+      }
+    });
+  },
+
+  /**
+   * 【P2-10 新增】检查订阅状态
+   */
+  checkSubscription: function() {
+    // 从本地存储读取订阅状态
+    const subscribed = wx.getStorageSync('message_subscribed') || false;
+    this.setData({
+      isSubscribed: subscribed
+    });
+  },
+
+  /**
+   * 【P2-10 新增】请求订阅消息
+   */
+  requestMessageSubscription: function() {
+    if (!this.progressNotifier) {
+      console.error('progressNotifier 未初始化');
+      return;
+    }
+    
+    this.progressNotifier.requestSubscription().then((res) => {
+      if (res.success && res.subscribed) {
+        wx.setStorageSync('message_subscribed', true);
+        this.setData({
+          isSubscribed: true
+        });
+        wx.showToast({
+          title: '订阅成功，完成后会通知您',
+          icon: 'success'
+        });
+      }
+    });
+  },
+
+  /**
+   * 【P2-8 新增】取消诊断功能
+   */
+  cancelDiagnosis: function() {
+    wx.showModal({
+      title: '确认取消诊断',
+      content: '取消后当前诊断将不会保存，确定要取消吗？',
+      confirmText: '确定取消',
+      cancelText: '继续诊断',
+      confirmColor: '#F44336',
+      success: (res) => {
+        if (res.confirm) {
+          // 停止轮询
+          if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+          }
+          
+          // 返回首页
+          wx.redirectTo({
+            url: '/pages/index/index',
+            success: () => {
+              wx.showToast({
+                title: '已取消诊断',
+                icon: 'success'
+              });
+            }
+          });
+        }
+      }
+    });
+  },
+
+  /**
+   * 【P2-7 新增】生成进度解释文案
+   */
+  generateProgressExplanation: function(parsedStatus, stageDesc) {
+    const progress = parsedStatus.progress;
+    
+    if (progress < 20) {
+      return '刚开始诊断，正在收集各 AI 平台的基础数据...';
+    } else if (progress < 50) {
+      return '诊断进行中，已分析部分 AI 平台响应...';
+    } else if (progress < 80) {
+      return '诊断过半，正在聚合多个平台的数据...';
+    } else if (progress < 95) {
+      return '接近尾声，正在生成最终诊断报告...';
+    } else {
+      return '即将完成，正在做最后的数据校验...';
+    }
+  },
+
+  /**
+   * 【P0 重构】更新轮询间隔
+   */
+  updatePollingInterval: function(progress) {
+    // 进度快时加快轮询，给用户流畅感
+    if (progress >= this.pollingConfig.fastProgress.threshold) {
+      return this.pollingConfig.fastProgress.interval;
+    }
+    
+    // 进度慢时适当放慢，减少服务器压力
+    if (progress < this.pollingConfig.slowProgress.threshold) {
+      return this.pollingConfig.slowProgress.interval;
+    }
+    
+    return this.pollingConfig.baseInterval;
+  },
+
+  /**
+   * 【P0 新增】更新知识提示
+   */
+  updateKnowledgeTip: function() {
+    const index = this.data.knowledgeIndex % this.knowledgeTips.length;
+    this.setData({
+      knowledgeTip: this.knowledgeTips[index],
+      knowledgeIndex: index + 1
+    });
+  },
+
+  /**
+   * 【P0 新增】后台运行功能
+   */
+  runInBackground: function() {
+    wx.showModal({
+      title: '后台运行确认',
+      content: '诊断将在后台继续运行，完成后会通知您。确定要返回首页吗？',
+      confirmText: '确定',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          // 返回首页
+          wx.redirectTo({
+            url: '/pages/index/index'
+          });
+        }
+      }
+    });
   },
 
   /**

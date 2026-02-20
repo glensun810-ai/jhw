@@ -142,9 +142,93 @@ Page({
 
   // 显示分数筛选弹窗
   showScoreFilter: function() {
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
+    const that = this;
+    const currentMin = this.data.scoreRange[0];
+    const currentMax = this.data.scoreRange[1];
+    
+    wx.showModal({
+      title: '分数范围筛选',
+      editable: true,
+      content: `当前范围：${currentMin}-${currentMax}分`,
+      success: function(res) {
+        if (res.confirm) {
+          // 使用 ActionSheet 提供预设选项
+          wx.showActionSheet({
+            itemList: ['全部 (0-100 分)', '优秀 (80-100 分)', '良好 (60-79 分)', '一般 (0-59 分)', '自定义'],
+            success: function(res2) {
+              const index = res2.tapIndex;
+              if (index === 0) {
+                // 全部
+                that.setData({
+                  scoreRange: [0, 100],
+                  scoreRangeText: '全部分数'
+                });
+              } else if (index === 1) {
+                // 优秀
+                that.setData({
+                  scoreRange: [80, 100],
+                  scoreRangeText: '优秀 (80-100)'
+                });
+              } else if (index === 2) {
+                // 良好
+                that.setData({
+                  scoreRange: [60, 79],
+                  scoreRangeText: '良好 (60-79)'
+                });
+              } else if (index === 3) {
+                // 一般
+                that.setData({
+                  scoreRange: [0, 59],
+                  scoreRangeText: '一般 (0-59)'
+                });
+              } else {
+                // 自定义 - 使用输入框
+                that.showCustomScoreFilter();
+                return;
+              }
+              that.applyFilters();
+              wx.showToast({
+                title: '筛选已应用',
+                icon: 'success'
+              });
+            }
+          });
+        }
+      }
+    });
+  },
+
+  // 显示自定义分数范围输入
+  showCustomScoreFilter: function() {
+    const that = this;
+    wx.showModal({
+      title: '自定义分数范围',
+      editable: true,
+      placeholder1: '最低分 (0-100)',
+      placeholder2: '最高分 (0-100)',
+      success: function(res) {
+        if (res.confirm) {
+          const min = parseInt(res.content1) || 0;
+          const max = parseInt(res.content2) || 100;
+          
+          if (min >= 0 && min <= 100 && max >= 0 && max <= 100 && min <= max) {
+            that.setData({
+              scoreRange: [min, max],
+              scoreRangeText: `${min}-${max}分`
+            });
+            that.applyFilters();
+            wx.showToast({
+              title: '筛选已应用',
+              icon: 'success'
+            });
+          } else {
+            wx.showToast({
+              title: '分数范围无效',
+              icon: 'none'
+            });
+          }
+        }
+      }
     });
   },
 

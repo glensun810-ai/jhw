@@ -1,0 +1,167 @@
+/* components/ImpactGauge/ImpactGauge.wxss */
+/* P0 级空缺修复：影响力仪表盘样式 */
+
+.impact-gauge {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin: 24rpx 0;
+  color: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 主仪表盘 */
+.impact-gauge__main {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32rpx;
+}
+
+.impact-gauge__circle {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.impact-gauge__svg {
+  width: 100%;
+  height: 100%;
+}
+
+.impact-gauge__bg-circle {
+  opacity: 0.3;
+}
+
+.impact-gauge__progress-circle {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.impact-gauge__center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.impact-gauge__score {
+  font-size: 56rpx;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #00F5A0 0%, #00A9FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.impact-gauge__label {
+  font-size: 24rpx;
+  opacity: 0.8;
+  margin-top: 8rpx;
+}
+
+.impact-gauge__level {
+  font-size: 22rpx;
+  margin-top: 8rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  display: inline-block;
+}
+
+.impact-gauge__level--excellent {
+  background: linear-gradient(135deg, #00F5A0, #00A9FF);
+  color: #1a1a2e;
+}
+
+.impact-gauge__level--good {
+  background: rgba(0, 245, 160, 0.2);
+  color: #00F5A0;
+}
+
+.impact-gauge__level--average {
+  background: rgba(255, 215, 0, 0.2);
+  color: #FFD700;
+}
+
+.impact-gauge__level--poor {
+  background: rgba(255, 107, 107, 0.2);
+  color: #FF6B6B;
+}
+
+/* 分项指标 */
+.impact-gauge__metrics {
+  margin-bottom: 24rpx;
+}
+
+.impact-gauge__metric {
+  margin-bottom: 20rpx;
+}
+
+.impact-gauge__metric:last-child {
+  margin-bottom: 0;
+}
+
+.impact-gauge__metric-bar {
+  height: 12rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6rpx;
+  overflow: hidden;
+  margin-bottom: 8rpx;
+}
+
+.impact-gauge__metric-fill {
+  height: 100%;
+  border-radius: 6rpx;
+  transition: width 0.5s ease;
+}
+
+.impact-gauge__metric-fill--authority {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.impact-gauge__metric-fill--visibility {
+  background: linear-gradient(90deg, #f093fb, #f5576c);
+}
+
+.impact-gauge__metric-fill--sentiment {
+  background: linear-gradient(90deg, #4facfe, #00f2fe);
+}
+
+.impact-gauge__metric-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.impact-gauge__metric-name {
+  font-size: 24rpx;
+  opacity: 0.8;
+}
+
+.impact-gauge__metric-value {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+/* 解读建议 */
+.impact-gauge__insight {
+  display: flex;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-top: 16rpx;
+}
+
+.impact-gauge__insight-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.impact-gauge__insight-text {
+  font-size: 24rpx;
+  line-height: 1.6;
+  opacity: 0.9;
+  flex: 1;
+}

@@ -1,0 +1,150 @@
+<!-- 原始数据详情页 - P0 级空缺修复 -->
+<view class="container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载原始数据中...</text>
+  </view>
+
+  <!-- 数据内容 -->
+  <view wx:else-if="{{!loading && rawData}}" class="content-wrapper">
+    <!-- 顶部摘要卡片 -->
+    <view class="summary-card">
+      <view class="summary-header">
+        <text class="summary-title">数据摘要</text>
+        <text class="summary-subtitle">{{executionId}}</text>
+      </view>
+      
+      <view class="summary-grid">
+        <view class="summary-item">
+          <view class="summary-value number-font">
+            <count-up end="{{summary.totalRecords}}" duration="1000"></count-up>
+          </view>
+          <view class="summary-label">总记录数</view>
+        </view>
+        
+        <view class="summary-item">
+          <view class="summary-value number-font">
+            <count-up end="{{summary.totalBrands}}" duration="1000"></count-up>
+          </view>
+          <view class="summary-label">品牌数量</view>
+        </view>
+        
+        <view class="summary-item">
+          <view class="summary-value number-font">
+            <count-up end="{{summary.totalQuestions}}" duration="1000"></count-up>
+          </view>
+          <view class="summary-label">问题数量</view>
+        </view>
+        
+        <view class="summary-item">
+          <view class="summary-value number-font">
+            <count-up end="{{summary.totalModels}}" duration="1000"></count-up>
+          </view>
+          <view class="summary-label">AI 模型数</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 数据筛选栏 -->
+    <view class="filter-bar">
+      <view class="filter-group">
+        <view 
+          class="filter-item {{currentFilter === 'all' ? 'active' : ''}}"
+          bindtap="onFilterTap"
+          data-filter="all"
+        >
+          全部
+        </view>
+        <view 
+          class="filter-item {{currentFilter === 'brand' ? 'active' : ''}}"
+          bindtap="onFilterTap"
+          data-filter="brand"
+        >
+          按品牌
+        </view>
+        <view 
+          class="filter-item {{currentFilter === 'model' ? 'active' : ''}}"
+          bindtap="onFilterTap"
+          data-filter="model"
+        >
+          按模型
+        </view>
+        <view 
+          class="filter-item {{currentFilter === 'question' ? 'active' : ''}}"
+          bindtap="onFilterTap"
+          data-filter="question"
+        >
+          按问题
+        </view>
+      </view>
+      
+      <view class="sort-group">
+        <view class="sort-btn" bindtap="toggleSortOrder">
+          <text>{{sortOrder === 'desc' ? '↓' : '↑'}}</text>
+          <text>时间排序</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 数据列表 -->
+    <view class="data-list">
+      <view 
+        class="data-item"
+        wx:for="{{filteredData}}"
+        wx:key="id"
+        bindtap="onItemTap"
+        data-item="{{item}}"
+      >
+        <view class="data-item-header">
+          <view class="data-item-brand">{{item.brand}}</view>
+          <view class="data-item-model">{{item.model}}</view>
+        </view>
+        
+        <view class="data-item-content">
+          <view class="data-item-question">
+            <text class="label">问题：</text>
+            <text class="text">{{item.question}}</text>
+          </view>
+          
+          <view class="data-item-response">
+            <text class="label">回答：</text>
+            <view class="response-text">{{item.response}}</view>
+          </view>
+        </view>
+        
+        <view class="data-item-footer">
+          <view class="data-item-meta">
+            <text class="meta-item">
+              <text class="meta-icon">📊</text>
+              <text>排名：{{item.rank || '-'}}</text>
+            </text>
+            <text class="meta-item">
+              <text class="meta-icon">💝</text>
+              <text>情感：{{item.sentiment || '-'}}</text>
+            </text>
+          </view>
+          
+          <view class="data-item-time">{{formatTime(item.timestamp)}}</view>
+        </view>
+        
+        <view class="expand-indicator {{item.expanded ? 'expanded' : ''}}">
+          <text>›</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:if="{{filteredData.length === 0}}" class="empty-state">
+      <text class="empty-icon">📭</text>
+      <text class="empty-text">暂无数据</text>
+    </view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:if="{{error}}" class="error-container">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{error}}</text>
+    <button class="retry-btn" bindtap="retry">重新加载</button>
+  </view>
+</view>

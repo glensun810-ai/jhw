@@ -212,7 +212,7 @@ class AlertSystem:
     
     def _monitor_loop(self):
         """监控循环"""
-        from .metrics_collector import get_metrics_collector
+        from wechat_backend.monitoring.metrics_collector import get_metrics_collector
         
         while self.is_running:
             try:
