@@ -4,18 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/data/ai_responses/ai_responses.jsonl" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/data/ai_responses/ai_responses.jsonl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/utils/ai_response_logger_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/utils/ai_response_logger_v2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.json" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/reportAggregator.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/reportAggregator.js" afterDir="false" />
-    </list>
+    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -42,13 +31,13 @@
     <commands />
     <urls />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Flask 服务器.Flask (backend_python/run.py).executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Flask 服务器.Flask (backend_python/run.py).executor": "Run",
+    "git-widget-placeholder": "正在变基 main",
+    "node.js.selected.package.tslint": "(autodetect)"
   }
-}</component>
+}]]></component>
   <component name="TaskManager">
     <servers />
   </component>
@@ -59,7 +48,7 @@
     <SUITE FILE_PATH="coverage/PythonProject$app.coverage" NAME="app 覆盖结果" MODIFIED="1771057092427" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend_python/wechat_backend" />
     <SUITE FILE_PATH="coverage/PythonProject$Flask__wechat_backend_app_py_.coverage" NAME="Flask (wechat_backend/app.py) 覆盖结果" MODIFIED="1770981411087" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_wechat_backend_app_py_.coverage" NAME="Flask (backend_python/wechat_backend/app.py) 覆盖结果" MODIFIED="1771057103838" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
-    <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_run_py_.coverage" NAME="Flask (backend_python/run.py) 覆盖结果" MODIFIED="1771532258322" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_run_py_.coverage" NAME="Flask (backend_python/run.py) 覆盖结果" MODIFIED="1771563896592" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770933166725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$demo_main.coverage" NAME="demo_main 覆盖结果" MODIFIED="1770745116755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/PythonProject$qwen_adapter.coverage" NAME="qwen_adapter 覆盖结果" MODIFIED="1770828819857" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wechat_backend/ai_adapters" />
