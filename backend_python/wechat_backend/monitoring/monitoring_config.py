@@ -3,7 +3,7 @@
 监控系统配置和初始化
 """
 
-from .alert_system import get_alert_system, Alert, AlertCondition, AlertSeverity
+from wechat_backend.monitoring.alert_system import get_alert_system, Alert, AlertCondition, AlertSeverity
 
 
 def configure_monitoring_system():
@@ -123,7 +123,7 @@ def initialize_monitoring():
     configure_monitoring_system()
 
     # 启动监控系统
-    from .alert_system import start_alert_monitoring
+    from wechat_backend.alert_system import start_alert_monitoring
     start_alert_monitoring()
 
     print("✓ 监控系统初始化完成")

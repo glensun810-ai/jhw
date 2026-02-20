@@ -1,60 +1,114 @@
-<view class="page-container container">
-  <!-- 页面头部 -->
-  <view class="page-header">
-    <text class="page-title">权限管理</text>
-    <text class="page-subtitle">管理您的账户权限</text>
+<!-- 权限管理页 - P1 级空缺修复 -->
+<view class="container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载权限数据中...</text>
   </view>
 
-  <!-- 用户信息 -->
-  <view class="user-info-section">
-    <view class="user-card">
-      <view class="user-avatar">
-        <text class="avatar-text">{{userInitial}}</text>
+  <!-- 数据内容 -->
+  <view wx:else-if="{{!loading && permissionsData}}" class="content-wrapper">
+    <!-- 当前用户权限摘要 -->
+    <view class="summary-card">
+      <view class="summary-header">
+        <text class="summary-title">我的权限</text>
+        <text class="summary-user-id">{{userId}}</text>
       </view>
-      <view class="user-details">
-        <text class="user-name">{{userName || '未登录用户'}}</text>
-        <text class="user-id">ID: {{userId || 'N/A'}}</text>
-        <text class="user-permission">权限: {{userRole || '访客'}}</text>
+      
+      <view class="summary-tags">
+        <view class="tag role-tag" wx:for="{{permissionsData.role_names}}" wx:key="*this">
+          🏷️ {{item}}
+        </view>
+        <view class="tag permission-tag" wx:for="{{permissionsData.permission_names}}" wx:key="*this">
+          ✅ {{item}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 所有权限列表 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">所有权限</text>
+        <text class="section-count">{{allPermissions.length}} 个</text>
+      </view>
+      
+      <view class="permission-list">
+        <view class="permission-item" wx:for="{{allPermissions}}" wx:key="id">
+          <view class="permission-info">
+            <text class="permission-name">{{item.name}}</text>
+            <text class="permission-desc">{{item.description}}</text>
+          </view>
+          <view class="permission-status">
+            <text class="status-badge {{hasPermission(item.id) ? 'active' : 'inactive'}}">
+              {{hasPermission(item.id) ? '已拥有' : '未拥有'}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 角色列表 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">所有角色</text>
+        <text class="section-count">{{allRoles.length}} 个</text>
+      </view>
+      
+      <view class="role-list">
+        <view class="role-item" wx:for="{{allRoles}}" wx:key="id">
+          <view class="role-info">
+            <view class="role-header">
+              <text class="role-name">🏷️ {{item.name}}</text>
+              <text class="role-permission-count">{{item.permission_count}} 权限</text>
+            </view>
+            <text class="role-desc">{{item.description}}</text>
+            <text class="role-user-count">已分配 {{item.user_count}} 人</text>
+          </view>
+          <view class="role-actions" wx:if="{{hasRole('admin')}}">
+            <button class="action-btn" bindtap="onAssignRole" data-role="{{item}}">分配</button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 授予权限表单 (仅管理员) -->
+    <view class="section" wx:if="{{hasRole('admin')}}">
+      <view class="section-header">
+        <text class="section-title">授予权限</text>
+      </view>
+      
+      <view class="grant-form">
+        <view class="form-item">
+          <text class="form-label">用户 ID</text>
+          <input class="form-input" placeholder="输入用户 ID" value="{{grantForm.userId}}" bindinput="onGrantUserIdInput"/>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">选择权限</text>
+          <picker class="form-picker" range="{{allPermissions}}" range-key="name" value="{{grantForm.permissionIndex}}" bindchange="onGrantPermissionChange">
+            <text class="form-picker-value">{{grantForm.permissionIndex >= 0 ? allPermissions[grantForm.permissionIndex].name : '请选择权限'}}</text>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">授权原因</text>
+          <textarea class="form-textarea" placeholder="请输入授权原因" value="{{grantForm.reason}}" bindinput="onGrantReasonInput"/>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">过期天数</text>
+          <input class="form-input" type="number" placeholder="留空表示永不过期" value="{{grantForm.expiresDays}}" bindinput="onGrantExpiresInput"/>
+        </view>
+        
+        <button class="grant-btn" bindtap="onGrantPermission">授予权限</button>
       </view>
     </view>
   </view>
 
-  <!-- 权限列表 -->
-  <view class="permission-list-section">
-    <text class="section-title">可用权限</text>
-    <view class="permission-item" wx:for="{{permissions}}" wx:key="id">
-      <view class="permission-info">
-        <text class="permission-name">{{item.name}}</text>
-        <text class="permission-desc">{{item.description}}</text>
-      </view>
-      <switch class="permission-switch" checked="{{item.granted}}" bindchange="togglePermission" data-permission="{{item.id}}" />
-    </view>
-  </view>
-
-  <!-- 权限说明 -->
-  <view class="permission-explanation-section">
-    <text class="section-title">权限说明</text>
-    <view class="explanation-item">
-      <text class="explanation-title">基础权限</text>
-      <text class="explanation-desc">所有用户默认拥有，包括查看公共数据、基础搜索功能等。</text>
-    </view>
-    <view class="explanation-item">
-      <text class="explanation-title">历史记录权限</text>
-      <text class="explanation-desc">登录用户拥有，可查看和管理个人历史记录。</text>
-    </view>
-    <view class="explanation-item">
-      <text class="explanation-title">保存结果权限</text>
-      <text class="explanation-desc">登录用户拥有，可保存和管理搜索结果。</text>
-    </view>
-    <view class="explanation-item">
-      <text class="explanation-title">高级分析权限</text>
-      <text class="explanation-desc">VIP用户拥有，可使用高级分析功能。</text>
-    </view>
-  </view>
-
-  <!-- 操作按钮 -->
-  <view class="action-buttons">
-    <button class="action-btn logout-btn" bindtap="logout">退出登录</button>
-    <button class="action-btn upgrade-btn" bindtap="upgradeAccount">升级账户</button>
+  <!-- 错误状态 -->
+  <view wx:if="{{error}}" class="error-container">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{error}}</text>
+    <button class="retry-btn" bindtap="retry">重新加载</button>
   </view>
 </view>

@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "报告历史",
+  "navigationBarBackgroundColor": "#1a1a2e",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f5f6fa",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "skeleton": "/components/Skeleton/index"
+  }
+}

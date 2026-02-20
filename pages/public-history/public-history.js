@@ -196,11 +196,40 @@ Page({
   // 查看详情
   viewDetail: function(e) {
     const id = e.currentTarget.dataset.id;
-    // 这期实现查看详情功能
-    wx.showToast({
-      title: '功能开发中',
-      icon: 'none'
-    });
+    logger.info('查看公共历史详情', { id });
+
+    // 查找对应的报告数据
+    const report = this.data.reports.find(r => r.executionId === id || r.id === id);
+    
+    if (report && report.executionId) {
+      // 保存到全局存储
+      app.globalData.lastReport = {
+        executionId: report.executionId,
+        dashboard: report,
+        raw: report.rawResults || [],
+        competitors: report.competitors || []
+      };
+
+      // 跳转到 Dashboard 页面
+      wx.navigateTo({
+        url: `/pages/report/dashboard/index?executionId=${report.executionId}`,
+        success: () => {
+          logger.debug('成功跳转到报告详情页');
+        },
+        fail: (err) => {
+          logger.error('跳转到报告详情页失败', err);
+          wx.showToast({
+            title: '跳转失败',
+            icon: 'none'
+          });
+        }
+      });
+    } else {
+      wx.showToast({
+        title: '报告数据不完整',
+        icon: 'none'
+      });
+    }
   },
 
   // 格式化日期

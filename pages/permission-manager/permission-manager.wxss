@@ -1,170 +1,328 @@
-/* pages/permission-manager/permission-manager.wxss */
-
-.page-container {
-  background-color: #121826;
-  color: #e8e8e8;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-}
+/* 权限管理页样式 - P1 级空缺修复 */
 
 .container {
-  padding: 40rpx;
   min-height: 100vh;
-  box-sizing: border-box;
-  background: linear-gradient(135deg, #1a1f29 0%, #121826 100%);
+  background: #f5f6fa;
+  padding: 24rpx;
+  padding-bottom: 140rpx;
 }
 
-/* 页面头部 */
-.page-header {
-  text-align: center;
-  margin-bottom: 60rpx;
-}
-.page-title {
-  font-size: 44rpx;
-  font-weight: bold;
-  color: #FFFFFF;
-  display: block;
-  margin-bottom: 20rpx;
-}
-.page-subtitle {
-  font-size: 28rpx;
-  color: #8c8c8c;
-  display: block;
-}
-
-/* 用户信息部分 */
-.user-info-section {
-  margin-bottom: 60rpx;
-}
-.user-card {
-  background-color: #1A202C;
-  border: 1rpx solid #303030;
-  border-radius: 16rpx;
-  padding: 30rpx;
+/* 加载状态 */
+.loading-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  padding: 200rpx 0;
 }
-.user-avatar {
-  width: 100rpx;
-  height: 100rpx;
-  background: linear-gradient(135deg, #00A9FF, #00F5A0);
+
+.loading-spinner {
+  width: 80rpx;
+  height: 80rpx;
+  border: 6rpx solid #e0e0e0;
+  border-top-color: #667eea;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 30rpx;
+  animation: spin 1s linear infinite;
 }
-.avatar-text {
-  font-size: 40rpx;
-  font-weight: bold;
-  color: #141414;
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
-.user-details {
-  flex: 1;
+
+.loading-text {
+  margin-top: 32rpx;
+  font-size: 28rpx;
+  color: #999;
 }
-.user-name {
+
+/* 摘要卡片 */
+.summary-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  color: #ffffff;
+  box-shadow: 0 8rpx 32rpx rgba(102, 126, 234, 0.3);
+}
+
+.summary-header {
+  margin-bottom: 24rpx;
+}
+
+.summary-title {
   display: block;
   font-size: 32rpx;
-  font-weight: bold;
-  color: #e8e8e8;
-  margin-bottom: 10rpx;
-}
-.user-id {
-  display: block;
-  font-size: 24rpx;
-  color: #8c8c8c;
-  margin-bottom: 10rpx;
-}
-.user-permission {
-  display: block;
-  font-size: 24rpx;
-  color: #00A9FF;
+  font-weight: 600;
 }
 
-/* 权限列表部分 */
-.permission-list-section {
-  margin-bottom: 60rpx;
-}
-.section-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #e8e8e8;
+.summary-user-id {
   display: block;
-  margin-bottom: 30rpx;
+  font-size: 22rpx;
+  opacity: 0.8;
+  margin-top: 8rpx;
+  word-break: break-all;
 }
+
+.summary-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.tag {
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10rpx);
+}
+
+.role-tag {
+  background: rgba(255, 255, 255, 0.3);
+  font-weight: 600;
+}
+
+.permission-tag {
+  background: rgba(0, 245, 160, 0.3);
+}
+
+/* 区块 */
+.section {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.section-count {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 权限列表 */
+.permission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
 .permission-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #1A202C;
-  border: 1rpx solid #303030;
-  border-radius: 16rpx;
-  padding: 30rpx;
-  margin-bottom: 20rpx;
+  padding: 20rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
 }
+
+.permission-item:active {
+  background: #e9ecef;
+}
+
 .permission-info {
   flex: 1;
 }
+
 .permission-name {
   display: block;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #e8e8e8;
-  margin-bottom: 10rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 6rpx;
 }
+
 .permission-desc {
   display: block;
   font-size: 24rpx;
-  color: #8c8c8c;
-}
-.permission-switch {
-  transform: scale(0.8);
+  color: #999;
 }
 
-/* 权限说明部分 */
-.permission-explanation-section {
-  margin-bottom: 60rpx;
+.permission-status {
+  margin-left: 16rpx;
 }
-.explanation-item {
-  background-color: #1A202C;
-  border: 1rpx solid #303030;
-  border-radius: 16rpx;
-  padding: 30rpx;
-  margin-bottom: 20rpx;
+
+.status-badge {
+  display: inline-block;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
 }
-.explanation-title {
-  display: block;
-  font-size: 32rpx;
-  font-weight: bold;
+
+.status-badge.active {
+  background: rgba(0, 245, 160, 0.2);
   color: #00F5A0;
-  margin-bottom: 10rpx;
 }
-.explanation-desc {
+
+.status-badge.inactive {
+  background: #e9ecef;
+  color: #999;
+}
+
+/* 角色列表 */
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.role-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+}
+
+.role-info {
+  flex: 1;
+}
+
+.role-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.role-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.role-permission-count {
+  font-size: 22rpx;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+}
+
+.role-desc {
   display: block;
   font-size: 24rpx;
-  color: #8c8c8c;
-  line-height: 1.5;
+  color: #666;
+  margin-bottom: 6rpx;
 }
 
-/* 操作按钮部分 */
-.action-buttons {
+.role-user-count {
+  display: block;
+  font-size: 22rpx;
+  color: #999;
+}
+
+.role-actions {
+  margin-left: 16rpx;
+}
+
+.action-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 20rpx;
+  padding: 10rpx 24rpx;
+  font-size: 24rpx;
+}
+
+/* 授予权限表单 */
+.grant-form {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
 }
-.action-btn {
-  height: 80rpx;
-  border-radius: 40rpx;
-  font-size: 28rpx;
-  font-weight: bold;
+
+.form-item {
   display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+}
+
+.form-input {
+  background: #f8f9fa;
+  border: 1rpx solid #e9ecef;
+  border-radius: 8rpx;
+  padding: 16rpx 20rpx;
+  font-size: 28rpx;
+}
+
+.form-picker {
+  background: #f8f9fa;
+  border: 1rpx solid #e9ecef;
+  border-radius: 8rpx;
+  padding: 16rpx 20rpx;
+  font-size: 28rpx;
+}
+
+.form-picker-value {
+  color: #333;
+}
+
+.form-textarea {
+  background: #f8f9fa;
+  border: 1rpx solid #e9ecef;
+  border-radius: 8rpx;
+  padding: 16rpx 20rpx;
+  font-size: 28rpx;
+  min-height: 120rpx;
+}
+
+.grant-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 40rpx;
+  padding: 20rpx 0;
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-top: 10rpx;
+}
+
+/* 错误状态 */
+.error-container {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  padding: 200rpx 0;
 }
-.logout-btn {
-  background: linear-gradient(to right, #ff6b6b, #ff5252);
-  color: #fff;
+
+.error-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
 }
-.upgrade-btn {
-  background: linear-gradient(to right, #00F5A0, #00D18C);
-  color: #141414;
+
+.error-text {
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 32rpx;
+}
+
+.retry-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 40rpx;
+  padding: 16rpx 48rpx;
+  font-size: 28rpx;
 }

@@ -1,0 +1,105 @@
+<!--components/ROICard/ROICard.wxml-->
+<!--
+  P0 级空缺修复：ROI 指标卡片组件
+  
+  展示内容:
+  - 曝光 ROI
+  - 情感 ROI
+  - 排名 ROI
+  - 估算价值
+-->
+<view class="roi-card" bind:tap="onCardTap">
+  <!-- 卡片头部 -->
+  <view class="roi-card__header">
+    <view class="roi-card__title">
+      <text class="roi-card__icon">📊</text>
+      <text class="roi-card__title-text">{{title}}</text>
+    </view>
+    <view class="roi-card__subtitle" wx:if="{{subtitle}}">{{subtitle}}</view>
+  </view>
+
+  <!-- ROI 指标网格 -->
+  <view class="roi-card__grid">
+    <!-- 曝光 ROI -->
+    <view class="roi-card__item">
+      <view class="roi-card__item-label">曝光 ROI</view>
+      <view class="roi-card__item-value {{roiData.exposure_roi >= benchmarks.exposure_roi_industry_avg ? 'positive' : 'neutral'}}">
+        {{roiData.exposure_roi.toFixed(1)}}x
+      </view>
+      <view class="roi-card__item-delta" wx:if="{{showDelta}}">
+        <text class="roi-card__delta-icon">{{roiData.exposure_roi >= benchmarks.exposure_roi_industry_avg ? '↑' : '↓'}}</text>
+        <text class="roi-card__delta-text">
+          {{roiData.exposure_roi >= benchmarks.exposure_roi_industry_avg ? '优于' : '低于'}}行业 {{benchmarks.exposure_roi_industry_avg}}x
+        </text>
+      </view>
+    </view>
+
+    <!-- 情感 ROI -->
+    <view class="roi-card__item">
+      <view class="roi-card__item-label">情感 ROI</view>
+      <view class="roi-card__item-value {{roiData.sentiment_roi >= benchmarks.sentiment_roi_industry_avg ? 'positive' : 'neutral'}}">
+        {{roiData.sentiment_roi.toFixed(1)}}x
+      </view>
+      <view class="roi-card__item-delta" wx:if="{{showDelta}}">
+        <text class="roi-card__delta-icon">{{roiData.sentiment_roi >= benchmarks.sentiment_roi_industry_avg ? '↑' : '↓'}}</text>
+        <text class="roi-card__delta-text">
+          {{roiData.sentiment_roi >= benchmarks.sentiment_roi_industry_avg ? '优于' : '低于'}}行业 {{benchmarks.sentiment_roi_industry_avg}}x
+        </text>
+      </view>
+    </view>
+
+    <!-- 排名 ROI -->
+    <view class="roi-card__item">
+      <view class="roi-card__item-label">排名 ROI</view>
+      <view class="roi-card__item-value {{roiData.ranking_roi >= benchmarks.ranking_roi_industry_avg ? 'positive' : 'neutral'}}">
+        {{roiData.ranking_roi.toFixed(0)}}
+      </view>
+      <view class="roi-card__item-delta" wx:if="{{showDelta}}">
+        <text class="roi-card__delta-icon">{{roiData.ranking_roi >= benchmarks.ranking_roi_industry_avg ? '↑' : '↓'}}</text>
+        <text class="roi-card__delta-text">
+          {{roiData.ranking_roi >= benchmarks.ranking_roi_industry_avg ? '优于' : '低于'}}行业 {{benchmarks.ranking_roi_industry_avg}}
+        </text>
+      </view>
+    </view>
+
+    <!-- 估算价值 -->
+    <view class="roi-card__item roi-card__item--highlight">
+      <view class="roi-card__item-label">估算价值</view>
+      <view class="roi-card__item-value roi-card__item-value--large">
+        ¥{{formatValue(roiData.estimated_value)}}
+      </view>
+      <view class="roi-card__item-unit">元</view>
+    </view>
+  </view>
+
+  <!-- 影响力评分 (可选) -->
+  <view class="roi-card__impact" wx:if="{{showImpact}}">
+    <view class="roi-card__impact-title">影响力评分</view>
+    <view class="roi-card__impact-grid">
+      <view class="roi-card__impact-item">
+        <view class="roi-card__impact-value">{{impactScores.authority_impact.toFixed(0)}}</view>
+        <view class="roi-card__impact-label">权威性</view>
+      </view>
+      <view class="roi-card__impact-item">
+        <view class="roi-card__impact-value">{{impactScores.visibility_impact.toFixed(0)}}</view>
+        <view class="roi-card__impact-label">可见度</view>
+      </view>
+      <view class="roi-card__impact-item">
+        <view class="roi-card__impact-value">{{impactScores.sentiment_impact.toFixed(0)}}</view>
+        <view class="roi-card__impact-label">情感</view>
+      </view>
+      <view class="roi-card__impact-item roi-card__impact-item--total">
+        <view class="roi-card__impact-value roi-card__impact-value--total">{{impactScores.overall_impact.toFixed(0)}}</view>
+        <view class="roi-card__impact-label">综合</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 查看详情按钮 -->
+  <view class="roi-card__footer" wx:if="{{showDetail}}">
+    <view class="roi-card__detail-btn">
+      <text>查看详情</text>
+      <text class="roi-card__arrow">›</text>
+    </view>
+  </view>
+</view>

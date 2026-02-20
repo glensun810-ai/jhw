@@ -527,3 +527,245 @@
   }
 }
 
+/* ========== 【P1 新增】输入恢复提示样式 ========== */
+.input-restore-banner {
+  margin: 24rpx 0;
+  padding: 24rpx;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+  border-radius: 16rpx;
+  border: 2rpx solid rgba(59, 130, 246, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.input-restore-banner.hidden {
+  display: none;
+}
+
+.banner-content {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.banner-icon {
+  font-size: 48rpx;
+  flex-shrink: 0;
+}
+
+.banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.banner-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary, #2c3e50);
+}
+
+.banner-summary {
+  font-size: 24rpx;
+  color: var(--text-secondary, #7f8c8d);
+}
+
+.banner-time {
+  font-size: 22rpx;
+  color: rgba(127, 140, 145, 0.8);
+}
+
+.banner-actions {
+  display: flex;
+  gap: 12rpx;
+  flex-shrink: 0;
+}
+
+.btn-use-last {
+  padding: 12rpx 24rpx;
+  background: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%);
+  color: #ffffff;
+  font-size: 26rpx;
+  font-weight: 600;
+  border-radius: 12rpx;
+  border: none;
+}
+
+.btn-use-last:active {
+  opacity: 0.8;
+  transform: scale(0.95);
+}
+
+.btn-clear-input {
+  padding: 12rpx 24rpx;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-size: 26rpx;
+  font-weight: 500;
+  border-radius: 12rpx;
+  border: 2rpx solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-clear-input:active {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* ========== 【P0 新增】诊断完成入口样式 ========== */
+.completed-diagnosis-banner {
+  margin: 24rpx 0;
+  padding: 32rpx;
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.15) 0%, rgba(52, 211, 153, 0.1) 100%);
+  border-radius: 20rpx;
+  border: 2rpx solid rgba(39, 174, 96, 0.4);
+  box-shadow: 0 8rpx 32rpx rgba(39, 174, 96, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.completed-diagnosis-banner.hidden {
+  display: none;
+}
+
+.banner-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.banner-icon {
+  font-size: 56rpx;
+  flex-shrink: 0;
+}
+
+.banner-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.title-main {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #27ae60;
+}
+
+.title-sub {
+  font-size: 24rpx;
+  color: rgba(46, 204, 113, 0.8);
+}
+
+.banner-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 24rpx 0;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16rpx;
+}
+
+.banner-metrics .metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  flex: 1;
+}
+
+.banner-metrics .metric-value {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.banner-metrics .metric-value.excellent {
+  color: #27ae60;
+}
+
+.banner-metrics .metric-value.good {
+  color: #3498db;
+}
+
+.banner-metrics .metric-value.warning {
+  color: #e74c3c;
+}
+
+.banner-metrics .metric-value.positive {
+  color: #27ae60;
+}
+
+.banner-metrics .metric-value.negative {
+  color: #e74c3c;
+}
+
+.banner-metrics .metric-value.neutral {
+  color: #95a5a6;
+}
+
+.banner-metrics .metric-label {
+  font-size: 22rpx;
+  color: #7f8c8d;
+}
+
+.banner-metrics .metric-divider {
+  width: 2rpx;
+  height: 60rpx;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.banner-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.btn-view-report {
+  flex: 2;
+  height: 88rpx;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: #ffffff;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 16rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  box-shadow: 0 8rpx 24rpx rgba(52, 152, 219, 0.3);
+}
+
+.btn-view-report:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.btn-view-report .btn-icon {
+  font-size: 36rpx;
+}
+
+.btn-retry-diagnosis {
+  flex: 1;
+  height: 88rpx;
+  background: rgba(255, 255, 255, 0.8);
+  color: #2c3e50;
+  font-size: 28rpx;
+  font-weight: 500;
+  border-radius: 16rpx;
+  border: 2rpx solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+.btn-retry-diagnosis:active {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(0.98);
+}
+
+.btn-retry-diagnosis .btn-icon {
+  font-size: 32rpx;
+}

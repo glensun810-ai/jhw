@@ -1,0 +1,182 @@
+/* components/ROICard/ROICard.wxss */
+/* P0 级空缺修复：ROI 指标卡片样式 */
+
+.roi-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin: 24rpx 0;
+  color: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+}
+
+.roi-card:active {
+  transform: scale(0.98);
+}
+
+/* 头部 */
+.roi-card__header {
+  margin-bottom: 24rpx;
+}
+
+.roi-card__title {
+  display: flex;
+  align-items: center;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.roi-card__icon {
+  margin-right: 12rpx;
+  font-size: 36rpx;
+}
+
+.roi-card__title-text {
+  flex: 1;
+}
+
+.roi-card__subtitle {
+  font-size: 24rpx;
+  opacity: 0.8;
+  margin-top: 8rpx;
+}
+
+/* 网格布局 */
+.roi-card__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+}
+
+.roi-card__item {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12rpx;
+  padding: 20rpx 16rpx;
+  text-align: center;
+  backdrop-filter: blur(10rpx);
+}
+
+.roi-card__item--highlight {
+  grid-column: span 3;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 24rpx 16rpx;
+}
+
+.roi-card__item-label {
+  font-size: 22rpx;
+  opacity: 0.8;
+  margin-bottom: 12rpx;
+}
+
+.roi-card__item-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.roi-card__item-value--large {
+  font-size: 48rpx;
+}
+
+.roi-card__item-value.positive {
+  color: #00F5A0;
+}
+
+.roi-card__item-value.neutral {
+  color: #FFD700;
+}
+
+.roi-card__item-unit {
+  font-size: 20rpx;
+  opacity: 0.7;
+  margin-top: 4rpx;
+}
+
+.roi-card__item-delta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12rpx;
+  font-size: 20rpx;
+  opacity: 0.7;
+}
+
+.roi-card__delta-icon {
+  margin-right: 4rpx;
+  font-weight: 700;
+}
+
+.roi-card__delta-text {
+  flex: 1;
+}
+
+/* 影响力评分 */
+.roi-card__impact {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-top: 16rpx;
+}
+
+.roi-card__impact-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+  opacity: 0.9;
+}
+
+.roi-card__impact-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16rpx;
+}
+
+.roi-card__impact-item {
+  text-align: center;
+  padding: 12rpx 8rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8rpx;
+}
+
+.roi-card__impact-item--total {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.roi-card__impact-value {
+  font-size: 28rpx;
+  font-weight: 700;
+  margin-bottom: 4rpx;
+}
+
+.roi-card__impact-value--total {
+  font-size: 32rpx;
+  color: #00F5A0;
+}
+
+.roi-card__impact-label {
+  font-size: 20rpx;
+  opacity: 0.7;
+}
+
+/* 底部 */
+.roi-card__footer {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.2);
+}
+
+.roi-card__detail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  opacity: 0.9;
+}
+
+.roi-card__arrow {
+  margin-left: 8rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+}

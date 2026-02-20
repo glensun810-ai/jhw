@@ -12,7 +12,26 @@ const { aggregateReport } = require('../../services/reportAggregator');
 
 const appid = 'wx8876348e089bc261'; // 您的 AppID
 
+/**
+ * P2 新增：AI 平台默认配置
+ * 原则：默认选择已验证可用的中文平台，降低首诊用户配置门槛
+ */
+const DEFAULT_AI_PLATFORMS = {
+  // 国内平台默认选中（已验证可用）
+  domestic: ['DeepSeek', '豆包', '通义千问', '智谱 AI'],
+  // 海外平台默认不选中（网络延迟高，需手动开启）
+  overseas: []
+};
+
+// 存储 Key
+const STORAGE_KEY_PLATFORM_PREFS = 'user_ai_platform_preferences';
+
 Page({
+  /**
+   * 【P1 新增】输入管理器
+   */
+  inputManager: null,
+
   data: {
     // 用户状态
     userInfo: null,
@@ -102,12 +121,18 @@ Page({
     debugJson: '',
 
     // 动画
-    particleAnimateId: null
+    particleAnimateId: null,
+
+    // 【新增】是否有上次诊断报告
+    hasLastReport: false
   },
 
   onLoad: function (options) {
     console.log('品牌AI雷达 - 页面加载完成');
     this.checkServerConnection();
+    
+    // P2 新增：加载用户 AI 平台偏好
+    this.loadUserPlatformPreferences();
     this.updateSelectedModelCount();
     this.updateSelectedQuestionCount();
 
@@ -128,45 +153,63 @@ Page({
       // 清除临时配置
       app.globalData.tempConfig = null;
     }
+    
+    // P2 修复：恢复草稿
+    this.restoreDraft();
   },
 
-  // 应用配置
+  /**
+   * P2 修复：应用配置（增强数据防御性）
+   */
   applyConfig: function(config) {
-    // 确保自定义问题格式正确（每个问题都应该有text和show属性）
-    const formattedQuestions = config.customQuestions.map(q => ({
-      text: q.text || '',
-      show: q.show !== undefined ? q.show : true
+    // 防御性检查：确保 config 存在
+    if (!config || typeof config !== 'object') {
+      console.warn('applyConfig: 配置数据无效', config);
+      return;
+    }
+
+    // 确保自定义问题格式正确（每个问题都应该有 text 和 show 属性）
+    const customQuestionsConfig = Array.isArray(config.customQuestions) ? config.customQuestions : [];
+    const formattedQuestions = customQuestionsConfig.map(q => ({
+      text: (q && q.text) || '',
+      show: (q && q.show !== undefined) ? q.show : true
     }));
 
+    // 防御性检查：确保 competitorBrands 是数组
+    const competitorBrandsConfig = Array.isArray(config.competitorBrands) ? config.competitorBrands : [];
+
+    // 防御性检查：确保 domesticAiModels 是数组
+    const domesticAiModelsConfig = Array.isArray(config.domesticAiModels) ? config.domesticAiModels : [];
+    const overseasAiModelsConfig = Array.isArray(config.overseasAiModels) ? config.overseasAiModels : [];
+
     this.setData({
-      brandName: config.brandName || '',
-      competitorBrands: Array.isArray(config.competitorBrands) ? config.competitorBrands : [],
+      brandName: (config && config.brandName) || '',
+      competitorBrands: competitorBrandsConfig,
       customQuestions: formattedQuestions,
       // 仅更新选中状态，保留模型的其他属性，处理可能不存在的模型
       domesticAiModels: this.data.domesticAiModels.map(model => {
-        const savedModel = Array.isArray(config.domesticAiModels)
-          ? config.domesticAiModels.find(saved => saved.name === model.name)
-          : null;
+        const savedModel = domesticAiModelsConfig.find(saved => saved && saved.name === model.name);
         return {
           ...model,
-          checked: savedModel ? savedModel.checked : false
+          checked: savedModel ? (savedModel.checked !== undefined ? savedModel.checked : false) : false
         };
       }),
       overseasAiModels: this.data.overseasAiModels.map(model => {
-        const savedModel = Array.isArray(config.overseasAiModels)
-          ? config.overseasAiModels.find(saved => saved.name === model.name)
-          : null;
+        const savedModel = overseasAiModelsConfig.find(saved => saved && saved.name === model.name);
         return {
           ...model,
-          checked: savedModel ? savedModel.checked : false
+          checked: savedModel ? (savedModel.checked !== undefined ? savedModel.checked : false) : false
         };
       })
     });
 
-    wx.showToast({
-      title: '配置已加载',
-      icon: 'success'
-    });
+    // 只在配置有效时显示提示
+    if (Object.keys(config).length > 0) {
+      wx.showToast({
+        title: '配置已加载',
+        icon: 'success'
+      });
+    }
   },
 
   onReady: function () {
@@ -268,12 +311,177 @@ Page({
     });
   },
 
+  /**
+   * P2 修复：品牌名称输入处理
+   */
   onBrandNameInput: function(e) {
-    this.setData({ brandName: e.detail.value });
+    const value = e.detail.value;
+    this.setData({ brandName: value });
+
+    // 防抖保存 (500ms)
+    clearTimeout(this.saveInputTimer);
+    this.saveInputTimer = setTimeout(() => {
+      this.saveCurrentInput();
+    }, 500);
   },
 
+  /**
+   * P2 修复：竞品输入处理
+   */
   onCompetitorInput: function(e) {
-    this.setData({ currentCompetitor: e.detail.value });
+    const value = e.detail.value;
+    this.setData({ currentCompetitor: value });
+
+    // 防抖保存 (500ms)
+    clearTimeout(this.saveInputTimer);
+    this.saveInputTimer = setTimeout(() => {
+      this.saveCurrentInput();
+    }, 500);
+  },
+
+  /**
+   * P2 修复：保存当前输入到本地存储
+   */
+  saveCurrentInput: function() {
+    const { brandName, currentCompetitor, competitorBrands } = this.data;
+    
+    wx.setStorageSync('draft_diagnostic_input', {
+      brandName: brandName || '',
+      currentCompetitor: currentCompetitor || '',
+      competitorBrands: competitorBrands || [],
+      updatedAt: Date.now()
+    });
+    
+    console.log('草稿已自动保存', { brandName, currentCompetitor });
+  },
+
+  /**
+   * P2 修复：从本地存储恢复草稿
+   */
+  restoreDraft: function() {
+    const draft = wx.getStorageSync('draft_diagnostic_input');
+    
+    if (draft && (draft.brandName || draft.competitorBrands?.length > 0)) {
+      // 检查是否是 7 天内的草稿
+      const now = Date.now();
+      const draftAge = now - draft.updatedAt;
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      
+      if (draftAge < sevenDays) {
+        this.setData({
+          brandName: draft.brandName || '',
+          currentCompetitor: draft.currentCompetitor || '',
+          competitorBrands: draft.competitorBrands || []
+        });
+        console.log('草稿已恢复', draft);
+      } else {
+        // 草稿过期，清除
+        wx.removeStorageSync('draft_diagnostic_input');
+        console.log('草稿已过期，已清除');
+      }
+    }
+  },
+
+  /**
+   * P2 新增：加载用户 AI 平台偏好
+   * 优先级：用户上次选择 > 默认配置
+   */
+  loadUserPlatformPreferences: function() {
+    try {
+      // 尝试从存储加载用户偏好
+      const userPrefs = wx.getStorageSync(STORAGE_KEY_PLATFORM_PREFS);
+      
+      let selectedDomestic = [];
+      let selectedOverseas = [];
+      
+      if (userPrefs && typeof userPrefs === 'object') {
+        // 有用户偏好，使用用户上次选择
+        selectedDomestic = userPrefs.domestic || [];
+        selectedOverseas = userPrefs.overseas || [];
+        console.log('加载用户 AI 平台偏好', userPrefs);
+      } else {
+        // 无用户偏好，使用默认配置
+        selectedDomestic = DEFAULT_AI_PLATFORMS.domestic;
+        selectedOverseas = DEFAULT_AI_PLATFORMS.overseas;
+        console.log('使用默认 AI 平台配置', selectedDomestic);
+      }
+      
+      // 更新国内平台选中状态
+      const updatedDomestic = this.data.domesticAiModels.map(model => ({
+        ...model,
+        checked: selectedDomestic.includes(model.name) && !model.disabled
+      }));
+      
+      // 更新海外平台选中状态
+      const updatedOverseas = this.data.overseasAiModels.map(model => ({
+        ...model,
+        checked: selectedOverseas.includes(model.name)
+      }));
+      
+      this.setData({
+        domesticAiModels: updatedDomestic,
+        overseasAiModels: updatedOverseas
+      });
+      
+      // 更新选中数量
+      this.updateSelectedModelCount();
+      
+    } catch (error) {
+      console.error('加载用户平台偏好失败', error);
+      // 降级：使用默认配置
+      this.applyDefaultPlatformConfig();
+    }
+  },
+
+  /**
+   * P2 新增：应用默认平台配置
+   */
+  applyDefaultPlatformConfig: function() {
+    const updatedDomestic = this.data.domesticAiModels.map(model => ({
+      ...model,
+      checked: DEFAULT_AI_PLATFORMS.domestic.includes(model.name) && !model.disabled
+    }));
+    
+    const updatedOverseas = this.data.overseasAiModels.map(model => ({
+      ...model,
+      checked: DEFAULT_AI_PLATFORMS.overseas.includes(model.name)
+    }));
+    
+    this.setData({
+      domesticAiModels: updatedDomestic,
+      overseasAiModels: updatedOverseas
+    });
+    
+    this.updateSelectedModelCount();
+  },
+
+  /**
+   * P2 新增：保存用户 AI 平台偏好
+   */
+  saveUserPlatformPreferences: function() {
+    try {
+      // 获取当前选中的平台
+      const selectedDomestic = this.data.domesticAiModels
+        .filter(model => model.checked)
+        .map(model => model.name);
+      
+      const selectedOverseas = this.data.overseasAiModels
+        .filter(model => model.checked)
+        .map(model => model.name);
+      
+      // 保存到存储
+      const userPrefs = {
+        domestic: selectedDomestic,
+        overseas: selectedOverseas,
+        updatedAt: Date.now()
+      };
+      
+      wx.setStorageSync(STORAGE_KEY_PLATFORM_PREFS, userPrefs);
+      console.log('用户 AI 平台偏好已保存', userPrefs);
+      
+    } catch (error) {
+      console.error('保存用户平台偏好失败', error);
+    }
   },
 
   addCompetitor: function() {
@@ -1474,13 +1682,24 @@ Page({
 
   /**
    * 跳转到战略看板（第三阶段：麦肯锡看板）
+   * 【P0 修复】使用 redirectTo 替换 navigateTo，避免页面栈堆积
    */
   navigateToDashboard: function() {
     try {
+      // 保存报告数据到存储
+      const reportData = this.data.reportData || this.data.dashboardData;
+      if (reportData && reportData.executionId) {
+        wx.setStorageSync('lastReport', reportData);
+        console.log('✅ 报告数据已保存到本地存储');
+      }
+
       // 延迟 500ms 跳转，让用户看到完成提示
       setTimeout(() => {
-        wx.navigateTo({
-          url: '/pages/report/dashboard/index',
+        wx.redirectTo({
+          url: '/pages/report/dashboard/index?executionId=' + (reportData.executionId || ''),
+          success: () => {
+            console.log('✅ 诊断完成，已跳转到 Dashboard');
+          },
           fail: (err) => {
             console.error('跳转到战略看板失败:', err);
             // 如果跳转失败，显示提示
@@ -1500,9 +1719,15 @@ Page({
    * 查看诊断报告（跳转到 Dashboard）
    */
   viewReport: function() {
-    if (this.data.reportData || this.data.dashboardData) {
+    const reportData = this.data.reportData || this.data.dashboardData;
+    if (reportData) {
+      // 保存报告数据到存储
+      if (reportData.executionId) {
+        wx.setStorageSync('lastReport', reportData);
+      }
+      
       wx.navigateTo({
-        url: '/pages/report/dashboard/index',
+        url: '/pages/report/dashboard/index?executionId=' + (reportData.executionId || ''),
         fail: (err) => {
           console.error('跳转报告页面失败:', err);
           wx.showToast({

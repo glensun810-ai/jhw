@@ -32,12 +32,12 @@ from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE, parse_geo_json
-from .ai_adapters.factory import AIAdapterFactory
-from .ai_adapters.geo_parser import parse_geo_json_enhanced
-from .config_manager import config_manager
-from .logging_config import api_logger
-from .database import save_test_record
+from wechat_backend.ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE, parse_geo_json
+from wechat_backend.ai_adapters.factory import AIAdapterFactory
+from wechat_backend.ai_adapters.geo_parser import parse_geo_json_enhanced
+from wechat_backend.config_manager import config_manager
+from wechat_backend.logging_config import api_logger
+from wechat_backend.database import save_test_record
 
 
 # ==================== 模块四：熔断机制 ====================
@@ -258,7 +258,7 @@ def _get_or_create_logger(execution_id: str) -> Tuple[Any, Path]:
     """
     with _logger_cache_lock:
         if execution_id not in _logger_cache:
-            from utils.ai_response_logger_v2 import AIResponseLogger
+            from wechat_backend.utils.ai_response_logger_v2 import AIResponseLogger
             logger = AIResponseLogger()
             _logger_cache[execution_id] = logger
             api_logger.info(f"[LogWriter] Created logger for execution_id: {execution_id}, file: {logger.log_file}")
@@ -735,7 +735,7 @@ def execute_nxm_test(
                         # 【重构点 1】流式持久化 - 先写日志，再更新内存
                         log_success = False
                         try:
-                            from utils.ai_response_logger_v2 import log_ai_response
+                            from wechat_backend.utils.ai_response_logger_v2 import log_ai_response
                             log_record = log_ai_response(
                                 question=geo_prompt,
                                 response=response_text,
@@ -801,7 +801,7 @@ def execute_nxm_test(
                         
                         # 【重构点 1】记录失败的调用到日志文件（同步写入）
                         try:
-                            from utils.ai_response_logger_v2 import log_ai_response
+                            from wechat_backend.utils.ai_response_logger_v2 import log_ai_response
                             log_record = log_ai_response(
                                 question=geo_prompt,
                                 response="",
@@ -840,7 +840,7 @@ def execute_nxm_test(
                     
                     # 【重构点 1】记录异常调用到日志文件（同步写入）
                     try:
-                        from utils.ai_response_logger_v2 import log_ai_response
+                        from wechat_backend.utils.ai_response_logger_v2 import log_ai_response
                         log_record = log_ai_response(
                             question=geo_prompt,
                             response="",

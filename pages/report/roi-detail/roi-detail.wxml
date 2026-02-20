@@ -1,0 +1,169 @@
+<!-- ROI 详情页 - P0 级空缺修复 -->
+<!-- P2 修复：移除所有 WXML 中的方法调用，使用预处理数据 -->
+<view class="container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载 ROI 数据中...</text>
+  </view>
+
+  <!-- 数据内容 -->
+  <view wx:else-if="{{!loading && roiData}}" class="content-wrapper">
+    <!-- 核心指标卡片 -->
+    <view class="metrics-card">
+      <view class="card-header">
+        <text class="card-title">ROI 核心指标</text>
+        <text class="card-subtitle">投资回报分析</text>
+      </view>
+
+      <view class="metrics-grid">
+        <view class="metric-item primary">
+          <view class="metric-label">曝光 ROI</view>
+          <view class="metric-value number-font">{{exposure_roi_display}}</view>
+          <view class="metric-unit">x</view>
+          <view class="metric-trend {{exposure_is_positive ? 'positive' : 'negative'}}">
+            <text>{{exposure_is_positive ? '↑' : '↓'}}</text>
+            <text>行业平均 {{benchmarks.exposure_roi_industry_avg}}x</text>
+          </view>
+        </view>
+
+        <view class="metric-item">
+          <view class="metric-label">情感 ROI</view>
+          <view class="metric-value number-font">{{sentiment_roi_display}}</view>
+          <view class="metric-unit">x</view>
+          <view class="metric-trend {{sentiment_is_positive ? 'positive' : 'negative'}}">
+            <text>{{sentiment_is_positive ? '↑' : '↓'}}</text>
+            <text>行业平均 {{benchmarks.sentiment_roi_industry_avg}}x</text>
+          </view>
+        </view>
+
+        <view class="metric-item">
+          <view class="metric-label">排名 ROI</view>
+          <view class="metric-value number-font">{{ranking_roi_display}}</view>
+          <view class="metric-unit">分</view>
+          <view class="metric-trend {{ranking_is_positive ? 'positive' : 'negative'}}">
+            <text>{{ranking_is_positive ? '↑' : '↓'}}</text>
+            <text>行业平均 {{benchmarks.ranking_roi_industry_avg}}</text>
+          </view>
+        </view>
+
+        <view class="metric-item highlight">
+          <view class="metric-label">估算价值</view>
+          <view class="metric-value number-font">¥{{estimated_value_display}}</view>
+          <view class="metric-unit">元</view>
+          <view class="metric-sub">累计媒体价值</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 影响力评分 -->
+    <view class="impact-card" wx:if="{{impactScores}}">
+      <view class="card-header">
+        <text class="card-title">品牌影响力评分</text>
+        <text class="card-subtitle">多维度评估</text>
+      </view>
+
+      <view class="impact-overview">
+        <view class="impact-total">
+          <view class="impact-total-value number-font">{{overall_impact_display}}</view>
+          <view class="impact-total-label">综合影响力</view>
+          <view class="impact-level {{impactLevelClass}}">
+            {{impactLevelText}}
+          </view>
+        </view>
+      </view>
+
+      <!-- P2 新增：影响力构成饼图 -->
+      <view class="impact-chart" wx:if="{{impactChartConfig}}">
+        <base-chart
+          type="pie"
+          chartData="{{impactChartConfig}}"
+          showLegend="{{true}}"
+          showTooltip="{{true}}"
+        ></base-chart>
+      </view>
+
+      <view class="impact-details">
+        <view class="impact-item">
+          <view class="impact-item-header">
+            <text class="impact-item-label">权威性</text>
+            <text class="impact-item-value">{{authority_impact_display}}</text>
+          </view>
+          <view class="impact-bar">
+            <view class="impact-bar-fill authority" style="width: {{impactScores.authority_impact}}%;"></view>
+          </view>
+        </view>
+
+        <view class="impact-item">
+          <view class="impact-item-header">
+            <text class="impact-item-label">可见度</text>
+            <text class="impact-item-value">{{visibility_impact_display}}</text>
+          </view>
+          <view class="impact-bar">
+            <view class="impact-bar-fill visibility" style="width: {{impactScores.visibility_impact}}%;"></view>
+          </view>
+        </view>
+
+        <view class="impact-item">
+          <view class="impact-item-header">
+            <text class="impact-item-label">情感</text>
+            <text class="impact-item-value">{{sentiment_impact_display}}</text>
+          </view>
+          <view class="impact-bar">
+            <view class="impact-bar-fill sentiment" style="width: {{impactScores.sentiment_impact}}%;"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 行业对比 -->
+    <view class="benchmark-card">
+      <view class="card-header">
+        <text class="card-title">行业对比分析</text>
+        <text class="card-subtitle">与行业平均水平对比</text>
+      </view>
+
+      <view class="benchmark-list">
+        <view class="benchmark-item">
+          <view class="benchmark-label">曝光 ROI</view>
+          <view class="benchmark-compare">
+            <view class="benchmark-my">我的：{{exposure_roi_display}}x</view>
+            <view class="benchmark-industry">行业：{{benchmarks.exposure_roi_industry_avg}}x</view>
+            <view class="benchmark-delta {{exposure_is_positive ? 'positive' : 'negative'}}">
+              {{exposure_delta_percent}}%
+            </view>
+          </view>
+        </view>
+
+        <view class="benchmark-item">
+          <view class="benchmark-label">情感 ROI</view>
+          <view class="benchmark-compare">
+            <view class="benchmark-my">我的：{{sentiment_roi_display}}x</view>
+            <view class="benchmark-industry">行业：{{benchmarks.sentiment_roi_industry_avg}}x</view>
+            <view class="benchmark-delta {{sentiment_is_positive ? 'positive' : 'negative'}}">
+              {{sentiment_delta_percent}}%
+            </view>
+          </view>
+        </view>
+
+        <view class="benchmark-item">
+          <view class="benchmark-label">排名 ROI</view>
+          <view class="benchmark-compare">
+            <view class="benchmark-my">我的：{{ranking_roi_display}}分</view>
+            <view class="benchmark-industry">行业：{{benchmarks.ranking_roi_industry_avg}}分</view>
+            <view class="benchmark-delta {{ranking_is_positive ? 'positive' : 'negative'}}">
+              {{ranking_delta_percent}}%
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:if="{{error}}" class="error-container">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{error}}</text>
+    <button class="retry-btn" bindtap="retry">重新加载</button>
+  </view>
+</view>

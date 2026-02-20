@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "ROI 详情分析",
+  "navigationBarBackgroundColor": "#667eea",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#f5f6fa",
+  "usingComponents": {
+    "count-up": "/components/CountUp/index",
+    "base-chart": "/components/BaseChart/index"
+  }
+}

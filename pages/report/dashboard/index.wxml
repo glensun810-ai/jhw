@@ -1,40 +1,105 @@
-<!-- GEO 品牌战略诊断看板 - 麦肯锡三段式布局 -->
+<!-- GEO 品牌战略诊断看板 - 完整版 (P0 增强版) -->
+<!-- 详情抽屉组件 -->
+<diagnostic-drawer
+  showDrawer="{{showDrawer}}"
+  currentQuestionData="{{currentQuestionData}}"
+  brandName="{{brandName}}"
+  competitors="{{competitors}}"
+  bind:close="onDrawerClose"
+  bind:save="onDrawerSave"
+></diagnostic-drawer>
+
+<!-- 主容器：数据加载成功 -->
 <view class="container" wx:if="{{dashboardData}}">
-  
-  <!-- 详情抽屉组件 -->
-  <diagnostic-drawer
-    showDrawer="{{showDrawer}}"
-    currentQuestionData="{{currentQuestionData}}"
-    brandName="{{brandName}}"
-    competitors="{{competitors}}"
-    bind:close="onDrawerClose"
-    bind:save="onDrawerSave"
-  ></diagnostic-drawer>
+  <!-- 操作栏 -->
+  <view class="action-bar">
+    <view class="action-item" bindtap="toggleFavorite">
+      <text class="action-icon">{{isFavorite ? '❤️' : '🤍'}}</text>
+      <text class="action-text">{{isFavorite ? '已收藏' : '收藏'}}</text>
+    </view>
+    <view class="action-item" bindtap="viewHistory">
+      <text class="action-icon">📋</text>
+      <text class="action-text">历史记录</text>
+    </view>
+    <view class="action-item" bindtap="shareReport">
+      <text class="action-icon">📤</text>
+      <text class="action-text">分享</text>
+    </view>
+  </view>
+
+  <!-- P0 新增：ROI 指标和影响力卡片 -->
+  <view class="p0-section" wx:if="{{dashboardData.roi_metrics || dashboardData.impact_scores}}">
+    <!-- ROI 指标卡片 -->
+    <roi-card
+      wx:if="{{dashboardData.roi_metrics}}"
+      title="ROI 指标"
+      subtitle="投资回报分析"
+      roiData="{{dashboardData.roi_metrics}}"
+      impactScores="{{dashboardData.impact_scores}}"
+      benchmarks="{{dashboardData.benchmarks || defaultBenchmarks}}"
+      showDelta="{{true}}"
+      showImpact="{{true}}"
+      showDetail="{{false}}"
+      bind:cardtap="onROICardTap"
+    ></roi-card>
+
+    <!-- 影响力仪表盘 -->
+    <impact-gauge
+      wx:if="{{dashboardData.impact_scores}}"
+      impactScores="{{dashboardData.impact_scores}}"
+      showInsight="{{true}}"
+      title="品牌影响力"
+    ></impact-gauge>
+  </view>
+
   <!-- 第一段：概览评分卡片 -->
   <view class="header-card">
-    <view class="brand-title">{{dashboardData.summary.brandName}} · GEO 品牌诊断报告</view>
-    
+    <view class="brand-title">
+      <text>{{dashboardData.summary.brandName || '品牌'}} · GEO 品牌诊断报告</text>
+      <view class="sov-badge {{dashboardData.summary.sovLabelClass || 'neutral'}}">
+        <text class="sov-badge-icon">{{dashboardData.summary.sovLabelClass === 'leading' ? '👑' : dashboardData.summary.sovLabelClass === 'neutral' ? '⚖️' : '📉'}}</text>
+        <text class="sov-badge-text">{{dashboardData.summary.sovLabel || '持平'}}</text>
+      </view>
+    </view>
+
     <view class="score-section">
       <view class="score-box">
         <text class="score-label">品牌健康度得分</text>
-        <text class="score-value {{dashboardData.summary.healthScore >= 80 ? 'excellent' : dashboardData.summary.healthScore >= 60 ? 'good' : 'warning'}}">{{dashboardData.summary.healthScore}}</text>
+        <text class="score-value {{dashboardData.summary.healthScore >= 80 ? 'excellent' : dashboardData.summary.healthScore >= 60 ? 'good' : 'fair'}}">{{dashboardData.summary.healthScore || 0}}</text>
         <text class="score-unit">分</text>
+        <view class="risk-level-badge {{dashboardData.summary.riskLevel || 'safe'}}">
+          <text class="risk-level-icon">{{dashboardData.summary.riskLevel === 'critical' ? '🚨' : dashboardData.summary.riskLevel === 'warning' ? '⚠️' : '✅'}}</text>
+          <text class="risk-level-text">{{dashboardData.summary.riskLevelText || '低风险'}}</text>
+        </view>
       </view>
-      
+
       <view class="metrics-row">
         <view class="metric-item">
-          <view class="metric-value">{{dashboardData.summary.sov}}%</view>
+          <view class="metric-value">{{dashboardData.summary.sov || dashboardData.summary.sov_value || 0}}%</view>
           <view class="metric-label">AI 声量占比</view>
-          <view class="metric-sub">{{dashboardData.summary.totalMentions}}/{{dashboardData.summary.totalTests}} 提及</view>
+          <view class="metric-sub">{{dashboardData.summary.totalMentions || 0}}/{{dashboardData.summary.totalTests || 0}} 提及</view>
         </view>
         <view class="metric-divider"></view>
         <view class="metric-item">
-          <view class="metric-value {{parseFloat(dashboardData.summary.avgSentiment) >= 0.3 ? 'positive' : parseFloat(dashboardData.summary.avgSentiment) <= -0.3 ? 'negative' : ''}}">{{dashboardData.summary.avgSentiment}}</view>
+          <view class="metric-value {{dashboardData.summary.sentimentStatus || 'neutral'}}">{{dashboardData.summary.avgSentiment || dashboardData.summary.sentiment_value || 0}}</view>
           <view class="metric-label">情感均值</view>
-          <view class="metric-sub">-1 到 1 区间</view>
+          <view class="metric-sub">{{dashboardData.summary.sentimentLabel || '中性'}}</view>
         </view>
       </view>
     </view>
+  </view>
+
+  <!-- P1 新增：工作流分析发现 -->
+  <view class="section" wx:if="{{workflowResults}}">
+    <workflow-findings
+      title="工作流分析发现"
+      subtitle="AI 诊断过程关键发现"
+      workflowStages="{{workflowResults.workflow_stages}}"
+      summary="{{workflowResults.summary}}"
+      expandAll="{{false}}"
+      expandedStage="{{expandedWorkflowStage}}"
+      bind:stagetoggle="onWorkflowStageToggle"
+    ></workflow-findings>
   </view>
 
   <!-- 第二段：核心问题诊断分析 -->
@@ -46,41 +111,60 @@
       </view>
       <view class="section-subtitle">共 {{questionCards.length}} 个问题</view>
     </view>
-    
+
     <view class="question-list">
       <block wx:for="{{questionCards}}" wx:key="index">
-        <view class="question-card {{item.status}}" bindtap="goToQuestionDetail" data-index="{{index}}">
+        <view class="question-card {{item.riskLevel || item.risk_level || 'safe'}}" bindtap="goToQuestionDetail" data-index="{{index}}">
           <view class="q-header">
-            <view class="q-number">Q{{index + 1}}</view>
-            <text class="q-text">{{item.text}}</text>
+            <view class="q-number {{item.riskLevel || item.risk_level || 'safe'}}">Q{{index + 1}}</view>
+            <text class="q-text">{{item.text || item.question_text}}</text>
+            <view class="risk-badge {{item.riskLevel || item.risk_level || 'safe'}}">
+              <text class="risk-icon">{{item.riskLevel === 'critical' || item.risk_level === 'critical' ? '🔴' : item.riskLevel === 'warning' || item.risk_level === 'warning' ? '🟠' : item.riskLevel === 'high' || item.risk_level === 'high' ? '🟡' : item.riskLevel === 'mid' || item.risk_level === 'mid' ? '🔵' : '🟢'}}</text>
+            </view>
           </view>
-          
+
           <view class="q-body">
             <view class="q-metrics">
               <view class="q-metric">
                 <text class="q-metric-label">平均排名</text>
-                <text class="q-metric-value {{item.avgRank === '未入榜' ? 'unranked' : ''}}">{{item.avgRank}}</text>
+                <text class="q-metric-value {{(item.avgRank || item.avg_rank) === '未入榜' ? 'unranked' : ''}}">{{item.avgRank || item.avg_rank}}</text>
               </view>
               <view class="q-metric">
                 <text class="q-metric-label">提及率</text>
-                <text class="q-metric-value">{{item.mentionCount}}/{{item.totalModels}}</text>
+                <text class="q-metric-value">{{item.mentionCount || 0}}/{{item.totalModels || 0}}</text>
+                <text class="q-metric-percent">{{item.mentionRate || item.mention_rate || 0}}%</text>
               </view>
               <view class="q-metric">
                 <text class="q-metric-label">情感</text>
-                <text class="q-metric-value {{parseFloat(item.avgSentiment) >= 0.3 ? 'positive' : parseFloat(item.avgSentiment) <= -0.3 ? 'negative' : ''}}">{{item.avgSentiment}}</text>
+                <text class="q-metric-value {{(item.avgSentiment || item.avg_sentiment) >= 0.3 ? 'positive' : (item.avgSentiment || item.avg_sentiment) <= -0.3 ? 'negative' : 'neutral'}}">{{item.avgSentiment || item.avg_sentiment}}</text>
               </view>
             </view>
-            
-            <view class="q-status {{item.status}}">
-              <text class="status-icon">{{item.status === 'safe' ? '✅' : '⚠️'}}</text>
-              <text class="status-text">{{item.status === 'safe' ? '安全' : '风险'}}</text>
+
+            <view class="q-status {{item.riskLevel || item.risk_level || 'safe'}}">
+              <text class="status-icon">{{item.riskLevel === 'critical' || item.risk_level === 'critical' ? '🚨' : item.riskLevel === 'warning' || item.risk_level === 'warning' ? '⚠️' : item.riskLevel === 'high' || item.risk_level === 'high' ? '⚡' : item.riskLevel === 'mid' || item.risk_level === 'mid' ? '📊' : '✅'}}</text>
+              <text class="status-text">{{item.riskLevelText || item.risk_level_text || '安全'}}</text>
             </view>
           </view>
-          
-          <view class="q-footer" wx:if="{{item.interceptedBy.length > 0}}">
-            <view class="warning-banner">
-              <text class="warning-icon">⚠️</text>
-              <text class="warning-text">被竞品拦截：<text class="warning-brand">{{item.interceptedBy}}</text></text>
+
+          <!-- 竞品拦截详情 -->
+          <view class="q-footer" wx:if="{{item.key_competitor || (item.intercepted_by && item.intercepted_by.length > 0)}}">
+            <view class="interception-banner">
+              <view class="interception-header">
+                <text class="interception-icon">🎯</text>
+                <text class="interception-title">竞品拦截分析</text>
+              </view>
+              <view class="key-competitor" wx:if="{{item.key_competitor}}">
+                <text class="competitor-label">主要拦截:</text>
+                <text class="competitor-name">{{item.key_competitor}}</text>
+                <text class="competitor-count">({{item.interceptCount || 0}} 次)</text>
+              </view>
+              <view class="competitor-list" wx:if="{{item.intercepted_by && item.intercepted_by.length > 1}}">
+                <block wx:for="{{item.intercepted_by}}" wx:key="*this" wx:for-item="competitor">
+                  <view class="competitor-tag" wx:if="{{competitor !== item.key_competitor}}">
+                    <text>{{competitor}}</text>
+                  </view>
+                </block>
+              </view>
             </view>
           </view>
         </view>
@@ -97,25 +181,32 @@
       </view>
       <view class="section-subtitle">共 {{toxicSources.length}} 个危险信源</view>
     </view>
-    
+
     <view class="toxic-sources-list">
       <block wx:for="{{toxicSources}}" wx:key="url">
-        <view class="toxic-source-card">
+        <view class="toxic-source-card threat-{{item.threatLevel || item.threat_level || 'safe'}}" bindtap="onSourceTap" data-source="{{item}}">
           <view class="ts-header">
-            <view class="ts-site">{{item.site}}</view>
+            <view class="ts-site">
+              <text class="ts-site-name">{{item.site_name || item.site}}</text>
+              <view class="threat-score-badge {{item.threatLevel || item.threat_level || 'safe'}}">
+                <text class="threat-score-label">威胁度</text>
+                <text class="threat-score-value">{{item.threat_score || item.threatScore || 0}}</text>
+              </view>
+            </view>
             <view class="ts-tag negative">负面</view>
           </view>
           <view class="ts-url">{{item.url}}</view>
           <view class="ts-footer">
-            <text class="ts-model">检测模型：{{item.model}}</text>
+            <text class="ts-model">提及 {{item.totalMentions || item.total_mentions || 0}} 次</text>
             <text class="ts-impact">影响排名</text>
+            <text class="ts-copy">📋 复制链接</text>
           </view>
         </view>
       </block>
     </view>
   </view>
 
-  <!-- 空状态提示 -->
+  <!-- 空状态 -->
   <view class="empty-state" wx:if="{{!toxicSources || toxicSources.length === 0}}">
     <view class="empty-icon">✅</view>
     <view class="empty-text">未发现高风险负面信源</view>
@@ -130,14 +221,18 @@
 </view>
 
 <!-- 加载中状态 -->
-<view class="loading-container" wx:if="{{!dashboardData && !loadError}}">
+<view class="loading-container" wx:elif="{{!loadError}}">
   <view class="loading-spinner"></view>
   <view class="loading-text">正在生成战略看板...</view>
 </view>
 
 <!-- 错误状态 -->
-<view class="error-container" wx:if="{{loadError}}">
+<view class="error-container" wx:else>
   <view class="error-icon">⚠️</view>
+  <view class="error-title">{{errorType === 'network' ? '网络连接失败' : errorType === 'timeout' ? '请求超时' : '数据加载失败'}}</view>
   <view class="error-text">{{loadError}}</view>
-  <button class="btn-retry" bindtap="retry">重新加载</button>
+  <view class="error-actions">
+    <button class="btn-retry" bindtap="retry">重新加载</button>
+    <button class="btn-home" bindtap="goHome">返回首页</button>
+  </view>
 </view>
