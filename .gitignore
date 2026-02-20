@@ -13,6 +13,8 @@
 *.key
 *.pem
 *.crt
+passwords.txt
+password*.txt
 
 # 数据库和存储
 database.db
