@@ -1072,7 +1072,9 @@ Page({
       try {
         const res = await getTaskStatusApi(executionId);
         console.log("返回数据：",res)//调试用，上线前删除
-        if (res.statusCode === 200) {
+        // 【P0 修复】getTaskStatusApi 返回的是 res.data，不是完整 res
+        // 检查是否有有效数据
+        if (res && (res.progress !== undefined || res.stage)) {
           // 更新调试区域显示原始JSON
           this.setData({ debugJson: JSON.stringify(res.data, null, 2) });
 
