@@ -1705,7 +1705,12 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
             'summary': {
                 'total_tests': len(detailed_results),
                 'brands_tested': len(all_brands)
-            }
+            },
+            # 【新增】传递语义偏移和优化建议数据
+            'semantic_drift_data': semantic_drift_data if 'semantic_drift_data' in dir() else None,
+            'semantic_contrast_data': semantic_contrast_data if 'semantic_contrast_data' in dir() else None,
+            'recommendation_data': recommendation_data if 'recommendation_data' in dir() else None,
+            'negative_sources': negative_sources if 'negative_sources' in dir() else None
         }
 
         # Cancel the alarm before returning
@@ -2558,7 +2563,40 @@ def get_task_status_api(task_id):
         # 返回任务状态信息
         return jsonify(response_data), 200
     else:
-        return jsonify({'error': 'Task not found'}), 404
+        # 【新增 P0 修复】从数据库查询（降级逻辑）
+        # 当 execution_store 中找不到时（如服务器重启后），从数据库查询
+        try:
+            from wechat_backend.models import get_task_status as get_db_task_status, get_deep_intelligence_result
+            
+            db_task_status = get_db_task_status(task_id)
+            if db_task_status:
+                # 从数据库构建响应
+                response_data = {
+                    'task_id': task_id,
+                    'progress': 100 if db_task_status.is_completed else 50,
+                    'stage': db_task_status.stage.value,
+                    'status': 'completed' if db_task_status.is_completed else 'unknown',
+                    'is_completed': db_task_status.is_completed,
+                    'created_at': db_task_status.created_at,
+                    'from_database': True,  # 标记数据来源
+                    'message': 'Task found in database (server restarted)'
+                }
+                
+                # 如果任务已完成，尝试获取结果
+                if db_task_status.is_completed:
+                    deep_result = get_deep_intelligence_result(task_id)
+                    if deep_result:
+                        response_data['has_result'] = True
+                
+                api_logger.info(f"[TaskStatus] Found task {task_id} in database")
+                return jsonify(response_data), 200
+            else:
+                # 数据库中也找不到，返回 404
+                api_logger.warning(f"[TaskStatus] Task {task_id} not found in execution_store or database")
+                return jsonify({'error': 'Task not found', 'suggestion': 'Please check execution ID or start a new diagnosis'}), 404
+        except Exception as e:
+            api_logger.error(f"[TaskStatus] Error querying database for task {task_id}: {e}")
+            return jsonify({'error': 'Task not found'}), 404
 
 
 @wechat_bp.route('/test/result/<task_id>', methods=['GET'])

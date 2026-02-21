@@ -780,6 +780,36 @@ Page({
     try {
       const response = await getTaskStatusApi(executionId);
 
+      // 【P0 修复】检查 404 响应
+      if (!response || (response.error && response.error.includes('not found'))) {
+        // 增加 404 计数器
+        this.notFoundCount = (this.notFoundCount || 0) + 1;
+        console.warn(`[404] Task not found (count: ${this.notFoundCount})`);
+        
+        // 如果连续 5 次 404，停止轮询并提示用户
+        if (this.notFoundCount >= 5) {
+          clearInterval(this.pollInterval);
+          this.pollInterval = null;
+          this.setData({
+            statusText: '任务不存在或已完成',
+            isLoading: false
+          });
+          wx.showToast({
+            title: '诊断任务不存在，请查看历史记录',
+            icon: 'none',
+            duration: 3000
+          });
+          // 延迟跳转到历史记录页
+          setTimeout(() => {
+            wx.navigateTo({ url: '/pages/history/history' });
+          }, 3000);
+        }
+        return null;
+      }
+      
+      // 重置 404 计数器
+      this.notFoundCount = 0;
+
       // 检查是否为完成状态
       if (response && (response.is_completed || response.status === 'completed' || response.progress >= 100)) {
         // 确保进度为100
@@ -1034,7 +1064,7 @@ Page({
         for (const subResult of result.results) {
           normalized.push({
             brand: subResult.brand || result.brand || brandNames[0] || 'Unknown Brand',
-            question: subResult.question || result.question || 'Unknown Question',
+            question: subResult.question || result.question || this.customQuestion || '品牌诊断问题',
             model: subResult.model || subResult.provider || result.model || result.provider || 'Unknown Model',
             answer: subResult.answer || subResult.response || subResult.content || result.answer || '',
             scores: subResult.scores || subResult.score || result.scores || result.score || {},
@@ -1044,7 +1074,7 @@ Page({
       } else {
         // 尝试从其他可能的字段结构中提取
         const brand = result.brand || result.brandName || brandNames[0] || 'Unknown Brand';
-        const question = result.question || result.query || 'Unknown Question';
+        const question = result.question || result.query || this.customQuestion || '品牌诊断问题';
         const model = result.model || result.provider || result.ai_model || 'Unknown Model';
 
         normalized.push({

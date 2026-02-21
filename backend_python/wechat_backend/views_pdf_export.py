@@ -2,8 +2,16 @@
 """
 PDF 报告导出 API 端点
 完整支持品牌诊断报告导出
+
+修复版本：v1.1
+修复内容:
+1. 修复表名错误 (test_results → test_records)
+2. 添加 gzip 解压缩支持
+3. 修复 execution_id 查询逻辑
 """
 
+import gzip
+import json
 from flask import Blueprint, request, Response, jsonify
 from datetime import datetime
 from wechat_backend.logging_config import api_logger
@@ -54,28 +62,112 @@ def export_pdf_report():
         deep_result = get_deep_intelligence_result(execution_id)
 
         if not deep_result:
-            # 尝试从 test_results 表获取
+            # 修复：从 test_records 表获取（实际存在的表）
             with get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT * FROM test_results 
-                    WHERE execution_id = ? OR result_id = ?
-                    LIMIT 1
-                """, (execution_id, execution_id))
-                row = cursor.fetchone()
-                
-                if row:
-                    deep_result = dict(row)
-                    # 解析 JSON 字段
-                    for field in ['ai_models_used', 'questions_used', 'results_summary', 'detailed_results']:
+                    SELECT id, user_id, brand_name, test_date, ai_models_used, questions_used,
+                           overall_score, total_tests, results_summary, detailed_results,
+                           is_summary_compressed, is_detailed_compressed
+                    FROM test_records
+                    ORDER BY created_at DESC
+                    LIMIT 10
+                """)
+                rows = cursor.fetchall()
+
+                # 查找匹配 execution_id 的记录
+                for row in rows:
+                    columns = ['id', 'user_id', 'brand_name', 'test_date', 'ai_models_used', 
+                               'questions_used', 'overall_score', 'total_tests', 'results_summary', 
+                               'detailed_results', 'is_summary_compressed', 'is_detailed_compressed']
+                    record_data = dict(zip(columns, row))
+                    
+                    # 解析 results_summary（可能需要解压）
+                    results_summary_raw = record_data.get('results_summary')
+                    is_compressed = record_data.get('is_summary_compressed', 0)
+                    
+                    try:
+                        if is_compressed and results_summary_raw:
+                            results_summary_bytes = gzip.decompress(results_summary_raw)
+                            results_summary = json.loads(results_summary_bytes.decode('utf-8'))
+                        elif results_summary_raw:
+                            results_summary = json.loads(results_summary_raw)
+                        else:
+                            results_summary = {}
+                    except (json.JSONDecodeError, TypeError, gzip.BadGzipFile):
+                        results_summary = {}
+                    
+                    # 检查是否匹配 execution_id
+                    summary_exec_id = results_summary.get('execution_id', '')
+                    if summary_exec_id == execution_id:
+                        # 解析 detailed_results
+                        detailed_results_raw = record_data.get('detailed_results')
+                        is_detailed_compressed = record_data.get('is_detailed_compressed', 0)
+                        
                         try:
-                            if deep_result.get(field):
-                                deep_result[field] = json.loads(deep_result[field])
-                        except (json.JSONDecodeError, TypeError):
-                            deep_result[field] = [] if field in ['ai_models_used', 'questions_used'] else {}
+                            if is_detailed_compressed and detailed_results_raw:
+                                detailed_results_bytes = gzip.decompress(detailed_results_raw)
+                                detailed_results = json.loads(detailed_results_bytes.decode('utf-8'))
+                            elif detailed_results_raw:
+                                detailed_results = json.loads(detailed_results_raw)
+                            else:
+                                detailed_results = []
+                        except (json.JSONDecodeError, TypeError, gzip.BadGzipFile):
+                            detailed_results = []
+
+                        # 解析其他 JSON 字段
+                        try:
+                            ai_models_used = json.loads(record_data.get('ai_models_used', '[]'))
+                            questions_used = json.loads(record_data.get('questions_used', '[]'))
+                        except:
+                            ai_models_used = []
+                            questions_used = []
+
+                        # 构建 deep_result
+                        deep_result = {
+                            'execution_id': summary_exec_id,
+                            'result_id': record_data.get('id'),
+                            'brand_name': record_data.get('brand_name', '未知品牌'),
+                            'test_date': record_data.get('test_date', ''),
+                            'ai_models_used': ai_models_used,
+                            'questions_used': questions_used,
+                            'overall_score': record_data.get('overall_score', 0) or 0,
+                            'total_tests': record_data.get('total_tests', 0) or 0,
+                            'results_summary': results_summary,
+                            'detailed_results': detailed_results,
+                            'platform_scores': [],
+                            'dimension_scores': {}
+                        }
+                        
+                        # 从 results_summary 中提取更多信息
+                        if results_summary:
+                            deep_result['competitor_brands'] = results_summary.get('competitor_brands', [])
+                            deep_result['formula'] = results_summary.get('formula', '')
+                        
+                        break
 
         if not deep_result:
             return jsonify({'error': 'Test result not found', 'code': 'RESULT_NOT_FOUND'}), 404
+
+        # 构建平台评分
+        detailed_results = deep_result.get('detailed_results', [])
+        if isinstance(detailed_results, list):
+            for result in detailed_results:
+                if isinstance(result, dict):
+                    deep_result.setdefault('platform_scores', []).append({
+                        'platform': result.get('model', result.get('platform', 'Unknown')),
+                        'score': result.get('score', result.get('overall_score', 0)),
+                        'rank': result.get('rank', 0),
+                        'sentiment': result.get('sentiment', 0)
+                    })
+
+        # 构建维度评分
+        deep_result['dimension_scores'] = {
+            'authority': deep_result.get('authority_score', 75),
+            'visibility': deep_result.get('visibility_score', 70),
+            'purity': deep_result.get('purity_score', 80),
+            'consistency': deep_result.get('consistency_score', 75)
+        }
 
         # 准备测试数据
         test_data = {

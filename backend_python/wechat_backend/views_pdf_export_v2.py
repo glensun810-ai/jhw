@@ -24,28 +24,38 @@ pdf_export_v2_bp = Blueprint('pdf_export_v2', __name__)
 def get_full_report_data():
     """
     获取完整报告数据
-    
+
     Query Parameters:
     - executionId: 执行 ID (required)
     - format: 数据格式 (basic, detailed, full) default: full
     - sections: 需要的章节 (comma-separated) default: all
-    
+
     Returns:
     - 完整报告数据 JSON
     """
     execution_id = request.args.get('executionId')
     format_level = request.args.get('format', 'full')
     sections = request.args.get('sections', 'all')
-    
+
     if not execution_id:
         return jsonify({'error': 'executionId is required', 'code': 'MISSING_EXECUTION_ID'}), 400
-    
+
     try:
         from wechat_backend.services.report_data_service import get_report_data_service
-        
+
         report_service = get_report_data_service()
-        full_report = report_service.generate_full_report(execution_id)
         
+        # 先检查数据是否存在
+        base_data = report_service._get_base_data(execution_id)
+        if not base_data:
+            return jsonify({
+                'error': 'Test result not found',
+                'code': 'RESULT_NOT_FOUND',
+                'details': f'No data found for executionId: {execution_id}'
+            }), 404
+        
+        full_report = report_service.generate_full_report(execution_id)
+
         # 根据 format_level 过滤数据
         if format_level == 'basic':
             report_data = _filter_basic(full_report)
@@ -53,17 +63,34 @@ def get_full_report_data():
             report_data = _filter_detailed(full_report)
         else:
             report_data = full_report
-        
+
         # 根据 sections 过滤
         if sections != 'all':
             section_list = [s.strip() for s in sections.split(',')]
             report_data = {k: v for k, v in report_data.items() if k in section_list or k == 'reportMetadata'}
-        
+
         return jsonify({
             'status': 'success',
             'data': report_data
         })
-        
+
+    except ValueError as e:
+        # 数据未找到，返回 404
+        error_msg = str(e)
+        if '未找到' in error_msg or 'not found' in error_msg.lower():
+            api_logger.warning(f"数据未找到：{e}")
+            return jsonify({
+                'error': 'Test result not found',
+                'code': 'RESULT_NOT_FOUND',
+                'details': error_msg
+            }), 404
+        # 其他 ValueError 返回 400
+        api_logger.error(f"请求参数错误：{e}")
+        return jsonify({
+            'error': 'Invalid request',
+            'details': str(e),
+            'code': 'INVALID_REQUEST'
+        }), 400
     except Exception as e:
         api_logger.error(f"获取报告数据失败：{e}", exc_info=True)
         return jsonify({

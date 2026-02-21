@@ -2047,21 +2047,32 @@ Page({
   generateDashboardData: function(processedReportData) {
     try {
       // 提取原始结果数组
-      const rawResults = Array.isArray(processedReportData) 
-        ? processedReportData 
+      const rawResults = Array.isArray(processedReportData)
+        ? processedReportData
         : (processedReportData.detailed_results || processedReportData.results || []);
-      
+
       if (!rawResults || rawResults.length === 0) {
         console.warn('没有可用的原始结果数据');
         return null;
       }
-      
+
       // 调用聚合引擎
       const brandName = this.data.brandName;
       const competitors = this.data.competitorBrands || [];
-      
-      const dashboardData = aggregateReport(rawResults, brandName, competitors);
-      
+
+      // 【新增】传递后端分析数据
+      const additionalData = {
+        semantic_drift_data: processedReportData.semantic_drift_data || null,
+        semantic_contrast_data: processedReportData.semantic_contrast_data || null,
+        recommendation_data: processedReportData.recommendation_data || null,
+        negative_sources: processedReportData.negative_sources || null,
+        brand_scores: processedReportData.brand_scores || null,
+        competitive_analysis: processedReportData.competitive_analysis || null,
+        overall_score: processedReportData.overall_score || null
+      };
+
+      const dashboardData = aggregateReport(rawResults, brandName, competitors, additionalData);
+
       // 保存到全局存储（供 dashboard 页面使用）
       const app = getApp();
       app.globalData.lastReport = {
@@ -2069,7 +2080,7 @@ Page({
         dashboard: dashboardData,
         competitors: competitors
       };
-      
+
       return dashboardData;
     } catch (error) {
       console.error('生成战略看板数据失败:', error);
@@ -2088,6 +2099,43 @@ Page({
       if (reportData && reportData.executionId) {
         wx.setStorageSync('lastReport', reportData);
         console.log('✅ 报告数据已保存到本地存储');
+        
+        // 【新增】保存 detailed_results 供结果页使用
+        const detailedResults = reportData.detailed_results || reportData.results || [];
+        if (detailedResults && detailedResults.length > 0) {
+          wx.setStorageSync('latestTestResults_' + reportData.executionId, detailedResults);
+          wx.setStorageSync('latestTestResults', detailedResults);  // 兼容旧 key
+          console.log('✅ 测试结果已保存到本地存储:', detailedResults.length, '条');
+        }
+        
+        // 保存品牌和竞品信息
+        if (this.data.brandName) {
+          wx.setStorageSync('latestTargetBrand', this.data.brandName);
+        }
+        if (this.data.competitorBrands) {
+          wx.setStorageSync('latestCompetitorBrands', this.data.competitorBrands);
+        }
+        
+        // 【新增】保存 competitiveAnalysis 和 negativeSources
+        if (reportData.competitiveAnalysis) {
+          wx.setStorageSync('latestCompetitiveAnalysis_' + reportData.executionId, reportData.competitiveAnalysis);
+          wx.setStorageSync('latestCompetitiveAnalysis', reportData.competitiveAnalysis);
+          console.log('✅ 竞品分析已保存');
+        }
+        if (reportData.negativeSources) {
+          wx.setStorageSync('latestNegativeSources_' + reportData.executionId, reportData.negativeSources);
+          console.log('✅ 负面信源已保存');
+        }
+        
+        // 【新增】保存语义偏移数据和优化建议
+        if (reportData.semanticDriftData) {
+          wx.setStorageSync('latestSemanticDrift_' + reportData.executionId, reportData.semanticDriftData);
+          console.log('✅ 语义偏移数据已保存');
+        }
+        if (reportData.recommendationData) {
+          wx.setStorageSync('latestRecommendations_' + reportData.executionId, reportData.recommendationData);
+          console.log('✅ 优化建议已保存');
+        }
       }
 
       // 延迟 500ms 跳转，让用户看到完成提示

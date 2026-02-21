@@ -671,9 +671,11 @@ def execute_nxm_test(
                 api_logger.info(f"Executing [Q:{q_idx+1}] [MainBrand:{main_brand}] on [Model:{model_name}]")
                 
                 # 构建结果项（带时间戳用于哈希生成）
+                # 【关键修复】添加 brand 字段，前端从 result.brand 提取品牌
                 result_item = {
                     "question_id": q_idx,
                     "question_text": question_text,
+                    "brand": main_brand,  # ✅ 前端从这里读取品牌
                     "main_brand": main_brand,
                     "competitor_brands": competitor_brands,
                     "model": model_name,
@@ -824,6 +826,7 @@ def execute_nxm_test(
                             result_item['log_error'] = str(log_error)
                         
                         # 5. 构造结构化结果
+                        # 【关键修复】确保 brand 字段不被覆盖
                         result_item.update({
                             "content": response_text,
                             "geo_data": geo_data,  # 包含 rank, sentiment, interception
@@ -833,6 +836,7 @@ def execute_nxm_test(
                             "platform": normalized_model_name,
                             "log_success": log_success,
                             "error_code": error_code  # 如果有解析错误，记录错误代码
+                            # ❌ 不要在这里覆盖 brand 字段
                         })
                         
                         api_logger.info(
@@ -842,11 +846,13 @@ def execute_nxm_test(
                         )
                     else:
                         # AI 调用失败
+                        # 【关键修复】确保 brand 字段不被覆盖
                         result_item.update({
                             "status": "failed",
                             "error": ai_response.error_message or "Unknown AI error",
                             "latency": latency,
                             "error_code": f"AI_ERROR_{getattr(ai_response, 'error_type', 'unknown')}"
+                            # ❌ 不要在这里覆盖 brand 字段
                         })
                         api_logger.warning(
                             f"AI Error: [Q:{q_idx+1}] [MainBrand:{main_brand}] [Model:{model_name}] - "
@@ -946,9 +952,423 @@ def execute_nxm_test(
         
         # 【重构点 3】任务终点校验 - 验证是否可以标记为 completed
         completion_check = _verify_completion(all_results, expected_total)
-        
+
         # 关闭日志写入器（确保文件句柄关闭）
         _close_logger(execution_id)
+
+        # ==================== 评分计算 ====================
+        # 从 all_results 中提取 geo_data 并计算品牌评分
+        from scoring_engine import ScoringEngine
+        from enhanced_scoring_engine import calculate_enhanced_scores
+        from ai_judge_module import JudgeResult, ConfidenceLevel
+        
+        scoring_engine = ScoringEngine()
+        brand_results_map = {}
+        
+        # 按品牌分组收集 judge_results
+        for result in all_results:
+            if result.get('status') == 'success' and result.get('geo_data'):
+                geo = result['geo_data']
+                brand = result.get('brand', main_brand)
+                
+                if brand not in brand_results_map:
+                    brand_results_map[brand] = []
+                
+                # 从 geo_data 构建 judge_result
+                # rank: 1-3 为高准确，4-6 为中等，7-10 为低，-1 为未入榜
+                rank = geo.get('rank', -1)
+                sentiment = geo.get('sentiment', 0)
+                
+                # 计算 accuracy_score (基于排名)
+                if rank <= 0:
+                    accuracy_score = 30 + sentiment * 20  # 未入榜
+                elif rank <= 3:
+                    accuracy_score = 85 + (3 - rank) * 5 + sentiment * 10  # 前 3 名
+                elif rank <= 6:
+                    accuracy_score = 65 + (6 - rank) * 5 + sentiment * 10  # 4-6 名
+                else:
+                    accuracy_score = 45 + (10 - rank) * 3 + sentiment * 10  # 7-10 名
+                
+                accuracy_score = max(0, min(100, accuracy_score))
+                
+                # completeness_score (基于是否有拦截分析)
+                interception = geo.get('interception', {})
+                completeness_score = 70 + len(interception) * 10 if interception else 60
+                
+                # sentiment_score 已经是 -1 到 1 的范围，转换为 0-100
+                sentiment_score = (sentiment + 1) * 50
+                
+                judge_result = JudgeResult(
+                    accuracy_score=accuracy_score,
+                    completeness_score=completeness_score,
+                    sentiment_score=sentiment_score,
+                    purity_score=sentiment_score * 0.9,  # 基于情感估算
+                    consistency_score=accuracy_score * 0.95,  # 基于准确性估算
+                    judgement=f"Rank: {rank}, Sentiment: {sentiment:.2f}",
+                    confidence_level=ConfidenceLevel.HIGH if rank > 0 else ConfidenceLevel.MEDIUM
+                )
+                brand_results_map[brand].append(judge_result)
+        
+        # 计算各品牌分数
+        brand_scores = {}
+        overall_score = 0
+        
+        for brand, judge_results in brand_results_map.items():
+            if judge_results:
+                try:
+                    basic_score = scoring_engine.calculate(judge_results)
+                    enhanced_result = calculate_enhanced_scores(judge_results, brand_name=brand)
+                    
+                    brand_scores[brand] = {
+                        'overallScore': basic_score.geo_score,
+                        'overallGrade': basic_score.grade,
+                        'overallAuthority': basic_score.authority_score,
+                        'overallVisibility': basic_score.visibility_score,
+                        'overallSentiment': basic_score.sentiment_score,
+                        'overallPurity': basic_score.purity_score,
+                        'overallConsistency': basic_score.consistency_score,
+                        'overallSummary': basic_score.summary
+                    }
+                    
+                    # 主品牌分数作为 overall_score
+                    if brand == main_brand:
+                        overall_score = basic_score.geo_score
+                        
+                except Exception as e:
+                    api_logger.error(f"Scoring failed for {brand}: {e}")
+                    brand_scores[brand] = {
+                        'overallScore': 0,
+                        'overallGrade': 'D',
+                        'overallAuthority': 0,
+                        'overallVisibility': 0,
+                        'overallSentiment': 0,
+                        'overallPurity': 0,
+                        'overallConsistency': 0,
+                        'overallSummary': '评分计算失败'
+                    }
+        
+        # 如果没有主品牌分数，使用所有品牌的平均分
+        if overall_score == 0 and brand_scores:
+            scores = [bs['overallScore'] for bs in brand_scores.values() if bs['overallScore'] > 0]
+            if scores:
+                overall_score = sum(scores) / len(scores)
+
+        api_logger.info(f"[Scoring] Main brand: {main_brand}, Overall score: {overall_score}, Brand scores: {brand_scores}")
+
+        # ==================== 竞品对比分析 ====================
+        # 生成竞品对比数据
+        all_brands = list(brand_scores.keys())
+        if main_brand not in all_brands:
+            all_brands.insert(0, main_brand)
+        
+        # 按分数排序
+        sorted_brands = sorted(
+            [(brand, data['overallScore']) for brand, data in brand_scores.items()],
+            key=lambda x: x[1],
+            reverse=True
+        )
+        
+        # 生成首次提及率（按平台统计）
+        platform_brand_first = {}
+        for result in all_results:
+            if result.get('status') == 'success' and result.get('geo_data'):
+                platform = result.get('platform', 'unknown')
+                geo = result['geo_data']
+                rank = geo.get('rank', -1)
+                brand = result.get('brand', main_brand)
+                
+                if platform not in platform_brand_first:
+                    platform_brand_first[platform] = {}
+                if rank > 0 and rank < platform_brand_first[platform].get('min_rank', 999):
+                    platform_brand_first[platform]['min_rank'] = rank
+                    platform_brand_first[platform]['brand'] = brand
+        
+        first_mention_by_platform = {}
+        for platform, data in platform_brand_first.items():
+            brand = data.get('brand', main_brand)
+            if brand == main_brand:
+                first_mention_by_platform[platform] = 1.0
+            else:
+                first_mention_by_platform[platform] = 0.0
+        
+        # 生成拦截风险分析
+        interception_risks = []
+        for brand, score_data in brand_scores.items():
+            if brand != main_brand and score_data['overallScore'] > brand_scores.get(main_brand, {}).get('overallScore', 0):
+                interception_risks.append({
+                    'type': 'visibility',
+                    'level': 'high' if score_data['overallScore'] - brand_scores[main_brand]['overallScore'] > 20 else 'medium',
+                    'brand': brand,
+                    'description': f"{brand}在 AI 认知中领先{score_data['overallScore'] - brand_scores[main_brand]['overallScore']}分"
+                })
+        
+        competitive_analysis = {
+            'brandScores': brand_scores,
+            'firstMentionByPlatform': first_mention_by_platform,
+            'interceptionRisks': interception_risks,
+            'ranking': [{'brand': b, 'score': s} for b, s in sorted_brands]
+        }
+        
+        # ==================== 负面信源分析 ====================
+        # 【关键修复】从 AI 响应中真实提取负面信源，而非预设模拟数据
+        negative_sources = []
+        main_brand_score = brand_scores.get(main_brand, {}).get('overallScore', 0)
+        
+        # 从 all_results 中提取 cited_sources
+        for result in all_results:
+            if result.get('status') == 'success' and result.get('geo_data'):
+                geo = result['geo_data']
+                cited_sources = geo.get('cited_sources', [])
+                
+                for source in cited_sources:
+                    url = source.get('url', '')
+                    site_name = source.get('site_name', '')
+                    attitude = source.get('attitude', 'neutral')
+                    
+                    # 只提取负面或中性偏负面的信源
+                    if attitude == 'negative' or (attitude == 'neutral' and main_brand_score < 70):
+                        # 检查是否已存在（去重）
+                        exists = any(ns.get('source_url') == url for ns in negative_sources)
+                        if not exists and url and site_name:
+                            # 根据情感分数计算严重性
+                            sentiment = geo.get('sentiment', 0)
+                            severity = 'high' if sentiment < -0.3 else ('medium' if sentiment < 0 else 'low')
+                            
+                            negative_sources.append({
+                                'source_name': site_name,
+                                'source_url': url,
+                                'source_type': 'article' if 'zhuanlan' in url or 'article' in url else 'encyclopedia' if 'baike' in url else 'social_media',
+                                'content_summary': f'AI 回答中引用的信源：{site_name}',
+                                'sentiment_score': sentiment,
+                                'severity': severity,
+                                'impact_scope': 'high' if 'huawei.com' in url or 'xiaomi.com' in url else 'medium',
+                                'estimated_reach': 100000 if 'baike' in url else 50000,
+                                'discovered_at': datetime.now().isoformat(),
+                                'recommendation': '官方回应 + SEO 优化' if severity == 'high' else '持续监控',
+                                'priority_score': 90 if severity == 'high' else (70 if severity == 'medium' else 50),
+                                'status': 'pending',
+                                'from_ai_response': True  # 标记为从 AI 响应提取
+                            })
+        
+        # 如果没有从 AI 响应中提取到负面信源，且分数较低，生成基于排名的信源分析
+        if len(negative_sources) == 0 and main_brand_score < 70:
+            # 从拦截风险中生成信源
+            for risk in interception_risks:
+                negative_sources.append({
+                    'source_name': f'AI 分析 - {risk.get("brand", "竞品")} 领先',
+                    'source_url': 'https://example.com/analysis',
+                    'source_type': 'analysis',
+                    'content_summary': risk.get('description', '竞品在 AI 认知中领先'),
+                    'sentiment_score': -0.3,
+                    'severity': risk.get('level', 'medium'),
+                    'impact_scope': 'medium',
+                    'estimated_reach': 50000,
+                    'discovered_at': datetime.now().isoformat(),
+                    'recommendation': '加强品牌内容建设',
+                    'priority_score': 70,
+                    'status': 'pending',
+                    'from_ai_response': False  # 标记为分析生成
+                })
+        
+        api_logger.info(f"[Competitive] Brands: {all_brands}, Interception risks: {len(interception_risks)}, Negative sources: {len(negative_sources)} (from AI: {sum(1 for ns in negative_sources if ns.get('from_ai_response'))})")
+
+        # ==================== 语义偏移分析 ====================
+        # 【新增】从 AI 响应中提取关键词，进行语义偏移分析
+        official_keywords = {
+            # 官方关键词库（可根据品牌动态加载）
+            '华为': ['创新', '品质', '技术领先', '5G', '影像', 'XMAGE', '鸿蒙', '高端', '商务', '拍照'],
+            '小米': ['性价比', '发烧', 'MIUI', '智能家居', '年轻', '性能', '快充', '旗舰'],
+            'Oppo': ['拍照', '人像', '快充', '设计', '轻薄', 'ColorOS', '影像'],
+            'Vivo': ['拍照', '人像', 'HiFi', '设计', '轻薄', 'OriginOS', '影像']
+        }
+        
+        # 从 AI 响应中提取 AI 生成的关键词
+        ai_keywords = {}
+        ai_keyword_details = []
+        
+        for result in all_results:
+            if result.get('status') == 'success' and result.get('content'):
+                content = result.get('content', '')
+                # 简单提取名词作为关键词（实际应使用 NLP）
+                import re
+                # 提取中文名词（2-4 个字）
+                words = re.findall(r'[\u4e00-\u9fa5]{2,4}', content)
+                for word in words:
+                    if word not in ai_keywords:
+                        ai_keywords[word] = 0
+                    ai_keywords[word] += 1
+                    ai_keyword_details.append({
+                        'word': word,
+                        'model': result.get('model', 'Unknown'),
+                        'question': result.get('question_text', '')
+                    })
+        
+        # 计算语义偏移
+        brand_official = official_keywords.get(main_brand, [])
+        brand_ai_keywords = {k: v for k, v in ai_keywords.items() if v > 0}
+        
+        # 缺失关键词（官方有但 AI 未提及）
+        missing_keywords = [k for k in brand_official if k not in brand_ai_keywords]
+        
+        # 意外关键词（AI 提及但官方没有）
+        unexpected_keywords = [k for k in brand_ai_keywords if k not in brand_official]
+        
+        # 负面术语（简单规则：包含负面含义的词）
+        negative_terms = [k for k in unexpected_keywords if any(neg in k for neg in ['贵', '差', '慢', '问题', '故障', '不足', '缺点'])]
+        
+        # 正面术语
+        positive_terms = [k for k in brand_ai_keywords if any(pos in k for pos in ['好', '优秀', '强', '领先', '出色', '推荐', '值得'])]
+        
+        # 计算偏移分数
+        drift_score = int((len(missing_keywords) + len(negative_terms) * 2) / max(len(brand_official), 1) * 100)
+        drift_score = min(100, drift_score)
+        
+        # 确定严重程度
+        if drift_score >= 60:
+            drift_severity = 'high'
+            drift_severity_text = '严重偏移'
+        elif drift_score >= 30:
+            drift_severity = 'medium'
+            drift_severity_text = '中度偏移'
+        else:
+            drift_severity = 'low'
+            drift_severity_text = '偏移轻微'
+        
+        # 计算语义相似度
+        common_count = len([k for k in brand_official if k in brand_ai_keywords])
+        total_count = len(set(brand_official) | set(brand_ai_keywords.keys()))
+        similarity_score = int((common_count / max(total_count, 1)) * 100)
+        
+        # 构建官方关键词对象
+        official_words = [{'name': k, 'value': 1.0, 'sentiment_valence': 0.8, 'category': 'Official_Key'} for k in brand_official]
+        
+        # 构建 AI 生成关键词对象
+        ai_generated_words = []
+        for k, v in sorted(brand_ai_keywords.items(), key=lambda x: x[1], reverse=True)[:20]:
+            category = 'AI_Generated_Risky' if k in negative_terms else ('AI_Generated_Positive' if k in positive_terms else 'AI_Generated_Neutral')
+            ai_generated_words.append({
+                'name': k,
+                'value': v / max(1, max(brand_ai_keywords.values())),
+                'sentiment_valence': 0.6 if k in positive_terms else (-0.5 if k in negative_terms else 0),
+                'category': category
+            })
+        
+        semantic_drift_data = {
+            'driftScore': drift_score,
+            'driftSeverity': drift_severity,
+            'driftSeverityText': drift_severity_text,
+            'similarityScore': similarity_score,
+            'missingKeywords': missing_keywords[:10],  # 限制数量
+            'unexpectedKeywords': unexpected_keywords[:10],
+            'negativeTerms': negative_terms[:10],
+            'positiveTerms': positive_terms[:10]
+        }
+        
+        semantic_contrast_data = {
+            'official_words': official_words,
+            'ai_generated_words': ai_generated_words
+        }
+        
+        api_logger.info(f"[Semantic] Drift score: {drift_score}, Severity: {drift_severity}, Missing: {len(missing_keywords)}, Unexpected: {len(unexpected_keywords)}")
+
+        # ==================== 优化建议生成 ====================
+        # 【新增】基于分析结果生成优化建议
+        recommendations = []
+        
+        # 基于语义偏移的建议
+        if drift_score >= 30:
+            recommendations.append({
+                'title': '优化品牌关键词传播',
+                'description': f'当前语义偏移分数为{drift_score}，{len(missing_keywords)}个官方关键词未被 AI 提及',
+                'category': 'content',
+                'phase': 'mid_term',
+                'priority': 'high' if drift_score >= 60 else 'medium',
+                'priority_score': 85 if drift_score >= 60 else 65,
+                'urgency': 8 if drift_score >= 60 else 5,
+                'estimated_impact': 'high' if drift_score >= 60 else 'medium',
+                'target': f'{main_brand}品牌内容团队',
+                'action_steps': [
+                    f'加强{", ".join(missing_keywords[:3])}等关键词的内容建设',
+                    '在官方渠道增加关键词曝光',
+                    '与 AI 平台合作优化品牌认知'
+                ]
+            })
+        
+        # 基于负面术语的建议
+        if len(negative_terms) > 0:
+            recommendations.append({
+                'title': '处理负面关键词影响',
+                'description': f'发现{len(negative_terms)}个负面术语：{", ".join(negative_terms[:3])}',
+                'category': 'pr',
+                'phase': 'short_term',
+                'priority': 'high',
+                'priority_score': 90,
+                'urgency': 9,
+                'estimated_impact': 'high',
+                'target': f'{main_brand}公关团队',
+                'action_steps': [
+                    '监测负面术语传播情况',
+                    '准备官方回应声明',
+                    '联系平台方沟通处理',
+                    '跟踪处理结果'
+                ]
+            })
+        
+        # 基于竞品对比的建议
+        for risk in interception_risks:
+            if risk.get('level') == 'high':
+                recommendations.append({
+                    'title': f'应对{risk.get("brand", "竞品")}竞争',
+                    'description': risk.get('description', '竞品在 AI 认知中领先'),
+                    'category': 'strategy',
+                    'phase': 'mid_term',
+                    'priority': 'high',
+                    'priority_score': 80,
+                    'urgency': 7,
+                    'estimated_impact': 'medium',
+                    'target': f'{main_brand}战略团队',
+                    'action_steps': [
+                        '分析竞品优势领域',
+                        '制定差异化竞争策略',
+                        '加强品牌独特卖点传播'
+                    ]
+                })
+        
+        # 基于负面信源的建议
+        high_severity_sources = [ns for ns in negative_sources if ns.get('severity') == 'high']
+        if len(high_severity_sources) > 0:
+            recommendations.append({
+                'title': '处理高风险负面信源',
+                'description': f'发现{len(high_severity_sources)}个高风险负面信源',
+                'category': 'pr',
+                'phase': 'short_term',
+                'priority': 'critical',
+                'priority_score': 95,
+                'urgency': 10,
+                'estimated_impact': 'high',
+                'target': f'{main_brand}公关和 SEO 团队',
+                'action_steps': [
+                    '立即评估负面信源影响',
+                    '准备官方回应',
+                    '联系平台方处理',
+                    '制定 SEO 优化策略'
+                ]
+            })
+        
+        # 计算建议统计
+        high_priority_count = sum(1 for r in recommendations if r.get('priority') in ['critical', 'high'])
+        medium_priority_count = sum(1 for r in recommendations if r.get('priority') == 'medium')
+        low_priority_count = sum(1 for r in recommendations if r.get('priority') == 'low')
+        
+        recommendation_data = {
+            'recommendations': recommendations,
+            'totalCount': len(recommendations),
+            'highPriorityCount': high_priority_count,
+            'mediumPriorityCount': medium_priority_count,
+            'lowPriorityCount': low_priority_count
+        }
+        
+        api_logger.info(f"[Recommendations] Generated {len(recommendations)} recommendations, High priority: {high_priority_count}")
         
         # 7. 更新任务最终状态
         api_logger.info(
@@ -1001,7 +1421,7 @@ def execute_nxm_test(
                 brand_name=main_brand,
                 ai_models_used=[m['name'] if isinstance(m, dict) else m for m in selected_models],
                 questions_used=raw_questions,
-                overall_score=0,
+                overall_score=overall_score,  # ✅ 使用计算出的分数
                 total_tests=len(all_results),
                 results_summary={
                     'execution_id': execution_id,
@@ -1011,11 +1431,18 @@ def execute_nxm_test(
                     'competitor_brands': competitor_brands,
                     'formula': f"{len(raw_questions)} questions × {len(selected_models)} models = {expected_total}",
                     'completion_verified': completion_check['can_complete'],
-                    'completion_check': completion_check
+                    'completion_check': completion_check,
+                    'brand_scores': brand_scores,  # ✅ 添加品牌评分
+                    'overall_score': overall_score,  # ✅ 添加总分
+                    'competitive_analysis': competitive_analysis,  # ✅ 添加竞品分析
+                    'negative_sources': negative_sources,  # ✅ 添加负面信源
+                    'semantic_drift_data': semantic_drift_data,  # ✅ 添加语义偏移数据
+                    'semantic_contrast_data': semantic_contrast_data,  # ✅ 添加语义对比数据
+                    'recommendation_data': recommendation_data  # ✅ 添加优化建议数据
                 },
                 detailed_results=all_results
             )
-            api_logger.info(f"Saved test record with ID: {record_id}")
+            api_logger.info(f"Saved test record with ID: {record_id}, overall_score: {overall_score}")
         except Exception as e:
             api_logger.error(f"Error saving test records to database: {e}")
         
@@ -1026,7 +1453,15 @@ def execute_nxm_test(
             'results': all_results,
             'formula': f"{len(raw_questions)} questions × {len(selected_models)} models = {expected_total}",
             'completion_verified': completion_check['can_complete'],
-            'completion_check': completion_check
+            'completion_check': completion_check,
+            # 【新增】返回完整的分析数据供前端使用
+            'brand_scores': brand_scores,
+            'competitive_analysis': competitive_analysis,
+            'negative_sources': negative_sources,
+            'semantic_drift_data': semantic_drift_data,
+            'semantic_contrast_data': semantic_contrast_data,
+            'recommendation_data': recommendation_data,
+            'overall_score': overall_score
         }
     
     except Exception as e:
