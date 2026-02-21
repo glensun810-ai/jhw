@@ -53,70 +53,55 @@ class PDFExportService:
         except Exception as e:
             self.logger.error(f"Error registering Chinese font: {e}")
     
-    def generate_test_report(self, test_data: Dict[str, Any]) -> bytes:
+    def generate_enhanced_report(self, report_data: Dict[str, Any], 
+                                  level: str = 'full',
+                                  sections: str = 'all') -> bytes:
         """
-        生成测试报告 PDF
+        生成增强版报告
         
         Args:
-            test_data: 测试数据字典，包含：
-                - executionId: 执行 ID
-                - brandName: 品牌名称
-                - competitorBrands: 竞品品牌列表
-                - aiModels: 使用的 AI 模型
-                - overallScore: 总体评分
-                - platformScores: 各平台评分
-                - dimensionScores: 各维度评分
-                - testDate: 测试日期
-                - recommendations: 优化建议
+            report_data: 完整报告数据
+            level: 报告级别
+            sections: 需要的章节
+        
+        Returns:
+            PDF 字节数据
+        """
+        from wechat_backend.services.enhanced_pdf_service import get_enhanced_pdf_service
+        
+        enhanced_service = get_enhanced_pdf_service()
+        return enhanced_service.generate_enhanced_report(report_data, level, sections)
+    
+    def generate_test_report(self, test_data: Dict[str, Any]) -> bytes:
+        """
+        生成测试报告 PDF（兼容旧版）
+        
+        Args:
+            test_data: 测试数据字典
         
         Returns:
             PDF 文件的字节数据
         """
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=A4,
-            leftMargin=2*cm,
-            rightMargin=2*cm,
-            topMargin=2*cm,
-            bottomMargin=2*cm
-        )
+        self.logger.info("Using legacy generate_test_report method")
+        # 转换为新格式
+        report_data = {
+            'reportMetadata': {
+                'executionId': test_data.get('executionId', ''),
+                'brandName': test_data.get('brandName', '')
+            },
+            'brandHealth': {
+                'overall_score': test_data.get('overallScore', 0),
+                'dimension_scores': test_data.get('dimensionScores', {})
+            },
+            'platformAnalysis': test_data.get('platformScores', []),
+            'executiveSummary': {},
+            'competitiveAnalysis': {},
+            'negativeSources': {},
+            'roiAnalysis': {},
+            'actionPlan': {}
+        }
         
-        elements = []
-        styles = self._create_styles()
-        
-        # 添加标题
-        elements.append(self._create_title(test_data.get('brandName', '品牌诊断报告'), styles))
-        elements.append(Spacer(1, 20))
-        
-        # 添加基本信息
-        elements.append(self._create_basic_info(test_data, styles))
-        elements.append(Spacer(1, 20))
-        
-        # 添加总体评分
-        elements.append(self._create_overall_score(test_data, styles))
-        elements.append(Spacer(1, 20))
-        
-        # 添加平台评分
-        if test_data.get('platformScores'):
-            elements.append(self._create_platform_scores(test_data['platformScores'], styles))
-            elements.append(Spacer(1, 20))
-        
-        # 添加维度评分
-        if test_data.get('dimensionScores'):
-            elements.append(self._create_dimension_scores(test_data['dimensionScores'], styles))
-            elements.append(Spacer(1, 20))
-        
-        # 添加优化建议
-        if test_data.get('recommendations'):
-            elements.append(self._create_recommendations(test_data['recommendations'], styles))
-        
-        # 构建 PDF
-        doc.build(elements)
-        pdf_data = buffer.getvalue()
-        buffer.close()
-        
-        return pdf_data
+        return self.generate_enhanced_report(report_data, level='basic')
     
     def _create_styles(self) -> Dict[str, ParagraphStyle]:
         """创建样式"""
