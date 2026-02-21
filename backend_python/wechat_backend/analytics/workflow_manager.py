@@ -12,13 +12,13 @@ import threading
 import queue
 from dataclasses import dataclass
 from wechat_backend.logging_config import api_logger
-from database import DB_PATH
-from security.sql_protection import SafeDatabaseQuery, sql_protector
+from wechat_backend.database import DB_PATH
+from wechat_backend.security.sql_protection import SafeDatabaseQuery, sql_protector
 from wechat_backend.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
-from ai_adapters.base_provider import BaseAIProvider
-from ai_adapters.doubao_provider import DoubaoProvider
-from ai_adapters.deepseek_provider import DeepSeekProvider
-from config_manager import config_manager
+from wechat_backend.ai_adapters.base_provider import BaseAIProvider
+from wechat_backend.ai_adapters.doubao_provider import DoubaoProvider
+from wechat_backend.ai_adapters.deepseek_provider import DeepSeekProvider
+from wechat_backend.config_manager import config_manager
 import sys
 import os
 # Add the project root directory to the Python path to allow importing from utils
