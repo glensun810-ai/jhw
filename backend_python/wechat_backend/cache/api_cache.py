@@ -8,17 +8,23 @@ API 缓存机制
 2. 请求去重 (Request Deduplication)
 3. 智能失效 (Smart Invalidation)
 4. 多级缓存 (Multi-level Caching)
+5. 持久化存储 (Persistent Storage) - 新增
 """
 
 import time
 import hashlib
 import json
+import os
+import gzip
+import sqlite3
+import threading
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, Callable, Tuple
 from functools import wraps
 from collections import OrderedDict
 from flask import request, jsonify, g, make_response
 from wechat_backend.logging_config import api_logger
+from contextlib import contextmanager
 
 # ==================== 缓存配置 ====================
 
@@ -26,18 +32,31 @@ class CacheConfig:
     """缓存配置"""
     # 默认缓存时间（秒）
     DEFAULT_TTL = 300  # 5 分钟
-    
+
     # 最大缓存条目数
     MAX_ENTRIES = 1000
-    
+
     # 缓存键前缀
     KEY_PREFIX = 'api_cache:'
-    
+
     # 需要缓存的 HTTP 方法
     CACHEABLE_METHODS = ['GET', 'HEAD']
-    
+
     # 不缓存的 HTTP 状态码
     NON_CACHEABLE_STATUS = [400, 401, 403, 404, 500, 502, 503]
+
+    # 【新增】持久化配置
+    PERSISTENCE_ENABLED = True
+    PERSISTENCE_DB_PATH = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        'cache.db'
+    )
+    # 内存缓存最大大小（MB）
+    MAX_MEMORY_SIZE_MB = 512
+    # 大对象阈值（KB），超过此值启用压缩
+    COMPRESSION_THRESHOLD_KB = 10
+    # 压缩阈值字节
+    COMPRESSION_THRESHOLD_BYTES = COMPRESSION_THRESHOLD_KB * 1024
 
 
 # ==================== 内存缓存存储 ====================
@@ -127,11 +146,11 @@ class MemoryCache:
     def stats(self) -> Dict[str, Any]:
         """获取缓存统计"""
         total_size = sum(entry.get('size', 0) for entry in self.cache.values())
-        
+
         hit_rate = 0
         if self.hits + self.misses > 0:
             hit_rate = self.hits / (self.hits + self.misses) * 100
-        
+
         return {
             'entries': len(self.cache),
             'max_entries': self.max_size,
@@ -141,6 +160,26 @@ class MemoryCache:
             'hit_rate': f'{hit_rate:.2f}%',
             'total_size_kb': round(total_size / 1024, 2),
             'utilization': f'{len(self.cache) / self.max_size * 100:.1f}%'
+        }
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """获取缓存监控指标"""
+        total_size = sum(entry.get('size', 0) for entry in self.cache.values())
+        total_requests = self.hits + self.misses
+        
+        return {
+            'entries': len(self.cache),
+            'max_entries': self.max_size,
+            'hits': self.hits,
+            'misses': self.misses,
+            'sets': self.sets,
+            'hit_rate': round(self.hits / max(total_requests, 1) * 100, 2),
+            'miss_rate': round(self.misses / max(total_requests, 1) * 100, 2),
+            'total_requests': total_requests,
+            'total_size_kb': round(total_size / 1024, 2),
+            'total_size_mb': round(total_size / 1024 / 1024, 2),
+            'utilization': round(len(self.cache) / self.max_size * 100, 1),
+            'avg_entry_size_kb': round(total_size / max(len(self.cache), 1) / 1024, 2)
         }
     
     def cleanup_expired(self) -> int:
@@ -157,8 +196,298 @@ class MemoryCache:
         return len(expired_keys)
 
 
-# 全局缓存实例
-_api_cache = MemoryCache()
+# ==================== 持久化缓存层 ====================
+
+class PersistentCache:
+    """
+    持久化缓存实现
+    使用 SQLite 存储，支持重启后恢复缓存
+    
+    功能:
+    1. 缓存持久化（重启不丢失）
+    2. 大对象压缩存储
+    3. 自动清理过期数据
+    4. 内存限制保护
+    """
+    
+    def __init__(self, db_path: str = CacheConfig.PERSISTENCE_DB_PATH):
+        self.db_path = db_path
+        self._lock = threading.Lock()
+        self._init_db()
+        api_logger.info(f"持久化缓存初始化：{db_path}")
+    
+    @contextmanager
+    def get_connection(self):
+        """获取数据库连接（上下文管理器）"""
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA synchronous=NORMAL')
+        try:
+            yield conn
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+    
+    def _init_db(self):
+        """初始化数据库表"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS cache_entries (
+                    key TEXT PRIMARY KEY,
+                    value BLOB,
+                    expires_at REAL,
+                    created_at REAL,
+                    is_compressed INTEGER DEFAULT 0,
+                    size_bytes INTEGER
+                )
+            ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_expires_at ON cache_entries(expires_at)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_created_at ON cache_entries(created_at)')
+    
+    def _compress(self, data: bytes) -> bytes:
+        """压缩数据"""
+        if len(data) > CacheConfig.COMPRESSION_THRESHOLD_BYTES:
+            return gzip.compress(data, compresslevel=6)
+        return data
+    
+    def _decompress(self, data: bytes) -> bytes:
+        """解压缩数据"""
+        try:
+            return gzip.decompress(data)
+        except Exception:
+            # 如果不是压缩数据，直接返回
+            return data
+    
+    def get(self, key: str) -> Optional[Any]:
+        """获取持久化缓存"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT value, expires_at, is_compressed
+                FROM cache_entries
+                WHERE key = ?
+            ''', (key,))
+            
+            row = cursor.fetchone()
+            
+            if not row:
+                return None
+            
+            value_bytes, expires_at, is_compressed = row
+            
+            # 检查是否过期
+            if expires_at and time.time() > expires_at:
+                self.delete(key)
+                return None
+            
+            # 解压缩
+            if is_compressed:
+                value_bytes = self._decompress(value_bytes)
+            
+            try:
+                return json.loads(value_bytes.decode('utf-8'))
+            except Exception:
+                return None
+    
+    def set(self, key: str, value: Any, ttl: int = CacheConfig.DEFAULT_TTL):
+        """设置持久化缓存"""
+        try:
+            value_bytes = json.dumps(value).encode('utf-8')
+            is_compressed = 0
+            
+            # 大对象压缩
+            if len(value_bytes) > CacheConfig.COMPRESSION_THRESHOLD_BYTES:
+                value_bytes = self._compress(value_bytes)
+                is_compressed = 1
+            
+            expires_at = time.time() + ttl if ttl > 0 else None
+            
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT OR REPLACE INTO cache_entries
+                    (key, value, expires_at, created_at, is_compressed, size_bytes)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (key, value_bytes, expires_at, time.time(), is_compressed, len(value_bytes)))
+        
+        except Exception as e:
+            api_logger.error(f"持久化缓存设置失败：{e}")
+    
+    def delete(self, key: str) -> bool:
+        """删除持久化缓存"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM cache_entries WHERE key = ?', (key,))
+            return cursor.rowcount > 0
+    
+    def clear(self):
+        """清空持久化缓存"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM cache_entries')
+        api_logger.info('持久化缓存已清空')
+    
+    def cleanup_expired(self) -> int:
+        """清理过期条目"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM cache_entries WHERE expires_at < ?', (time.time(),))
+            deleted_count = cursor.rowcount
+            if deleted_count > 0:
+                api_logger.info(f"清理了 {deleted_count} 条过期缓存")
+            return deleted_count
+    
+    def stats(self) -> Dict[str, Any]:
+        """获取缓存统计"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # 总条目数
+            cursor.execute('SELECT COUNT(*) FROM cache_entries')
+            total_entries = cursor.fetchone()[0]
+            
+            # 压缩条目数
+            cursor.execute('SELECT COUNT(*) FROM cache_entries WHERE is_compressed = 1')
+            compressed_entries = cursor.fetchone()[0]
+            
+            # 总大小
+            cursor.execute('SELECT SUM(size_bytes) FROM cache_entries')
+            total_size = cursor.fetchone()[0] or 0
+            
+            # 过期条目数
+            cursor.execute('SELECT COUNT(*) FROM cache_entries WHERE expires_at < ?', (time.time(),))
+            expired_entries = cursor.fetchone()[0]
+            
+            return {
+                'total_entries': total_entries,
+                'compressed_entries': compressed_entries,
+                'compression_ratio': f'{compressed_entries / max(total_entries, 1) * 100:.1f}%',
+                'total_size_kb': round(total_size / 1024, 2),
+                'total_size_mb': round(total_size / 1024 / 1024, 2),
+                'expired_entries': expired_entries
+            }
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """获取持久化缓存监控指标"""
+        stats = self.stats()
+        return {
+            'entries': stats['total_entries'],
+            'compressed_entries': stats['compressed_entries'],
+            'compression_ratio': stats['compression_ratio'],
+            'total_size_kb': stats['total_size_kb'],
+            'total_size_mb': stats['total_size_mb'],
+            'expired_entries': stats['expired_entries'],
+            'hit_rate': 0,  # PersistentCache 不直接统计命中率
+            'miss_rate': 0
+        }
+
+
+# ==================== 混合缓存（L1 + L2） ====================
+
+class HybridCache:
+    """
+    混合缓存实现
+    L1: MemoryCache（热点数据，快速访问）
+    L2: PersistentCache（冷数据，持久化）
+    
+    策略:
+    1. 写入：同时写入 L1 和 L2
+    2. 读取：先读 L1，未命中读 L2，并回写到 L1
+    3. 删除：同时删除 L1 和 L2
+    4. 过期：L1 自动过期，L2 定期清理
+    """
+    
+    def __init__(self, memory_cache: MemoryCache = None, persistent_cache: PersistentCache = None):
+        self.l1_cache = memory_cache or MemoryCache()
+        self.l2_cache = persistent_cache if persistent_cache is not None else PersistentCache()
+        self.enabled = CacheConfig.PERSISTENCE_ENABLED
+        api_logger.info(f"混合缓存初始化：L1={type(self.l1_cache).__name__}, L2={type(self.l2_cache).__name__}")
+    
+    def get(self, key: str) -> Optional[Any]:
+        """获取缓存（L1 → L2）"""
+        # 先读 L1
+        value = self.l1_cache.get(key)
+        if value is not None:
+            return value
+        
+        # L1 未命中，读 L2
+        if self.enabled:
+            value = self.l2_cache.get(key)
+            if value is not None:
+                # 回写到 L1
+                self.l1_cache.set(key, value)
+                return value
+        
+        return None
+    
+    def set(self, key: str, value: Any, ttl: int = CacheConfig.DEFAULT_TTL):
+        """设置缓存（L1 + L2）"""
+        # 写入 L1
+        self.l1_cache.set(key, value, ttl)
+        
+        # 写入 L2
+        if self.enabled:
+            self.l2_cache.set(key, value, ttl)
+    
+    def delete(self, key: str) -> bool:
+        """删除缓存（L1 + L2）"""
+        l1_deleted = self.l1_cache.delete(key)
+        l2_deleted = self.l2_cache.delete(key) if self.enabled else False
+        return l1_deleted or l2_deleted
+    
+    def clear(self):
+        """清空所有缓存"""
+        self.l1_cache.clear()
+        if self.enabled:
+            self.l2_cache.clear()
+    
+    def cleanup_expired(self) -> int:
+        """清理过期条目"""
+        l1_cleaned = self.l1_cache.cleanup_expired()
+        l2_cleaned = self.l2_cache.cleanup_expired() if self.enabled else 0
+        return l1_cleaned + l2_cleaned
+    
+    def stats(self) -> Dict[str, Any]:
+        """获取缓存统计"""
+        l1_stats = self.l1_cache.stats()
+        l2_stats = self.l2_cache.stats() if self.enabled else {}
+        
+        return {
+            'l1_cache': l1_stats,
+            'l2_cache': l2_stats,
+            'persistence_enabled': self.enabled
+        }
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """获取混合缓存监控指标"""
+        l1_metrics = self.l1_cache.get_metrics()
+        l2_metrics = self.l2_cache.get_metrics() if self.enabled else {}
+        
+        # 计算整体命中率
+        total_hits = l1_metrics.get('hits', 0) + l2_metrics.get('hits', 0) if self.enabled else l1_metrics.get('hits', 0)
+        total_misses = l1_metrics.get('misses', 0)
+        total_requests = total_hits + total_misses
+        
+        return {
+            'l1_cache': l1_metrics,
+            'l2_cache': l2_metrics,
+            'persistence_enabled': self.enabled,
+            'total_hits': total_hits,
+            'total_misses': total_misses,
+            'total_requests': total_requests,
+            'overall_hit_rate': round(total_hits / max(total_requests, 1) * 100, 2),
+            'overall_miss_rate': round(total_misses / max(total_requests, 1) * 100, 2),
+            'l1_hit_ratio': round(l1_metrics.get('hits', 0) / max(total_hits, 1) * 100, 2) if total_hits > 0 else 0,
+            'l2_hit_ratio': round(l2_metrics.get('hits', 0) / max(total_hits, 1) * 100, 2) if self.enabled and total_hits > 0 else 0
+        }
+
+
+# 全局缓存实例（升级为混合缓存）
+_api_cache = HybridCache()
 
 
 # ==================== 缓存装饰器 ====================

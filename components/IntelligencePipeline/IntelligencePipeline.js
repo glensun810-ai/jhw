@@ -4,9 +4,9 @@
  */
 
 const app = getApp();
-const logger = require('../../../utils/logger');
-const { request } = require('../../../utils/request');
-const { watchIntelligenceUpdates } = require('../../../utils/sse-client');
+const logger = require('../../utils/logger');
+const { request } = require('../../utils/request');
+const { watchIntelligenceUpdates } = require('../../utils/sse-client');
 
 Component({
   options: {

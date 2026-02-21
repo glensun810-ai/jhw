@@ -266,7 +266,7 @@ class SSEClient {
  * @returns {SSEClient}
  */
 function createIntelligenceSSE(executionId, options = {}) {
-  const baseUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5001';
+  const baseUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5000';
   const sseUrl = `${baseUrl}/api/intelligence/stream?executionId=${executionId}`;
 
   logger.info('[SSE] 创建情报流水线 SSE 客户端', { executionId, sseUrl });

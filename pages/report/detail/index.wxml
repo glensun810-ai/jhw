@@ -13,14 +13,14 @@
   <scroll-view scroll-x class="model-tabs" enable-flex>
     <view 
       wx:for="{{modelResults}}" 
-      wx:key="model" 
+      wx:key="model"
       class="tab-item {{currentModelIndex === index ? 'active' : ''}}"
-      bindtap="switchModel" 
+      bindtap="switchModel"
       data-index="{{index}}"
     >
       <view class="tab-model-name">{{item.model}}</view>
-      <view class="tab-rank {{item.geo_data?.rank > 0 ? 'ranked' : 'unranked'}}">
-        {{item.geo_data?.rank > 0 ? '#' + item.geo_data.rank : '未上榜'}}
+      <view class="tab-rank {{(item.geo_data && item.geo_data.rank && item.geo_data.rank > 0) ? 'ranked' : 'unranked'}}">
+        {{(item.geo_data && item.geo_data.rank && item.geo_data.rank > 0) ? '#' + item.geo_data.rank : '未上榜'}}
       </view>
     </view>
   </scroll-view>
@@ -31,7 +31,7 @@
       <text class="title-icon">🔍</text>
       <text class="title-text">归因诊断：为什么排在这里？</text>
     </view>
-    
+
     <!-- 情感定性 -->
     <view class="insight-section">
       <view class="insight-item">
@@ -40,10 +40,10 @@
           <text class="insight-label">情感定性</text>
         </view>
         <view class="insight-content">
-          <text class="value {{currentModelData?.geo_data?.sentiment > 0.3 ? 'pos' : currentModelData?.geo_data?.sentiment < -0.3 ? 'neg' : 'neu'}}">
-            {{currentModelData?.geo_data?.sentiment > 0.3 ? '正面评价' : currentModelData?.geo_data?.sentiment < -0.3 ? '存在负面' : '中性评价'}}
+          <text class="value {{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.sentiment > 0.3) ? 'pos' : (currentModelData && currentModelData.geo_data && currentModelData.geo_data.sentiment < -0.3) ? 'neg' : 'neu'}}">
+            {{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.sentiment > 0.3) ? '正面评价' : (currentModelData && currentModelData.geo_data && currentModelData.geo_data.sentiment < -0.3) ? '存在负面' : '中性评价'}}
           </text>
-          <text class="sub-value">得分：{{currentModelData?.geo_data?.sentiment}}</text>
+          <text class="sub-value">得分：{{currentModelData && currentModelData.geo_data ? currentModelData.geo_data.sentiment : 'N/A'}}</text>
         </view>
       </view>
 
@@ -54,8 +54,8 @@
           <text class="insight-label">排名情况</text>
         </view>
         <view class="insight-content">
-          <text class="value {{currentModelData?.geo_data?.rank > 0 && currentModelData?.geo_data?.rank <= 3 ? 'good' : currentModelData?.geo_data?.rank > 5 ? 'bad' : 'normal'}}">
-            {{currentModelData?.geo_data?.rank > 0 ? '第' + currentModelData?.geo_data?.rank + '名' : '未进入榜单'}}
+          <text class="value {{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.rank > 0 && currentModelData.geo_data.rank <= 3) ? 'good' : (currentModelData && currentModelData.geo_data && currentModelData.geo_data.rank > 5) ? 'bad' : 'normal'}}">
+            {{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.rank > 0) ? '第' + currentModelData.geo_data.rank + '名' : '未进入榜单'}}
           </text>
           <text class="sub-value">共{{modelResults.length}}个模型参与排名</text>
         </view>
@@ -68,10 +68,10 @@
           <text class="insight-label">品牌提及</text>
         </view>
         <view class="insight-content">
-          <text class="value {{currentModelData?.geo_data?.brand_mentioned ? 'pos' : 'neg'}}">
-            {{currentModelData?.geo_data?.brand_mentioned ? '已提及' : '未提及'}}
+          <text class="value {{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.brand_mentioned) ? 'pos' : 'neg'}}">
+            {{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.brand_mentioned) ? '已提及' : '未提及'}}
           </text>
-          <text class="sub-value">{{currentModelData?.geo_data?.brand_mentioned ? 'AI 认知中存在' : 'AI 未识别品牌'}}</text>
+          <text class="sub-value">{{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.brand_mentioned) ? 'AI 认知中存在' : 'AI 未识别品牌'}}</text>
         </view>
       </view>
     </view>
@@ -81,16 +81,16 @@
       <view class="detective-header">
         <text class="detective-icon">🕵️</text>
         <text class="detective-label">影响力的信源证据</text>
-        <text class="detective-count">{{(currentModelData?.geo_data?.cited_sources || []).length}} 个信源</text>
+        <text class="detective-count">{{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.cited_sources ? currentModelData.geo_data.cited_sources.length : 0)}} 个信源</text>
       </view>
 
-      <view wx:if="{{(currentModelData?.geo_data?.cited_sources || []).length === 0}}" class="empty-sources">
+      <view wx:if="{{(!currentModelData || !currentModelData.geo_data || !currentModelData.geo_data.cited_sources || currentModelData.geo_data.cited_sources.length === 0)}}" class="empty-sources">
         <text class="empty-icon">📭</text>
         <text class="empty-text">未检测到引用信源</text>
         <text class="empty-sub">AI 基于内部知识生成回答</text>
       </view>
 
-      <view wx:for="{{currentModelData?.geo_data?.cited_sources}}" wx:key="url" class="source-box">
+      <view wx:for="{{(currentModelData && currentModelData.geo_data && currentModelData.geo_data.cited_sources) ? currentModelData.geo_data.cited_sources : []}}" wx:key="url" class="source-box">
         <view class="source-header">
           <view class="source-info">
             <text class="site-name">{{item.site_name || '未知来源'}}</text>
@@ -106,13 +106,13 @@
     </view>
 
     <!-- 竞品拦截分析 -->
-    <view class="interception-analysis" wx:if="{{currentModelData?.geo_data?.interception}}">
+    <view class="interception-analysis" wx:if="{{currentModelData && currentModelData.geo_data && currentModelData.geo_data.interception}}">
       <view class="interception-header">
         <text class="interception-icon">⚠️</text>
         <text class="interception-label">竞品拦截预警</text>
       </view>
       <view class="interception-content">
-        <text class="interception-text">AI 推荐了竞品 <text class="competitor-name">{{currentModelData?.geo_data?.interception}}</text> 而非本品牌</text>
+        <text class="interception-text">AI 推荐了竞品 <text class="competitor-name">{{currentModelData.geo_data.interception}}</text> 而非本品牌</text>
         <view class="interception-suggestion">
           <text class="suggestion-icon">💡</text>
           <text class="suggestion-text">建议：加强品牌与竞品的差异化定位，提升 AI 认知中的独特性</text>
@@ -126,7 +126,7 @@
     <view class="card-title">
       <text class="title-icon">💬</text>
       <text class="title-text">AI 原文对话</text>
-      <text class="title-sub">{{currentModelData?.model}} · {{currentModelData?.latency}}s</text>
+      <text class="title-sub">{{(currentModelData && currentModelData.model) ? currentModelData.model : 'N/A'}} · {{(currentModelData && currentModelData.latency) ? currentModelData.latency : '0'}}s</text>
     </view>
     
     <view class="content-box">

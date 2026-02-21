@@ -74,7 +74,6 @@ Page({
     testProgress: 0,
     progressText: '准备启动AI认知诊断...',
     testCompleted: false,
-    completedTime: null,
 
     // 高级设置控制
     showAdvancedSettings: false,
@@ -128,21 +127,15 @@ Page({
 
     // 【P2 新增】配置对象（包含诊断预估信息）- 严禁设为 null
     config: {
-      estimate: {
-        duration: '30s',
-        steps: 5
-      },
+      estimate: { duration: '30s', steps: 5 },
       brandName: '',
       competitorBrands: [],
       customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}]
     },
-    
+
     // 诊断配置兜底数据 - 严禁设为 null
     diagnosticConfig: {
-      estimate: {
-        duration: '30s',
-        steps: 5
-      }
+      estimate: { duration: '30s', steps: 5 }
     }
   },
 
@@ -165,10 +158,10 @@ Page({
       // 先检查 this.data 是否存在
       let estimate = { duration: '30s', steps: 5 }; // 默认值
       
-      if (this.data) {
-        // 使用最安全的访问方式
+      // 使用最安全的访问方式，避免访问 null 对象的属性
+      if (this.data && this.data.config) {
         const config = this.data.config;
-        if (config && typeof config === 'object' && config.estimate) {
+        if (config.estimate && typeof config.estimate === 'object') {
           estimate = config.estimate;
         }
       }
@@ -196,6 +189,9 @@ Page({
           brandName: '',
           competitorBrands: [],
           customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}]
+        },
+        diagnosticConfig: {
+          estimate: { duration: '30s', steps: 5 }
         }
       });
 
@@ -207,7 +203,7 @@ Page({
       });
     }
   },
-  
+
   /**
    * 初始化默认值（独立方法）
    */
@@ -229,9 +225,13 @@ Page({
       });
       return;
     }
-    
+
     // 确保 config 和 diagnosticConfig 始终有默认值
-    if (!this.data.config || !this.data.config.estimate) {
+    // 使用安全的属性访问方式，处理可能为 null 的情况
+    const config = this.data.config;
+    const hasConfigEstimate = config && typeof config === 'object' && config.estimate && typeof config.estimate === 'object';
+
+    if (!hasConfigEstimate) {
       this.setData({
         config: {
           estimate: { duration: '30s', steps: 5 },
@@ -242,7 +242,10 @@ Page({
       });
     }
 
-    if (!this.data.diagnosticConfig || !this.data.diagnosticConfig.estimate) {
+    const diagnosticConfig = this.data.diagnosticConfig;
+    const hasDiagnosticEstimate = diagnosticConfig && typeof diagnosticConfig === 'object' && diagnosticConfig.estimate && typeof diagnosticConfig.estimate === 'object';
+
+    if (!hasDiagnosticEstimate) {
       this.setData({
         diagnosticConfig: {
           estimate: { duration: '30s', steps: 5 }
@@ -924,8 +927,7 @@ Page({
       testProgress: 0,
       progressText: '正在启动AI认知诊断...',
       testCompleted: false,
-      completedTime: null,
-    completedTime: null,
+      completedTime: null
     });
 
     this.callBackendBrandTest(brand_list, selectedModels, customQuestions);

@@ -11,7 +11,7 @@ const { debugLog, debugLogAiIo, debugLogStatusFlow, debugLogResults, debugLogExc
 const { API_ENDPOINTS } = require('./config');
 
 const ENV_CONFIG = {
-  develop: { baseURL: 'http://127.0.0.1:5001', timeout: 30000 },  // 修改为 5001 端口，避免与 macOS AirTunes 冲突
+  develop: { baseURL: 'http://127.0.0.1:5000', timeout: 30000 },  // 开发环境默认端口
   trial: { baseURL: 'https://staging.api.yourdomain.com', timeout: 20000 },
   release: { baseURL: 'https://api.yourdomain.com', timeout: 15000 }
 };

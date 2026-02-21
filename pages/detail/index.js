@@ -115,7 +115,17 @@ Page({
     networkQuality: 'unknown',
     networkQualityText: '',
     //【P2-10 新增】订阅状态
-    isSubscribed: false
+    isSubscribed: false,
+    //【P0 新增】实时统计（用于加载阶段显示）
+    realtimeStats: null,
+    realtimeSov: 0,
+    realtimeSentiment: '0.00',
+    brandRankings: [],
+    //【P0 新增】聚合结果（用于加载阶段显示）
+    aggregatedResults: null,
+    healthScore: 0,
+    //【P1 新增】进度详情
+    progressDetail: ''
   },
 
   //【P0 新增】诊断知识库 - Insight Pulse 商业洞察
@@ -140,6 +150,15 @@ Page({
       this.brandList = JSON.parse(decodeURIComponent(options.brand_list || '[]'));
       this.modelNames = JSON.parse(decodeURIComponent(options.models || '[]'));
       this.customQuestion = decodeURIComponent(options.question || '');
+
+      //【P0 新增】初始化工具类实例（在使用前初始化）
+      this.timeEstimator = new TimeEstimator();
+      this.remainingTimeCalc = new RemainingTimeCalculator();
+      this.progressValidator = new ProgressValidator();
+      this.stageEstimator = new StageEstimator();
+      this.networkMonitor = new NetworkMonitor();
+      this.progressNotifier = new ProgressNotifier();
+      this.taskWeightProcessor = new TaskWeightProcessor();
 
       // 计算预估时间：基础8秒 + (品牌数 * 模型数 * 1.5秒) * 1.3倍安全系数
       //【P0 重构】使用智能时间预估器
@@ -170,12 +189,6 @@ Page({
       this.startPolling();
       
       //【P0 新增】初始化工具类实例
-      this.timeEstimator = new TimeEstimator();
-      this.remainingTimeCalc = new RemainingTimeCalculator();
-      this.progressValidator = new ProgressValidator();
-      this.stageEstimator = new StageEstimator();
-      this.networkMonitor = new NetworkMonitor();
-      this.progressNotifier = new ProgressNotifier();
       this.taskWeightProcessor = new TaskWeightProcessor();
     } else {
       // 如果没有executionId，使用原来的结果数据模式
@@ -956,6 +969,23 @@ Page({
       // 初始化网格数据
       const gridData = getMatrixData('panorama', { results: normalizedResults }, '');
 
+      // 【关键修复】从后台真实结果中提取聚合数据
+      // 检查是否有 detailed_results 或 overall_score 字段
+      const overallScore = statusData.overall_score || 0;
+      const summary = statusData.summary || {};
+      
+      // 计算健康度分数（从 overallScore 映射）
+      const healthScore = overallScore > 0 ? Math.round(overallScore) : 0;
+      
+      // 计算 SOV（Share of Voice）
+      const sov = summary.sov || this.calculateSov(normalizedResults, this.brandList[0]);
+      
+      // 计算平均情感
+      const avgSentiment = summary.avgSentiment || this.calculateAvgSentiment(normalizedResults);
+      
+      // 计算成功率
+      const successRate = normalizedResults.filter(r => r.scores && r.scores.accuracy > 0).length / normalizedResults.length * 100;
+
       // 完成进度条
       this.setData({
         matrixData: matrixData,
@@ -968,7 +998,16 @@ Page({
         progress: 100,
         progressText: '战略大盘生成完毕',
         // 如果还有倒计时，清除它
-        currentTime: 0
+        currentTime: 0,
+        // 【关键修复】设置真实诊断数据
+        healthScore: healthScore,
+        aggregatedResults: {
+          summary: {
+            sov: sov,
+            avgSentiment: avgSentiment,
+            successRate: Math.round(successRate)
+          }
+        }
       });
 
       // 如果还有倒计时，清除它
@@ -1268,11 +1307,51 @@ Page({
 
     // 获取第一个结果的回答作为摘要
     const firstAnswer = results[0].answer || results[0].response || '';
-    
+
     // 限制长度并添加省略号
     return firstAnswer.length > 50 ? firstAnswer.substring(0, 50) + '...' : firstAnswer;
   },
 
+  /**
+   * 计算 SOV（Share of Voice）
+   * @param {Array} results - 标准化结果数组
+   * @param {String} mainBrand - 主品牌名称
+   * @returns {Number} SOV 百分比
+   */
+  calculateSov: function(results, mainBrand) {
+    if (!results || results.length === 0 || !mainBrand) {
+      return 0;
+    }
+    
+    const mainBrandCount = results.filter(r => r.brand === mainBrand).length;
+    return Math.round((mainBrandCount / results.length) * 100);
+  },
+
+  /**
+   * 计算平均情感分数
+   * @param {Array} results - 标准化结果数组
+   * @returns {String} 平均情感（保留 2 位小数）
+   */
+  calculateAvgSentiment: function(results) {
+    if (!results || results.length === 0) {
+      return '0.00';
+    }
+    
+    const sentiments = results
+      .map(r => {
+        if (r.scores && r.scores.sentiment) return r.scores.sentiment;
+        if (r.sentiment_score) return r.sentiment_score;
+        return null;
+      })
+      .filter(s => s !== null);
+    
+    if (sentiments.length === 0) {
+      return '0.00';
+    }
+    
+    const avg = sentiments.reduce((sum, s) => sum + s, 0) / sentiments.length;
+    return avg.toFixed(2);
+  },
 
   /**
    * 显示详情弹窗
@@ -1391,14 +1470,38 @@ Page({
    * 获取详细指标数据
    */
   getDetailedScores: function(brand, question) {
-    // 这里应该根据实际数据结构获取详细指标
-    // 模拟数据
+    // 【关键修复】从 matrixData 中获取真实的详细指标数据
+    if (!this.data.matrixData || !this.data.matrixData.rows) {
+      return [];
+    }
+    
+    // 查找对应的行
+    const row = this.data.matrixData.rows.find(r => r[0] === question);
+    if (!row) {
+      return [];
+    }
+    
+    // 查找对应的品牌列
+    const brandIndex = this.data.matrixData.headers.indexOf(brand);
+    if (brandIndex < 1) {
+      return [];
+    }
+    
+    const cellData = row[brandIndex];
+    if (!cellData || !cellData.models || cellData.models.length === 0) {
+      return [];
+    }
+    
+    // 使用第一个模型的数据作为代表（或者可以聚合所有模型的数据）
+    const modelData = cellData.models[0];
+    
+    // 从真实数据中提取维度评分
     return [
-      { name: '准确性', value: Math.floor(Math.random() * 40) + 60 }, // 60-100
-      { name: '完整性', value: Math.floor(Math.random() * 40) + 60 },
-      { name: '相关性', value: Math.floor(Math.random() * 40) + 60 },
-      { name: '安全性', value: Math.floor(Math.random() * 40) + 60 },
-      { name: '情感倾向', value: Math.floor(Math.random() * 40) + 60 }
+      { name: '准确性', value: modelData.authority_score || modelData.scores?.accuracy || 0 },
+      { name: '完整性', value: modelData.visibility_score || modelData.scores?.completeness || 0 },
+      { name: '相关性', value: modelData.sentiment_score || modelData.scores?.relevance || 0 },
+      { name: '纯净度', value: modelData.purity_score || modelData.scores?.purity || 0 },
+      { name: '一致性', value: modelData.consistency_score || modelData.scores?.consistency || 0 }
     ];
   },
 
@@ -1406,13 +1509,25 @@ Page({
    * 获取信源数据
    */
   getSources: function(brand, question) {
-    // 这里应该根据实际数据结构获取信源
-    // 模拟数据
-    return [
-      { url: 'https://example.com/source1', title: '参考来源 1' },
-      { url: 'https://example.com/source2', title: '参考来源 2' },
-      { url: 'https://example.com/source3', title: '参考来源 3' }
-    ];
+    // 【关键修复】从后台真实结果中提取信源数据
+    // 检查是否有 intelligenceData 或相关的信源数据
+    if (this.data.aggregatedResults && this.data.aggregatedResults.source_intelligence) {
+      const sourceIntelligence = this.data.aggregatedResults.source_intelligence;
+      if (sourceIntelligence.nodes) {
+        return sourceIntelligence.nodes
+          .filter(node => node.category !== 'brand' && node.category !== 'risk')
+          .map(node => ({
+            url: node.url || `https://${node.name.toLowerCase()}.com`,
+            title: node.name,
+            category: node.category,
+            contribution_score: node.value || 0,
+            sentiment: node.sentiment || 'neutral'
+          }));
+      }
+    }
+    
+    // 如果没有后台数据，返回空数组
+    return [];
   },
 
   /**
@@ -1471,11 +1586,51 @@ Page({
    */
   showScoreTip: function(e) {
     const { brand, question, model, score } = e.currentTarget.dataset;
-    wx.showToast({
-      title: `点击查看 ${brand} 在 ${model} 下的详细归因`,
-      icon: 'none',
-      duration: 2000
+    
+    // 【关键修复】从 matrixData 中获取详细的诊断结果
+    const scoreData = this.findScoreData(brand, question, model);
+    
+    wx.showModal({
+      title: `${brand} · ${model}`,
+      content: `问题：${question}\n\n` +
+               `综合得分：${score || 'N/A'}\n\n` +
+               `AI 回答：${scoreData && scoreData.answer ? scoreData.answer.substring(0, 200) + '...' : '暂无数据'}\n\n` +
+               `维度评分：\n` +
+               `  权威度：${scoreData && scoreData.authority_score ? scoreData.authority_score : 'N/A'}\n` +
+               `  可见度：${scoreData && scoreData.visibility_score ? scoreData.visibility_score : 'N/A'}\n` +
+               `  情感：${scoreData && scoreData.sentiment_score ? scoreData.sentiment_score : 'N/A'}`,
+      showCancel: false,
+      confirmText: '关闭'
     });
+  },
+  
+  /**
+   * 从 matrixData 中查找特定品牌、问题、模型的详细数据
+   */
+  findScoreData: function(brand, question, model) {
+    if (!this.data.matrixData || !this.data.matrixData.rows) {
+      return null;
+    }
+    
+    // 在 matrixData 中查找对应的行
+    const row = this.data.matrixData.rows.find(r => r[0] === question);
+    if (!row) {
+      return null;
+    }
+    
+    // 查找对应的品牌列
+    const brandIndex = this.data.matrixData.headers.indexOf(brand);
+    if (brandIndex < 1) {
+      return null;
+    }
+    
+    const cellData = row[brandIndex];
+    if (!cellData || !cellData.models) {
+      return null;
+    }
+    
+    // 查找对应的模型数据
+    return cellData.models.find(m => m.name === model) || null;
   },
 
   /**

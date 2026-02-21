@@ -461,45 +461,58 @@ def get_index_manager() -> IndexManager:
 # ==================== 初始化推荐索引 ====================
 
 def init_recommended_indexes():
-    """初始化推荐索引"""
+    """初始化推荐索引（增强版）"""
     index_manager = get_index_manager()
-    
+
     # 定义推荐索引
     recommended_indexes = [
         # 用户相关
         {'table': 'users', 'columns': ['openid'], 'unique': True},
         {'table': 'users', 'columns': ['created_at']},
-        
-        # 测试结果相关
-        {'table': 'test_results', 'columns': ['user_id']},
-        {'table': 'test_results', 'columns': ['execution_id']},
-        {'table': 'test_results', 'columns': ['created_at']},
-        {'table': 'test_results', 'columns': ['brand_name']},
-        
+
+        # 测试结果相关（修复：使用正确的表名 test_records）
+        {'table': 'test_records', 'columns': ['user_id']},
+        {'table': 'test_records', 'columns': ['brand_name']},
+        {'table': 'test_records', 'columns': ['test_date']},
+        {'table': 'test_records', 'columns': ['overall_score']},
+        # 复合索引：优化常用查询
+        {'table': 'test_records', 'columns': ['user_id', 'test_date']},
+        {'table': 'test_records', 'columns': ['brand_name', 'test_date']},
+
+        # 品牌测试结果相关
+        {'table': 'brand_test_results', 'columns': ['task_id']},
+        {'table': 'brand_test_results', 'columns': ['brand_name']},
+        {'table': 'brand_test_results', 'columns': ['created_at']},
+        {'table': 'brand_test_results', 'columns': ['task_id', 'brand_name']},
+
         # 审计日志相关
         {'table': 'audit_logs', 'columns': ['user_id']},
         {'table': 'audit_logs', 'columns': ['action']},
         {'table': 'audit_logs', 'columns': ['timestamp']},
-        
+
         # 同步数据相关
         {'table': 'sync_results', 'columns': ['user_id']},
         {'table': 'sync_results', 'columns': ['sync_timestamp']},
+        
+        # 缓存相关
+        {'table': 'cache_entries', 'columns': ['expires_at']},
+        {'table': 'cache_entries', 'columns': ['created_at']},
     ]
-    
+
     created_count = 0
-    
+
     for idx_config in recommended_indexes:
         result = index_manager.create_index(
             table=idx_config['table'],
             columns=idx_config['columns'],
             unique=idx_config.get('unique', False)
         )
-        
+
         if result.get('success'):
             created_count += 1
-    
+
     api_logger.info(f'推荐索引初始化完成，创建 {created_count} 个索引')
-    
+
     return {
         'success': True,
         'created_count': created_count,

@@ -29,8 +29,8 @@ class AsyncExportService:
         self.task_status: Dict[str, Dict[str, Any]] = {}
         self.max_workers = max_workers
         self.workers = []
-        self._start_workers()
         self.logger = api_logger
+        self._start_workers()
         self.logger.info(f"AsyncExportService started with {max_workers} workers")
     
     def _start_workers(self):

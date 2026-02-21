@@ -115,22 +115,22 @@
           {{myBrandData.overall_score || 0}}
         </view>
         <view class="td score">
-          {{myBrandData.dimension_scores?.authority || 0}}
+          {{(myBrandData && myBrandData.dimension_scores && myBrandData.dimension_scores.authority) ? myBrandData.dimension_scores.authority : 0}}
         </view>
         <view class="td score">
-          {{myBrandData.dimension_scores?.visibility || 0}}
+          {{(myBrandData && myBrandData.dimension_scores && myBrandData.dimension_scores.visibility) ? myBrandData.dimension_scores.visibility : 0}}
         </view>
         <view class="td score">
-          {{myBrandData.dimension_scores?.purity || 0}}
+          {{(myBrandData && myBrandData.dimension_scores && myBrandData.dimension_scores.purity) ? myBrandData.dimension_scores.purity : 0}}
         </view>
         <view class="td score">
-          {{myBrandData.dimension_scores?.consistency || 0}}
+          {{(myBrandData && myBrandData.dimension_scores && myBrandData.dimension_scores.consistency) ? myBrandData.dimension_scores.consistency : 0}}
         </view>
       </view>
-      
+
       <!-- 竞品列表 -->
-      <view 
-        class="table-row {{selectedCompetitor?.competitor_name === item.competitor_name ? 'selected' : ''}}"
+      <view
+        class="table-row {{(selectedCompetitor && selectedCompetitor.competitor_name && item.competitor_name === selectedCompetitor.competitor_name) ? 'selected' : ''}}"
         wx:for="{{competitors}}"
         wx:key="competitor_name"
         data-competitor="{{item}}"

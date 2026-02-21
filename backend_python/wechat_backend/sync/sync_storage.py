@@ -49,13 +49,16 @@ CREATE TABLE IF NOT EXISTS sync_results (
     sync_timestamp TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    is_deleted INTEGER DEFAULT 0,
-    INDEX idx_user_id (user_id),
-    INDEX idx_sync_timestamp (sync_timestamp),
-    INDEX idx_test_date (test_date),
-    INDEX idx_brand_name (brand_name)
+    is_deleted INTEGER DEFAULT 0
 )
 """
+
+CREATE_SYNC_RESULTS_INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_user_id ON sync_results(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_sync_timestamp ON sync_results(sync_timestamp)",
+    "CREATE INDEX IF NOT EXISTS idx_test_date ON sync_results(test_date)",
+    "CREATE INDEX IF NOT EXISTS idx_brand_name ON sync_results(brand_name)",
+]
 
 CREATE_SYNC_METADATA_TABLE = """
 CREATE TABLE IF NOT EXISTS sync_metadata (
@@ -94,6 +97,8 @@ class SyncStorageManager:
             cursor = conn.cursor()
             cursor.execute(CREATE_SYNC_RESULTS_TABLE)
             cursor.execute(CREATE_SYNC_METADATA_TABLE)
+            for index_sql in CREATE_SYNC_RESULTS_INDEXES:
+                cursor.execute(index_sql)
             api_logger.info('同步数据存储表初始化完成')
     
     def save_result(self, user_id: str, result: Dict[str, Any]) -> bool:
