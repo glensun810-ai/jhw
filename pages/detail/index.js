@@ -296,11 +296,6 @@ Page({
     this.stagnantProgressCounter = 0; // 进度停滞计数器
     this.lastProgressValue = 0; // 上一次的进度值
 
-    //【P0 新增】启动 Insight Pulse 跑马灯，每 10 秒切换一条商业洞察
-    this.insightPulseTimer = setInterval(() => {
-      this.updateKnowledgeTip();
-    }, 10000);
-
     // Log polling start with DEBUG_AI_CODE
     if (ENABLE_DEBUG_AI_CODE) {
       debugLog('POLLING_START', this.executionId, `Starting polling for task ${this.executionId}`); // #DEBUG_CLEAN
@@ -960,11 +955,6 @@ Page({
     // 清除倒计时定时器
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
-    }
-
-    //【P0 新增】清除 Insight Pulse 跑马灯定时器
-    if (this.insightPulseTimer) {
-      clearInterval(this.insightPulseTimer);
     }
   },
 
