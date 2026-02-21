@@ -6,6 +6,7 @@
 const app = getApp();
 const logger = require('../../../utils/logger');
 const { request } = require('../../../utils/request');
+const { watchIntelligenceUpdates } = require('../../../utils/sse-client');
 
 Component({
   options: {
@@ -84,6 +85,7 @@ Component({
     // SSE 连接状态
     sseConnected: false,
     sseConnecting: false,
+    sseError: null,
     // 滚动控制
     scrollTop: 0,
     scrollIntoView: ''
@@ -213,31 +215,102 @@ Component({
      * 连接 SSE 实时流
      */
     connectSSE() {
-      if (this.sseSource) {
-        this.sseSource.close();
+      const { executionId, enableSSE } = this.data;
+
+      if (!enableSSE || !executionId) {
+        logger.info('[IntelligencePipeline] SSE 未启用或缺少 executionId');
+        return;
       }
 
-      const { executionId } = this.data;
-      const baseUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5001';
-      const sseUrl = `${baseUrl}/api/intelligence/stream?executionId=${executionId}`;
+      // 关闭之前的连接
+      if (this.sseClient) {
+        this.sseClient.close();
+        this.sseClient = null;
+      }
 
-      logger.info('[IntelligencePipeline] 连接 SSE 流', { sseUrl });
+      this.setData({ sseConnecting: true, sseError: null });
 
-      this.setData({ sseConnecting: true });
+      logger.info('[IntelligencePipeline] 连接 SSE 流', { executionId });
 
       try {
-        // 微信小程序不支持原生 SSE，使用轮询替代
-        this.startPolling();
+        // 使用 SSE 客户端连接
+        this.sseClient = watchIntelligenceUpdates(
+          executionId,
+          (data) => this._handleSSEMessage(data)
+        );
+
+        // 监听连接状态
+        const checkConnection = setInterval(() => {
+          if (this.sseClient) {
+            const isConnected = this.sseClient.isConnected();
+            if (isConnected) {
+              this.setData({
+                sseConnecting: false,
+                sseConnected: true,
+                sseError: null
+              });
+              logger.info('[IntelligencePipeline] SSE 连接成功');
+              clearInterval(checkConnection);
+            }
+          }
+        }, 500);
+
+        // 5 秒超时检查
+        setTimeout(() => {
+          if (this.data.sseConnecting) {
+            this.setData({
+              sseConnecting: false,
+              sseConnected: false,
+              sseError: '连接超时，使用轮询模式'
+            });
+            logger.warn('[IntelligencePipeline] SSE 连接超时，降级为轮询');
+            clearInterval(checkConnection);
+          }
+        }, 5000);
+
       } catch (error) {
         logger.error('[IntelligencePipeline] SSE 连接失败', error);
         this.setData({
           sseConnecting: false,
-          sseConnected: false
+          sseConnected: false,
+          sseError: error.message || 'SSE 连接失败'
         });
 
         this.triggerEvent('sseError', {
           error: error.message || 'SSE 连接失败'
         });
+      }
+    },
+
+    /**
+     * 处理 SSE 消息
+     */
+    _handleSSEMessage(data) {
+      logger.debug('[IntelligencePipeline] 收到 SSE 消息', data);
+
+      const { items } = this.data;
+      const newItems = data.items || [];
+
+      // 检查是否有新数据
+      if (newItems.length > items.length) {
+        logger.info('[IntelligencePipeline] 检测到新情报', {
+          oldCount: items.length,
+          newCount: newItems.length
+        });
+
+        this.setData({ items: newItems });
+
+        // 触发更新事件
+        this.triggerEvent('update', {
+          items: newItems,
+          addedCount: newItems.length - items.length,
+          source: 'sse'
+        });
+
+        // 自动滚动到底部
+        if (this.data.autoScroll) {
+          this.scrollToBottom();
+        }
       }
     },
 
@@ -493,10 +566,15 @@ Component({
      */
     cleanup() {
       this.stopPolling();
+      if (this.sseClient) {
+        this.sseClient.close();
+        this.sseClient = null;
+      }
       if (this.sseSource) {
         this.sseSource.close();
         this.sseSource = null;
       }
+      logger.info('[IntelligencePipeline] 资源已清理');
     },
 
     /**
