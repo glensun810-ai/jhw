@@ -1,0 +1,196 @@
+<!--
+  竞品分析组件
+  版本：v2.0
+-->
+<view class="competitive-container {{visible ? 'visible' : ''}}" wx:if="{{visible}}">
+  
+  <!-- 头部 -->
+  <view class="ca-header">
+    <view class="header-title">竞品对比分析</view>
+    <view class="header-actions">
+      <view class="mode-switcher">
+        <view 
+          class="mode-option {{compareMode === 'radar' ? 'active' : ''}}"
+          data-mode="radar"
+          bindtap="onModeChange"
+        >雷达图</view>
+        <view 
+          class="mode-option {{compareMode === 'table' ? 'active' : ''}}"
+          data-mode="table"
+          bindtap="onModeChange"
+        >表格</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 对比摘要 -->
+  <view class="comparison-summary" wx:if="{{comparisonSummary}}">
+    <view class="summary-card">
+      <view class="card-icon">🏆</view>
+      <view class="card-content">
+        <view class="card-label">当前排名</view>
+        <view class="card-value">
+          第{{comparisonSummary.my_rank}}名
+          <text class="rank-desc">{{comparisonSummary.total_competitors + 1}}个品牌</text>
+        </view>
+      </view>
+    </view>
+    
+    <view class="summary-card">
+      <view class="card-icon">📏</view>
+      <view class="card-content">
+        <view class="card-label">与领导者差距</view>
+        <view class="card-value {{comparisonSummary.gap_to_leader <= 5 ? 'good' : 'warning'}}">
+          {{comparisonSummary.gap_to_leader}}分
+          <text class="gap-desc">{{comparisonSummary.gap_to_leader <= 5 ? '差距较小' : '需努力追赶'}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <view class="summary-card">
+      <view class="card-icon">📊</view>
+      <view class="card-content">
+        <view class="card-label">行业平均</view>
+        <view class="card-value">
+          {{comparisonSummary.average_competitor_score}}分
+          <text class="avg-desc">行业标杆</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 雷达图模式 -->
+  <view class="radar-mode" wx:if="{{compareMode === 'radar' && radarData}}">
+    <!-- 雷达图容器 -->
+    <view class="radar-chart">
+      <view class="radar-placeholder" wx:if="{{!radarData.datasets}}">
+        <view class="placeholder-icon">📊</view>
+        <view class="placeholder-text">雷达图数据加载中...</view>
+      </view>
+      
+      <!-- 使用 canvas 绘制雷达图 -->
+      <canvas 
+        class="radar-canvas"
+        type="2d"
+        id="radarChart"
+        wx:if="{{radarData.datasets}}"
+      ></canvas>
+    </view>
+    
+    <!-- 图例 -->
+    <view class="radar-legend">
+      <view 
+        class="legend-item"
+        wx:for="{{radarData.datasets}}"
+        wx:key="label"
+      >
+        <view 
+          class="legend-color" 
+          style="background: {{item.borderColor || '#999'}}"
+        ></view>
+        <view class="legend-label">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 表格模式 -->
+  <view class="table-mode" wx:if="{{compareMode === 'table'}}">
+    <view class="data-table">
+      <view class="table-header">
+        <view class="th">品牌</view>
+        <view class="th">综合</view>
+        <view class="th">权威性</view>
+        <view class="th">可见性</view>
+        <view class="th">纯净度</view>
+        <view class="th">一致性</view>
+      </view>
+      
+      <!-- 我方品牌 -->
+      <view class="table-row my-brand" wx:if="{{myBrandData}}">
+        <view class="td brand">
+          <view class="brand-icon">🏠</view>
+          <view class="brand-name">{{myBrandData.brand_name || '我方品牌'}}</view>
+        </view>
+        <view class="td score overall">
+          {{myBrandData.overall_score || 0}}
+        </view>
+        <view class="td score">
+          {{myBrandData.dimension_scores?.authority || 0}}
+        </view>
+        <view class="td score">
+          {{myBrandData.dimension_scores?.visibility || 0}}
+        </view>
+        <view class="td score">
+          {{myBrandData.dimension_scores?.purity || 0}}
+        </view>
+        <view class="td score">
+          {{myBrandData.dimension_scores?.consistency || 0}}
+        </view>
+      </view>
+      
+      <!-- 竞品列表 -->
+      <view 
+        class="table-row {{selectedCompetitor?.competitor_name === item.competitor_name ? 'selected' : ''}}"
+        wx:for="{{competitors}}"
+        wx:key="competitor_name"
+        data-competitor="{{item}}"
+        bindtap="onSelectCompetitor"
+      >
+        <view class="td brand">
+          <view class="brand-icon">🏢</view>
+          <view class="brand-name">{{item.competitor_name}}</view>
+        </view>
+        <view class="td score overall">
+          {{item.overall_score}}
+        </view>
+        <view class="td score">
+          {{item.authority_score}}
+        </view>
+        <view class="td score">
+          {{item.visibility_score}}
+        </view>
+        <view class="td score">
+          {{item.purity_score}}
+        </view>
+        <view class="td score">
+          {{item.consistency_score}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 竞品详情卡片 -->
+  <view class="competitor-detail" wx:if="{{selectedCompetitor}}">
+    <view class="detail-header">
+      <view class="detail-title">{{selectedCompetitor.competitor_name}}</view>
+      <view class="detail-grade">{{selectedCompetitor.overall_score}}分</view>
+    </view>
+    
+    <view class="detail-content">
+      <!-- 优势 -->
+      <view class="detail-section" wx:if="{{selectedCompetitor.strongest_dimensions && selectedCompetitor.strongest_dimensions.length > 0}}">
+        <view class="section-title">💪 优势维度</view>
+        <view class="tag-list">
+          <view 
+            class="tag success"
+            wx:for="{{selectedCompetitor.strongest_dimensions}}"
+            wx:key="*this"
+          >{{item}}</view>
+        </view>
+      </view>
+      
+      <!-- 劣势 -->
+      <view class="detail-section" wx:if="{{selectedCompetitor.weakest_dimensions && selectedCompetitor.weakest_dimensions.length > 0}}">
+        <view class="section-title">⚠️ 劣势维度</view>
+        <view class="tag-list">
+          <view 
+            class="tag warning"
+            wx:for="{{selectedCompetitor.weakest_dimensions}}"
+            wx:key="*this"
+          >{{item}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+</view>
