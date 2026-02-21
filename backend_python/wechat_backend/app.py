@@ -160,6 +160,18 @@ init_audit_routes(app)
 from wechat_backend.views_intelligence import register_blueprints as register_intelligence_blueprints
 register_intelligence_blueprints(app)
 
+# Register Data Sync API blueprints (数据同步)
+from wechat_backend.views_sync import register_blueprints as register_sync_blueprints
+register_sync_blueprints(app)
+
+# Register User Behavior Analytics API blueprints (用户行为分析)
+from wechat_backend.views_analytics_behavior import register_blueprints as register_analytics_blueprints
+register_analytics_blueprints(app)
+
+# Register Audit Log API blueprints (完整审计日志)
+from wechat_backend.views_audit_full import register_blueprints as register_audit_full_blueprints
+register_audit_full_blueprints(app)
+
 # Add security headers
 @app.after_request
 def after_request(response):
