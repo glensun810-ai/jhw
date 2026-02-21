@@ -23,7 +23,11 @@ from wechat_backend.security.rate_limiting import rate_limit
 # 创建 Blueprint
 analytics_bp = Blueprint('analytics', __name__)
 
-# 内存存储（生产环境应使用数据库）
+# 内存存储配置
+MAX_EVENTS_PER_USER = 1000  # 每用户最大事件数
+MAX_DAILY_STATS_DAYS = 30   # 保留天数
+
+# 内存存储（带限制）
 _user_events: Dict[str, List[Dict[str, Any]]] = {}
 _session_data: Dict[str, Dict[str, Any]] = {}
 _daily_stats: Dict[str, Dict[str, Any]] = {}
@@ -286,15 +290,34 @@ def get_funnel_data():
 # ==================== 辅助函数 ====================
 
 def _save_event(user_id: str, event: Dict[str, Any]):
-    """保存事件"""
+    """保存事件（带内存限制）"""
     if user_id not in _user_events:
         _user_events[user_id] = []
-    
+
     _user_events[user_id].append(event)
+
+    # 限制存储数量，防止内存溢出
+    if len(_user_events[user_id]) > MAX_EVENTS_PER_USER:
+        # 删除最旧的事件
+        _user_events[user_id] = _user_events[user_id][-MAX_EVENTS_PER_USER:]
+        api_logger.debug(f'用户事件已达上限，已清理最旧数据：user_id={user_id}')
+
+
+def _cleanup_old_daily_stats():
+    """清理过期的每日统计"""
+    current_date = datetime.now().date()
+    cutoff_date = current_date - timedelta(days=MAX_DAILY_STATS_DAYS)
     
-    # 限制存储数量
-    if len(_user_events[user_id]) > 10000:
-        _user_events[user_id] = _user_events[user_id][-10000:]
+    keys_to_delete = [
+        date_str for date_str in _daily_stats.keys()
+        if datetime.fromisoformat(date_str).date() < cutoff_date
+    ]
+    
+    for key in keys_to_delete:
+        del _daily_stats[key]
+    
+    if keys_to_delete:
+        api_logger.debug(f'清理 {len(keys_to_delete)} 条过期每日统计')
 
 
 def _get_user_events(user_id: str, start_time: Optional[str] = None, 
@@ -401,9 +424,9 @@ def _generate_journey_summary(events: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _update_daily_stats(user_id: str, event: Dict[str, Any]):
-    """更新每日统计"""
+    """更新每日统计（带自动清理）"""
     today = datetime.now().strftime('%Y-%m-%d')
-    
+
     if today not in _daily_stats:
         _daily_stats[today] = {
             'date': today,
@@ -413,11 +436,15 @@ def _update_daily_stats(user_id: str, event: Dict[str, Any]):
             'hourly_distribution': defaultdict(int)
         }
     
+    # 定期清理过期数据（每 100 次更新执行一次）
+    if _daily_stats[today]['total_events'] % 100 == 0:
+        _cleanup_old_daily_stats()
+
     stats = _daily_stats[today]
     stats['total_events'] += 1
     stats['unique_users'].add(user_id)
     stats['event_breakdown'][event.get('event', 'unknown')] += 1
-    
+
     # 小时分布
     try:
         hour = datetime.fromisoformat(event.get('timestamp', '')).hour
