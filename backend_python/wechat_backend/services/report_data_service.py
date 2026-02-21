@@ -57,16 +57,24 @@ class ReportDataService:
             # 3. 获取或生成负面信源数据
             negative_sources = self._get_or_generate_negative_sources(execution_id, base_data)
             
-            # 4. 计算 ROI 指标
-            roi_metrics = self._calculate_roi(base_data, competitive_data)
-            
-            # 5. 生成行动建议
-            action_plan = self._generate_action_plan(
-                base_data, 
-                competitive_data,
-                negative_sources,
-                roi_metrics
-            )
+            # 4. 计算 ROI 指标（使用增强的 ROI 计算器）
+            from wechat_backend.services.roi_calculator import get_roi_calculator
+            roi_metrics = get_roi_calculator().calculate_roi({
+                'reportMetadata': {'brandName': base_data.get('brand_name', '未知品牌')},
+                'brandHealth': base_data,
+                'platformAnalysis': base_data.get('platform_scores', []),
+                'negativeSources': negative_sources
+            })
+
+            # 5. 生成行动建议（使用增强的行动计划生成器）
+            from wechat_backend.services.action_plan_generator import get_action_plan_generator
+            action_plan = get_action_plan_generator().generate_action_plan({
+                'reportMetadata': {'brandName': base_data.get('brand_name', '未知品牌')},
+                'brandHealth': base_data,
+                'competitiveAnalysis': competitive_data,
+                'negativeSources': negative_sources,
+                'roiAnalysis': roi_metrics
+            })
             
             # 6. 生成执行摘要
             executive_summary = self._generate_executive_summary(

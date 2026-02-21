@@ -8,6 +8,8 @@
     "roi-card": "/components/ROICard/ROICard",
     "impact-gauge": "/components/ImpactGauge/ImpactGauge",
     "workflow-findings": "/components/WorkflowFindings/WorkflowFindings",
-    "intelligence-pipeline": "/components/IntelligencePipeline/IntelligencePipeline"
+    "intelligence-pipeline": "/components/IntelligencePipeline/IntelligencePipeline",
+    "export-options": "/components/ExportOptions/ExportOptions",
+    "competitive-analysis": "/components/CompetitiveAnalysis/CompetitiveAnalysis"
   }
 }
