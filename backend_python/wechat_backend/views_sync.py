@@ -8,6 +8,7 @@
 2. 数据下载 (Data Download)
 3. 结果上传 (Result Upload)
 4. 结果删除 (Result Delete)
+5. SQLite 持久化存储 (Persistent Storage)
 """
 
 import json
@@ -18,12 +19,12 @@ from flask import Blueprint, request, jsonify, g
 from wechat_backend.logging_config import api_logger
 from wechat_backend.security.auth import require_auth_optional, get_current_user_id
 from wechat_backend.security.rate_limiting import rate_limit
-from wechat_backend.models import db, SyncResult
+from wechat_backend.sync.sync_storage import get_sync_storage
 
 # 创建 Blueprint
 sync_bp = Blueprint('sync', __name__)
 
-# 内存存储（生产环境应使用数据库）
+# 内存存储（作为缓存，持久化在 SQLite）
 _sync_results: Dict[str, List[Dict[str, Any]]] = {}
 _sync_timestamps: Dict[str, str] = {}
 
@@ -54,18 +55,21 @@ def sync_data():
         
         api_logger.info(f'数据同步请求：user_id={user_id}, local_count={len(local_results)}')
         
+        # 获取持久化存储
+        storage = get_sync_storage()
+        
         # 处理上传的结果
         uploaded_count = 0
         if local_results:
             for result in local_results:
                 result_id = result.get('result_id')
                 if result_id:
-                    # 保存到数据库或缓存
-                    _save_sync_result(user_id, result)
+                    # 保存到 SQLite
+                    storage.save_result(user_id, result)
                     uploaded_count += 1
         
-        # 获取需要同步的云端结果
-        cloud_results = _get_cloud_results(user_id, last_sync_timestamp)
+        # 获取需要同步的云端结果（增量获取）
+        cloud_results = storage.get_results(user_id, last_sync_timestamp, limit=50)
         
         # 生成新的同步时间戳
         current_timestamp = datetime.now().isoformat()
@@ -115,8 +119,11 @@ def download_data():
         
         api_logger.info(f'数据下载请求：user_id={user_id}, last_sync={last_sync_timestamp}')
         
+        # 获取持久化存储
+        storage = get_sync_storage()
+        
         # 获取云端结果
-        cloud_results = _get_cloud_results(user_id, last_sync_timestamp, limit)
+        cloud_results = storage.get_results(user_id, last_sync_timestamp, limit)
         
         # 生成新的同步时间戳
         current_timestamp = datetime.now().isoformat()
@@ -180,17 +187,25 @@ def upload_result():
         result['user_id'] = user_id
         result['sync_timestamp'] = datetime.now().isoformat()
         
-        # 保存结果
-        _save_sync_result(user_id, result)
+        # 获取持久化存储并保存
+        storage = get_sync_storage()
+        saved = storage.save_result(user_id, result)
         
-        api_logger.info(f'结果上传成功：result_id={result_id}, user_id={user_id}')
-        
-        return jsonify({
-            'status': 'success',
-            'result_id': result_id,
-            'sync_timestamp': result['sync_timestamp'],
-            'message': '结果上传成功'
-        })
+        if saved:
+            api_logger.info(f'结果上传成功：result_id={result_id}, user_id={user_id}')
+            
+            return jsonify({
+                'status': 'success',
+                'result_id': result_id,
+                'sync_timestamp': result['sync_timestamp'],
+                'message': '结果上传成功'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'error': 'Failed to save result',
+                'code': 'SAVE_ERROR'
+            }), 500
         
     except Exception as e:
         api_logger.error(f'结果上传失败：{e}', exc_info=True)
@@ -228,8 +243,9 @@ def delete_result():
                 'code': 'MISSING_RESULT_ID'
             }), 400
         
-        # 删除结果
-        deleted = _delete_sync_result(user_id, result_id)
+        # 获取持久化存储并删除
+        storage = get_sync_storage()
+        deleted = storage.delete_result(user_id, result_id)
         
         if deleted:
             api_logger.info(f'结果删除成功：result_id={result_id}')
@@ -269,16 +285,17 @@ def get_sync_status():
     try:
         user_id = get_current_user_id() or 'anonymous'
         
-        last_sync_timestamp = _sync_timestamps.get(user_id)
-        results = _sync_results.get(user_id, [])
+        # 获取持久化存储的元数据
+        storage = get_sync_storage()
+        metadata = storage.get_user_metadata(user_id)
         
         return jsonify({
             'status': 'success',
             'data': {
-                'last_sync_timestamp': last_sync_timestamp,
-                'pending_count': 0,  # 内存存储，无待同步
-                'total_count': len(results),
-                'storage_used': len(results) * 10,  # 估算 KB
+                'last_sync_timestamp': metadata.get('last_sync_timestamp'),
+                'pending_count': 0,  # 使用持久化后无待同步
+                'total_count': metadata.get('total_results', 0),
+                'storage_used_kb': metadata.get('storage_used_kb', 0),
                 'storage_limit': 5120  # 5MB limit
             }
         })
@@ -292,60 +309,14 @@ def get_sync_status():
         }), 500
 
 
-def _save_sync_result(user_id: str, result: Dict[str, Any]):
-    """保存同步结果"""
-    if user_id not in _sync_results:
-        _sync_results[user_id] = []
-    
-    result_id = result.get('result_id')
-    
-    # 查找是否已存在
-    found = False
-    for i, existing in enumerate(_sync_results[user_id]):
-        if existing.get('result_id') == result_id:
-            _sync_results[user_id][i] = result
-            found = True
-            break
-    
-    if not found:
-        _sync_results[user_id].append(result)
-    
-    # 限制存储数量
-    if len(_sync_results[user_id]) > 1000:
-        _sync_results[user_id] = _sync_results[user_id][-1000:]
-
-
-def _get_cloud_results(user_id: str, last_sync_timestamp: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
-    """获取云端结果"""
-    results = _sync_results.get(user_id, [])
-    
-    if last_sync_timestamp:
-        # 过滤出上次同步之后的结果
-        filtered_results = [
-            r for r in results 
-            if r.get('sync_timestamp', '') > last_sync_timestamp
-        ]
-        return filtered_results[:limit]
-    
-    # 返回最新的结果
-    return results[-limit:]
-
-
-def _delete_sync_result(user_id: str, result_id: str) -> bool:
-    """删除同步结果"""
-    results = _sync_results.get(user_id, [])
-    
-    for i, result in enumerate(results):
-        if result.get('result_id') == result_id:
-            del results[i]
-            return True
-    
-    return False
-
-
 # 注册 Blueprint
 def register_blueprints(app):
     """注册数据同步 Blueprint"""
     from wechat_backend.logging_config import api_logger
+    from wechat_backend.sync.sync_storage import init_sync_storage
+    
+    # 初始化持久化存储
+    init_sync_storage()
+    
     app.register_blueprint(sync_bp)
     api_logger.info('Sync Blueprint registered')

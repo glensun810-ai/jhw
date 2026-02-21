@@ -366,13 +366,34 @@ def deduplicate_request(ttl: int = 30):
 # ==================== 辅助函数 ====================
 
 def _generate_cache_key() -> str:
-    """生成缓存键"""
-    # 包含路径、参数、用户 ID 等
+    """
+    生成缓存键
+    包含路径、方法、参数、用户 ID、请求体等所有可能影响响应的因素
+    """
     key_parts = [
         request.path,
+        request.method,
         request.query_string.decode() if request.query_string else '',
-        g.get('user_id', 'anonymous')
+        str(g.get('user_id', 'anonymous'))
     ]
+    
+    # 对于 POST/PUT 请求，包含请求体哈希（防止不同参数命中相同缓存）
+    if request.method in ['POST', 'PUT'] and request.is_json:
+        try:
+            body_data = request.get_json(silent=True)
+            if body_data:
+                # 对请求体排序后哈希，确保相同数据生成相同键
+                body_sorted = json.dumps(body_data, sort_keys=True)
+                body_hash = hashlib.md5(body_sorted.encode()).hexdigest()[:8]
+                key_parts.append(body_hash)
+        except Exception:
+            # 如果无法解析请求体，跳过
+            pass
+    
+    # 添加 Accept 头（不同格式可能返回不同响应）
+    accept_header = request.headers.get('Accept', '')
+    if accept_header and 'application/json' not in accept_header:
+        key_parts.append(accept_header)
     
     key_string = ':'.join(key_parts)
     key_hash = hashlib.md5(key_string.encode()).hexdigest()[:16]
