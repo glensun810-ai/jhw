@@ -85,6 +85,10 @@ Page({
     // 新增：用于存储完整报告数据
     reportData: null,
 
+    // 【新增】最新诊断结果标记
+    hasLatestDiagnosis: false,
+    latestDiagnosisInfo: null,
+
     // 控制是否启用新的分析图表组件
     analysisChartsEnabled: true,
 
@@ -262,9 +266,43 @@ Page({
       // 清除临时配置
       app.globalData.tempConfig = null;
     }
-    
+
     // P2 修复：恢复草稿
     this.restoreDraft();
+
+    // 【关键修复】检查是否有最新的诊断结果
+    this.checkLatestDiagnosis();
+  },
+
+  /**
+   * 【新增】检查最新诊断结果
+   */
+  checkLatestDiagnosis: function() {
+    try {
+      const latestExecutionId = wx.getStorageSync('latestExecutionId');
+      const latestTargetBrand = wx.getStorageSync('latestTargetBrand');
+      const latestDiagnosisTime = wx.getStorageSync('latestDiagnosisTime');
+
+      if (latestExecutionId && latestTargetBrand) {
+        console.log('✅ 检测到最新诊断结果:', {
+          executionId: latestExecutionId,
+          brand: latestTargetBrand,
+          time: latestDiagnosisTime
+        });
+
+        // 显示查看最新诊断结果的提示
+        this.setData({
+          hasLatestDiagnosis: true,
+          latestDiagnosisInfo: {
+            executionId: latestExecutionId,
+            brand: latestTargetBrand,
+            time: latestDiagnosisTime
+          }
+        });
+      }
+    } catch (e) {
+      console.error('检查最新诊断结果失败:', e);
+    }
   },
 
   /**
@@ -1569,6 +1607,48 @@ Page({
     wx.navigateTo({ url: '/pages/personal-history/personal-history' });
   },
 
+  /**
+   * 【新增】查看最新诊断结果
+   */
+  viewLatestDiagnosis: function() {
+    try {
+      const executionId = this.data.latestDiagnosisInfo.executionId;
+      const brandList = [
+        this.data.latestDiagnosisInfo.brand,
+        ...(wx.getStorageSync('latestCompetitorBrands') || [])
+      ];
+
+      if (executionId) {
+        // 跳转到详情页面
+        const url = `/pages/detail/index?executionId=${encodeURIComponent(executionId)}`;
+        wx.navigateTo({
+          url: url,
+          success: () => {
+            console.log('✅ 跳转到最新诊断结果页面');
+          },
+          fail: (err) => {
+            console.error('❌ 跳转失败:', err);
+            wx.showToast({
+              title: '跳转失败，请重试',
+              icon: 'none'
+            });
+          }
+        });
+      } else {
+        wx.showToast({
+          title: '暂无诊断结果',
+          icon: 'none'
+        });
+      }
+    } catch (e) {
+      console.error('查看最新诊断结果失败:', e);
+      wx.showToast({
+        title: '操作失败，请重试',
+        icon: 'none'
+      });
+    }
+  },
+
   // 显示保存配置模态框
   showSaveConfigModal: function() {
     this.setData({
@@ -1893,6 +1973,12 @@ Page({
       const url = `/pages/detail/index?executionId=${encodeURIComponent(executionId)}&brand_list=${brands}&models=${models}&question=${question}`; // 优化：使用简化参数名
 
       console.log('🚀 战略中心激活，正在导航:', url);
+
+      // 【关键修复】保存诊断信息到本地存储，方便返回首页后继续查看
+      wx.setStorageSync('latestExecutionId', executionId);
+      wx.setStorageSync('latestTargetBrand', brandList[0] || '');
+      wx.setStorageSync('latestCompetitorBrands', brandList.slice(1) || []);
+      wx.setStorageSync('latestDiagnosisTime', new Date().toLocaleString('zh-CN'));
 
       // 4. 执行顶级流畅跳转
       wx.navigateTo({
