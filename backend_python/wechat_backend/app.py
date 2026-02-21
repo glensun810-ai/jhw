@@ -172,6 +172,15 @@ register_analytics_blueprints(app)
 from wechat_backend.views_audit_full import register_blueprints as register_audit_full_blueprints
 register_audit_full_blueprints(app)
 
+# Register Cache API blueprints (API 缓存)
+from wechat_backend.cache.api_cache import cache_bp, start_cache_maintenance
+app.register_blueprint(cache_bp)
+start_cache_maintenance()
+
+# Initialize database query optimization (数据库查询优化)
+from wechat_backend.database.query_optimizer import init_recommended_indexes
+init_recommended_indexes()
+
 # Add security headers
 @app.after_request
 def after_request(response):
