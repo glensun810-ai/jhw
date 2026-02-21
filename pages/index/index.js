@@ -1076,10 +1076,10 @@ Page({
         // 检查是否有有效数据
         if (res && (res.progress !== undefined || res.stage)) {
           // 更新调试区域显示原始JSON
-          this.setData({ debugJson: JSON.stringify(res.data, null, 2) });
+          this.setData({ debugJson: JSON.stringify(res, null, 2) });
 
           // 使用服务层解析任务状态数据
-          const parsedStatus = parseTaskStatus(res.data);
+          const parsedStatus = parseTaskStatus(res);
 
           // 更新进度条、状态文本和当前阶段
           this.setData({
