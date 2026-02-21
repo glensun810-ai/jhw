@@ -55,6 +55,11 @@ const API_ENDPOINTS = {
     UPDATE: '/api/intelligence/update',
     CLEAR: '/api/intelligence/clear'
   },
+  CACHE: {
+    STATS: '/api/cache/stats',
+    CLEAR: '/api/cache/clear',
+    INVALIDATE: '/api/cache/invalidate'
+  },
   SYSTEM: {
     TEST_CONNECTION: '/api/test'
   }
