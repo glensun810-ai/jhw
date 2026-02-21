@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from enum import Enum
 import uuid
 from datetime import datetime
-from ..logging_config import api_logger
+from wechat_backend.logging_config import api_logger
 
 
 class TestCaseStatus(Enum):

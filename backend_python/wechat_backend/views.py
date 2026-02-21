@@ -16,32 +16,44 @@ import concurrent.futures
 import asyncio
 
 from config import Config
-from .database import save_test_record, get_user_test_history, get_test_record_by_id
-from .models import TaskStatus, TaskStage, get_task_status, save_task_status, get_deep_intelligence_result, save_deep_intelligence_result, update_task_stage
-from .logging_config import api_logger, wechat_logger, db_logger
-from .ai_adapters.base_adapter import AIPlatformType, AIClient, AIResponse, GEO_PROMPT_TEMPLATE, parse_geo_json
-from .ai_adapters.factory import AIAdapterFactory
-from .nxm_execution_engine import execute_nxm_test, verify_nxm_execution
-from .question_system import QuestionManager, TestCaseGenerator
-from .test_engine import TestExecutor, ExecutionStrategy
+from wechat_backend.database import save_test_record, get_user_test_history, get_test_record_by_id
+from wechat_backend.models import TaskStatus, TaskStage, get_task_status, save_task_status, get_deep_intelligence_result, save_deep_intelligence_result, update_task_stage
+from wechat_backend.realtime_analyzer import get_analyzer
+from wechat_backend.incremental_aggregator import get_aggregator
+from wechat_backend.logging_config import api_logger, wechat_logger, db_logger
+from wechat_backend.ai_adapters.base_adapter import AIPlatformType, AIClient, AIResponse, GEO_PROMPT_TEMPLATE, parse_geo_json
+from wechat_backend.ai_adapters.factory import AIAdapterFactory
+from wechat_backend.nxm_execution_engine import execute_nxm_test, verify_nxm_execution
+from wechat_backend.question_system import QuestionManager, TestCaseGenerator
+from wechat_backend.test_engine import TestExecutor, ExecutionStrategy
 from scoring_engine import ScoringEngine
 from enhanced_scoring_engine import EnhancedScoringEngine, calculate_enhanced_scores
 from ai_judge_module import AIJudgeClient, JudgeResult, ConfidenceLevel
-from .analytics.interception_analyst import InterceptionAnalyst
-from .analytics.monetization_service import MonetizationService, UserLevel
-from .analytics.source_intelligence_processor import SourceIntelligenceProcessor, process_brand_source_intelligence
-from .recommendation_generator import RecommendationGenerator, RecommendationPriority, RecommendationType
-from .cruise_controller import CruiseController
-from .market_intelligence_service import MarketIntelligenceService
+from wechat_backend.analytics.interception_analyst import InterceptionAnalyst
+from wechat_backend.analytics.monetization_service import MonetizationService, UserLevel
+from wechat_backend.analytics.source_intelligence_processor import SourceIntelligenceProcessor, process_brand_source_intelligence
+from wechat_backend.recommendation_generator import RecommendationGenerator, RecommendationPriority, RecommendationType
+from wechat_backend.cruise_controller import CruiseController
+from wechat_backend.market_intelligence_service import MarketIntelligenceService
+
+# SSE Service imports
+from wechat_backend.services.sse_service import (
+    get_sse_manager,
+    create_sse_response,
+    send_progress_update,
+    send_intelligence_update,
+    send_task_complete,
+    send_error
+)
 
 # Security imports
-from .security.auth import require_auth, require_auth_optional, get_current_user_id
-from .security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer, validate_safe_text
-from .security.sql_protection import sql_protector
-from .security.rate_limiting import rate_limit, CombinedRateLimiter
+from wechat_backend.security.auth import require_auth, require_auth_optional, get_current_user_id
+from wechat_backend.security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer, validate_safe_text
+from wechat_backend.security.sql_protection import sql_protector
+from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimiter
 
 # Monitoring imports
-from .monitoring.monitoring_decorator import monitored_endpoint
+from wechat_backend.monitoring.monitoring_decorator import monitored_endpoint
 
 # Create a blueprint
 wechat_bp = Blueprint('wechat', __name__)
@@ -62,7 +74,7 @@ def verify_wechat_signature(token, signature, timestamp, nonce):
 def wechat_verify():
     """Handle WeChat server verification"""
     # 记录请求信息用于调试
-    from .logging_config import api_logger
+    from wechat_backend.logging_config import api_logger
     api_logger.info(f"WeChat verification request: {request.method}, URL: {request.url}, Args: {request.args}")
     
     if request.method == 'GET':
@@ -98,7 +110,7 @@ def wechat_verify():
 def wechat_login():
     """Handle login with WeChat Mini Program code"""
     from wechat_backend.app import APP_ID, APP_SECRET
-    from .security.auth import jwt_manager
+    from wechat_backend.security.auth import jwt_manager
 
     data = request.get_json()
     if not data:
@@ -308,8 +320,8 @@ def perform_brand_test():
         judge_api_key = data.get('judgeApiKey')  # 前端传入的评判API密钥
 
         # Provider可用性检查：验证所选模型是否已配置API Key并在AIAdapterFactory中注册
-        from .ai_adapters.factory import AIAdapterFactory
-        from .ai_adapters.base_adapter import AIPlatformType
+        from wechat_backend.ai_adapters.factory import AIAdapterFactory
+        from wechat_backend.ai_adapters.base_adapter import AIPlatformType
 
         # 添加运行时调试信息
         api_logger.info(f"=== Runtime Adapter Status Check ===")
@@ -338,7 +350,7 @@ def perform_brand_test():
                 }), 400
 
             # 检查API Key是否已配置
-            from .config_manager import config_manager
+            from wechat_backend.config_manager import config_manager
             api_key = config_manager.get_api_key(normalized_model_name)
             if not api_key:
                 return jsonify({"status": "error", "error": f'Model {model_name} not configured - missing API key', "code": 400, 'message': 'API Key 缺失'}), 400
@@ -1095,11 +1107,11 @@ def mvp_brand_test():
                 api_logger.info(f"[MVP] Q{idx + 1}: {actual_question[:50]}...")
                 
                 # 调用豆包API
-                from .ai_adapters.factory import AIAdapterFactory
-                from .ai_adapters.base_adapter import AIPlatformType
+                from wechat_backend.ai_adapters.factory import AIAdapterFactory
+                from wechat_backend.ai_adapters.base_adapter import AIPlatformType
                 
                 # 获取豆包配置
-                from .config_manager import config_manager
+                from wechat_backend.config_manager import config_manager
                 api_key = config_manager.get_api_key('doubao')
                 # 优先从环境变量获取模型ID，其次从配置管理器，最后使用默认模型
                 import os
@@ -1874,7 +1886,7 @@ def convert_to_dashboard_format(aggregate_result, all_brands, main_brand):
         
         # ========== 集成信源分析 ==========
         try:
-            from .analytics.source_aggregator import SourceAggregator
+            from wechat_backend.analytics.source_aggregator import SourceAggregator
             
             # 准备模型响应数据
             model_responses = []
@@ -1917,7 +1929,7 @@ def convert_to_dashboard_format(aggregate_result, all_brands, main_brand):
         
         # ========== 集成排名分析 ==========
         try:
-            from .analytics.rank_analyzer import RankAnalyzer
+            from wechat_backend.analytics.rank_analyzer import RankAnalyzer
             
             # 按问题分组
             question_map = {}
@@ -2108,7 +2120,7 @@ def get_platform_status():
     """获取所有AI平台的状态信息"""
     try:
         # 从配置管理器获取平台状态
-        from .config_manager import ConfigurationManager as PlatformConfigManager
+        from wechat_backend.config_manager import ConfigurationManager as PlatformConfigManager
         config_manager = PlatformConfigManager()
 
         status_info = {}
@@ -2157,7 +2169,7 @@ def get_platform_status():
 def get_test_progress():
     """
     获取测试进度 - 【任务 3 优化】
-    
+
     新增 is_synced 字段：
     - 当 status == 'completed' 且 len(results) == expected 时，is_synced 为 true
     - 告知前端，数据不仅运行完了，而且已经完全同步到了报告引擎中
@@ -2171,18 +2183,18 @@ def get_test_progress():
         results = progress_data.get('results', [])
         expected = progress_data.get('expected_total', progress_data.get('total', 0))
         completion_verified = progress_data.get('completion_verified', False)
-        
+
         # is_synced 为 true 的条件：
         # 1. status == 'completed'
         # 2. len(results) == expected
         # 3. completion_verified == True（可选，增强检查）
         is_synced = (
-            status == 'completed' and 
-            len(results) == expected and 
+            status == 'completed' and
+            len(results) == expected and
             expected > 0 and
             completion_verified
         )
-        
+
         progress_data['is_synced'] = is_synced
         progress_data['sync_check'] = {
             'status': status,
@@ -2198,6 +2210,37 @@ def get_test_progress():
         return jsonify(progress_data)
     else:
         return jsonify({'error': 'Execution ID not found'}), 404
+
+
+# ====================
+# SSE 实时推送端点
+# ====================
+
+@wechat_bp.route('/api/stream/progress/<execution_id>', methods=['GET'])
+def stream_progress(execution_id):
+    """
+    SSE 实时进度推送端点
+    
+    客户端通过 EventSource 连接此端点，实时接收诊断进度更新
+    
+    事件类型:
+    - connected: 连接成功
+    - progress: 进度更新
+    - intelligence: 情报更新
+    - complete: 任务完成
+    - error: 错误通知
+    """
+    # 生成客户端 ID
+    client_id = f"{execution_id}_{uuid.uuid4().hex[:8]}"
+    
+    # 添加连接到管理器
+    manager = get_sse_manager()
+    manager.add_connection(execution_id, client_id)
+    
+    api_logger.info(f"[SSE] Client {client_id} connected to execution {execution_id}")
+    
+    # 创建 SSE 响应
+    return create_sse_response(client_id)
 
 
 @wechat_bp.route('/test/submit', methods=['POST'])
@@ -2422,7 +2465,7 @@ def submit_brand_test():
             }
 
             # 创建DeepIntelligenceResult对象
-            from .models import DeepIntelligenceResult, BrandTestResult, save_brand_test_result
+            from wechat_backend.models import DeepIntelligenceResult, BrandTestResult, save_brand_test_result
             deep_result_obj = DeepIntelligenceResult(
                 exposure_analysis=deep_intelligence_result_data['exposure_analysis'],
                 source_intelligence=deep_intelligence_result_data['source_intelligence'],
@@ -2532,12 +2575,12 @@ def get_test_history():
 @monitored_endpoint('/api/dashboard/aggregate', require_auth=False, validate_inputs=True)
 def get_dashboard_aggregate():
     """
-    获取 Dashboard 聚合数据
-    
+    获取 Dashboard 聚合数据 (增强版 - P0 级空缺修复)
+
     查询参数:
         executionId: 执行 ID (可选，如果提供则从数据库获取)
         userOpenid: 用户 OpenID (可选)
-    
+
     返回:
         {
             "success": true,
@@ -2551,31 +2594,48 @@ def get_dashboard_aggregate():
                     "totalTests": 200
                 },
                 "questionCards": [...],
-                "toxicSources": [...]
+                "toxicSources": [...],
+                "roi_metrics": {  # P0 新增
+                    "exposure_roi": 3.5,
+                    "sentiment_roi": 2.1,
+                    "ranking_roi": 4.2,
+                    "estimated_value": 50000
+                },
+                "impact_scores": {  # P0 新增
+                    "authority_impact": 75,
+                    "visibility_impact": 82,
+                    "sentiment_impact": 68,
+                    "overall_impact": 75
+                }
             }
         }
     """
     try:
         execution_id = request.args.get('executionId')
         user_openid = request.args.get('userOpenid', 'anonymous')
-        
+
         api_logger.info(f"请求 Dashboard 聚合数据：executionId={execution_id}, userOpenid={user_openid}")
-        
+
         # 如果有 executionId，从数据库获取测试结果
         if execution_id:
             # 从数据库获取测试结果
-            from .models import TestRecord
+            from wechat_backend.models import TestRecord
             record = TestRecord.query.filter_by(execution_id=execution_id).first()
-            
+
             if record and record.results:
                 # 使用已有的聚合结果
                 api_logger.info(f"从数据库获取执行 ID {execution_id} 的结果")
-                
+
                 # 检查是否已经是 Dashboard 格式
                 if 'dashboard' in record.results:
+                    dashboard_data = record.results['dashboard']
+                    
+                    # P0 增强：添加 ROI 指标和影响力评分
+                    dashboard_data = enrich_dashboard_with_roi(dashboard_data, execution_id)
+                    
                     return jsonify({
                         'success': True,
-                        'dashboard': record.results['dashboard']
+                        'dashboard': dashboard_data
                     })
                 else:
                     # 转换为 Dashboard 格式
@@ -2584,32 +2644,41 @@ def get_dashboard_aggregate():
                         record.results.get('competitiveAnalysis', {}).get('brandScores', {}).keys(),
                         record.results.get('main_brand', '未知品牌')
                     )
+                    
+                    # P0 增强：添加 ROI 指标和影响力评分
+                    dashboard_data = enrich_dashboard_with_roi(dashboard_data, execution_id)
+                    
                     return jsonify({
                         'success': True,
                         'dashboard': dashboard_data
                     })
-        
+
         # 如果没有 executionId 或数据库中没有，尝试从最近的测试获取
         try:
-            from .models import TestRecord
+            from wechat_backend.models import TestRecord
             recent_record = TestRecord.query.filter_by(user_openid=user_openid).order_by(TestRecord.created_at.desc()).first()
-            
+
             if recent_record and recent_record.results:
                 api_logger.info(f"使用最近的测试结果：{recent_record.id}")
-                
+
                 # 转换为 Dashboard 格式
                 dashboard_data = convert_to_dashboard_format(
                     recent_record.results,
                     recent_record.results.get('competitiveAnalysis', {}).get('brandScores', {}).keys(),
                     recent_record.results.get('main_brand', '未知品牌')
                 )
+                
+                # P0 增强：添加 ROI 指标和影响力评分
+                if hasattr(recent_record, 'execution_id') and recent_record.execution_id:
+                    dashboard_data = enrich_dashboard_with_roi(dashboard_data, recent_record.execution_id)
+                
                 return jsonify({
                     'success': True,
                     'dashboard': dashboard_data
                 })
         except Exception as db_error:
             api_logger.warning(f"数据库查询失败：{db_error}")
-        
+
         # 如果没有历史数据，返回错误
         api_logger.warning(f"未找到 Dashboard 数据：executionId={execution_id}")
         return jsonify({
@@ -2617,13 +2686,74 @@ def get_dashboard_aggregate():
             'error': '未找到测试数据，请先执行品牌测试',
             'code': 'NO_DATA'
         }), 404
-        
+
     except Exception as e:
         api_logger.error(f"获取 Dashboard 聚合数据失败：{e}")
         return jsonify({
             'success': False,
             'error': f'服务器错误：{str(e)}'
         }), 500
+
+
+def enrich_dashboard_with_roi(dashboard_data: dict, execution_id: str) -> dict:
+    """
+    P0 级空缺修复：为 Dashboard 数据添加 ROI 指标和影响力评分
+    
+    Args:
+        dashboard_data: 原始 Dashboard 数据
+        execution_id: 执行 ID
+        
+    Returns:
+        增强后的 Dashboard 数据
+    """
+    try:
+        from .views_geo_analysis import ROIMetricsModel
+        
+        # 获取 ROI 指标
+        roi_data = ROIMetricsModel.from_execution_id(execution_id)
+        
+        if roi_data:
+            # 添加 ROI 指标
+            dashboard_data['roi_metrics'] = roi_data['roi_metrics']
+            dashboard_data['impact_scores'] = roi_data['impact_scores']
+            dashboard_data['benchmarks'] = roi_data.get('benchmarks', {})
+            
+            api_logger.info(f"Dashboard enriched with ROI metrics for execution: {execution_id}")
+        else:
+            # 如果无法获取 ROI 数据，提供默认值
+            dashboard_data['roi_metrics'] = {
+                'exposure_roi': 0,
+                'sentiment_roi': 0,
+                'ranking_roi': 0,
+                'estimated_value': 0
+            }
+            dashboard_data['impact_scores'] = {
+                'authority_impact': 0,
+                'visibility_impact': 0,
+                'sentiment_impact': 0,
+                'overall_impact': 0
+            }
+            api_logger.warning(f"Could not enrich ROI metrics for execution: {execution_id}")
+            
+    except Exception as e:
+        api_logger.error(f"Error enriching dashboard with ROI: {e}")
+        # 保持原数据，不抛出异常
+        if 'roi_metrics' not in dashboard_data:
+            dashboard_data['roi_metrics'] = {
+                'exposure_roi': 0,
+                'sentiment_roi': 0,
+                'ranking_roi': 0,
+                'estimated_value': 0
+            }
+        if 'impact_scores' not in dashboard_data:
+            dashboard_data['impact_scores'] = {
+                'authority_impact': 0,
+                'visibility_impact': 0,
+                'sentiment_impact': 0,
+                'overall_impact': 0
+            }
+    
+    return dashboard_data
 
 @wechat_bp.route('/api/test-record/<int:record_id>', methods=['GET'])
 def get_test_record(record_id):
@@ -3002,7 +3132,7 @@ def get_prediction_forecast():
             })
 
         # 使用预测引擎进行预测
-        from .analytics.prediction_engine import PredictionEngine
+        from wechat_backend.analytics.prediction_engine import PredictionEngine
         prediction_engine = PredictionEngine()
 
         # 准备历史数据
@@ -3049,11 +3179,11 @@ def get_prediction_forecast():
 
 
 # 初始化工作流管理器
-from .analytics.workflow_manager import WorkflowManager
+from wechat_backend.analytics.workflow_manager import WorkflowManager
 workflow_manager = WorkflowManager()
 
 # 初始化资产智能引擎
-from .analytics.asset_intelligence_engine import AssetIntelligenceEngine
+from wechat_backend.analytics.asset_intelligence_engine import AssetIntelligenceEngine
 asset_intelligence_engine = AssetIntelligenceEngine()
 
 
@@ -3098,7 +3228,7 @@ def optimize_assets():
                     return jsonify({'error': f'all items in ai_preferences[{platform}] must be strings'}), 400
 
         # 验证输入内容的安全性
-        from .security.input_validation import validate_safe_text
+        from wechat_backend.security.input_validation import validate_safe_text
         if not validate_safe_text(official_asset, max_length=5000):
             return jsonify({'error': 'Invalid official_asset content'}), 400
 
@@ -3133,7 +3263,7 @@ def optimize_assets():
 
 
 # 初始化报告生成器
-from .analytics.report_generator import ReportGenerator
+from wechat_backend.analytics.report_generator import ReportGenerator
 report_generator = ReportGenerator()
 
 
@@ -3267,7 +3397,7 @@ def get_pdf_report():
 
 
 # 初始化工作流管理器
-from .ai_adapters.workflow_manager import WorkflowManager
+from wechat_backend.ai_adapters.workflow_manager import WorkflowManager
 workflow_manager = WorkflowManager()
 
 
@@ -3345,7 +3475,7 @@ def create_workflow_task():
 
     try:
         # 分发任务
-        from .ai_adapters.workflow_manager import TaskPriority
+        from wechat_backend.ai_adapters.workflow_manager import TaskPriority
         priority_enum = TaskPriority(priority)
 
         task_id = workflow_manager.dispatch_task(
@@ -3398,44 +3528,6 @@ def get_workflow_task_status(task_id):
         return jsonify({'error': 'Failed to get task status', 'details': str(e)}), 500
 
 
-# Additional endpoints to match frontend API expectations
-@wechat_bp.route('/api/validate-token', methods=['POST'])
-@rate_limit(limit=20, window=60, per='ip')
-def validate_token():
-    """Validate user token"""
-    api_logger.info("Token validation endpoint accessed")
-
-    # In a real implementation, this would validate the JWT token
-    # For now, returning a mock response
-    return jsonify({
-        'status': 'valid',
-        'message': 'Token is valid'
-    })
-
-
-@wechat_bp.route('/api/refresh-token', methods=['POST'])
-@rate_limit(limit=10, window=60, per='ip')
-def refresh_token():
-    """Refresh user token"""
-    api_logger.info("Token refresh endpoint accessed")
-
-    # In a real implementation, this would refresh the JWT token
-    # For now, returning a mock response
-    data = request.get_json() or {}
-    refresh_token = data.get('refresh_token')
-
-    if not refresh_token:
-        return jsonify({'error': 'Refresh token is required'}), 400
-
-    # Generate a new token (mock implementation)
-    new_token = f"refreshed_{refresh_token[:8]}_token"
-
-    return jsonify({
-        'status': 'success',
-        'token': new_token,
-        'expires_in': 3600  # 1 hour
-    })
-
 
 @wechat_bp.route('/api/send-verification-code', methods=['POST'])
 @rate_limit(limit=5, window=60, per='ip')
@@ -3457,24 +3549,32 @@ def send_verification_code():
     if not re.match(phone_pattern, phone):
         return jsonify({'error': 'Invalid phone number format'}), 400
 
-    # In a real implementation, this would send an SMS verification code
-    # For now, returning a mock response
+    # Generate 6-digit verification code
     import random
     verification_code = f"{random.randint(100000, 999999)}"
 
-    api_logger.info(f"Verification code sent to {phone} (mock: {verification_code})")
+    # Save verification code (in-memory, should use Redis in production)
+    from wechat_backend.database import save_verification_code
+    save_verification_code(phone, verification_code)
 
+    # In production, send SMS via SMS service (Aliyun, Tencent Cloud, etc.)
+    # For development, log the code for testing
+    api_logger.info(f"Verification code sent to {phone} (mock: {verification_code})")
+    
+    # For testing purposes, return the code in the response (remove in production!)
     return jsonify({
         'status': 'success',
         'message': 'Verification code sent successfully',
-        'phone': phone
+        'phone': phone,
+        # REMOVE THIS IN PRODUCTION - for testing only!
+        'mock_code': verification_code
     })
 
 
 @wechat_bp.route('/api/register', methods=['POST'])
 @rate_limit(limit=5, window=60, per='ip')
 def register_user():
-    """Register new user"""
+    """Register new user with phone and password"""
     api_logger.info("User registration endpoint accessed")
 
     data = request.get_json()
@@ -3488,78 +3588,417 @@ def register_user():
     if not phone or not verification_code or not password:
         return jsonify({'error': 'Phone, verification code, and password are required'}), 400
 
-    # In a real implementation, this would verify the code and register the user
-    # For now, returning a mock response
+    # Validate phone number format
+    import re
+    phone_pattern = r'^1[3-9]\d{9}$'
+    if not re.match(phone_pattern, phone):
+        return jsonify({'error': 'Invalid phone number format'}), 400
+
+    # Validate password strength (at least 6 characters)
+    if len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters long'}), 400
+
+    # Verify the verification code
+    from wechat_backend.database import verify_code, create_user_with_phone
+    if not verify_code(phone, verification_code):
+        return jsonify({'error': 'Invalid or expired verification code'}), 400
+
+    # Check if phone already registered
+    from wechat_backend.database import get_user_by_phone
+    existing_user = get_user_by_phone(phone)
+    if existing_user:
+        return jsonify({'error': 'Phone number already registered'}), 409
+
+    # Hash password using bcrypt
+    import bcrypt
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    # Create user
+    user_id = create_user_with_phone(phone, password_hash)
+    if user_id == -1:
+        return jsonify({'error': 'Failed to create user'}), 500
+
+    # Generate JWT tokens
+    from wechat_backend.security.auth import jwt_manager
+    access_token = jwt_manager.generate_token(str(user_id), expires_delta=timedelta(hours=24), token_type='access')
+    refresh_token = jwt_manager.generate_token(str(user_id), expires_delta=timedelta(days=7), token_type='refresh')
+
+    # Save refresh token
+    from wechat_backend.database import save_refresh_token
+    save_refresh_token(str(user_id), refresh_token)
+
+    api_logger.info(f"User registered successfully: {phone}, user_id: {user_id}")
+
     return jsonify({
         'status': 'success',
         'message': 'User registered successfully',
-        'user_id': f"user_{phone[-4:]}"
+        'user_id': user_id,
+        'token': access_token,
+        'refresh_token': refresh_token,
+        'expires_in': 86400,  # 24 hours
+        'refresh_expires_in': 604800  # 7 days
     })
 
 
-@wechat_bp.route('/api/user/profile', methods=['GET', 'POST'])
+@wechat_bp.route('/api/login/phone', methods=['POST'])
+@rate_limit(limit=10, window=60, per='ip')
+def login_by_phone():
+    """Login with phone and password"""
+    api_logger.info("Phone login endpoint accessed")
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    phone = data.get('phone')
+    password = data.get('password')
+
+    if not phone or not password:
+        return jsonify({'error': 'Phone and password are required'}), 400
+
+    # Get user by phone
+    from wechat_backend.database import get_user_by_phone
+    user = get_user_by_phone(phone)
+
+    if not user:
+        api_logger.warning(f"Login failed: user not found for {phone}")
+        return jsonify({'error': 'Invalid phone or password'}), 401
+
+    # Verify password
+    import bcrypt
+    try:
+        if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+            api_logger.warning(f"Login failed: incorrect password for {phone}")
+            return jsonify({'error': 'Invalid phone or password'}), 401
+    except Exception as e:
+        api_logger.error(f"Password verification error: {e}")
+        return jsonify({'error': 'Login failed'}), 500
+
+    # Generate JWT tokens
+    from wechat_backend.security.auth import jwt_manager
+    access_token = jwt_manager.generate_token(str(user['id']), expires_delta=timedelta(hours=24), token_type='access')
+    refresh_token = jwt_manager.generate_token(str(user['id']), expires_delta=timedelta(days=7), token_type='refresh')
+
+    # Save refresh token
+    from wechat_backend.database import save_refresh_token
+    save_refresh_token(str(user['id']), refresh_token)
+
+    api_logger.info(f"User logged in successfully: {phone}, user_id: {user['id']}")
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Login successful',
+        'user_id': user['id'],
+        'token': access_token,
+        'refresh_token': refresh_token,
+        'expires_in': 86400,  # 24 hours
+        'refresh_expires_in': 604800,  # 7 days
+        'profile': {
+            'phone': user['phone'],
+            'nickname': user['nickname'],
+            'avatar_url': user['avatar_url']
+        }
+    })
+
+
+@wechat_bp.route('/api/validate-token', methods=['POST'])
+@rate_limit(limit=30, window=60, per='ip')
+def validate_token():
+    """Validate access token"""
+    api_logger.info("Token validation endpoint accessed")
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'status': 'invalid', 'error': 'No JSON data provided'}), 400
+    
+    token = data.get('token')
+    if not token:
+        # Try to get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+    
+    if not token:
+        return jsonify({'status': 'invalid', 'error': 'Token not provided'}), 400
+    
+    try:
+        from wechat_backend.security.auth import jwt_manager
+        if not jwt_manager:
+            return jsonify({'status': 'invalid', 'error': 'JWT service unavailable'}), 500
+        
+        # Decode and validate token (verify it's an access token)
+        payload = jwt_manager.decode_token(token, verify_type='access')
+        
+        return jsonify({
+            'status': 'valid',
+            'user_id': payload.get('user_id'),
+            'expires_at': payload.get('exp')
+        })
+        
+    except Exception as e:
+        api_logger.warning(f"Token validation failed: {e}")
+        return jsonify({'status': 'invalid', 'error': str(e)}), 401
+
+
+@wechat_bp.route('/api/refresh-token', methods=['POST'])
+@rate_limit(limit=10, window=60, per='ip')
+def refresh_token():
+    """Refresh access token using refresh token"""
+    api_logger.info("Token refresh endpoint accessed")
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+    
+    refresh_token_str = data.get('refresh_token')
+    
+    if not refresh_token_str:
+        # Try to get refresh token from cookie or header
+        refresh_token_str = request.headers.get('X-Refresh-Token')
+    
+    if not refresh_token_str:
+        return jsonify({'error': 'Refresh token is required'}), 400
+    
+    # Verify refresh token
+    from wechat_backend.database import verify_refresh_token
+    user_id = verify_refresh_token(refresh_token_str)
+    
+    if not user_id:
+        return jsonify({'error': 'Invalid or expired refresh token'}), 401
+    
+    try:
+        from wechat_backend.security.auth import jwt_manager
+        if not jwt_manager:
+            return jsonify({'error': 'JWT service unavailable'}), 500
+        
+        # Generate new access token
+        new_access_token = jwt_manager.generate_token(
+            user_id,
+            expires_delta=timedelta(hours=24),
+            token_type='access'
+        )
+        
+        # Generate new refresh token (rotate refresh tokens for security)
+        new_refresh_token = jwt_manager.generate_token(
+            user_id,
+            expires_delta=timedelta(days=7),
+            token_type='refresh'
+        )
+        
+        # Save new refresh token
+        from wechat_backend.database import save_refresh_token
+        save_refresh_token(user_id, new_refresh_token)
+        
+        # Revoke old refresh token (token rotation)
+        from wechat_backend.database import revoke_refresh_token
+        revoke_refresh_token(refresh_token_str)
+        
+        api_logger.info(f"Token refreshed for user {user_id}")
+        
+        return jsonify({
+            'status': 'success',
+            'token': new_access_token,
+            'refresh_token': new_refresh_token,
+            'expires_in': 86400,  # 24 hours
+            'token_type': 'Bearer'
+        })
+        
+    except Exception as e:
+        api_logger.error(f"Token refresh failed: {e}")
+        return jsonify({'error': 'Token refresh failed'}), 500
+
+
+@wechat_bp.route('/api/logout', methods=['POST'])
 @require_auth_optional
+@rate_limit(limit=10, window=60, per='ip')
+def logout():
+    """Logout user (revoke refresh tokens)"""
+    api_logger.info("Logout endpoint accessed")
+    
+    data = request.get_json() or {}
+    user_id = get_current_user_id()
+    
+    # Option 1: Logout from current device only
+    refresh_token_str = data.get('refresh_token') or request.headers.get('X-Refresh-Token')
+    if refresh_token_str:
+        from wechat_backend.database import revoke_refresh_token
+        revoke_refresh_token(refresh_token_str)
+    
+    # Option 2: Logout from all devices (if requested)
+    if data.get('all_devices', False) and user_id:
+        from wechat_backend.database import revoke_all_user_tokens
+        revoke_all_user_tokens(user_id)
+        api_logger.info(f"All tokens revoked for user {user_id}")
+    else:
+        api_logger.info(f"Token revoked for user {user_id or 'anonymous'}")
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Logout successful'
+    })
+
+
+@wechat_bp.route('/api/user/profile', methods=['GET'])
+@require_auth
 @rate_limit(limit=20, window=60, per='ip')
 def get_user_profile():
     """Get user profile information"""
     user_id = get_current_user_id()
     api_logger.info(f"User profile endpoint accessed by user: {user_id}")
-
-    # In a real implementation, this would fetch user profile from DB
-    # For now, returning a mock response
+    
+    # Convert user_id to int if it's a string
+    try:
+        user_id_int = int(user_id)
+    except (ValueError, TypeError):
+        api_logger.warning(f"Invalid user_id format: {user_id}")
+        return jsonify({'error': 'Invalid user ID'}), 400
+    
+    # Fetch user profile from database
+    from wechat_backend.database import get_user_by_id
+    user = get_user_by_id(user_id_int)
+    
+    if not user:
+        api_logger.warning(f"User not found: {user_id}")
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Mask phone number for privacy
+    phone_masked = '***'
+    if user.get('phone'):
+        phone = user['phone']
+        if len(phone) >= 7:
+            phone_masked = phone[:3] + '****' + phone[-4:]
+    
+    api_logger.info(f"User profile retrieved: {user_id}")
+    
     return jsonify({
         'status': 'success',
         'profile': {
-            'user_id': user_id or 'anonymous',
-            'username': f'user_{user_id[-4:]}' if user_id else 'anonymous',
-            'email': 'user@example.com',
-            'phone': '138****8888',
-            'created_at': datetime.now().isoformat()
+            'user_id': user['id'],
+            'phone': phone_masked,
+            'nickname': user.get('nickname') or '未设置昵称',
+            'avatar_url': user.get('avatar_url') or '',
+            'created_at': user.get('created_at'),
+            'updated_at': user.get('updated_at')
         }
     })
 
 
-@wechat_bp.route('/api/user/update', methods=['POST'])
+@wechat_bp.route('/api/user/profile', methods=['PUT'])
+@require_auth
+@rate_limit(limit=10, window=60, per='ip')
+def put_user_profile():
+    """Update user profile information (PUT method)"""
+    return update_user_profile_data()
+
+
+@wechat_bp.route('/api/user/update', methods=['POST', 'PUT'])
 @require_auth
 @rate_limit(limit=10, window=60, per='ip')
 def update_user_profile():
     """Update user profile information"""
+    return update_user_profile_data()
+
+
+def update_user_profile_data():
+    """Helper function to update user profile"""
     user_id = get_current_user_id()
     api_logger.info(f"Update user profile endpoint accessed by user: {user_id}")
-
-    data = request.get_json() or {}
-
-    # In a real implementation, this would update user profile in DB
-    # For now, returning a mock response
-    return jsonify({
-        'status': 'success',
-        'message': 'Profile updated successfully',
-        'updated_fields': list(data.keys())
-    })
+    
+    # Convert user_id to int if it's a string
+    try:
+        user_id_int = int(user_id)
+    except (ValueError, TypeError):
+        api_logger.warning(f"Invalid user_id format: {user_id}")
+        return jsonify({'error': 'Invalid user ID'}), 400
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+    
+    # Update user profile in database
+    from wechat_backend.database import update_user_profile
+    success = update_user_profile(user_id_int, data)
+    
+    if success:
+        api_logger.info(f"User profile updated: {user_id}")
+        
+        # Fetch updated profile
+        from wechat_backend.database import get_user_by_id
+        user = get_user_by_id(user_id_int)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Profile updated successfully',
+            'profile': {
+                'user_id': user['id'],
+                'nickname': user.get('nickname'),
+                'avatar_url': user.get('avatar_url')
+            }
+        })
+    else:
+        api_logger.error(f"Failed to update user profile: {user_id}")
+        return jsonify({'error': 'Failed to update profile'}), 500
 
 
 @wechat_bp.route('/api/sync-data', methods=['POST'])
 @require_auth
 @rate_limit(limit=10, window=60, per='ip')
 def sync_data():
-    """Sync user data"""
+    """
+    Sync user data (incremental sync)
+    
+    Request body:
+    - last_sync_timestamp: Last sync timestamp (optional, for incremental sync)
+    - local_results: Local results to upload (optional)
+    
+    Response:
+    - cloud_results: Results from cloud
+    - uploaded_count: Number of results uploaded
+    - last_sync_timestamp: Timestamp for next sync
+    """
     user_id = get_current_user_id()
     api_logger.info(f"Data sync endpoint accessed by user: {user_id}")
-
+    
     data = request.get_json() or {}
-    openid = data.get('openid')
-    local_results = data.get('localResults', data.get('local_results', []))
-
-    if not openid:
-        return jsonify({'error': 'OpenID is required'}), 400
-
-    # In a real implementation, this would sync data to/from DB
-    # For now, returning a mock response
+    last_sync_timestamp = data.get('last_sync_timestamp') or data.get('lastSyncTimestamp')
+    local_results = data.get('local_results') or data.get('localResults', [])
+    
+    try:
+        # Convert user_id to int
+        user_id_int = int(user_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid user ID'}), 400
+    
+    # Initialize sync database if needed
+    from wechat_backend.database import init_sync_db, save_user_data, get_user_data
+    init_sync_db()
+    
+    # 1. Save local results to cloud
+    uploaded_count = 0
+    if local_results and len(local_results) > 0:
+        for result in local_results:
+            result_id = save_user_data(user_id_int, result)
+            if result_id:
+                uploaded_count += 1
+    
+    api_logger.info(f"Uploaded {uploaded_count} results for user {user_id}")
+    
+    # 2. Get cloud results (incremental)
+    cloud_results = get_user_data(user_id_int, last_sync_timestamp)
+    
+    # 3. Get current timestamp for next sync
+    from datetime import datetime
+    current_timestamp = datetime.now().isoformat()
+    
+    api_logger.info(f"Sync completed for user {user_id}: {len(cloud_results)} cloud results, {uploaded_count} uploaded")
+    
     return jsonify({
         'status': 'success',
         'message': 'Data synced successfully',
-        'synced_count': len(local_results),
-        'timestamp': datetime.now().isoformat()
+        'cloud_results': cloud_results,
+        'uploaded_count': uploaded_count,
+        'last_sync_timestamp': current_timestamp,
+        'has_more': False  # For pagination support in future
     })
 
 
@@ -3567,23 +4006,47 @@ def sync_data():
 @require_auth
 @rate_limit(limit=10, window=60, per='ip')
 def download_data():
-    """Download user data"""
+    """
+    Download user data from cloud (incremental download)
+    
+    Request body:
+    - last_sync_timestamp: Last sync timestamp (optional, for incremental sync)
+    
+    Response:
+    - cloud_results: Results from cloud
+    - last_sync_timestamp: Timestamp for next sync
+    """
     user_id = get_current_user_id()
     api_logger.info(f"Data download endpoint accessed by user: {user_id}")
-
+    
     data = request.get_json() or {}
-    openid = data.get('openid')
-
-    if not openid:
-        return jsonify({'error': 'OpenID is required'}), 400
-
-    # In a real implementation, this would fetch data from DB
-    # For now, returning a mock response
+    last_sync_timestamp = data.get('last_sync_timestamp') or data.get('lastSyncTimestamp')
+    
+    try:
+        # Convert user_id to int
+        user_id_int = int(user_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid user ID'}), 400
+    
+    # Initialize sync database if needed
+    from wechat_backend.database import init_sync_db, get_user_data
+    init_sync_db()
+    
+    # Get cloud results (incremental)
+    cloud_results = get_user_data(user_id_int, last_sync_timestamp)
+    
+    # Get current timestamp for next sync
+    from datetime import datetime
+    current_timestamp = datetime.now().isoformat()
+    
+    api_logger.info(f"Download completed for user {user_id}: {len(cloud_results)} results")
+    
     return jsonify({
         'status': 'success',
         'message': 'Data downloaded successfully',
-        'cloudResults': [],  # Return empty array or mock data
-        'timestamp': datetime.now().isoformat()
+        'cloud_results': cloud_results,
+        'last_sync_timestamp': current_timestamp,
+        'has_more': False
     })
 
 
@@ -3591,50 +4054,99 @@ def download_data():
 @require_auth
 @rate_limit(limit=10, window=60, per='ip')
 def upload_result():
-    """Upload individual result"""
+    """
+    Upload individual test result to cloud
+    
+    Request body:
+    - result: Test result data
+      - result_id: Unique result ID
+      - brand_name: Brand name
+      - ai_models_used: List of AI models used
+      - questions_used: List of questions used
+      - overall_score: Overall score
+      - results_summary: Summary of results
+      - detailed_results: Full detailed results
+    """
     user_id = get_current_user_id()
     api_logger.info(f"Upload result endpoint accessed by user: {user_id}")
-
+    
     data = request.get_json() or {}
-    openid = data.get('openid')
     result = data.get('result')
-
-    if not openid or not result:
-        return jsonify({'error': 'OpenID and result are required'}), 400
-
-    # In a real implementation, this would save result to DB
-    # For now, returning a mock response
-    return jsonify({
-        'status': 'success',
-        'message': 'Result uploaded successfully',
-        'result_id': f"result_{hash(str(result)) % 10000}",
-        'timestamp': datetime.now().isoformat()
-    })
+    
+    if not result:
+        return jsonify({'error': 'Result data is required'}), 400
+    
+    try:
+        # Convert user_id to int
+        user_id_int = int(user_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid user ID'}), 400
+    
+    # Initialize sync database if needed
+    from wechat_backend.database import init_sync_db, save_user_data
+    init_sync_db()
+    
+    # Save result to cloud
+    result_id = save_user_data(user_id_int, result)
+    
+    if result_id:
+        api_logger.info(f"Result {result_id} uploaded for user {user_id}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Result uploaded successfully',
+            'result_id': result_id,
+            'timestamp': datetime.now().isoformat()
+        })
+    else:
+        api_logger.error(f"Failed to upload result for user {user_id}")
+        return jsonify({'error': 'Failed to upload result'}), 500
 
 
 @wechat_bp.route('/api/delete-result', methods=['POST'])
 @require_auth
 @rate_limit(limit=10, window=60, per='ip')
 def delete_result():
-    """Delete individual result"""
+    """
+    Delete individual result from cloud (soft delete)
+    
+    Request body:
+    - result_id: Result ID to delete
+    """
     user_id = get_current_user_id()
     api_logger.info(f"Delete result endpoint accessed by user: {user_id}")
-
+    
     data = request.get_json() or {}
-    openid = data.get('openid')
-    result_id = data.get('id')
-
-    if not openid or not result_id:
-        return jsonify({'error': 'OpenID and result ID are required'}), 400
-
-    # In a real implementation, this would delete result from DB
-    # For now, returning a mock response
-    return jsonify({
-        'status': 'success',
-        'message': 'Result deleted successfully',
-        'deleted_id': result_id,
-        'timestamp': datetime.now().isoformat()
-    })
+    result_id = data.get('result_id') or data.get('id')
+    
+    if not result_id:
+        return jsonify({'error': 'Result ID is required'}), 400
+    
+    try:
+        # Convert user_id to int
+        user_id_int = int(user_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid user ID'}), 400
+    
+    # Initialize sync database if needed
+    from wechat_backend.database import init_sync_db, delete_user_data
+    init_sync_db()
+    
+    # Delete result from cloud
+    success = delete_user_data(user_id_int, result_id)
+    
+    if success:
+        api_logger.info(f"Result {result_id} deleted for user {user_id}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Result deleted successfully',
+            'deleted_id': result_id,
+            'timestamp': datetime.now().isoformat()
+        })
+    else:
+        api_logger.warning(f"Result {result_id} not found for user {user_id}")
+        return jsonify({'error': 'Result not found'}), 404
 
 
 @wechat_bp.route('/api/competitive-analysis', methods=['POST'])
@@ -3655,7 +4167,7 @@ def competitive_analysis():
 
     try:
         # Use the same logic as action/recommendations but with different endpoint
-        from .recommendation_generator import RecommendationGenerator
+        from wechat_backend.recommendation_generator import RecommendationGenerator
         generator = RecommendationGenerator()
 
         recommendations = generator.generate_recommendations(

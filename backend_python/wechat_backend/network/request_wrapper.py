@@ -8,13 +8,13 @@ import requests
 from typing import Dict, Any, Optional, Union
 from urllib.parse import urljoin
 import logging
-from ..network.security import get_http_client
-from ..network.connection_pool import get_session_for_url
-from ..network.circuit_breaker import get_circuit_breaker
-from ..network.retry_mechanism import SmartRetryHandler
-from ..network.rate_limiter import is_rate_limited
-from ..monitoring.metrics_collector import record_api_call, record_error
-from ..monitoring.logging_enhancements import log_api_request, log_api_response
+from wechat_backend.network.security import get_http_client
+from wechat_backend.network.connection_pool import get_session_for_url
+from wechat_backend.network.circuit_breaker import get_circuit_breaker
+from wechat_backend.network.retry_mechanism import SmartRetryHandler
+from wechat_backend.network.rate_limiter import is_rate_limited
+from wechat_backend.monitoring.metrics_collector import record_api_call, record_error
+from wechat_backend.monitoring.logging_enhancements import log_api_request, log_api_response
 
 logger = logging.getLogger(__name__)
 

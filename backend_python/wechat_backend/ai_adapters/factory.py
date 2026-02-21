@@ -2,14 +2,14 @@
 Factory for creating and managing AI adapters
 """
 from typing import Dict, Type, Union
-from .base_adapter import AIClient, AIPlatformType
-from ..logging_config import api_logger
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIPlatformType
+from wechat_backend.logging_config import api_logger
 
 api_logger.info("=== Starting AI Adapter Imports ===")
 
 # 动态导入适配器，防止单个适配器的依赖问题导致整个应用崩溃
 try:
-    from .deepseek_adapter import DeepSeekAdapter
+    from wechat_backend.ai_adapters.deepseek_adapter import DeepSeekAdapter
     api_logger.info("Successfully imported DeepSeekAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import DeepSeekAdapter: {e}")
@@ -27,7 +27,7 @@ except ImportError as e:
     DeepSeekR1Adapter = None
 
 try:
-    from .qwen_adapter import QwenAdapter
+    from wechat_backend.ai_adapters.qwen_adapter import QwenAdapter
     api_logger.info("Successfully imported QwenAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import QwenAdapter: {e}")
@@ -36,7 +36,7 @@ except ImportError as e:
     QwenAdapter = None
 
 try:
-    from .doubao_adapter import DoubaoAdapter
+    from wechat_backend.ai_adapters.doubao_adapter import DoubaoAdapter
     api_logger.info("Successfully imported DoubaoAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import DoubaoAdapter: {e}")
@@ -63,7 +63,7 @@ except ImportError as e:
     GeminiAdapter = None
 
 try:
-    from .zhipu_adapter import ZhipuAdapter
+    from wechat_backend.ai_adapters.zhipu_adapter import ZhipuAdapter
     api_logger.info("Successfully imported ZhipuAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import ZhipuAdapter: {e}")
@@ -218,14 +218,14 @@ class AIAdapterFactory:
 
         # If API key is not provided, try to get it from config
         if not api_key:
-            from ..config_manager import config_manager
+            from config_manager import config_manager
             api_key = config_manager.get_api_key(platform_type.value)
             if not api_key:
                 raise ValueError(f"No API key provided or configured for platform: {platform_type.value}")
 
         # If model name is not provided, try to get default from config
         if not model_name:
-            from ..config_manager import config_manager
+            from config_manager import config_manager
             model_name = config_manager.get_platform_model(platform_type.value) or f"default-{platform_type.value}-model"
 
         adapter_class = cls._adapters[platform_type]

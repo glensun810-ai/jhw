@@ -124,24 +124,130 @@ Page({
     particleAnimateId: null,
 
     // 【新增】是否有上次诊断报告
-    hasLastReport: false
+    hasLastReport: false,
+
+    // 【P2 新增】配置对象（包含诊断预估信息）- 严禁设为 null
+    config: {
+      estimate: {
+        duration: '30s',
+        steps: 5
+      },
+      brandName: '',
+      competitorBrands: [],
+      customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}]
+    },
+    
+    // 诊断配置兜底数据 - 严禁设为 null
+    diagnosticConfig: {
+      estimate: {
+        duration: '30s',
+        steps: 5
+      }
+    }
   },
 
   onLoad: function (options) {
-    console.log('品牌AI雷达 - 页面加载完成');
-    this.checkServerConnection();
-    
-    // P2 新增：加载用户 AI 平台偏好
-    this.loadUserPlatformPreferences();
-    this.updateSelectedModelCount();
-    this.updateSelectedQuestionCount();
+    try {
+      console.log('品牌 AI 雷达 - 页面加载完成');
 
-    // 检查是否需要立即启动快速搜索
-    if (options && options.quickSearch === 'true') {
-      // 延迟执行，确保页面已完全加载
-      setTimeout(() => {
-        this.startBrandTest();
-      }, 1000); // 延迟稍长一些，确保配置已完全加载
+      // 1. 初始化默认值（确保 config.estimate 有默认值）
+      this.initializeDefaults();
+
+      // 2. 检查服务器连接
+      this.checkServerConnection();
+
+      // 3. 加载用户 AI 平台偏好
+      this.loadUserPlatformPreferences();
+      this.updateSelectedModelCount();
+      this.updateSelectedQuestionCount();
+
+      // 4. 防御性读取 config.estimate（多层保护）
+      // 先检查 this.data 是否存在
+      let estimate = { duration: '30s', steps: 5 }; // 默认值
+      
+      if (this.data) {
+        // 使用最安全的访问方式
+        const config = this.data.config;
+        if (config && typeof config === 'object' && config.estimate) {
+          estimate = config.estimate;
+        }
+      }
+      
+      console.log('诊断预估配置:', estimate);
+
+      // 5. 检查是否需要立即启动快速搜索
+      if (options && options.quickSearch === 'true') {
+        setTimeout(() => {
+          this.startBrandTest();
+        }, 1000);
+      }
+
+      // 注意：restoreDraft 移到 onShow 中调用，避免 onLoad 中重复 setData
+    } catch (error) {
+      // 隔离报错环境：记录日志并维持默认状态
+      console.error('onLoad 初始化失败:', error);
+      console.error('错误堆栈:', error.stack);
+
+      // 维持默认状态，确保页面可用
+      this.setData({
+        serverStatus: '初始化失败',
+        config: {
+          estimate: { duration: '30s', steps: 5 },
+          brandName: '',
+          competitorBrands: [],
+          customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}]
+        }
+      });
+
+      // 不影响用户其他操作
+      wx.showToast({
+        title: '初始化失败，请刷新重试',
+        icon: 'none',
+        duration: 2000
+      });
+    }
+  },
+  
+  /**
+   * 初始化默认值（独立方法）
+   */
+  initializeDefaults: function() {
+    // 防御性检查：确保 this.data 存在
+    if (!this.data) {
+      console.warn('initializeDefaults: this.data is null, initializing...');
+      // 如果 this.data 不存在，先初始化一个基础结构
+      this.setData({
+        config: {
+          estimate: { duration: '30s', steps: 5 },
+          brandName: '',
+          competitorBrands: [],
+          customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}]
+        },
+        diagnosticConfig: {
+          estimate: { duration: '30s', steps: 5 }
+        }
+      });
+      return;
+    }
+    
+    // 确保 config 和 diagnosticConfig 始终有默认值
+    if (!this.data.config || !this.data.config.estimate) {
+      this.setData({
+        config: {
+          estimate: { duration: '30s', steps: 5 },
+          brandName: '',
+          competitorBrands: [],
+          customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}]
+        }
+      });
+    }
+
+    if (!this.data.diagnosticConfig || !this.data.diagnosticConfig.estimate) {
+      this.setData({
+        diagnosticConfig: {
+          estimate: { duration: '30s', steps: 5 }
+        }
+      });
     }
   },
 
@@ -343,42 +449,94 @@ Page({
    * P2 修复：保存当前输入到本地存储
    */
   saveCurrentInput: function() {
-    const { brandName, currentCompetitor, competitorBrands } = this.data;
-    
+    const { brandName, currentCompetitor, competitorBrands, customQuestions, domesticAiModels, overseasAiModels } = this.data;
+
+    // 提取选中的国内平台
+    const selectedDomestic = domesticAiModels
+      .filter(model => model.checked)
+      .map(model => model.name);
+
+    // 提取选中的海外平台
+    const selectedOverseas = overseasAiModels
+      .filter(model => model.checked)
+      .map(model => model.name);
+
     wx.setStorageSync('draft_diagnostic_input', {
       brandName: brandName || '',
       currentCompetitor: currentCompetitor || '',
       competitorBrands: competitorBrands || [],
+      customQuestions: customQuestions || [],
+      selectedModels: {
+        domestic: selectedDomestic,
+        overseas: selectedOverseas
+      },
       updatedAt: Date.now()
     });
-    
-    console.log('草稿已自动保存', { brandName, currentCompetitor });
+
+    console.log('草稿已自动保存', { brandName, currentCompetitor, customQuestionsCount: customQuestions?.length });
   },
 
   /**
-   * P2 修复：从本地存储恢复草稿
+   * P2 修复：从本地存储恢复草稿（增强完整性校验 + 合并 setData）
    */
   restoreDraft: function() {
-    const draft = wx.getStorageSync('draft_diagnostic_input');
-    
-    if (draft && (draft.brandName || draft.competitorBrands?.length > 0)) {
-      // 检查是否是 7 天内的草稿
-      const now = Date.now();
-      const draftAge = now - draft.updatedAt;
-      const sevenDays = 7 * 24 * 60 * 60 * 1000;
-      
-      if (draftAge < sevenDays) {
-        this.setData({
-          brandName: draft.brandName || '',
-          currentCompetitor: draft.currentCompetitor || '',
-          competitorBrands: draft.competitorBrands || []
-        });
-        console.log('草稿已恢复', draft);
-      } else {
-        // 草稿过期，清除
-        wx.removeStorageSync('draft_diagnostic_input');
-        console.log('草稿已过期，已清除');
+    try {
+      const draft = wx.getStorageSync('draft_diagnostic_input');
+
+      // 完整性校验：只有数据完整才更新
+      if (draft && draft.brandName) {
+        // 检查是否是 7 天内的草稿
+        const now = Date.now();
+        const draftAge = now - (draft.updatedAt || 0);
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+
+        if (draftAge < sevenDays) {
+          // 恢复自定义问题（确保格式正确）
+          const customQuestionsConfig = Array.isArray(draft.customQuestions) ? draft.customQuestions : [];
+          const formattedQuestions = customQuestionsConfig.map(q => ({
+            text: (q && q.text) || '',
+            show: (q && q.show !== undefined) ? q.show : true
+          }));
+
+          // 恢复 AI 平台选择状态
+          const selectedDomestic = draft.selectedModels?.domestic || [];
+          const selectedOverseas = draft.selectedModels?.overseas || [];
+
+          const updatedDomestic = this.data.domesticAiModels.map(model => ({
+            ...model,
+            checked: selectedDomestic.includes(model.name) && !model.disabled
+          }));
+
+          const updatedOverseas = this.data.overseasAiModels.map(model => ({
+            ...model,
+            checked: selectedOverseas.includes(model.name)
+          }));
+
+          // 合并为一次 setData，提高性能
+          const updateData = {
+            brandName: draft.brandName || '',
+            currentCompetitor: draft.currentCompetitor || '',
+            competitorBrands: Array.isArray(draft.competitorBrands) ? draft.competitorBrands : [],
+            customQuestions: formattedQuestions.length > 0 ? formattedQuestions : this.data.customQuestions,
+            domesticAiModels: updatedDomestic,
+            overseasAiModels: updatedOverseas
+          };
+          
+          this.setData(updateData);
+          console.log('草稿已恢复', draft);
+          
+          // 更新计数（这些不依赖 setData，可以直接调用）
+          this.updateSelectedModelCount();
+          this.updateSelectedQuestionCount();
+        } else {
+          // 草稿过期，清除
+          wx.removeStorageSync('draft_diagnostic_input');
+          console.log('草稿已过期，已清除');
+        }
       }
+    } catch (error) {
+      // 恢复失败不影响页面使用
+      console.error('恢复草稿失败:', error);
     }
   },
 
@@ -521,6 +679,7 @@ Page({
     customQuestions[index].text = value;
     this.setData({ customQuestions: customQuestions });
     this.updateSelectedQuestionCount();
+    this.saveCurrentInput();
   },
 
   addCustomQuestion: function() {
@@ -528,6 +687,7 @@ Page({
     customQuestions.push({text: '', show: true});
     this.setData({ customQuestions: customQuestions });
     this.updateSelectedQuestionCount();
+    this.saveCurrentInput();
   },
 
   removeCustomQuestion: function(e) {
@@ -544,6 +704,7 @@ Page({
     }
 
     this.updateSelectedQuestionCount();
+    this.saveCurrentInput();
   },
 
   getValidQuestions: function() {
@@ -571,17 +732,19 @@ Page({
     models[index].checked = !models[index].checked;
     this.setData({ [key]: models });
     this.updateSelectedModelCount();
+    this.saveCurrentInput();
   },
 
   selectAllModels: function(e) {
     const { type } = e.currentTarget.dataset;
     const key = type === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
-    const models = this.data[key].map(model => ({ 
-      ...model, 
+    const models = this.data[key].map(model => ({
+      ...model,
       checked: !model.disabled
     }));
     this.setData({ [key]: models });
     this.updateSelectedModelCount();
+    this.saveCurrentInput();
   },
 
   updateSelectedModelCount: function() {
@@ -590,6 +753,152 @@ Page({
     const totalCount = selectedDomesticCount + selectedOverseasCount;
     this.setData({ selectedModelCount: totalCount });
   },
+
+  /**
+   * P2 新增：重置所有输入
+   * 清空品牌、竞品、自定义问题，恢复 AI 平台默认配置
+   */
+  resetAllInput: function() {
+    // 重置品牌名称
+    this.setData({ brandName: '' });
+
+    // 重置竞品列表
+    this.setData({ competitorBrands: [], currentCompetitor: '' });
+
+    // 重置自定义问题为 3 个空的初始问题结构
+    this.setData({ customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}] });
+
+    // 重置 AI 平台偏好为默认配置（国内已验证平台默认选中）
+    this.setData({ 
+      selectedModels: DEFAULT_AI_PLATFORMS.domestic 
+    });
+
+    // 更新国内平台选中状态
+    const updatedDomestic = this.data.domesticAiModels.map(model => ({
+      ...model,
+      checked: DEFAULT_AI_PLATFORMS.domestic.includes(model.name) && !model.disabled
+    }));
+
+    // 更新海外平台选中状态（默认不选中）
+    const updatedOverseas = this.data.overseasAiModels.map(model => ({
+      ...model,
+      checked: DEFAULT_AI_PLATFORMS.overseas.includes(model.name)
+    }));
+
+    this.setData({
+      domesticAiModels: updatedDomestic,
+      overseasAiModels: updatedOverseas
+    });
+
+    // 清除本地缓存
+    wx.removeStorageSync('draft_diagnostic_input');
+
+    // 更新计数
+    this.updateSelectedModelCount();
+    this.updateSelectedQuestionCount();
+
+    console.log('所有输入已重置');
+  },
+
+  /**
+   * P2 新增：处理重置所有输入的确认交互
+   */
+  handleResetAll: function() {
+    wx.showModal({
+      title: '确认清空',
+      content: '是否清空所有输入并重置配置？',
+      success: (res) => {
+        if (res.confirm) {
+          this.resetAllInput();
+          wx.showToast({
+            title: '已清空所有输入',
+            icon: 'success'
+          });
+        }
+      }
+    });
+  },
+
+  /**
+   * 计算预估诊断时间
+   * 基于 Questions × Models 计算
+   */
+  calculateEstimatedDuration: function() {
+    const questionCount = this.getValidQuestions().length;
+    const modelCount = this.getSelectedModelCount();
+    
+    // 基于 Questions × Models 计算预估时间
+    // 假设每个 Q×M 组合平均耗时 15 秒
+    const baseDuration = questionCount * modelCount * 15; // 秒
+    
+    // 添加缓冲时间（网络延迟、API 响应波动）
+    const bufferTime = 30; // 秒
+    
+    const totalSeconds = baseDuration + bufferTime;
+    
+    // 格式化为"X 分 Y 秒"
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    return {
+      duration: `${minutes}分${seconds}秒`,
+      totalSeconds: totalSeconds
+    };
+  },
+
+  /**
+   * 启动进度伪装（AI 响应前匀速步进到 15%）
+   */
+  startProgressSimulation: function() {
+    const that = this;
+    let currentProgress = 0;
+    const targetProgress = 15; // AI 响应前进度到 15%
+    const duration = 5000; // 5 秒内完成
+    const interval = 100;
+    const step = (targetProgress / (duration / interval)) * 0.8; // 80% 速度，留余量
+    
+    const timer = setInterval(() => {
+      currentProgress += step;
+      
+      if (currentProgress >= targetProgress) {
+        clearInterval(timer);
+        that.setData({ testProgress: targetProgress });
+      } else {
+        that.setData({ testProgress: Math.floor(currentProgress) });
+      }
+    }, interval);
+    
+    return timer;
+  },
+
+  /**
+   * 添加研判日志
+   */
+  addIntelligenceLog: function(stage, model, message, type = 'info') {
+    const logs = this.data.intelligenceLogs || [];
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString('zh-CN', { hour12: false });
+    
+    logs.push({
+      id: Date.now(),
+      timestamp,
+      stage,
+      model,
+      message,
+      type  // 'info' | 'success' | 'error'
+    });
+    
+    // 保持最近 20 条日志
+    if (logs.length > 20) {
+      logs.shift();
+    }
+    
+    this.setData({
+      intelligenceLogs: logs,
+      showIntelligenceView: true
+    });
+  },
+
 
   startBrandTest: function() {
     const brandName = this.data.brandName.trim();

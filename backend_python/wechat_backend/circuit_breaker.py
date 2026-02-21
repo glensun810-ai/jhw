@@ -2,7 +2,7 @@ import time
 import threading
 from enum import Enum
 from typing import Optional, Callable, Any, Tuple
-from .logging_config import api_logger
+from wechat_backend.logging_config import api_logger
 
 
 class CircuitBreakerState(Enum):

@@ -9,7 +9,7 @@ from typing import Dict, Optional
 from collections import defaultdict
 from enum import Enum
 
-from ..logging_config import api_logger
+from wechat_backend.logging_config import api_logger
 
 
 class RequestPriority(Enum):

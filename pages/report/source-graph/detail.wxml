@@ -1,2 +1,103 @@
 <!--pages/report/source-graph/detail.wxml-->
-<text>pages/report/source-graph/detail.wxml</text>
+<!-- 信源图谱详情页 -->
+<view class="container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载信源数据中...</text>
+  </view>
+
+  <!-- 数据内容 -->
+  <view wx:elif="{{!loading && sourceData}}" class="content-wrapper">
+    <!-- 页面头部 -->
+    <view class="page-header">
+      <text class="page-title">信源图谱分析</text>
+      <text class="page-subtitle">{{brandName}}</text>
+    </view>
+
+    <!-- 信源概览 -->
+    <view class="overview-card">
+      <view class="card-header">
+        <text class="card-title">信源概览</text>
+      </view>
+      <view class="overview-grid">
+        <view class="overview-item">
+          <view class="overview-value">{{totalSources}}</view>
+          <view class="overview-label">总信源数</view>
+        </view>
+        <view class="overview-item">
+          <view class="overview-value">{{citedSources}}</view>
+          <view class="overview-label">被引用信源</view>
+        </view>
+        <view class="overview-item">
+          <view class="overview-value">{{citationRate}}%</view>
+          <view class="overview-label">引用率</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 信源引用排名 -->
+    <view class="sources-card">
+      <view class="card-header">
+        <text class="card-title">信源引用排名</text>
+        <text class="card-subtitle">Top 10</text>
+      </view>
+      <view class="source-list">
+        <view class="source-item" wx:for="{{sourceRanking}}" wx:key="rank" wx:for-item="source">
+          <view class="source-rank">{{source.rank}}</view>
+          <view class="source-info">
+            <view class="source-name">{{source.name}}</view>
+            <view class="source-domain">{{source.domain}}</view>
+          </view>
+          <view class="source-stats">
+            <view class="source-citations">{{source.citations}} 次引用</view>
+            <view class="source-percentage">{{source.percentage}}%</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 信源类型分布 -->
+    <view class="sources-card" wx:if="{{sourceTypes && sourceTypes.length > 0}}">
+      <view class="card-header">
+        <text class="card-title">信源类型分布</text>
+      </view>
+      <view class="type-list">
+        <view class="type-item" wx:for="{{sourceTypes}}" wx:key="type" wx:for-item="typeItem">
+          <view class="type-label">{{typeItem.type}}</view>
+          <view class="type-bar">
+            <view class="type-bar-fill" style="width: {{typeItem.percentage}}%;"></view>
+          </view>
+          <view class="type-value">{{typeItem.count}} ({{typeItem.percentage}}%)</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 可信度分析 -->
+    <view class="sources-card" wx:if="{{credibilityData}}">
+      <view class="card-header">
+        <text class="card-title">信源可信度分析</text>
+      </view>
+      <view class="credibility-grid">
+        <view class="credibility-item">
+          <view class="credibility-label">高可信度</view>
+          <view class="credibility-value high">{{credibilityData.high}}</view>
+        </view>
+        <view class="credibility-item">
+          <view class="credibility-label">中可信度</view>
+          <view class="credibility-value medium">{{credibilityData.medium}}</view>
+        </view>
+        <view class="credibility-item">
+          <view class="credibility-label">低可信度</view>
+          <view class="credibility-value low">{{credibilityData.low}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:else class="empty-state">
+    <text class="empty-icon">📊</text>
+    <text class="empty-text">暂无信源数据</text>
+  </view>
+</view>

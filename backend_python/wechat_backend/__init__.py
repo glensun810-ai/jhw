@@ -1,5 +1,5 @@
 # 导入app实例
-from .app import app
+from wechat_backend.app import app
 
 def create_app():
     """延迟导入以避免循环导入问题"""
