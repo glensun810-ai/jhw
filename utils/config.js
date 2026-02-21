@@ -1,37 +1,59 @@
 /**
  * 统一配置文件
- * 将散落的硬编码URL和其他配置项收拢至此
+ * 将散落的硬编码 URL 和其他配置项收拢至此
  */
 
-// API端点配置
+// API 端点配置
 const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/api/login',
-    VALIDATE_TOKEN: '/api/validate-token',  // Needs backend implementation
-    REFRESH_TOKEN: '/api/refresh-token',   // Needs backend implementation
+    VALIDATE_TOKEN: '/api/validate-token',
+    REFRESH_TOKEN: '/api/refresh-token',
     SEND_VERIFICATION_CODE: '/api/send-verification-code',
-    REGISTER: '/api/register'               // Needs backend implementation
+    REGISTER: '/api/register'
   },
   USER: {
-    PROFILE: '/api/user/profile',          // Needs backend implementation
-    UPDATE: '/api/user/update'             // Needs backend implementation
+    PROFILE: '/api/user/profile',
+    UPDATE: '/api/user/update'
   },
   SYNC: {
-    DATA: '/api/sync-data',                // Needs backend implementation
-    DOWNLOAD: '/api/download-data',        // Needs backend implementation
-    UPLOAD_RESULT: '/api/upload-result',   // Needs backend implementation
-    DELETE_RESULT: '/api/delete-result'    // Needs backend implementation
+    DATA: '/api/sync/data',
+    DOWNLOAD: '/api/sync/download',
+    UPLOAD_RESULT: '/api/sync/upload-result',
+    DELETE_RESULT: '/api/sync/delete-result',
+    STATUS: '/api/sync/status'
+  },
+  ANALYTICS: {
+    TRACK: '/api/analytics/track',
+    USER_JOURNEY: '/api/analytics/user-journey',
+    STATISTICS: '/api/analytics/statistics',
+    HEATMAP: '/api/analytics/heatmap',
+    FUNNEL: '/api/analytics/funnel'
+  },
+  AUDIT: {
+    LOG: '/api/audit/log',
+    LOGS: '/api/audit/logs',
+    REPORT: '/api/audit/report',
+    COMPLIANCE: '/api/audit/compliance',
+    USER_ACTIVITY: '/api/audit/user-activity'
   },
   HISTORY: {
     LIST: '/api/test-history'
   },
   BRAND: {
-    TEST: '/api/perform-brand-test',      // 品牌测试接口（支持问题解析与分发）
-    PROGRESS: '/api/test-progress',       // 测试进度查询
-    STATUS: '/test/status'               // 测试状态查询（注意：实际调用时需要附加task_id，如 /test/status/{taskId}）
+    TEST: '/api/perform-brand-test',
+    PROGRESS: '/api/test-progress',
+    STATUS: '/test/status'
   },
   COMPETITIVE: {
-    ANALYSIS: '/action/recommendations'   // Matches existing backend endpoint
+    ANALYSIS: '/action/recommendations'
+  },
+  INTELLIGENCE: {
+    PIPELINE: '/api/intelligence/pipeline',
+    STREAM: '/api/intelligence/stream',
+    ADD: '/api/intelligence/add',
+    UPDATE: '/api/intelligence/update',
+    CLEAR: '/api/intelligence/clear'
   },
   SYSTEM: {
     TEST_CONNECTION: '/api/test'
@@ -43,33 +65,33 @@ const ENV_CONFIG = {
   develop: {
     // 使用 127.0.0.1 作为默认开发地址，支持模拟器调试
     // 真机调试时，在微信开发者工具中设置"不校验合法域名"即可使用本地服务
-    // 注意：确保后端服务运行在相同端口（默认5000），与 backend_python/run.py 中的端口保持一致
-    baseURL: 'http://127.0.0.1:5000', // 开发环境 API 地址
-    timeout: 30000, // 30秒超时
+    // 注意：确保后端服务运行在相同端口（默认 5001），与 backend_python/run.py 中的端口保持一致
+    baseURL: 'http://127.0.0.1:5001', // 开发环境 API 地址
+    timeout: 30000, // 30 秒超时
     env: 'dev'
   },
   trial: {
     baseURL: 'https://staging.api.yourdomain.com', // 体验版 API 地址
-    timeout: 20000, // 20秒超时
+    timeout: 20000, // 20 秒超时
     env: 'trial'
   },
   release: {
     baseURL: 'https://api.yourdomain.com', // 正式环境 API 地址
-    timeout: 15000, // 15秒超时
+    timeout: 15000, // 15 秒超时
     env: 'release'
   }
 };
 
-// 允许从环境变量或本地存储覆盖基础URL
+// 允许从环境变量或本地存储覆盖基础 URL
 const getBaseUrlOverride = () => {
   try {
-    // 检查本地存储中是否有自定义的API地址
+    // 检查本地存储中是否有自定义的 API 地址
     const customBaseURL = wx.getStorageSync('custom_base_url');
     if (customBaseURL && typeof customBaseURL === 'string' && customBaseURL.startsWith('http')) {
       return customBaseURL;
     }
   } catch (e) {
-    console.warn('无法获取自定义API地址:', e);
+    console.warn('无法获取自定义 API 地址:', e);
   }
   return null;
 };
@@ -89,7 +111,7 @@ const getCurrentEnv = () => {
 // 当前环境配置
 const CURRENT_ENV = getCurrentEnv();
 
-// 完整的基础URL
+// 完整的基础 URL
 const BASE_URL = CURRENT_ENV.baseURL;
 
 module.exports = {
