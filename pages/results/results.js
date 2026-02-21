@@ -309,44 +309,116 @@ Page({
   buildCompetitiveAnalysis: function(results, targetBrand, competitorBrands) {
     const brandScores = {};
     const firstMentionByPlatform = {};
-    
+
     // 按品牌分组计算分数
     const brandResults = {};
     results.forEach(result => {
-      const brand = result.brand || targetBrand;
+      // 兼容不同数据格式
+      const brand = result.brand || result.main_brand || targetBrand;
       if (!brandResults[brand]) {
         brandResults[brand] = [];
       }
       brandResults[brand].push(result);
     });
-    
+
     // 计算每个品牌的分数
     Object.keys(brandResults).forEach(brand => {
       const scores = brandResults[brand];
-      const avgScore = scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length;
-      const avgAuthority = scores.reduce((sum, s) => sum + (s.authority_score || 0), 0) / scores.length;
-      const avgVisibility = scores.reduce((sum, s) => sum + (s.visibility_score || 0), 0) / scores.length;
-      const avgPurity = scores.reduce((sum, s) => sum + (s.purity_score || 0), 0) / scores.length;
-      const avgConsistency = scores.reduce((sum, s) => sum + (s.consistency_score || 0), 0) / scores.length;
       
-      // 计算等级
-      let grade = 'D';
-      if (avgScore >= 90) grade = 'A+';
-      else if (avgScore >= 80) grade = 'A';
-      else if (avgScore >= 70) grade = 'B';
-      else if (avgScore >= 60) grade = 'C';
+      // 从 geo_data 中提取分数（兼容后端数据格式）
+      let totalScore = 0;
+      let totalAuthority = 0;
+      let totalVisibility = 0;
+      let totalPurity = 0;
+      let totalConsistency = 0;
+      let count = 0;
       
-      brandScores[brand] = {
-        overallScore: Math.round(avgScore),
-        overallGrade: grade,
-        overallAuthority: Math.round(avgAuthority),
-        overallVisibility: Math.round(avgVisibility),
-        overallPurity: Math.round(avgPurity),
-        overallConsistency: Math.round(avgConsistency),
-        overallSummary: this.getScoreSummary(avgScore)
-      };
+      scores.forEach(s => {
+        // 尝试多种字段名
+        let score = s.score;
+        let authority = s.authority_score;
+        let visibility = s.visibility_score;
+        let purity = s.purity_score;
+        let consistency = s.consistency_score;
+        
+        // 如果没有直接字段，从 geo_data 中提取
+        if (s.geo_data) {
+          const geo = s.geo_data;
+          if (score === undefined || score === null) {
+            // 从 rank 和 sentiment 计算分数
+            const rank = geo.rank || -1;
+            const sentiment = geo.sentiment || 0;
+            // 排名 1-3 得 90-100 分，4-6 得 70-89 分，7-10 得 50-69 分，未入榜得 30 分
+            if (rank > 0) {
+              if (rank <= 3) score = 90 + (3 - rank) * 3 + sentiment * 10;
+              else if (rank <= 6) score = 70 + (6 - rank) * 3 + sentiment * 10;
+              else score = 50 + (10 - rank) * 2 + sentiment * 10;
+            } else {
+              score = 30 + sentiment * 10;
+            }
+            score = Math.min(100, Math.max(0, score));
+          }
+          if (authority === undefined || authority === null) {
+            // 从 sentiment 推断权威度
+            authority = 50 + sentiment * 25;
+          }
+          if (visibility === undefined || visibility === null) {
+            // 从 rank 推断可见度
+            const rank = geo.rank || -1;
+            if (rank <= 3) visibility = 90 + sentiment * 10;
+            else if (rank <= 6) visibility = 70 + sentiment * 10;
+            else if (rank > 0) visibility = 50 + sentiment * 10;
+            else visibility = 30 + sentiment * 10;
+          }
+          if (purity === undefined || purity === null) {
+            purity = 70 + sentiment * 15;
+          }
+          if (consistency === undefined || consistency === null) {
+            consistency = 75 + sentiment * 10;
+          }
+        }
+        
+        // 如果还是 undefined，使用默认值
+        if (score === undefined || score === null) score = 50;
+        if (authority === undefined || authority === null) authority = 50;
+        if (visibility === undefined || visibility === null) visibility = 50;
+        if (purity === undefined || purity === null) purity = 50;
+        if (consistency === undefined || consistency === null) consistency = 50;
+        
+        totalScore += score;
+        totalAuthority += authority;
+        totalVisibility += visibility;
+        totalPurity += purity;
+        totalConsistency += consistency;
+        count++;
+      });
+      
+      if (count > 0) {
+        const avgScore = totalScore / count;
+        const avgAuthority = totalAuthority / count;
+        const avgVisibility = totalVisibility / count;
+        const avgPurity = totalPurity / count;
+        const avgConsistency = totalConsistency / count;
+        
+        // 计算等级
+        let grade = 'D';
+        if (avgScore >= 90) grade = 'A+';
+        else if (avgScore >= 80) grade = 'A';
+        else if (avgScore >= 70) grade = 'B';
+        else if (avgScore >= 60) grade = 'C';
+        
+        brandScores[brand] = {
+          overallScore: Math.round(avgScore),
+          overallGrade: grade,
+          overallAuthority: Math.round(avgAuthority),
+          overallVisibility: Math.round(avgVisibility),
+          overallPurity: Math.round(avgPurity),
+          overallConsistency: Math.round(avgConsistency),
+          overallSummary: this.getScoreSummary(avgScore)
+        };
+      }
     });
-    
+
     return {
       brandScores,
       firstMentionByPlatform,
