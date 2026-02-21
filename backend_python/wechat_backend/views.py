@@ -1682,6 +1682,32 @@ def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_br
             'interceptionRisks': interception_risks
         }
 
+        # 【关键修复】构建 final_result 对象
+        final_result = {
+            'detailed_results': detailed_results,
+            'main_brand': brand_scores.get(main_brand, {
+                'overallScore': 0,
+                'overallGrade': 'D',
+                'overallAuthority': 0,
+                'overallVisibility': 0,
+                'overallSentiment': 0,
+                'overallPurity': 0,
+                'overallConsistency': 0,
+                'overallSummary': 'No data available',
+                'enhanced_data': {
+                    'cognitive_confidence': 0.0,
+                    'bias_indicators': [],
+                    'detailed_analysis': {},
+                    'recommendations': []
+                }
+            }),
+            'competitiveAnalysis': competitive_analysis,
+            'summary': {
+                'total_tests': len(detailed_results),
+                'brands_tested': len(all_brands)
+            }
+        }
+
         # Cancel the alarm before returning
         signal.alarm(0)
         if old_handler:
@@ -4210,3 +4236,132 @@ def competitive_analysis():
     except Exception as e:
         api_logger.error(f"Error generating competitive analysis: {e}")
         return jsonify({'error': 'Failed to generate competitive analysis', 'details': str(e)}), 500
+
+
+# ==================== 监控 API 端点 ====================
+
+@wechat_bp.route('/api/monitoring/metrics', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=10, window=60, per='endpoint')
+def get_monitoring_metrics():
+    """
+    获取系统监控指标
+    
+    返回:
+    - 数据库连接池指标
+    - 查询性能指标
+    - 压缩统计指标
+    - 缓存命中率指标
+    """
+    try:
+        from wechat_backend.database_core import (
+            get_db_pool_metrics,
+            get_query_metrics,
+            get_compression_metrics
+        )
+        from wechat_backend.cache.api_cache import _api_cache
+        
+        metrics = {
+            'database': {
+                'connection_pool': get_db_pool_metrics(),
+                'query_performance': get_query_metrics()
+            },
+            'cache': _api_cache.get_metrics() if _api_cache else {},
+            'compression': get_compression_metrics(),
+            'timestamp': datetime.now().isoformat(),
+            'status': 'healthy'
+        }
+        
+        return jsonify(metrics), 200
+        
+    except Exception as e:
+        api_logger.error(f"获取监控指标失败：{e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+
+@wechat_bp.route('/api/monitoring/reset', methods=['POST'])
+@require_auth
+@rate_limit(limit=5, window=60, per='endpoint')
+def reset_monitoring_metrics():
+    """
+    重置监控指标（需要管理员权限）
+    
+    返回:
+    - 重置结果
+    """
+    try:
+        from wechat_backend.database_core import (
+            reset_db_pool_metrics,
+            reset_query_metrics,
+            reset_compression_metrics
+        )
+        from wechat_backend.cache.api_cache import _api_cache
+        
+        # 重置所有指标
+        reset_db_pool_metrics()
+        reset_query_metrics()
+        reset_compression_metrics()
+        
+        if _api_cache:
+            _api_cache.l1_cache.hits = 0
+            _api_cache.l1_cache.misses = 0
+            _api_cache.l1_cache.sets = 0
+        
+        return jsonify({
+            'status': 'success',
+            'message': '监控指标已重置'
+        }), 200
+        
+    except Exception as e:
+        api_logger.error(f"重置监控指标失败：{e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+
+@wechat_bp.route('/api/monitoring/health', methods=['GET'])
+@rate_limit(limit=30, window=60, per='endpoint')
+def health_check():
+    """
+    健康检查端点
+    
+    返回:
+    - 系统健康状态
+    """
+    try:
+        from wechat_backend.database_core import get_db_pool_metrics
+        
+        # 检查数据库连接池
+        pool_metrics = get_db_pool_metrics()
+        db_status = 'healthy' if pool_metrics['timeout_count'] == 0 else 'degraded'
+        
+        # 检查缓存
+        from wechat_backend.cache.api_cache import _api_cache
+        cache_status = 'healthy' if _api_cache else 'unavailable'
+        
+        overall_status = 'healthy' if db_status == 'healthy' and cache_status == 'healthy' else 'degraded'
+        
+        return jsonify({
+            'status': overall_status,
+            'components': {
+                'database': db_status,
+                'cache': cache_status
+            },
+            'metrics': {
+                'db_connections': pool_metrics['active_connections'],
+                'db_timeouts': pool_metrics['timeout_count'],
+                'cache_hit_rate': _api_cache.get_metrics().get('overall_hit_rate', 0) if _api_cache else 0
+            },
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        api_logger.error(f"健康检查失败：{e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500

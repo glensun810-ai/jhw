@@ -22,14 +22,14 @@ from wechat_backend.security.auth import require_auth_optional, get_current_user
 from wechat_backend.security.rate_limiting import rate_limit
 
 # 创建 Blueprint
-audit_bp = Blueprint('audit', __name__)
+audit_full_bp = Blueprint('audit_full', __name__)
 
 # 内存存储（生产环境应使用数据库）
 _audit_logs: List[Dict[str, Any]] = []
 _audit_indexes: Dict[str, List[int]] = {}  # 索引加速查询
 
 
-@audit_bp.route('/api/audit/log', methods=['POST'])
+@audit_full_bp.route('/api/audit/log', methods=['POST'])
 @require_auth_optional
 @rate_limit(limit=200, window=60, per='endpoint')
 def log_audit_event():
@@ -99,7 +99,7 @@ def log_audit_event():
         }), 500
 
 
-@audit_bp.route('/api/audit/logs', methods=['GET'])
+@audit_full_bp.route('/api/audit/logs', methods=['GET'])
 @require_auth_optional
 @rate_limit(limit=50, window=60, per='endpoint')
 def get_audit_logs():
@@ -170,7 +170,7 @@ def get_audit_logs():
         }), 500
 
 
-@audit_bp.route('/api/audit/report', methods=['GET'])
+@audit_full_bp.route('/api/audit/report', methods=['GET'])
 @require_auth_optional
 @rate_limit(limit=10, window=60, per='endpoint')
 def get_audit_report():
@@ -220,7 +220,7 @@ def get_audit_report():
         }), 500
 
 
-@audit_bp.route('/api/audit/compliance', methods=['GET'])
+@audit_full_bp.route('/api/audit/compliance', methods=['GET'])
 @require_auth_optional
 @rate_limit(limit=10, window=60, per='endpoint')
 def check_compliance():
@@ -258,7 +258,7 @@ def check_compliance():
         }), 500
 
 
-@audit_bp.route('/api/audit/user-activity/<user_id>', methods=['GET'])
+@audit_full_bp.route('/api/audit/user-activity/<user_id>', methods=['GET'])
 @require_auth_optional
 def get_user_activity(user_id: str):
     """
@@ -701,5 +701,5 @@ def _get_risk_level(score: int) -> str:
 def register_blueprints(app):
     """注册审计 Blueprint"""
     from wechat_backend.logging_config import api_logger
-    app.register_blueprint(audit_bp)
+    app.register_blueprint(audit_full_bp)
     api_logger.info('Audit Blueprint registered')

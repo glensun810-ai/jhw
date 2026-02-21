@@ -116,7 +116,7 @@
                 <text class="meta-icon">🏷️</text>
                 <text class="meta-text">{{item.brand}}</text>
               </view>
-              <view class="item-meta-item" wx:if="{{item.metadata?.tokens_used}}">
+              <view class="item-meta-item" wx:if="{{item.metadata && item.metadata.tokens_used}}">
                 <text class="meta-icon">📊</text>
                 <text class="meta-text">{{item.metadata.tokens_used}} tokens</text>
               </view>

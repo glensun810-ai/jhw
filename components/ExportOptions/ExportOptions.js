@@ -250,7 +250,7 @@ Component({
      */
     async _exportPDF(executionId, level, sections, isAsync) {
       const app = getApp();
-      const baseUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5001';
+      const baseUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5000';
 
       if (isAsync) {
         // 异步导出
@@ -434,7 +434,7 @@ Component({
      */
     async _exportHTML(executionId, level) {
       const app = getApp();
-      const baseUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5001';
+      const baseUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5000';
 
       this.setData({ 
         progress: 50,

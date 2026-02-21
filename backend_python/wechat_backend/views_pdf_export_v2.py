@@ -15,10 +15,10 @@ from wechat_backend.security.rate_limiting import rate_limit
 from wechat_backend.security.auth import require_auth_optional, get_current_user_id
 
 # 创建 Blueprint
-pdf_export_bp = Blueprint('pdf_export', __name__)
+pdf_export_v2_bp = Blueprint('pdf_export_v2', __name__)
 
 
-@pdf_export_bp.route('/api/export/report-data', methods=['GET'])
+@pdf_export_v2_bp.route('/api/export/report-data', methods=['GET'])
 @require_auth_optional
 @rate_limit(limit=10, window=60, per='endpoint')
 def get_full_report_data():
@@ -73,7 +73,7 @@ def get_full_report_data():
         }), 500
 
 
-@pdf_export_bp.route('/api/export/pdf', methods=['GET'])
+@pdf_export_v2_bp.route('/api/export/pdf', methods=['GET'])
 @require_auth_optional
 @rate_limit(limit=5, window=60, per='endpoint')
 def export_pdf_report():
@@ -141,7 +141,7 @@ def export_pdf_report():
             }), 500
 
 
-@pdf_export_bp.route('/api/export/status/<task_id>', methods=['GET'])
+@pdf_export_v2_bp.route('/api/export/status/<task_id>', methods=['GET'])
 @require_auth_optional
 def get_export_status(task_id):
     """
@@ -176,7 +176,7 @@ def get_export_status(task_id):
     return jsonify(response_data)
 
 
-@pdf_export_bp.route('/api/export/download/<task_id>', methods=['GET'])
+@pdf_export_v2_bp.route('/api/export/download/<task_id>', methods=['GET'])
 @require_auth_optional
 def download_export_file(task_id):
     """
@@ -210,7 +210,7 @@ def download_export_file(task_id):
     )
 
 
-@pdf_export_bp.route('/api/export/html', methods=['GET'])
+@pdf_export_v2_bp.route('/api/export/html', methods=['GET'])
 @require_auth_optional
 @rate_limit(limit=10, window=60, per='endpoint')
 def export_html_report():
@@ -252,7 +252,7 @@ def export_html_report():
         return jsonify({'error': str(e)}), 500
 
 
-@pdf_export_bp.route('/api/export/stats', methods=['GET'])
+@pdf_export_v2_bp.route('/api/export/stats', methods=['GET'])
 @require_auth_optional
 def get_export_stats():
     """
@@ -299,7 +299,7 @@ def _filter_detailed(report_data: Dict) -> Dict:
 # 注册 Blueprint
 def register_blueprints(app):
     """注册 PDF 导出 Blueprint"""
-    app.register_blueprint(pdf_export_bp)
+    app.register_blueprint(pdf_export_v2_bp)
     api_logger.info('PDF Export Blueprint registered')
     
     # 启动清理线程

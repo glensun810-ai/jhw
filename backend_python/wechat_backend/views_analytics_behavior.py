@@ -21,7 +21,7 @@ from wechat_backend.security.auth import require_auth_optional, get_current_user
 from wechat_backend.security.rate_limiting import rate_limit
 
 # 创建 Blueprint
-analytics_bp = Blueprint('analytics', __name__)
+analytics_behavior_bp = Blueprint('analytics_behavior', __name__)
 
 # 内存存储配置
 MAX_EVENTS_PER_USER = 1000  # 每用户最大事件数
@@ -33,7 +33,7 @@ _session_data: Dict[str, Dict[str, Any]] = {}
 _daily_stats: Dict[str, Dict[str, Any]] = {}
 
 
-@analytics_bp.route('/api/analytics/track', methods=['POST'])
+@analytics_behavior_bp.route('/api/analytics/track', methods=['POST'])
 @require_auth_optional
 @rate_limit(limit=100, window=60, per='endpoint')
 def track_event():
@@ -111,7 +111,7 @@ def track_event():
         }), 500
 
 
-@analytics_bp.route('/api/analytics/user-journey', methods=['GET'])
+@analytics_behavior_bp.route('/api/analytics/user-journey', methods=['GET'])
 @require_auth_optional
 def get_user_journey():
     """
@@ -165,7 +165,7 @@ def get_user_journey():
         }), 500
 
 
-@analytics_bp.route('/api/analytics/statistics', methods=['GET'])
+@analytics_behavior_bp.route('/api/analytics/statistics', methods=['GET'])
 @require_auth_optional
 def get_analytics_statistics():
     """
@@ -212,7 +212,7 @@ def get_analytics_statistics():
         }), 500
 
 
-@analytics_bp.route('/api/analytics/heatmap', methods=['GET'])
+@analytics_behavior_bp.route('/api/analytics/heatmap', methods=['GET'])
 @require_auth_optional
 def get_heatmap_data():
     """
@@ -250,7 +250,7 @@ def get_heatmap_data():
         }), 500
 
 
-@analytics_bp.route('/api/analytics/funnel', methods=['GET'])
+@analytics_behavior_bp.route('/api/analytics/funnel', methods=['GET'])
 @require_auth_optional
 def get_funnel_data():
     """
@@ -566,5 +566,5 @@ def _generate_funnel_data(funnel_name: str, period: str) -> Dict[str, Any]:
 def register_blueprints(app):
     """注册行为分析 Blueprint"""
     from wechat_backend.logging_config import api_logger
-    app.register_blueprint(analytics_bp)
+    app.register_blueprint(analytics_behavior_bp)
     api_logger.info('Analytics Blueprint registered')
