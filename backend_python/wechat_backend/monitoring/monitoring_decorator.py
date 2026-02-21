@@ -16,7 +16,7 @@ from wechat_backend.monitoring.logging_enhancements import (
     log_api_access,
     log_security_event
 )
-from security.input_validation import validate_safe_text
+from wechat_backend.security.input_validation import validate_safe_text
 
 
 def monitored_endpoint(

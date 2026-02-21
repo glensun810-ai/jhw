@@ -12,12 +12,12 @@ from enum import Enum
 import threading
 import queue
 from dataclasses import dataclass
-from ..logging_config import api_logger
-from ..database import DB_PATH
-from ..security.sql_protection import SafeDatabaseQuery, sql_protector
-from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+from wechat_backend.logging_config import api_logger
+from wechat_backend.database import DB_PATH
+from wechat_backend.security.sql_protection import SafeDatabaseQuery, sql_protector
+from wechat_backend.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 # Remove unused imports to avoid circular dependencies
-# from .base_provider import BaseAIProvider
+# from wechat_backend.ai_adapters.base_provider import BaseAIProvider
 # from .doubao_provider import DoubaoProvider
 # from .deepseek_provider import DeepSeekProvider
 
