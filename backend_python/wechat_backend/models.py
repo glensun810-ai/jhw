@@ -7,8 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from enum import Enum
 
-from .logging_config import db_logger
-from .security.sql_protection import SafeDatabaseQuery, sql_protector
+from wechat_backend.logging_config import db_logger
+from wechat_backend.security.sql_protection import SafeDatabaseQuery, sql_protector
 
 DB_PATH = Path(__file__).parent.parent / 'database.db'
 

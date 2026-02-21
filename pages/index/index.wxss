@@ -313,6 +313,10 @@
 /* 保存配置按钮 */
 .save-config-btn { width: 100%; height: 80rpx; display: flex; align-items: center; justify-content: center; background-color: rgba(0, 169, 255, 0.15); border: 1rpx solid #00A9FF; border-radius: 8rpx; color: #00A9FF; font-size: 28rpx; }
 
+/* 清空重置按钮 */
+.reset-config-btn { width: 100%; height: 80rpx; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 77, 79, 0.15); border: 1rpx solid #ff4d4f; border-radius: 8rpx; color: #ff4d4f; font-size: 28rpx; }
+.reset-config-btn:active { background-color: rgba(255, 77, 79, 0.25); }
+
 /* 模态框样式 */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal-content { width: 80%; max-width: 600rpx; background-color: #1A202C; border-radius: 16rpx; padding: 40rpx; border: 1rpx solid #303030; box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.3); }
@@ -350,8 +354,76 @@
 
 /* 进度条 */
 .progress-section { width: 100%; margin-top: 60rpx; text-align: center; }
-.progress-bar-container { width: 100%; height: 16rpx; background-color: #262626; border-radius: 8rpx; overflow: hidden; }
-.progress-bar { height: 100%; background: linear-gradient(90deg, #00A9FF, #00F5A0); transition: width 0.5s ease; }
+.progress-bar-container { 
+  width: 100%; 
+  height: 16rpx; 
+  background-color: #262626; 
+  border-radius: 8rpx; 
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
+}
+.progress-bar { 
+  height: 100%; 
+  background: linear-gradient(90deg, #00A9FF, #00F5A0); 
+  transition: width 0.5s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* P2 新增：进度条流光特效 */
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: progress-shine 2s ease-in-out infinite;
+}
+
+@keyframes progress-shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* P2 新增：进度条外发光效果 */
+.progress-bar::before {
+  content: '';
+  position: absolute;
+  top: -4rpx;
+  left: 0;
+  right: 0;
+  bottom: -4rpx;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(0, 169, 255, 0.4) 50%, 
+    transparent 100%);
+  filter: blur(10rpx);
+  opacity: 0.6;
+  animation: progress-glow 3s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes progress-glow {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
 .progress-text { font-size: 26rpx; color: #8c8c8c; margin-top: 20rpx; }
 
 /* Debug 区域 */

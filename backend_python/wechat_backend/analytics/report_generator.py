@@ -9,11 +9,21 @@ from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 import math
 import io
-from ..logging_config import api_logger
-from ..database import DB_PATH
-from ..security.sql_protection import SafeDatabaseQuery, sql_protector
-from ..models import get_brand_test_result, get_deep_intelligence_result
-from ..cruise_controller import CruiseController
+from wechat_backend.logging_config import api_logger
+from wechat_backend.database import DB_PATH
+from wechat_backend.security.sql_protection import SafeDatabaseQuery, sql_protector
+from wechat_backend.models import get_brand_test_result, get_deep_intelligence_result
+from wechat_backend.cruise_controller import CruiseController
+
+# PDF 生成相关导入
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 
 class ReportGenerator:

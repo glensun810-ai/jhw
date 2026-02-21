@@ -28,3 +28,8 @@ aiohttp>=3.8.0
 fastapi>=0.100.0
 uvicorn>=0.20.0
 pydantic-settings>=2.0.0
+bcrypt>=4.0.0         # 用于密码加密
+
+# PDF 生成相关依赖包
+reportlab>=4.0.0      # PDF 生成库
+xhtml2pdf>=0.2.11     # HTML to PDF 转换（支持中文）

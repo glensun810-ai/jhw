@@ -9,7 +9,7 @@ const API_ENDPOINTS = {
     LOGIN: '/api/login',
     VALIDATE_TOKEN: '/api/validate-token',  // Needs backend implementation
     REFRESH_TOKEN: '/api/refresh-token',   // Needs backend implementation
-    SEND_VERIFICATION_CODE: '/api/send-verification-code',  // Needs backend implementation
+    SEND_VERIFICATION_CODE: '/api/send-verification-code',
     REGISTER: '/api/register'               // Needs backend implementation
   },
   USER: {

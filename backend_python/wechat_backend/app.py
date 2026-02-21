@@ -11,7 +11,7 @@ from config import Config
 
 # Initialize logging before other imports to capture all logs
 #
-from .logging_config import setup_logging
+from wechat_backend.logging_config import setup_logging
 setup_logging(
     log_level=Config.LOG_LEVEL,
     log_file=Config.LOG_FILE,
@@ -20,23 +20,23 @@ setup_logging(
 )
 
 # Import logger after setting up logging
-from .logging_config import app_logger
+from wechat_backend.logging_config import app_logger
 
 # Initialize database
-from .database import init_db
+from wechat_backend.database import init_db
 init_db()
 
 # Initialize task status database
-from .models import init_task_status_db
+from wechat_backend.models import init_task_status_db
 init_task_status_db()
 
 # Security imports
-from .security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer
-from .security.rate_limiting import rate_limit, CombinedRateLimiter
+from wechat_backend.security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer
+from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimiter
 
 # Conditionally import auth module to handle JWT dependency
 try:
-    from .security.auth import require_auth, require_auth_optional, get_current_user_id
+    from wechat_backend.security.auth import require_auth, require_auth_optional, get_current_user_id
 except RuntimeError as e:
     if "PyJWT is required" in str(e):
         # 如果JWT不可用，创建占位符函数
@@ -123,6 +123,39 @@ CORS(app,
 from wechat_backend.views import wechat_bp
 app.register_blueprint(wechat_bp)
 
+# Register GEO Analysis API blueprints (P0 级空缺修复)
+from wechat_backend.views_geo_analysis import init_geo_analysis_routes
+init_geo_analysis_routes(app)
+
+# Register P1 Analysis API blueprints (P1 级空缺修复)
+from wechat_backend.views_p1_analysis import init_p1_analysis_routes
+init_p1_analysis_routes(app)
+
+# Register P2 Optimization API blueprints (P2 级空缺修复)
+from wechat_backend.views_p2_optimization import init_p2_optimization_routes
+init_p2_optimization_routes(app)
+
+# Register Permission Management API blueprints (P1 级后端支持)
+from wechat_backend.views_permission import init_permission_routes, init_permission_db
+init_permission_routes(app)
+init_permission_db()  # 初始化权限数据库表
+
+# Register PDF Export API blueprints (P1-3 报告导出功能)
+from wechat_backend.views_pdf_export import init_pdf_export_routes
+init_pdf_export_routes(app)
+
+# Register Admin API blueprints (P2-1 管理后台)
+from wechat_backend.views_admin import init_admin_routes
+init_admin_routes(app)
+
+# Register Analytics API blueprints (P2-2 使用分析)
+from wechat_backend.views_analytics import init_analytics_routes
+init_analytics_routes(app)
+
+# Register Audit API blueprints (P1-8 审计日志系统)
+from wechat_backend.views_audit import init_audit_routes
+init_audit_routes(app)
+
 # Add security headers
 @app.after_request
 def after_request(response):
@@ -144,8 +177,8 @@ initialize_monitoring()
 
 def warm_up_adapters():
     """预热所有已注册的API适配器"""
-    from .logging_config import api_logger
-    from .ai_adapters.factory import AIAdapterFactory
+    from wechat_backend.logging_config import api_logger
+    from wechat_backend.ai_adapters.factory import AIAdapterFactory
 
     api_logger.info("Starting adapter warm-up...")
 

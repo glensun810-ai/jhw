@@ -118,16 +118,18 @@ Page({
     isSubscribed: false
   },
 
-  //【P0 新增】诊断知识库
+  //【P0 新增】诊断知识库 - Insight Pulse 商业洞察
   knowledgeTips: [
-    'GEO（Generative Engine Optimization）类似于 SEO，但针对的是 AI 模型而非搜索引擎。',
-    '品牌在 AI 模型中的提及率直接影响消费者的购买决策。',
-    '情感分析得分>0.2 表示正面评价，<-0.2 表示负面评价。',
-    'SOV（Share of Voice）>60% 表示市场领先地位。',
-    '被竞品拦截意味着 AI 模型更推荐竞品而非您的品牌。',
-    '负面信源的影响力是正面信源的 3 倍，需要及时处理。',
-    '多模型诊断可以避免单一 AI 模型的偏见。',
-    '排名 1-3 位可见度为 100%，4-6 位为 60%，7-10 位为 30%。'
+    '💼 GEO（Generative Engine Optimization）类似于 SEO，但针对的是 AI 模型而非搜索引擎。',
+    '📊 品牌在 AI 模型中的提及率直接影响消费者的购买决策。',
+    '💡 情感分析得分>0.2 表示正面评价，<-0.2 表示负面评价。',
+    '🏆 SOV（Share of Voice）>60% 表示市场领先地位。',
+    '⚠️ 被竞品拦截意味着 AI 模型更推荐竞品而非您的品牌。',
+    '🔴 负面信源的影响力是正面信源的 3 倍，需要及时处理。',
+    '🔍 多模型诊断可以避免单一 AI 模型的偏见。',
+    '📈 排名 1-3 位可见度为 100%，4-6 位为 60%，7-10 位为 30%。',
+    '💰 竞品对比场景是 GEO 中最关键的转化节点。',
+    '🎯 高可信度信源（权威媒体）的权重是普通信源的 5 倍。'
   ],
 
   onLoad: function(options) {
@@ -303,6 +305,11 @@ Page({
     this.stagnantProgressCounter = 0; // 进度停滞计数器
     this.lastProgressValue = 0; // 上一次的进度值
 
+    //【P0 新增】启动 Insight Pulse 跑马灯，每 10 秒切换一条商业洞察
+    this.insightPulseTimer = setInterval(() => {
+      this.updateKnowledgeTip();
+    }, 10000);
+
     // Log polling start with DEBUG_AI_CODE
     if (ENABLE_DEBUG_AI_CODE) {
       debugLog('POLLING_START', this.executionId, `Starting polling for task ${this.executionId}`); // #DEBUG_CLEAN
@@ -418,11 +425,14 @@ Page({
           
           // 检测进度停滞
           this.checkProgressStagnation(statusData.progress);
+
+          // 【P0 修复】调用 updateProgressDetails 计算剩余时间
+          this.updateProgressDetails(statusData, parsedStatus);
         }
       } catch (error) {
         console.error('轮询错误:', error);
         this.pollAttemptCount++;
-        
+
         // 如果错误次数过多，停止轮询
         if (this.pollAttemptCount >= this.maxPollAttempts) {
           clearInterval(this.pollInterval);
@@ -1025,6 +1035,11 @@ Page({
     // 清除倒计时定时器
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
+    }
+
+    //【P0 新增】清除 Insight Pulse 跑马灯定时器
+    if (this.insightPulseTimer) {
+      clearInterval(this.insightPulseTimer);
     }
   },
 

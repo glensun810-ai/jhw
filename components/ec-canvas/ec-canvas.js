@@ -1,13 +1,7 @@
-import * as echarts from './echarts';
-
-function wrapTouch(event) {
-  for (let i = 0; i < event.touches.length; ++i) {
-    const touch = event.touches[i];
-    touch.offsetX = touch.x;
-    touch.offsetY = touch.y;
-  }
-  return event;
-}
+/**
+ * EC-Canvas 组件
+ * 基于 echarts-for-weixin 的图表组件
+ */
 
 Component({
   properties: {
@@ -16,108 +10,92 @@ Component({
       value: 'ec-canvas'
     },
     ec: {
-      type: Object
+      type: Object,
+      value: null
+    },
+    height: {
+      type: Number,
+      value: 400
+    },
+    width: {
+      type: Number,
+      value: null
     }
   },
 
   data: {
-    isUseNewCanvas: false
+    canvasWidth: 0,
+    canvasHeight: 0
   },
 
-  ready: function () {
+  ready: function() {
     if (!this.data.ec) {
-      console.warn('组件需绑定 ec 变量，例：<ec-canvas ec="{{ ec }}"></ec-canvas>');
+      console.warn('组件必需传入 ec 配置项');
       return;
     }
 
-    if (!this.data.ec.lazyLoad) {
-      this.init();
-    }
+    const systemInfo = wx.getSystemInfoSync();
+    const query = wx.createSelectorQuery().in(this);
+    
+    query.select('.ec-canvas').boundingClientRect((res) => {
+      if (!res) {
+        console.error('无法获取 canvas 元素');
+        return;
+      }
+      
+      this.setData({
+        canvasWidth: res.width || systemInfo.windowWidth,
+        canvasHeight: this.data.height
+      });
+      
+      this.initChart();
+    }).exec();
   },
 
   methods: {
-    init: function (callback) {
-      const version = wx.getSystemInfoSync().SDKVersion;
-      const canUseNewCanvas = version.split('.').map(n => parseInt(n, 10)).reduce((a, b, i) => a + b * Math.pow(100, 2 - i)) >= 10602;
-      this.setData({ isUseNewCanvas: canUseNewCanvas });
-
-      if (canUseNewCanvas) {
-        this.initByNewWay(callback);
-      } else {
-        console.error('微信版本过低，无法使用新版 canvas 接口');
+    initChart: function() {
+      const canvasNode = this.selectComponent('#' + this.data.canvasId);
+      
+      if (!canvasNode) {
+        console.error('无法找到 canvas 节点');
+        return;
       }
-    },
 
-    initByNewWay: function (callback) {
-      const query = wx.createSelectorQuery().in(this);
-      query
-        .select(`#${this.data.canvasId}`)
-        .fields({ node: true, size: true })
-        .exec(res => {
-          const canvasNode = res[0].node;
-          this.canvasNode = canvasNode;
+      const ctx = canvasNode.getContext('2d');
+      const dpr = wx.getSystemInfoSync().pixelRatio;
+      
+      canvasNode.width = this.data.canvasWidth * dpr;
+      canvasNode.height = this.data.canvasHeight * dpr;
+      ctx.scale(dpr, dpr);
 
-          const canvasDpr = wx.getSystemInfoSync().pixelRatio;
-          const canvasWidth = res[0].width;
-          const canvasHeight = res[0].height;
+      // 初始化 ECharts
+      const echarts = require('./echarts');
+      const chart = echarts.init(canvasNode, null, {
+        width: this.data.canvasWidth,
+        height: this.data.canvasHeight,
+        devicePixelRatio: dpr
+      });
 
-          const ctx = canvasNode.getContext('2d');
+      this.chart = chart;
 
-          const canvas = {
-            width: canvasWidth,
-            height: canvasHeight,
-            getContext: () => ctx,
-            setChart: function(chart) {
-              this.chart = chart;
-            },
-            addEventListener: () => {}, // mock
-            removeEventListener: () => {}, // mock
-            dispatchEvent: () => {} // mock
-          };
-
-          if (typeof callback === 'function') {
-            this.chart = callback(canvas, canvasWidth, canvasHeight, canvasDpr);
-          } else if (this.data.ec && typeof this.data.ec.onInit === 'function') {
-            this.chart = this.data.ec.onInit(canvas, canvasWidth, canvasHeight, canvasDpr);
-          }
-        });
-    },
-
-    touchStart(e) {
-      if (this.chart && e.touches.length > 0) {
-        const touch = e.touches[0];
-        this.chart.getZr().handler.dispatch('mousedown', {
-          zrX: touch.x,
-          zrY: touch.y
-        });
-        this.chart.getZr().handler.dispatch('mousemove', {
-          zrX: touch.x,
-          zrY: touch.y
-        });
+      // 设置配置项
+      if (this.data.ec) {
+        chart.setOption(this.data.ec);
       }
+
+      // 触发初始化完成事件
+      this.triggerEvent('chartReady', { chart });
     },
 
-    touchMove(e) {
-      if (this.chart && e.touches.length > 0) {
-        const touch = e.touches[0];
-        this.chart.getZr().handler.dispatch('mousemove', {
-          zrX: touch.x,
-          zrY: touch.y
-        });
-      }
-    },
-
-    touchEnd(e) {
+    setOption: function(option) {
       if (this.chart) {
-        const touch = e.changedTouches ? e.changedTouches[0] : {};
-        this.chart.getZr().handler.dispatch('mouseup', {
-          zrX: touch.x,
-          zrY: touch.y
-        });
-        this.chart.getZr().handler.dispatch('click', {
-          zrX: touch.x,
-          zrY: touch.y
-        });
+        this.chart.setOption(option, true);
+      }
+    },
+
+    dispose: function() {
+      if (this.chart) {
+        this.chart.dispose();
       }
     }
   }

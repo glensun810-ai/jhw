@@ -47,6 +47,17 @@
       <view class="progress-detail-container" wx:if="{{progressDetail}}">
         <text class="progress-detail">{{progressDetail}}</text>
       </view>
+
+      <!--【P0 新增】Insight Pulse 智能知识跑马灯 -->
+      <view class="insight-pulse-container" wx:if="{{currentTip}}">
+        <view class="insight-pulse-header">
+          <text class="pulse-icon">💡</text>
+          <text class="pulse-title">Insight Pulse · 商业洞察</text>
+        </view>
+        <view class="insight-pulse-content">
+          <text class="insight-text">{{currentTip}}</text>
+        </view>
+      </view>
       
       <!--【阶段 1】实时统计显示 -->
       <view class="realtime-stats-container" wx:if="{{realtimeStats && realtimeStats.completed > 0}}">

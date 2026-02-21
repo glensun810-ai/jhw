@@ -5,7 +5,7 @@
 
 使用方式:
     # 现有代码无需修改
-    from .logging_config import app_logger, api_logger, get_logger
+    from wechat_backend.logging_config import app_logger, api_logger, get_logger
     
     # 新代码使用统一接口
     from backend_python.unified_logging.entry import get_logger, init

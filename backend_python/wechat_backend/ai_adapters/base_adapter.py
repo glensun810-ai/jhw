@@ -5,9 +5,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict
 from enum import Enum
 from typing import Optional, Dict, Any, List
-from ..logging_config import api_logger
-from ..optimization.request_frequency_optimizer import optimize_request_frequency, RequestPriority
-from .geo_parser import parse_geo_json_enhanced
+from wechat_backend.logging_config import api_logger
+from wechat_backend.optimization.request_frequency_optimizer import optimize_request_frequency, RequestPriority
+from wechat_backend.ai_adapters.geo_parser import parse_geo_json_enhanced
 
 # 保持向后兼容
 parse_geo_json = parse_geo_json_enhanced

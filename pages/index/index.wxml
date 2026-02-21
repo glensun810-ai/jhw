@@ -60,6 +60,11 @@
         <button class="save-config-btn" bindtap="showSaveConfigModal">💾 保存当前配置</button>
       </view>
 
+      <!-- 清空重置按钮 -->
+      <view class="setting-block">
+        <button class="reset-config-btn" bindtap="handleResetAll">🗑️ 清空所有输入</button>
+      </view>
+
       <!-- 自定义问题输入 -->
       <view class="setting-block">
         <view class="setting-title">

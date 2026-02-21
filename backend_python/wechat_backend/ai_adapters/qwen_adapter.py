@@ -1,17 +1,17 @@
 import time
 import requests
 from typing import Optional
-from ..logging_config import api_logger
-from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
-from ..network.request_wrapper import get_ai_request_wrapper
-from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
-from ..monitoring.metrics_collector import record_api_call, record_error
-from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from ..config_manager import ConfigurationManager as PlatformConfigManager
+from wechat_backend.logging_config import api_logger
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
+from wechat_backend.network.request_wrapper import get_ai_request_wrapper
+from wechat_backend.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+from wechat_backend.monitoring.metrics_collector import record_api_call, record_error
+from wechat_backend.monitoring.logging_enhancements import log_api_request, log_api_response
+from wechat_backend.config_manager import ConfigurationManager as PlatformConfigManager
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from utils.ai_response_wrapper import log_detailed_response
+from wechat_backend.utils.ai_response_wrapper import log_detailed_response
 
 
 class QwenAdapter(AIClient):
@@ -60,7 +60,7 @@ class QwenAdapter(AIClient):
                     error_type=AIErrorType.SERVICE_UNAVAILABLE,
                     latency_ms=0,  # No latency since no actual request was made
                     execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
+                    **{k: v for k, v in kwargs.items() if k != 'execution_id'}
                 )
             except Exception as log_error:
                 # Don't let logging errors affect the main response
@@ -128,7 +128,8 @@ class QwenAdapter(AIClient):
                         latency_ms=int(latency * 1000),  # Convert to milliseconds
                         tokens_used=tokens_used,
                         execution_id=execution_id,
-                        **kwargs  # Pass any additional context from kwargs
+                        # 避免重复传递 execution_id
+                        **{k: v for k, v in kwargs.items() if k != 'execution_id'}
                     )
                 except Exception as log_error:
                     # Don't let logging errors affect the main response
@@ -163,18 +164,18 @@ class QwenAdapter(AIClient):
                         error_type=error_type if error_type else AIErrorType.UNKNOWN_ERROR,
                         latency_ms=int(latency * 1000),  # Convert to milliseconds
                         execution_id=execution_id,
-                        **kwargs  # Pass any additional context from kwargs
+                        **{k: v for k, v in kwargs.items() if k != 'execution_id'}
                     )
                 except Exception as log_error:
                     # Don't let logging errors affect the main response
                     api_logger.warning(f"Failed to log failed response to enhanced logger: {log_error}")
-                
+
                 return AIResponse(
-                    success=False, 
-                    error_message=error_message, 
-                    error_type=error_type, 
-                    model=self.model_name, 
-                    platform=self.platform_type.value, 
+                    success=False,
+                    error_message=error_message,
+                    error_type=error_type,
+                    model=self.model_name,
+                    platform=self.platform_type.value,
                     latency=latency
                 )
 
@@ -196,24 +197,24 @@ class QwenAdapter(AIClient):
                     error_type=AIErrorType.REQUEST_EXCEPTION,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
+                    **{k: v for k, v in kwargs.items() if k != 'execution_id'}
                 )
             except Exception as log_error:
                 # Don't let logging errors affect the main response
                 api_logger.warning(f"Failed to log request exception to enhanced logger: {log_error}")
-            
+
             record_error("qwen", "REQUEST_EXCEPTION", str(e))
-            
+
             # Re-raise the exception to trigger circuit breaker for connection-related errors
             if isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
                 raise e
-            
+
             return AIResponse(
-                success=False, 
-                error_message=error_message, 
-                error_type=AIErrorType.UNKNOWN_ERROR, 
-                model=self.model_name, 
-                platform=self.platform_type.value, 
+                success=False,
+                error_message=error_message,
+                error_type=AIErrorType.UNKNOWN_ERROR,
+                model=self.model_name,
+                platform=self.platform_type.value,
                 latency=latency
             )
         except Exception as e:
@@ -234,24 +235,24 @@ class QwenAdapter(AIClient):
                     error_type=AIErrorType.UNEXPECTED_ERROR,
                     latency_ms=int(latency * 1000),  # Convert to milliseconds
                     execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
+                    **{k: v for k, v in kwargs.items() if k != 'execution_id'}
                 )
             except Exception as log_error:
                 # Don't let logging errors affect the main response
                 api_logger.warning(f"Failed to log unexpected error to enhanced logger: {log_error}")
-            
+
             record_error("qwen", "UNKNOWN_ERROR", str(e))
-            
+
             # Re-raise the exception to trigger circuit breaker for critical errors
             if isinstance(e, (ConnectionError, TimeoutError)):
                 raise e
-            
+
             return AIResponse(
-                success=False, 
-                error_message=error_message, 
-                error_type=AIErrorType.UNKNOWN_ERROR, 
-                model=self.model_name, 
-                platform=self.platform_type.value, 
+                success=False,
+                error_message=error_message,
+                error_type=AIErrorType.UNKNOWN_ERROR,
+                model=self.model_name,
+                platform=self.platform_type.value,
                 latency=latency
             )
 

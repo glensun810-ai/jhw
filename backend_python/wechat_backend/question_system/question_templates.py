@@ -7,7 +7,7 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass
 import re
 import uuid
-from ..logging_config import db_logger
+from wechat_backend.logging_config import db_logger
 
 
 class QuestionCategory(Enum):

@@ -1,4 +1,3 @@
-const { login } = require('../../utils/auth.js');
 const { sendVerificationCode, registerUser } = require('../../api/auth.js');
 
 Page({
@@ -162,37 +161,40 @@ Page({
       });
 
       wx.hideLoading();
-      if (res.status === 'success') {
+      if (res && res.status === 'success') {
         wx.showToast({
           title: '注册成功',
           icon: 'success'
         });
 
-        // 自动登录
-        login({
-          phone: phone,
-          password: password
-        }).then((userData) => {
-          // 跳转到首页
+        // 保存 token 和 refresh token
+        if (res.token) {
+          wx.setStorageSync('token', res.token);
+          wx.setStorageSync('userToken', res.token);  // 兼容旧代码
+        }
+        if (res.refresh_token) {
+          wx.setStorageSync('refreshToken', res.refresh_token);
+        }
+        wx.setStorageSync('user_id', res.user_id);
+        wx.setStorageSync('isLoggedIn', true);
+
+        // 自动登录并跳转
+        setTimeout(() => {
           wx.reLaunch({
             url: '/pages/index/index'
           });
-        }).catch((error) => {
-          wx.showToast({
-            title: error.message || '登录失败',
-            icon: 'none'
-          });
-        });
+        }, 1000);
       } else {
         wx.showToast({
-          title: res.message || '注册失败',
+          title: res?.error || res?.message || '注册失败',
           icon: 'none'
         });
       }
     } catch (error) {
       wx.hideLoading();
+      console.error('Registration error:', error);
       wx.showToast({
-        title: '网络错误',
+        title: error?.message || error?.errmsg || '网络错误',
         icon: 'none'
       });
     }

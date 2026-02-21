@@ -8,15 +8,15 @@ import time
 import functools
 from flask import request, g
 from typing import Callable, Any
-from ..logging_config import api_logger
-from .metrics_collector import record_api_call, record_error
-from .logging_enhancements import (
+from wechat_backend.logging_config import api_logger
+from wechat_backend.monitoring.metrics_collector import record_api_call, record_error
+from wechat_backend.monitoring.logging_enhancements import (
     log_api_request,
     log_api_response,
     log_api_access,
     log_security_event
 )
-from ..security.input_validation import validate_safe_text
+from security.input_validation import validate_safe_text
 
 
 def monitored_endpoint(

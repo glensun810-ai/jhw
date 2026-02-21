@@ -1,185 +1,349 @@
 /* pages/history-detail/history-detail.wxss */
 
 .page-container {
-  background-color: #121826;
-  color: #e8e8e8;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  padding: 30rpx;
+  background-color: #f5f5f5;
+  min-height: 100vh;
 }
 
-.container {
-  padding: 40rpx;
-  min-height: 100vh;
-  box-sizing: border-box;
-  background: linear-gradient(135deg, #1a1f29 0%, #121826 100%);
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid #e0e0e0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 30rpx;
+  color: #999;
+  font-size: 28rpx;
 }
 
 /* 页面头部 */
 .page-header {
-  text-align: center;
-  margin-bottom: 60rpx;
-}
-.page-title {
-  font-size: 44rpx;
-  font-weight: bold;
-  color: #FFFFFF;
-  display: block;
-  margin-bottom: 20rpx;
-}
-.page-subtitle {
-  font-size: 28rpx;
-  color: #8c8c8c;
-  display: block;
+  margin-bottom: 30rpx;
 }
 
-/* 总体评分部分 */
+.page-title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.page-subtitle {
+  display: block;
+  font-size: 26rpx;
+  color: #999;
+  margin-top: 10rpx;
+}
+
+/* 总体评分卡片 */
 .overall-score-section {
-  margin-bottom: 60rpx;
+  margin-bottom: 30rpx;
 }
+
 .score-card {
-  background: linear-gradient(135deg, #00A9FF 0%, #00F5A0 100%);
-  border-radius: 24rpx;
-  padding: 60rpx 40rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20rpx;
+  padding: 40rpx;
   text-align: center;
-  box-shadow: 0 10rpx 30rpx rgba(0, 169, 255, 0.2);
-  position: relative;
-  overflow: hidden;
+  color: #fff;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
 }
+
+.score-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  margin-bottom: 20rpx;
+}
+
 .score-number {
   font-size: 80rpx;
   font-weight: bold;
-  color: #141414;
-  display: block;
   line-height: 1;
 }
+
 .score-grade {
-  font-size: 36rpx;
+  font-size: 40rpx;
   font-weight: bold;
-  color: #141414;
-  display: block;
-  margin-top: 10rpx;
+  margin-left: 20rpx;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 10rpx 30rpx;
+  border-radius: 10rpx;
 }
+
 .score-desc {
   font-size: 28rpx;
-  color: #141414;
-  display: block;
-  margin-top: 20rpx;
   opacity: 0.9;
 }
 
-/* 评分维度部分 */
+/* 评分维度 */
 .score-dimensions-section {
-  margin-bottom: 60rpx;
+  background-color: #fff;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
 }
+
+.section-title-wrap {
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.section-subtitle {
+  font-size: 24rpx;
+  color: #999;
+  margin-left: 10rpx;
+}
+
 .dimension-item {
   display: flex;
   align-items: center;
-  margin-bottom: 40rpx;
-}
-.dimension-label {
-  width: 120rpx;
-  font-size: 28rpx;
-  color: #e8e8e8;
-}
-.dimension-bar {
-  flex: 1;
-  height: 24rpx;
-  background-color: #262626;
-  border-radius: 12rpx;
-  margin: 0 20rpx;
-  overflow: hidden;
-  position: relative;
-}
-.bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #00A9FF, #00F5A0);
-  border-radius: 12rpx;
-  transition: width 1s ease;
-}
-.dimension-value {
-  width: 100rpx;
-  font-size: 24rpx;
-  color: #8c8c8c;
-  text-align: right;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
 }
 
-/* 详细结果部分 */
-.detailed-results-section {
-  margin-bottom: 60rpx;
+.dimension-item:last-child {
+  border-bottom: none;
 }
-.section-title {
-  font-size: 36rpx;
+
+.dimension-label {
+  width: 100rpx;
+  font-size: 28rpx;
+  color: #666;
+}
+
+.dimension-bar {
+  flex: 1;
+  height: 20rpx;
+  background-color: #f0f0f0;
+  border-radius: 10rpx;
+  margin: 0 20rpx;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 10rpx;
+  transition: width 0.3s ease;
+}
+
+.bar-fill.authority {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+.bar-fill.visibility {
+  background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+}
+
+.bar-fill.purity {
+  background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.bar-fill.consistency {
+  background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.dimension-value {
+  width: 100rpx;
+  text-align: right;
+  font-size: 28rpx;
   font-weight: bold;
-  color: #e8e8e8;
-  display: block;
-  margin-bottom: 30rpx;
+  color: #333;
 }
-.result-item {
-  background-color: #1A202C;
-  border: 1rpx solid #303030;
-  border-radius: 16rpx;
+
+/* 测试信息 */
+.info-section {
+  background-color: #fff;
+  border-radius: 20rpx;
   padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  padding: 20rpx;
+  background-color: #f8f9fa;
+  border-radius: 12rpx;
+}
+
+.info-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 10rpx;
+}
+
+.info-value {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #667eea;
+}
+
+/* 详细结果列表 */
+.detailed-results-section {
+  background-color: #fff;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.result-list {
+  margin-top: 20rpx;
+}
+
+.result-item {
+  background-color: #f8f9fa;
+  border-radius: 12rpx;
+  padding: 20rpx;
   margin-bottom: 20rpx;
 }
+
 .result-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 20rpx;
+  align-items: center;
+  margin-bottom: 15rpx;
 }
-.result-brand, .result-model {
-  font-size: 26rpx;
+
+.result-brand {
+  font-size: 28rpx;
   font-weight: bold;
-  color: #e8e8e8;
+  color: #333;
 }
-.result-question, .result-response {
+
+.result-model {
+  font-size: 24rpx;
+  color: #999;
+  background-color: #e0e0e0;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.result-question {
   font-size: 26rpx;
-  color: #8c8c8c;
+  color: #666;
   margin-bottom: 15rpx;
   line-height: 1.5;
 }
+
+.result-response {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 20rpx;
+  line-height: 1.6;
+  background-color: #fff;
+  padding: 15rpx;
+  border-radius: 8rpx;
+}
+
 .result-scores {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20rpx;
+  justify-content: space-between;
   margin-bottom: 15rpx;
 }
-.score-item {
-  font-size: 24rpx;
-  color: #00A9FF;
-  background-color: #262626;
-  padding: 8rpx 15rpx;
-  border-radius: 6rpx;
+
+.result-score-item {
+  text-align: center;
 }
-.result-score {
+
+.score-label {
+  display: block;
+  font-size: 22rpx;
+  color: #999;
+  margin-bottom: 6rpx;
+}
+
+.score-value {
+  display: block;
   font-size: 28rpx;
   font-weight: bold;
-  color: #00A9FF;
+  color: #667eea;
+}
+
+.result-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 15rpx;
+  border-top: 1rpx solid #e0e0e0;
+}
+
+.total-label {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.total-value {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #667eea;
 }
 
 /* 底部操作栏 */
 .bottom-actions {
   display: flex;
   gap: 20rpx;
-  margin-top: 40rpx;
+  padding: 30rpx;
+  position: sticky;
+  bottom: 0;
+  background-color: #f5f5f5;
 }
+
 .action-btn {
   flex: 1;
-  height: 80rpx;
-  border-radius: 40rpx;
+  border-radius: 50rpx;
+  padding: 24rpx 0;
   font-size: 28rpx;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-weight: 500;
+  border: none;
 }
+
 .home-btn {
-  background: linear-gradient(to right, #00F5A0, #00D18C);
-  color: #141414;
+  background-color: #fff;
+  color: #666;
+  border: 2rpx solid #e0e0e0;
 }
+
 .history-btn {
-  background: linear-gradient(to right, #00A9FF, #0088cc);
-  color: #fff;
+  background-color: #fff;
+  color: #667eea;
+  border: 2rpx solid #667eea;
 }
+
 .report-btn {
-  background: linear-gradient(to right, #ff7e5f, #feb47b);
-  color: #141414;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
 }

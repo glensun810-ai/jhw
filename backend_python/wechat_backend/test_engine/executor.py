@@ -5,12 +5,15 @@ Integrates scheduler, progress tracking, and AI adapters
 from typing import List, Dict, Any, Callable
 from datetime import datetime
 import uuid
-from ..ai_adapters import AIAdapterFactory
-from ..question_system import TestCase
-from .scheduler import TestScheduler, TestTask, ExecutionStrategy
-from .progress_tracker import ProgressTracker, TestProgress
-from ..logging_config import api_logger
-from ..database import save_test_record
+from ai_adapters import AIAdapterFactory
+from question_system import TestCase
+from wechat_backend.test_engine.scheduler import TestScheduler, TestTask, ExecutionStrategy
+from wechat_backend.test_engine.progress_tracker import ProgressTracker, TestProgress
+from wechat_backend.logging_config import api_logger
+from database import save_test_record
+from wechat_backend.realtime_analyzer import get_analyzer, create_analyzer
+from wechat_backend.incremental_aggregator import get_aggregator, create_aggregator
+from realtime_persistence import get_persistence_service, create_persistence_service, remove_persistence_service
 
 
 class TestExecutor:
@@ -67,6 +70,22 @@ class TestExecutor:
                 'api_key_provided': bool(api_key)
             }
         )
+        
+        #【P0 新增】创建实时分析器
+        # 从 test_cases 中提取主品牌和所有品牌
+        main_brand = test_cases[0].brand_name if test_cases else 'unknown'
+        all_brands = list(set(case.brand_name for case in test_cases))
+        analyzer = create_analyzer(execution_id, main_brand, all_brands)
+        api_logger.info(f"Created RealtimeAnalyzer for execution {execution_id} - Brand: {main_brand}, All brands: {all_brands}")
+        
+        #【P0 新增】创建增量聚合器
+        questions = list(set(case.question for case in test_cases))
+        aggregator = create_aggregator(execution_id, main_brand, all_brands, questions)
+        api_logger.info(f"Created IncrementalAggregator for execution {execution_id} - Questions: {len(questions)}")
+        
+        #【阶段 3】创建持久化服务
+        persistence_service = create_persistence_service(execution_id, user_openid)
+        api_logger.info(f"Created RealtimePersistence for execution {execution_id}")
         
         # Convert TestCases to TestTasks for the scheduler
         test_tasks = []
@@ -140,8 +159,34 @@ class TestExecutor:
             except Exception as e:
                 api_logger.error(f"Failed to save individual test result to database: {e}")
             
-            # Call the external progress update callback if provided
+            #【P0 新增】获取实时统计并添加到进度中
             current_progress = self.progress_tracker.get_progress(execution_id)
+            
+            if analyzer:
+                realtime_progress = analyzer.get_realtime_progress()
+                # 将实时统计添加到进度对象中
+                current_progress.realtime_stats = realtime_progress
+                current_progress.brand_rankings = realtime_progress['brand_rankings']
+                current_progress.sov = realtime_progress['sov']
+                current_progress.avg_sentiment = realtime_progress['avg_sentiment']
+                
+                api_logger.info(f"Realtime progress: completed={current_progress.completed_tests}/{current_progress.total_tests}, sov={current_progress.sov}%, brands={len(current_progress.brand_rankings)}")
+            
+            #【P0 新增】添加聚合结果到进度对象
+            if aggregator:
+                aggregated_results = aggregator.get_aggregated_results()
+                current_progress.aggregated_results = aggregated_results
+                current_progress.health_score = aggregated_results['summary']['healthScore']
+                
+                #【阶段 3】定期保存聚合结果 (每保存 3 个任务保存一次聚合结果)
+                if persistence_service and current_progress.completed_tests % 3 == 0:
+                    persistence_service.save_aggregated_results(aggregated_results)
+                    persistence_service.save_brand_rankings(aggregated_results['brand_rankings'])
+                    api_logger.info(f"Persisted aggregated results: health_score={aggregated_results['summary']['healthScore']}")
+                
+                api_logger.info(f"Aggregated results: health_score={current_progress.health_score}, sov={aggregated_results['summary']['sov']}%")
+            
+            # Call the external progress update callback if provided
             if on_progress_update:
                 on_progress_update(execution_id, current_progress)
         
@@ -245,7 +290,7 @@ def run_brand_cognition_test(
     Returns:
         Dict with test results
     """
-    from ..question_system import TestCaseGenerator
+    from question_system import TestCaseGenerator
 
     # Generate test cases
     generator = TestCaseGenerator()

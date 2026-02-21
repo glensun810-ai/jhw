@@ -1,9 +1,8 @@
-<canvas
-  class="ec-canvas"
-  canvas-id="{{canvasId}}"
-  bind:touchstart="touchStart"
-  bind:touchmove="touchMove"
-  bind:touchend="touchEnd"
-  bind:tap="tap"
-  disable-scroll="{{true}}"
+<view class="ec-canvas-container" style="height: {{canvasHeight}}px;">
+  <canvas 
+    type="2d" 
+    id="{{canvasId}}" 
+    class="ec-canvas"
+    style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
   ></canvas>
+</view>
