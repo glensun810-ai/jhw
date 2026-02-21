@@ -1015,7 +1015,18 @@ Page({
       if (executionId) {
         console.log('✅ 战局指令下达成功，执行ID:', executionId);
         wx.hideLoading(); // 确保配对关闭
-        this.navigateToDetail(executionId, brand_list, selectedModels, custom_question); // 调用跳转
+        // 【P0 修复】删除 detail 页后，直接在首页显示进度
+        this.setData({
+          isTesting: true,
+          executionId: executionId,
+          testProgress: 0,
+          progressText: '正在启动 AI 认知诊断...'
+        });
+        
+        // 启动进度轮询
+        if (typeof this.startProgressPolling === 'function') {
+          this.startProgressPolling(executionId);
+        } // 调用跳转
       } else {
         throw new Error('未能从响应中提取有效ID');
       }
@@ -1620,7 +1631,7 @@ Page({
 
       if (executionId) {
         // 跳转到详情页面
-        const url = `/pages/detail/index?executionId=${encodeURIComponent(executionId)}`;
+        // 【P0 修复】删除 detail 页后，进度轮询在首页进行
         wx.navigateTo({
           url: url,
           success: () => {
@@ -1949,54 +1960,7 @@ Page({
     // 例如：动画效果、数据可视化初始化等
   },
 
-  /**
-   * 强制清理并跳转
-   */
-  navigateToDetail: function(executionId, brandList, selectedModels, customQuestion) {
-    // 1. 立即隐藏加载状态，确保跳转瞬间界面清爽
-    wx.hideLoading();
 
-    // 2. 提取模型名称，避免传递完整对象数组
-    const modelNames = selectedModels.map(model => {
-      if (typeof model === 'object' && model !== null) {
-        return model.name || model.id || model.label || '';
-      } else {
-        return model;
-      }
-    });
-
-    // 3. 严谨封装"养生茶"诊断参数
-    try {
-      const brands = encodeURIComponent(JSON.stringify(brandList || []));
-      const models = encodeURIComponent(JSON.stringify(modelNames || [])); // 优化：只传递模型名称
-      const question = encodeURIComponent(customQuestion || '');
-      const url = `/pages/detail/index?executionId=${encodeURIComponent(executionId)}&brand_list=${brands}&models=${models}&question=${question}`; // 优化：使用简化参数名
-
-      console.log('🚀 战略中心激活，正在导航:', url);
-
-      // 【关键修复】保存诊断信息到本地存储，方便返回首页后继续查看
-      wx.setStorageSync('latestExecutionId', executionId);
-      wx.setStorageSync('latestTargetBrand', brandList[0] || '');
-      wx.setStorageSync('latestCompetitorBrands', brandList.slice(1) || []);
-      wx.setStorageSync('latestDiagnosisTime', new Date().toLocaleString('zh-CN'));
-
-      // 4. 执行顶级流畅跳转
-      wx.navigateTo({
-        url: url,
-        fail: (err) => {
-          console.error('❌ 跳转失败，请确认 app.json 路径:', err);
-          // 兜底方案：如果是路径问题，弹出专业提示
-          wx.showModal({
-            title: '系统提示',
-            content: '战局中心模块尚未注册，请检查页面路径配置',
-            showCancel: false
-          });
-        }
-      });
-    } catch (e) {
-      console.error('❌ 参数序列化失败:', e);
-    }
-  },
 
   /**
    * 设置自定义API服务器地址

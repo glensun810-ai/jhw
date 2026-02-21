@@ -1,9 +1,0 @@
-{
-  "navigationBarTitleText": "战略战局中心",
-  "usingComponents": {
-    "battlefield-matrix": "../../components/BattlefieldMatrix/BattlefieldMatrix",
-    "view-switcher": "../../components/ViewSwitcher/ViewSwitcher",
-    "intelligence-drawer": "../../components/IntelligenceDrawer/IntelligenceDrawer",
-    "skeleton": "../../components/Skeleton/Skeleton"
-  }
-}

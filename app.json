@@ -4,7 +4,6 @@
     "pages/mvp-index/mvp-index",
     "pages/mvp-results/mvp-results",
     "pages/mvp-platform-selector/mvp-platform-selector",
-    "pages/detail/index",
     "pages/results/results",
     "pages/report/dashboard/index",
     "pages/report/history/index",
