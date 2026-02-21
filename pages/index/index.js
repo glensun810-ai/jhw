@@ -2096,44 +2096,47 @@ Page({
     try {
       // 保存报告数据到存储
       const reportData = this.data.reportData || this.data.dashboardData;
-      if (reportData && reportData.executionId) {
+      const executionId = reportData?.executionId || this.data.executionId || Date.now().toString();
+      
+      if (reportData) {
         wx.setStorageSync('lastReport', reportData);
         console.log('✅ 报告数据已保存到本地存储');
-        
+
         // 【新增】保存 detailed_results 供结果页使用
         const detailedResults = reportData.detailed_results || reportData.results || [];
         if (detailedResults && detailedResults.length > 0) {
-          wx.setStorageSync('latestTestResults_' + reportData.executionId, detailedResults);
+          wx.setStorageSync('latestTestResults_' + executionId, detailedResults);
           wx.setStorageSync('latestTestResults', detailedResults);  // 兼容旧 key
           console.log('✅ 测试结果已保存到本地存储:', detailedResults.length, '条');
         }
+
+        // 保存品牌和竞品信息（确保 brandName 不为空）
+        const brandName = this.data.brandName || reportData.brand_name || '品牌';
+        wx.setStorageSync('latestTargetBrand', brandName);
+        console.log('✅ 品牌名称已保存:', brandName);
         
-        // 保存品牌和竞品信息
-        if (this.data.brandName) {
-          wx.setStorageSync('latestTargetBrand', this.data.brandName);
-        }
         if (this.data.competitorBrands) {
           wx.setStorageSync('latestCompetitorBrands', this.data.competitorBrands);
         }
-        
+
         // 【新增】保存 competitiveAnalysis 和 negativeSources
         if (reportData.competitiveAnalysis) {
-          wx.setStorageSync('latestCompetitiveAnalysis_' + reportData.executionId, reportData.competitiveAnalysis);
+          wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, reportData.competitiveAnalysis);
           wx.setStorageSync('latestCompetitiveAnalysis', reportData.competitiveAnalysis);
           console.log('✅ 竞品分析已保存');
         }
         if (reportData.negativeSources) {
-          wx.setStorageSync('latestNegativeSources_' + reportData.executionId, reportData.negativeSources);
+          wx.setStorageSync('latestNegativeSources_' + executionId, reportData.negativeSources);
           console.log('✅ 负面信源已保存');
         }
-        
+
         // 【新增】保存语义偏移数据和优化建议
         if (reportData.semanticDriftData) {
-          wx.setStorageSync('latestSemanticDrift_' + reportData.executionId, reportData.semanticDriftData);
+          wx.setStorageSync('latestSemanticDrift_' + executionId, reportData.semanticDriftData);
           console.log('✅ 语义偏移数据已保存');
         }
         if (reportData.recommendationData) {
-          wx.setStorageSync('latestRecommendations_' + reportData.executionId, reportData.recommendationData);
+          wx.setStorageSync('latestRecommendations_' + executionId, reportData.recommendationData);
           console.log('✅ 优化建议已保存');
         }
       }
