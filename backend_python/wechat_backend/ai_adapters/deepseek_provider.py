@@ -8,10 +8,10 @@ import json
 from typing import Dict, Any, List
 from urllib.parse import urlparse
 import re
-from .base_provider import BaseAIProvider
-from ..logging_config import api_logger
-from ..network.request_wrapper import get_ai_request_wrapper
-from ..monitoring.metrics_collector import record_api_call, record_error
+from wechat_backend.ai_adapters.base_provider import BaseAIProvider
+from wechat_backend.logging_config import api_logger
+from wechat_backend.network.request_wrapper import get_ai_request_wrapper
+from wechat_backend.monitoring.metrics_collector import record_api_call, record_error
 
 
 class DeepSeekProvider(BaseAIProvider):

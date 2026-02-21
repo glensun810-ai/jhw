@@ -4,13 +4,13 @@
 import json
 from datetime import datetime
 from typing import List, Dict, Any
-from .logging_config import api_logger
-from .database import save_test_record
-from .test_engine import TestExecutor, ExecutionStrategy
-from .question_system import QuestionManager, TestCaseGenerator
-from .ai_utils import get_ai_client
-from .recommendation_generator import RecommendationGenerator
-from .cruise_controller import CruiseController
+from wechat_backend.logging_config import api_logger
+from wechat_backend.database import save_test_record
+from wechat_backend.test_engine import TestExecutor, ExecutionStrategy
+from wechat_backend.question_system import QuestionManager, TestCaseGenerator
+from wechat_backend.ai_utils import get_ai_client
+from wechat_backend.recommendation_generator import RecommendationGenerator
+from wechat_backend.cruise_controller import CruiseController
 
 
 def run_diagnostic_task(

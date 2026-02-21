@@ -6,8 +6,8 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 import logging
-from .logging_config import api_logger
-from .ai_adapters.factory import AIAdapterFactory
+from wechat_backend.logging_config import api_logger
+from wechat_backend.ai_adapters.factory import AIAdapterFactory
 from config_manager import Config as PlatformConfigManager
 
 

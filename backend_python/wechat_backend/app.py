@@ -140,10 +140,6 @@ from wechat_backend.views_permission import init_permission_routes, init_permiss
 init_permission_routes(app)
 init_permission_db()  # 初始化权限数据库表
 
-# Register PDF Export API blueprints (P1-3 报告导出功能)
-from wechat_backend.views_pdf_export import init_pdf_export_routes
-init_pdf_export_routes(app)
-
 # Register Admin API blueprints (P2-1 管理后台)
 from wechat_backend.views_admin import init_admin_routes
 init_admin_routes(app)

@@ -8,11 +8,11 @@ import json
 import re
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
-from .base_provider import BaseAIProvider
-from ..logging_config import api_logger
-from ..network.request_wrapper import get_ai_request_wrapper
-from ..monitoring.metrics_collector import record_api_call, record_error
-from ..monitoring.logging_enhancements import log_api_request, log_api_response
+from wechat_backend.ai_adapters.base_provider import BaseAIProvider
+from wechat_backend.logging_config import api_logger
+from wechat_backend.network.request_wrapper import get_ai_request_wrapper
+from wechat_backend.monitoring.metrics_collector import record_api_call, record_error
+from wechat_backend.monitoring.logging_enhancements import log_api_request, log_api_response
 from config_manager import Config as PlatformConfigManager
 
 

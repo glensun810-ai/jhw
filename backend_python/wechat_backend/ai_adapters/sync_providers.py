@@ -5,8 +5,8 @@ Includes providers for domestic models like DeepSeek, Doubao, Qwen, etc.
 import requests
 import time
 from typing import List, Dict, Any
-from .enhanced_base import EnhancedAIClient, AIResponse, AIPlatformType
-from ..logging_config import api_logger
+from wechat_backend.ai_adapters.enhanced_base import EnhancedAIClient, AIResponse, AIPlatformType
+from wechat_backend.logging_config import api_logger
 
 
 class DeepSeekProvider(EnhancedAIClient):

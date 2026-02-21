@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import os
-from .logging_config import db_logger
+from wechat_backend.logging_config import db_logger
 
 
 class SourceWeightLibrary:

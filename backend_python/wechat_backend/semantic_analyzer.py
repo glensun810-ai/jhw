@@ -10,7 +10,7 @@ from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from .logging_config import api_logger
+from wechat_backend.logging_config import api_logger
 
 
 class SemanticAnalyzer:

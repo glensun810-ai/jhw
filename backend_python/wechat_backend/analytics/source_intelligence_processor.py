@@ -3,9 +3,9 @@ from urllib.parse import urlparse
 from collections import defaultdict
 from typing import List, Dict, Any
 from snownlp import SnowNLP
-from ..logging_config import api_logger
-from .source_aggregator import SourceAggregator
-from .impact_calculator import ImpactCalculator
+from wechat_backend.logging_config import api_logger
+from wechat_backend.analytics.source_aggregator import SourceAggregator
+from wechat_backend.analytics.impact_calculator import ImpactCalculator
 
 class SourceWeightLibrary:
     """

@@ -4,7 +4,7 @@ Enhanced GEO JSON Parser with improved error handling and Markdown support
 import json
 import re
 from typing import Dict, Any, List
-from ..logging_config import api_logger
+from wechat_backend.logging_config import api_logger
 
 
 def parse_geo_json_enhanced(text: str) -> Dict[str, Any]:

@@ -2,11 +2,11 @@ import os
 import time
 import requests
 from typing import Optional
-from ..logging_config import api_logger
-from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
-from ..network.request_wrapper import get_ai_request_wrapper
-from ..monitoring.metrics_collector import record_api_call, record_error
-from ..monitoring.logging_enhancements import log_api_request, log_api_response
+from wechat_backend.logging_config import api_logger
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
+from wechat_backend.network.request_wrapper import get_ai_request_wrapper
+from wechat_backend.monitoring.metrics_collector import record_api_call, record_error
+from wechat_backend.monitoring.logging_enhancements import log_api_request, log_api_response
 from config_manager import Config as PlatformConfigManager
 
 class DoubaoAdapter(AIClient):

@@ -1,0 +1,106 @@
+<!--pages/admin/dashboard/dashboard.wxml-->
+<!-- 管理员仪表盘 -->
+<view class="admin-container">
+  <!-- 头部 -->
+  <view class="admin-header">
+    <text class="admin-title">管理后台</text>
+    <text class="admin-subtitle">系统监控与管理</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 数据内容 -->
+  <view wx:else class="content-wrapper">
+    <!-- 概览卡片 -->
+    <view class="overview-section">
+      <view class="overview-card primary">
+        <view class="card-icon">👥</view>
+        <view class="card-content">
+          <text class="card-value">{{overview.total_users}}</text>
+          <text class="card-label">总用户数</text>
+        </view>
+      </view>
+
+      <view class="overview-card">
+        <view class="card-icon">📈</view>
+        <view class="card-content">
+          <text class="card-value">{{overview.new_users_today}}</text>
+          <text class="card-label">今日新增</text>
+        </view>
+      </view>
+
+      <view class="overview-card">
+        <view class="card-icon">📝</view>
+        <view class="card-content">
+          <text class="card-value">{{overview.total_tests}}</text>
+          <text class="card-label">总测试数</text>
+        </view>
+      </view>
+
+      <view class="overview-card">
+        <view class="card-icon">⚡</view>
+        <view class="card-content">
+          <text class="card-value">{{overview.tests_today}}</text>
+          <text class="card-label">今日测试</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 待处理任务 -->
+    <view class="section" wx:if="{{pendingTasks && pendingTasks.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">待处理任务</text>
+      </view>
+      <view class="task-list">
+        <view class="task-item" wx:for="{{pendingTasks}}" wx:key="stage" wx:for-item="task">
+          <view class="task-stage">{{task.stage_name}}</view>
+          <view class="task-count">{{task.count}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 最近活动 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">最近活动</text>
+        <text class="section-subtitle">{{recentActivities.length}} 条</text>
+      </view>
+      <view class="activity-list">
+        <view class="activity-item" wx:for="{{recentActivities}}" wx:key="index" wx:for-item="activity">
+          <view class="activity-info">
+            <text class="activity-brand">{{activity.brand_name}}</text>
+            <text class="activity-user">用户：{{activity.user_id}}</text>
+          </view>
+          <view class="activity-meta">
+            <text class="activity-score">评分：{{activity.overall_score}}</text>
+            <text class="activity-time">{{formatDate(activity.test_date)}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 功能入口 -->
+    <view class="function-grid">
+      <view class="function-item" bindtap="navigateTo" data-url="/pages/admin/users/users">
+        <view class="function-icon">👤</view>
+        <text class="function-label">用户管理</text>
+      </view>
+      <view class="function-item" bindtap="navigateTo" data-url="/pages/admin/tests/tests">
+        <view class="function-icon">📊</view>
+        <text class="function-label">测试记录</text>
+      </view>
+      <view class="function-item" bindtap="navigateTo" data-url="/pages/admin/system/system">
+        <view class="function-icon">⚙️</view>
+        <text class="function-label">系统监控</text>
+      </view>
+      <view class="function-item" bindtap="navigateTo" data-url="/pages/admin/logs/logs">
+        <view class="function-icon">📋</view>
+        <text class="function-label">日志查看</text>
+      </view>
+    </view>
+  </view>
+</view>

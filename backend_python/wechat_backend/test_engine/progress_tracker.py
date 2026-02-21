@@ -8,7 +8,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 import threading
 import uuid
-from ..logging_config import api_logger
+from wechat_backend.logging_config import api_logger
 
 
 class TestStatus(Enum):

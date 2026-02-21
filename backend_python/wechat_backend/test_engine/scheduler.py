@@ -12,8 +12,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 import uuid
-from ..logging_config import api_logger
-from ..ai_adapters.factory import AIAdapterFactory
+from wechat_backend.logging_config import api_logger
+from ai_adapters.factory import AIAdapterFactory
 # Temporarily bypass config_manager due to module caching issue
 # from config_manager import Config as PlatformConfigManager
 

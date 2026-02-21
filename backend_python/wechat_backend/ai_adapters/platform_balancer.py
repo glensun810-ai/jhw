@@ -7,8 +7,8 @@ import threading
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from enum import Enum
-from .factory import AIAdapterFactory
-from ..logging_config import api_logger
+from wechat_backend.ai_adapters.factory import AIAdapterFactory
+from wechat_backend.logging_config import api_logger
 
 
 class PlatformHealthStatus(Enum):

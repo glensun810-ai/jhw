@@ -9,9 +9,9 @@ from pathlib import Path
 from collections import defaultdict
 import statistics
 
-from .logging_config import api_logger
-from .database import DB_PATH
-from .security.sql_protection import SafeDatabaseQuery, sql_protector
+from wechat_backend.logging_config import api_logger
+from wechat_backend.database import DB_PATH
+from wechat_backend.security.sql_protection import SafeDatabaseQuery, sql_protector
 
 
 class MarketIntelligenceService:

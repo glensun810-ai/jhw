@@ -10,8 +10,8 @@ from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from ..logging_config import api_logger
-from ..semantic_analyzer import SemanticAnalyzer
+from wechat_backend.logging_config import api_logger
+from wechat_backend.semantic_analyzer import SemanticAnalyzer
 
 
 class AssetIntelligenceEngine:

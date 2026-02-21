@@ -10,10 +10,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 import jieba
 import re
 from datetime import datetime
-from .logging_config import api_logger
-from .competitive_analysis import CompetitiveAnalyzer
-from .semantic_analyzer import SemanticAnalyzer, AttributionAnalyzer
-from .source_weight_library import SourceWeightLibrary
+from wechat_backend.logging_config import api_logger
+from wechat_backend.competitive_analysis import CompetitiveAnalyzer
+from wechat_backend.semantic_analyzer import SemanticAnalyzer, AttributionAnalyzer
+from wechat_backend.source_weight_library import SourceWeightLibrary
 
 
 # Note: We'll use the imported SemanticAnalyzer instead of this class

@@ -1,6 +1,6 @@
 """增强版AI客户端基础类"""
-from .base_adapter import AIClient, AIResponse, AIPlatformType
-from ..analytics.api_monitor import ApiMonitor
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType
+from wechat_backend.analytics.api_monitor import ApiMonitor
 import time
 import requests
 from typing import Optional
