@@ -841,5 +841,65 @@ Page({
     const { stage } = event.detail;
     logger.debug('工作流阶段切换', { stage });
     this.setData({ expandedWorkflowStage: stage });
+  },
+
+  /**
+   * 情报流水线加载完成
+   */
+  onPipelineLoaded: function(event) {
+    const { items, stats, metadata } = event.detail;
+    logger.info('[Dashboard] 情报流水线加载完成', {
+      itemCount: items.length,
+      stats,
+      metadata
+    });
+  },
+
+  /**
+   * 情报流水线更新
+   */
+  onPipelineUpdate: function(event) {
+    const { items, addedCount } = event.detail;
+    logger.info('[Dashboard] 情报流水线更新', {
+      totalCount: items.length,
+      added: addedCount
+    });
+
+    // 更新 dashboard 数据
+    this.setData({
+      pipelineItems: items,
+      pipelineStats: {
+        ...this.data.pipelineStats,
+        addedCount: addedCount
+      }
+    });
+  },
+
+  /**
+   * 情报流水线错误
+   */
+  onPipelineError: function(event) {
+    const { type, error } = event.detail;
+    logger.error('[Dashboard] 情报流水线错误', { type, error });
+
+    wx.showToast({
+      title: error || '情报加载失败',
+      icon: 'none',
+      duration: 3000
+    });
+  },
+
+  /**
+   * 情报项点击
+   */
+  onPipelineItemTap: function(event) {
+    const { item } = event.detail;
+    logger.info('[Dashboard] 情报项点击', item);
+
+    // 显示详情或执行其他操作
+    wx.showToast({
+      title: `查看：${item.model}`,
+      icon: 'none'
+    });
   }
 });
