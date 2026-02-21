@@ -13,11 +13,24 @@
 import sqlite3
 import json
 import time
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from contextlib import contextmanager
 from wechat_backend.logging_config import api_logger
-from wechat_backend.database import DB_PATH
+
+# ==================== 数据库配置 ====================
+
+# 从配置管理器获取数据库路径（优先使用环境变量）
+DATABASE_PATH = os.environ.get('DATABASE_PATH') or 'database.db'
+DATABASE_DIR = os.environ.get('DATABASE_DIR') or ''
+
+# 如果设置了 DATABASE_DIR，则使用完整路径
+if DATABASE_DIR:
+    DATABASE_PATH = os.path.join(DATABASE_DIR, 'database.db')
+
+# 同步数据保留天数配置
+SYNC_RETENTION_DAYS = int(os.environ.get('SYNC_RETENTION_DAYS', '90'))
 
 # ==================== 数据库表结构 ====================
 
@@ -60,8 +73,8 @@ CREATE TABLE IF NOT EXISTS sync_metadata (
 class SyncStorageManager:
     """同步数据存储管理器"""
     
-    def __init__(self, db_path: str = DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or DATABASE_PATH
         self._init_tables()
     
     @contextmanager
@@ -321,19 +334,20 @@ class SyncStorageManager:
             api_logger.error(f'获取用户元数据失败：{e}', exc_info=True)
             return {}
     
-    def cleanup_old_results(self, user_id: str, days: int = 90) -> int:
+    def cleanup_old_results(self, user_id: str, days: int = None) -> int:
         """
         清理过期结果
         
         Args:
             user_id: 用户 ID
-            days: 保留天数
+            days: 保留天数（默认使用配置值）
         
         Returns:
             清理数量
         """
         try:
-            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+            retention_days = days or SYNC_RETENTION_DAYS
+            cutoff_date = (datetime.now() - timedelta(days=retention_days)).isoformat()
             
             with self.get_connection() as conn:
                 cursor = conn.cursor()
