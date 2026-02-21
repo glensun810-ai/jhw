@@ -1,0 +1,136 @@
+<!--
+  导出选项组件
+  版本：v2.0
+-->
+<view class="export-overlay {{visible ? 'visible' : ''}}" bindtap="onCancel"></view>
+
+<view class="export-container {{visible ? 'visible' : ''}}">
+  <!-- 头部 -->
+  <view class="export-header">
+    <view class="export-title">导出诊断报告</view>
+    <view class="export-subtitle">{{brandName}}</view>
+    <view class="export-close" bindtap="onCancel">✕</view>
+  </view>
+
+  <!-- 内容区域 -->
+  <scroll-view class="export-content" scroll-y>
+    
+    <!-- 导出格式 -->
+    <view class="export-section">
+      <view class="section-title">导出格式</view>
+      <view class="format-options">
+        <view 
+          class="format-option {{format === 'pdf' ? 'selected' : ''}}"
+          data-format="pdf"
+          bindtap="onFormatChange"
+        >
+          <view class="format-icon">📄</view>
+          <view class="format-label">PDF</view>
+        </view>
+        <view 
+          class="format-option {{format === 'html' ? 'selected' : ''}}"
+          data-format="html"
+          bindtap="onFormatChange"
+        >
+          <view class="format-icon">🌐</view>
+          <view class="format-label">HTML</view>
+        </view>
+        <view 
+          class="format-option {{format === 'excel' ? 'selected' : ''}}"
+          data-format="excel"
+          bindtap="onFormatChange"
+        >
+          <view class="format-icon">📊</view>
+          <view class="format-label">Excel</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 报告级别 -->
+    <view class="export-section">
+      <view class="section-title">报告级别</view>
+      <view class="level-options">
+        <view 
+          class="level-option {{level === item.value ? 'selected' : ''}}"
+          wx:for="{{levelOptions}}"
+          wx:key="value"
+          data-level="{{item.value}}"
+          bindtap="onLevelChange"
+        >
+          <view class="level-icon">{{item.icon}}</view>
+          <view class="level-info">
+            <view class="level-label">{{item.label}}</view>
+            <view class="level-desc">{{item.desc}}</view>
+          </view>
+          <view class="level-radio {{level === item.value ? 'checked' : ''}}"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 选择章节 -->
+    <view class="export-section">
+      <view class="section-title">
+        <view>选择章节</view>
+        <view class="section-hint">（灰色为必选项）</view>
+      </view>
+      <view class="section-options">
+        <view 
+          class="section-option {{sections[item.key] ? 'selected' : ''}} {{item.required ? 'required' : ''}}"
+          wx:for="{{sectionOptions}}"
+          wx:key="key"
+          data-key="{{item.key}}"
+          bindtap="onSectionChange"
+        >
+          <view class="section-icon">{{item.icon}}</view>
+          <view class="section-label">{{item.label}}</view>
+          <view class="section-checkbox {{sections[item.key] ? 'checked' : ''}}"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 异步生成选项 -->
+    <view class="export-section" wx:if="{{format === 'pdf' && level === 'full'}}">
+      <view class="async-option">
+        <view class="async-info">
+          <view class="async-title">异步生成</view>
+          <view class="async-desc">完整报告生成时间较长，建议使用异步模式</view>
+        </view>
+        <switch 
+          class="async-switch"
+          checked="{{isAsync}}"
+          bindchange="onAsyncChange"
+          color="#0f3460"
+        />
+      </view>
+    </view>
+
+    <!-- 生成进度 -->
+    <view class="export-section" wx:if="{{generating}}">
+      <view class="progress-container">
+        <view class="progress-title">{{statusMessage}}</view>
+        <view class="progress-bar">
+          <view class="progress-fill" style="width: {{progress}}%"></view>
+        </view>
+        <view class="progress-text">{{progress}}%</view>
+      </view>
+    </view>
+
+  </scroll-view>
+
+  <!-- 底部按钮 -->
+  <view class="export-footer">
+    <view class="footer-info">
+      <view class="info-text">预计生成时间：{{level === 'basic' ? '10 秒' : level === 'detailed' ? '30 秒' : '60 秒'}}</view>
+    </view>
+    <view class="footer-buttons">
+      <button class="btn-cancel" bindtap="onCancel">取消</button>
+      <button 
+        class="btn-export {{generating ? 'disabled' : ''}}"
+        bindtap="onExport"
+        disabled="{{generating}}"
+      >
+        {{generating ? '生成中...' : '开始导出'}}
+      </button>
+    </view>
+  </view>
+</view>
