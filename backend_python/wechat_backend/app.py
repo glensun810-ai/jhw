@@ -156,6 +156,10 @@ init_analytics_routes(app)
 from wechat_backend.views_audit import init_audit_routes
 init_audit_routes(app)
 
+# Register Intelligence Pipeline API blueprints (情报流水线)
+from wechat_backend.views_intelligence import register_blueprints as register_intelligence_blueprints
+register_intelligence_blueprints(app)
+
 # Add security headers
 @app.after_request
 def after_request(response):

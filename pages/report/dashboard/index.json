@@ -7,6 +7,7 @@
     "diagnostic-drawer": "/components/diagnostic-drawer/index",
     "roi-card": "/components/ROICard/ROICard",
     "impact-gauge": "/components/ImpactGauge/ImpactGauge",
-    "workflow-findings": "/components/WorkflowFindings/WorkflowFindings"
+    "workflow-findings": "/components/WorkflowFindings/WorkflowFindings",
+    "intelligence-pipeline": "/components/IntelligencePipeline/IntelligencePipeline"
   }
 }

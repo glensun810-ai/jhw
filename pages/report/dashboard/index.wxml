@@ -27,6 +27,21 @@
     </view>
   </view>
 
+  <!-- P0 新增：情报流水线组件 -->
+  <view class="pipeline-section" wx:if="{{executionId}}">
+    <intelligence-pipeline
+      executionId="{{executionId}}"
+      brandName="{{dashboardData.summary.brandName}}"
+      enableSSE="{{true}}"
+      autoScroll="{{true}}"
+      collapsed="{{false}}"
+      bind:loaded="onPipelineLoaded"
+      bind:update="onPipelineUpdate"
+      bind:error="onPipelineError"
+      bind:itemtap="onPipelineItemTap"
+    ></intelligence-pipeline>
+  </view>
+
   <!-- P0 新增：ROI 指标和影响力卡片 -->
   <view class="p0-section" wx:if="{{dashboardData.roi_metrics || dashboardData.impact_scores}}">
     <!-- ROI 指标卡片 -->
