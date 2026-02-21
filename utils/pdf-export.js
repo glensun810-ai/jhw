@@ -1,11 +1,11 @@
 /**
- * PDF 导出工具 - P1 级空缺修复
- * 
+ * PDF 导出工具 - P1 级功能
+ *
  * 功能:
  * 1. 生成诊断报告 PDF
  * 2. 支持自定义内容选择
  * 3. 支持批量导出
- * 
+ *
  * 使用示例:
  * const pdf = await exportToPDF({
  *   executionId: 'xxx',
@@ -15,6 +15,7 @@
  */
 
 const app = getApp();
+const logger = require('./logger');
 
 /**
  * 导出诊断报告为 PDF
@@ -31,6 +32,10 @@ async function exportToPDF(options = {}) {
     includeSources = true
   } = options;
 
+  if (!executionId) {
+    throw new Error('executionId 是必需的');
+  }
+
   try {
     // 显示加载提示
     wx.showLoading({
@@ -38,14 +43,16 @@ async function exportToPDF(options = {}) {
       mask: true
     });
 
+    logger.info('[PDF Export] 开始导出 PDF', { executionId, includeROI, includeSources });
+
     // 获取报告数据
     const reportData = await fetchReportData(executionId);
 
-    // 生成 PDF 内容
+    // 生成 PDF 内容（HTML 格式，微信小程序使用）
     const pdfContent = generatePDFContent(reportData, { includeROI, includeSources });
 
-    // 保存 PDF
-    const filePath = await savePDF(pdfContent);
+    // 保存文件
+    const filePath = await savePDF(pdfContent, executionId);
 
     wx.hideLoading();
 
@@ -53,20 +60,29 @@ async function exportToPDF(options = {}) {
     wx.showModal({
       title: 'PDF 已生成',
       content: '是否立即预览？',
+      confirmText: '预览',
+      cancelText: '稍后',
       success: (res) => {
         if (res.confirm) {
           wx.openDocument({
             filePath: filePath,
-            showMenu: true
+            showMenu: true,
+            success: () => {
+              logger.info('[PDF Export] 文档打开成功');
+            },
+            fail: (err) => {
+              logger.error('[PDF Export] 文档打开失败', err);
+            }
           });
         }
       }
     });
 
+    logger.info('[PDF Export] PDF 导出成功', { filePath });
     return filePath;
   } catch (error) {
     wx.hideLoading();
-    console.error('PDF export failed:', error);
+    logger.error('[PDF Export] PDF 导出失败', error);
     throw new Error('PDF 生成失败：' + error.message);
   }
 }
@@ -76,8 +92,10 @@ async function exportToPDF(options = {}) {
  */
 async function fetchReportData(executionId) {
   return new Promise((resolve, reject) => {
+    const apiUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5001';
+    
     wx.request({
-      url: `${app.globalData.apiBaseUrl}/api/dashboard/aggregate`,
+      url: `${apiUrl}/api/dashboard/aggregate`,
       method: 'GET',
       data: {
         executionId,
@@ -86,13 +104,21 @@ async function fetchReportData(executionId) {
       timeout: 30000,
       success: (res) => {
         if (res.data && res.data.success) {
+          logger.debug('[PDF Export] 获取报告数据成功', { 
+            hasSummary: !!res.data.dashboard?.summary,
+            questionCount: res.data.dashboard?.questionCards?.length || 0 
+          });
           resolve(res.data.dashboard);
         } else {
-          reject(new Error('获取数据失败'));
+          const errorMsg = res.data?.error || '获取数据失败';
+          logger.error('[PDF Export] 获取报告数据失败', errorMsg);
+          reject(new Error(errorMsg));
         }
       },
       fail: (error) => {
-        reject(new Error('网络请求失败'));
+        const errorMsg = error.errMsg || '网络请求失败';
+        logger.error('[PDF Export] 网络请求失败', errorMsg);
+        reject(new Error(errorMsg));
       }
     });
   });
@@ -193,21 +219,49 @@ function generatePDFContent(data, options) {
 /**
  * 保存 PDF 文件
  */
-function savePDF(content) {
+function savePDF(content, executionId) {
   return new Promise((resolve, reject) => {
-    const fileName = `report_${Date.now()}.html`;
+    const fileName = `report_${executionId}_${Date.now()}.html`;
     const filePath = `${wx.env.USER_DATA_PATH}/${fileName}`;
-    
+
     const fs = wx.getFileSystemManager();
-    
+
     fs.writeFile({
       filePath: filePath,
       data: content,
       encoding: 'utf8',
       success: () => {
+        logger.debug('[PDF Export] 文件保存成功', { filePath, fileName });
         resolve(filePath);
       },
       fail: (error) => {
+        logger.error('[PDF Export] 文件保存失败', error);
+        reject(new Error('保存文件失败：' + error.message));
+      }
+    });
+  });
+}
+
+/**
+ * 保存 CSV 文件
+ */
+function saveCSV(content, executionId) {
+  return new Promise((resolve, reject) => {
+    const fileName = `report_${executionId}_${Date.now()}.csv`;
+    const filePath = `${wx.env.USER_DATA_PATH}/${fileName}`;
+
+    const fs = wx.getFileSystemManager();
+
+    fs.writeFile({
+      filePath: filePath,
+      data: content,
+      encoding: 'utf8',
+      success: () => {
+        logger.debug('[Excel Export] 文件保存成功', { filePath, fileName });
+        resolve(filePath);
+      },
+      fail: (error) => {
+        logger.error('[Excel Export] 文件保存失败', error);
         reject(new Error('保存文件失败：' + error.message));
       }
     });
@@ -221,40 +275,55 @@ function savePDF(content) {
 async function exportToExcel(options = {}) {
   const { executionId } = options;
 
+  if (!executionId) {
+    throw new Error('executionId 是必需的');
+  }
+
   try {
     wx.showLoading({
       title: '生成 Excel 中...',
       mask: true
     });
 
+    logger.info('[Excel Export] 开始导出 Excel', { executionId });
+
     // 获取原始数据
     const dashboardData = await fetchReportData(executionId);
-    
+
     // 生成 CSV 内容 (简化版 Excel)
     const csvContent = generateCSVContent(dashboardData);
-    
+
     // 保存文件
-    const filePath = await saveCSV(csvContent);
-    
+    const filePath = await saveCSV(csvContent, executionId);
+
     wx.hideLoading();
-    
+
     wx.showModal({
       title: 'Excel 已生成',
       content: '是否立即预览？',
+      confirmText: '预览',
+      cancelText: '稍后',
       success: (res) => {
         if (res.confirm) {
           wx.openDocument({
             filePath: filePath,
-            showMenu: true
+            showMenu: true,
+            success: () => {
+              logger.info('[Excel Export] 文档打开成功');
+            },
+            fail: (err) => {
+              logger.error('[Excel Export] 文档打开失败', err);
+            }
           });
         }
       }
     });
-    
+
+    logger.info('[Excel Export] Excel 导出成功', { filePath });
     return filePath;
   } catch (error) {
     wx.hideLoading();
-    console.error('Excel export failed:', error);
+    logger.error('[Excel Export] Excel 导出失败', error);
     throw new Error('Excel 生成失败：' + error.message);
   }
 }
@@ -264,15 +333,15 @@ async function exportToExcel(options = {}) {
  */
 function generateCSVContent(data) {
   let csv = '品牌，模型，问题，回答，排名，情感，时间\n';
-  
+
   if (data.questionCards && Array.isArray(data.questionCards)) {
     data.questionCards.forEach(card => {
       (card.responses || []).forEach(response => {
         const row = [
-          `"${card.brand || '-'}"`,
+          `"${card.brand || '-' || data.summary?.brandName || '-' }"`,
           `"${response.model || '-'}"`,
           `"${card.question || '-'}"`,
-          `"${(response.content || '').replace(/"/g, '""')}"`,
+          `"${(response.content || '-').replace(/"/g, '""')}"`,
           response.rank || '-',
           response.sentiment || '-',
           response.timestamp || '-'
@@ -281,37 +350,15 @@ function generateCSVContent(data) {
       });
     });
   }
-  
-  return csv;
-}
 
-/**
- * 保存 CSV 文件
- */
-function saveCSV(content) {
-  return new Promise((resolve, reject) => {
-    const fileName = `report_${Date.now()}.csv`;
-    const filePath = `${wx.env.USER_DATA_PATH}/${fileName}`;
-    
-    const fs = wx.getFileSystemManager();
-    
-    fs.writeFile({
-      filePath: filePath,
-      data: content,
-      encoding: 'utf8',
-      success: () => {
-        resolve(filePath);
-      },
-      fail: (error) => {
-        reject(new Error('保存文件失败：' + error.message));
-      }
-    });
-  });
+  return csv;
 }
 
 module.exports = {
   exportToPDF,
   exportToExcel,
   generatePDFContent,
-  generateCSVContent
+  generateCSVContent,
+  savePDF,
+  saveCSV
 };

@@ -172,6 +172,10 @@ register_analytics_blueprints(app)
 from wechat_backend.views_audit_full import register_blueprints as register_audit_full_blueprints
 register_audit_full_blueprints(app)
 
+# Register PDF Export API blueprints (PDF 报告导出)
+from wechat_backend.views_pdf_export import register_blueprints as register_pdf_export_blueprints
+register_pdf_export_blueprints(app)
+
 # Register Cache API blueprints (API 缓存)
 from wechat_backend.cache.api_cache import cache_bp, start_cache_maintenance
 app.register_blueprint(cache_bp)
