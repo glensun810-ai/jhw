@@ -3,11 +3,11 @@ ProviderFactory - AI提供者工厂类
 用于创建和管理不同AI平台的提供者实例
 """
 from typing import Dict, Type
-from .base_provider import BaseAIProvider
-from .doubao_provider import DoubaoProvider
-from .deepseek_provider import DeepSeekProvider
-from .qwen_provider import QwenProvider
-from ..logging_config import api_logger
+from wechat_backend.ai_adapters.base_provider import BaseAIProvider
+from wechat_backend.ai_adapters.doubao_provider import DoubaoProvider
+from wechat_backend.ai_adapters.deepseek_provider import DeepSeekProvider
+from wechat_backend.ai_adapters.qwen_provider import QwenProvider
+from wechat_backend.logging_config import api_logger
 
 
 class ProviderFactory:

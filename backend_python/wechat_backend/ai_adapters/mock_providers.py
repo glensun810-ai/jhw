@@ -1,7 +1,7 @@
 """
 Mock providers for testing purposes
 """
-from .base import BaseAIProvider, StandardAIResponse, AIProviderType
+from wechat_backend.ai_adapters.base import BaseAIProvider, StandardAIResponse, AIProviderType
 import asyncio
 import time
 

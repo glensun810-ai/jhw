@@ -1,7 +1,7 @@
 """增强版AI适配器工厂"""
 from typing import Dict, Type, Union, Optional
-from .base_adapter import AIClient, AIPlatformType
-from ..analytics.api_monitor import ApiMonitor
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIPlatformType
+from wechat_backend.analytics.api_monitor import ApiMonitor
 import random
 
 

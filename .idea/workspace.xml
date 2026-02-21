@@ -4,14 +4,58 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="" />
+    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/data/ai_responses/ai_responses.jsonl" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/data/ai_responses/ai_responses.jsonl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/chatgpt_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/chatgpt_adapter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/deepseek_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/deepseek_adapter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/deepseek_provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/deepseek_provider.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/deepseek_r1_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/deepseek_r1_adapter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/domestic_providers.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/domestic_providers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_adapter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_adapter_fixed.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_adapter_fixed.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_provider.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/enhanced_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/enhanced_base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/enhanced_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/enhanced_factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/erniebot_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/erniebot_adapter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/gemini_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/gemini_adapter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/geo_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/geo_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/mock_providers.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/mock_providers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/platform_balancer.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/platform_balancer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/provider_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/provider_factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/qwen_provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/qwen_provider.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/sync_providers.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/sync_providers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/analytics/asset_intelligence_engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/analytics/asset_intelligence_engine.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/analytics/recommendation_system.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/analytics/recommendation_system.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/analytics/source_intelligence_processor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/analytics/source_intelligence_processor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/competitive_analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/competitive_analysis.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/cruise_controller.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/cruise_controller.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/cruise_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/cruise_executor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/market_intelligence_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/market_intelligence_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/recommendation_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/recommendation_generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/result_processor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/result_processor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/semantic_analyzer.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/semantic_analyzer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/source_weight_library.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/source_weight_library.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/test_engine/progress_tracker.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/test_engine/progress_tracker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/test_engine/scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/test_engine/scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/test_engine/test_matrix_mode.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/test_engine/test_matrix_mode.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project.private.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/project.private.config.json" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_/Users/sgl/PycharmProjects/PythonProject" value="39wqZQBxSto96dE1LWYMOkzx7Ow" />
+    </persistenceIdMap>
+  </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="10966" />
+    <option name="cachedIndexableFilesCount" value="11275" />
   </component>
   <component name="FlaskConsoleOptions" custom-start-script="import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass">
     <envs>
@@ -31,15 +75,85 @@
     <commands />
     <urls />
   </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="39wqZQBxSto96dE1LWYMOkzx7Ow" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Flask 服务器.Flask (backend_python/run.py).executor": "Run",
-    "git-widget-placeholder": "正在变基 main",
-    "node.js.selected.package.tslint": "(autodetect)"
+    "Python.run.py.executor": "Run",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "main",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "通义灵码",
+    "vue.rearranger.settings.migration": "true",
+    "wxn.project": "true"
   }
 }]]></component>
+  <component name="RunManager">
+    <configuration name="run.py" type="PythonConfigurationType" factoryName="Python">
+      <module name="PythonProject" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.14 (PythonProject)" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/backend_python/run.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.31033.139" />
+        <option value="bundled-python-sdk-2653e85de345-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.31033.139" />
+      </set>
+    </attachedChunks>
+  </component>
   <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="" />
+      <created>1771617538832</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1771617538832</updated>
+      <workItem from="1771617540397" duration="35379000" />
+      <workItem from="1771673678196" duration="957000" />
+      <workItem from="1771674650570" duration="80000" />
+      <workItem from="1771674742963" duration="304000" />
+      <workItem from="1771675075698" duration="5383000" />
+    </task>
     <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/PythonProject$Flask.coverage" NAME="Flask 覆盖结果" MODIFIED="1771514860645" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
@@ -48,12 +162,21 @@
     <SUITE FILE_PATH="coverage/PythonProject$app.coverage" NAME="app 覆盖结果" MODIFIED="1771057092427" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend_python/wechat_backend" />
     <SUITE FILE_PATH="coverage/PythonProject$Flask__wechat_backend_app_py_.coverage" NAME="Flask (wechat_backend/app.py) 覆盖结果" MODIFIED="1770981411087" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_wechat_backend_app_py_.coverage" NAME="Flask (backend_python/wechat_backend/app.py) 覆盖结果" MODIFIED="1771057103838" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
-    <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_run_py_.coverage" NAME="Flask (backend_python/run.py) 覆盖结果" MODIFIED="1771563896592" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/PythonProject$Flask__backend_python_run_py_.coverage" NAME="Flask (backend_python/run.py) 覆盖结果" MODIFIED="1771612752223" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770933166725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$demo_main.coverage" NAME="demo_main 覆盖结果" MODIFIED="1770745116755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/PythonProject$qwen_adapter.coverage" NAME="qwen_adapter 覆盖结果" MODIFIED="1770828819857" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wechat_backend/ai_adapters" />
+    <SUITE FILE_PATH="coverage/PythonProject$run_py.coverage" NAME="run.py 覆盖结果" MODIFIED="1771673694375" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/PythonProject$window_tiler.coverage" NAME="window_tiler 覆盖结果" MODIFIED="1770295290564" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$test.coverage" NAME="test 覆盖结果" MODIFIED="1771467522812" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend_python/tests" />
     <SUITE FILE_PATH="coverage/PythonProject$PythonProject.coverage" NAME="PythonProject 覆盖结果" MODIFIED="1771514678933" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
   </component>
 </project>

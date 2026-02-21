@@ -2,8 +2,8 @@
 Utility functions for managing AI adapters and running tests
 """
 from typing import List, Dict, Any
-from .ai_adapters.base_adapter import AIPlatformType, AIClient, AIResponse
-from .ai_adapters.factory import AIAdapterFactory
+from wechat_backend.ai_adapters.base_adapter import AIPlatformType, AIClient, AIResponse
+from wechat_backend.ai_adapters.factory import AIAdapterFactory
 
 
 def get_ai_client(platform_name: str, api_key: str, model_name: str, **kwargs) -> AIClient:

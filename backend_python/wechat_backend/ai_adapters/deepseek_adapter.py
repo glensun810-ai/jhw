@@ -1,13 +1,13 @@
 import time
 import requests
-from ..logging_config import api_logger
-from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
-from ..network.request_wrapper import get_ai_request_wrapper
-from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+from wechat_backend.logging_config import api_logger
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
+from wechat_backend.network.request_wrapper import get_ai_request_wrapper
+from wechat_backend.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from utils.ai_response_wrapper import log_detailed_response
+from wechat_backend.utils.ai_response_wrapper import log_detailed_response
 
 
 class DeepSeekAdapter(AIClient):

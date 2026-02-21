@@ -4,13 +4,13 @@ import requests
 import statistics
 from typing import Optional
 from requests.adapters import HTTPAdapter
-from ..logging_config import api_logger
-from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
-from ..network.request_wrapper import get_ai_request_wrapper
-from ..monitoring.metrics_collector import record_api_call, record_error
-from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from ..config_manager import ConfigurationManager as PlatformConfigManager
-from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+from wechat_backend.logging_config import api_logger
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
+from wechat_backend.network.request_wrapper import get_ai_request_wrapper
+from wechat_backend.monitoring.metrics_collector import record_api_call, record_error
+from wechat_backend.monitoring.logging_enhancements import log_api_request, log_api_response
+from wechat_backend.config_manager import ConfigurationManager as PlatformConfigManager
+from wechat_backend.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -21,7 +21,7 @@ from utils.debug_manager import ai_io_log, exception_log, debug_log
 from utils.logger import debug_log_ai_io, debug_log_exception, ENABLE_DEBUG_AI_CODE
 
 # Note: Response logging is now handled by NXM execution engine
-# from utils.ai_response_wrapper import log_detailed_response  # Removed: use NXM unified logging
+# from wechat_backend.utils.ai_response_wrapper import log_detailed_response  # Removed: use NXM unified logging
 
 
 class DoubaoAdapter(AIClient):

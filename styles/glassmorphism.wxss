@@ -1,0 +1,408 @@
+/**
+ * 全局高斯模糊背景样式库
+ * 
+ * 提供多种毛玻璃/高斯模糊背景效果，可在各页面中复用
+ * 
+ * 使用方法:
+ * 1. 在页面 wxss 中导入：@import './glassmorphism.wxss';
+ * 2. 在 wxml 中添加对应类名
+ */
+
+/* ====================
+   基础毛玻璃效果
+   ==================== */
+.glass-base {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+/* ====================
+   模糊强度变体
+   ==================== */
+
+/* 轻度模糊 */
+.glass-blur-sm {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* 标准模糊 */
+.glass-blur {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 强度模糊 */
+.glass-blur-lg {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* 超强模糊 */
+.glass-blur-xl {
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+}
+
+/* ====================
+   背景透明度变体
+   ==================== */
+
+/* 高透明 */
+.glass-transparent {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* 标准透明 */
+.glass-base {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 半透明 */
+.glass-translucent {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 低透明 */
+.glass-opaque {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ====================
+   色调变体
+   ==================== */
+
+/* 冷色调（蓝灰） */
+.glass-cool {
+  background: rgba(200, 210, 220, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 暖色调（米白） */
+.glass-warm {
+  background: rgba(255, 245, 235, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 暗色调 */
+.glass-dark {
+  background: rgba(20, 20, 30, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 彩色调 - 红 */
+.glass-tint-red {
+  background: rgba(255, 100, 100, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 彩色调 - 蓝 */
+.glass-tint-blue {
+  background: rgba(100, 150, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 彩色调 - 绿 */
+.glass-tint-green {
+  background: rgba(100, 255, 150, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 彩色调 - 紫 */
+.glass-tint-purple {
+  background: rgba(180, 120, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ====================
+   边框变体
+   ==================== */
+
+/* 无边框 */
+.glass-border-none {
+  border: none;
+}
+
+/* 细边框 */
+.glass-border-sm {
+  border: 0.5rpx solid rgba(255, 255, 255, 0.06);
+}
+
+/* 标准边框 */
+.glass-border {
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+/* 粗边框 */
+.glass-border-lg {
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+}
+
+/* 渐变边框 */
+.glass-border-gradient {
+  border: 1rpx solid transparent;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05)), 
+                    linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/* 发光边框 */
+.glass-border-glow {
+  border: 1rpx solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 20rpx rgba(255, 255, 255, 0.1);
+}
+
+/* ====================
+   阴影变体
+   ==================== */
+
+/* 无阴影 */
+.glass-shadow-none {
+  box-shadow: none;
+}
+
+/* 轻阴影 */
+.glass-shadow-sm {
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+/* 标准阴影 */
+.glass-shadow {
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.15);
+}
+
+/* 强阴影 */
+.glass-shadow-lg {
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+}
+
+/* 发光阴影 */
+.glass-shadow-glow {
+  box-shadow: 0 4rpx 20rpx rgba(100, 150, 255, 0.2);
+}
+
+/* 彩色阴影 - 蓝 */
+.glass-shadow-blue {
+  box-shadow: 0 4rpx 20rpx rgba(100, 150, 255, 0.25);
+}
+
+/* 彩色阴影 - 紫 */
+.glass-shadow-purple {
+  box-shadow: 0 4rpx 20rpx rgba(180, 120, 255, 0.25);
+}
+
+/* 彩色阴影 - 粉 */
+.glass-shadow-pink {
+  box-shadow: 0 4rpx 20rpx rgba(255, 100, 150, 0.25);
+}
+
+/* ====================
+   圆角变体
+   ==================== */
+
+/* 无圆角 */
+.glass-square {
+  border-radius: 0;
+}
+
+/* 小圆角 */
+.glass-rounded-sm {
+  border-radius: 8rpx;
+}
+
+/* 标准圆角 */
+.glass-rounded {
+  border-radius: 12rpx;
+}
+
+/* 大圆角 */
+.glass-rounded-lg {
+  border-radius: 20rpx;
+}
+
+/* 超大圆角 */
+.glass-rounded-xl {
+  border-radius: 32rpx;
+}
+
+/* 完全圆角 */
+.glass-rounded-full {
+  border-radius: 9999rpx;
+}
+
+/* ====================
+   组合样式（预设）
+   ==================== */
+
+/* 卡片风格 */
+.glass-card {
+  composes: glass-base glass-blur glass-rounded glass-shadow;
+}
+
+/* 弹窗风格 */
+.glass-modal {
+  composes: glass-translucent glass-blur-lg glass-rounded-xl glass-shadow-lg;
+}
+
+/* 导航栏风格 */
+.glass-navbar {
+  composes: glass-opaque glass-blur-lg glass-shadow-sm;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* 悬浮按钮风格 */
+.glass-float-button {
+  composes: glass-base glass-blur glass-rounded-full glass-shadow-glow;
+}
+
+/* 输入框风格 */
+.glass-input {
+  composes: glass-transparent glass-blur-sm glass-rounded glass-border-sm;
+}
+
+/* 徽章风格 */
+.glass-badge {
+  composes: glass-transparent glass-blur-sm glass-rounded-full glass-border-sm;
+}
+
+/* 分隔线风格 */
+.glass-divider {
+  height: 1rpx;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ====================
+   动态光斑背景
+   ==================== */
+.glass-orb-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glass-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.4;
+  animation: orb-float 20s ease-in-out infinite;
+}
+
+.glass-orb-1 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(233, 69, 96, 0.4) 0%, transparent 70%);
+  top: 10%;
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.glass-orb-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(15, 52, 96, 0.5) 0%, transparent 70%);
+  bottom: 10%;
+  right: 10%;
+  animation-delay: -7s;
+}
+
+.glass-orb-3 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(46, 204, 113, 0.3) 0%, transparent 70%);
+  top: 50%;
+  right: 30%;
+  animation-delay: -14s;
+}
+
+@keyframes orb-float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  75% {
+    transform: translate(20px, 30px) scale(1.05);
+  }
+}
+
+/* ====================
+   渐变背景叠加
+   ==================== */
+.glass-gradient-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(15, 12, 41, 0.9) 0%,
+    rgba(48, 43, 99, 0.8) 50%,
+    rgba(36, 36, 62, 0.9) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1;
+}
+
+/* ====================
+   使用示例
+   ==================== */
+/*
+WXML:
+<!-- 基础卡片 -->
+<view class="glass-card">
+  <text>毛玻璃卡片内容</text>
+</view>
+
+<!-- 弹窗 -->
+<view class="glass-modal">
+  <text>弹窗内容</text>
+</view>
+
+<!-- 导航栏 -->
+<view class="glass-navbar">
+  <text>导航栏</text>
+</view>
+
+<!-- 带光斑背景 -->
+<view class="glass-orb-background">
+  <view class="glass-orb glass-orb-1"></view>
+  <view class="glass-orb glass-orb-2"></view>
+  <view class="glass-orb glass-orb-3"></view>
+</view>
+
+<!-- 组合使用 -->
+<view class="glass-base glass-blur-lg glass-rounded-xl glass-shadow-lg glass-tint-blue">
+  <text>自定义组合效果</text>
+</view>
+*/

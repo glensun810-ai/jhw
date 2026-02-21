@@ -1,6 +1,6 @@
 """AI平台推荐系统"""
 from typing import Dict, List, Optional
-from .api_monitor import ApiMonitor
+from wechat_backend.analytics.api_monitor import ApiMonitor
 
 
 class PlatformRecommendation:

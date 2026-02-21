@@ -1,0 +1,344 @@
+/**
+ * 全局进度条特效样式库
+ * 
+ * 提供多种进度条特效样式，可在各页面中复用
+ * 
+ * 使用方法:
+ * 1. 在页面 wxss 中导入：@import './progress-effects.wxss';
+ * 2. 在 wxml 中添加对应类名
+ */
+
+/* ====================
+   基础进度条容器
+   ==================== */
+.progress-base {
+  width: 100%;
+  height: 16rpx;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8rpx;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ====================
+   流光特效（通用）
+   ==================== */
+.progress-shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-shine-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: progress-shine 2s ease-in-out infinite;
+}
+
+@keyframes progress-shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* ====================
+   外发光特效（通用）
+   ==================== */
+.progress-glow-effect {
+  position: relative;
+}
+
+.progress-glow-effect::before {
+  content: '';
+  position: absolute;
+  top: -4rpx;
+  left: 0;
+  right: 0;
+  bottom: -4rpx;
+  background: inherit;
+  filter: blur(10rpx);
+  opacity: 0.6;
+  animation: progress-glow 3s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes progress-glow {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* ====================
+   脉冲特效（接近完成）
+   ==================== */
+.progress-pulse-effect {
+  animation: progress-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20rpx currentColor;
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 35rpx currentColor;
+  }
+}
+
+/* ====================
+   渐变背景变体
+   ==================== */
+
+/* 科技蓝渐变 */
+.progress-gradient-blue {
+  background: linear-gradient(90deg, #00A9FF, #00F5A0);
+}
+
+/* 科技金渐变 */
+.progress-gradient-gold {
+  background: linear-gradient(90deg, #ffd700 0%, #ffb347 50%, #ffd700 100%);
+}
+
+/* 活力橙渐变 */
+.progress-gradient-orange {
+  background: linear-gradient(90deg, #FF6B35 0%, #F7931E 50%, #FF6B35 100%);
+}
+
+/* 翡翠绿渐变 */
+.progress-gradient-green {
+  background: linear-gradient(90deg, #00C853 0%, #69F0AE 50%, #00C853 100%);
+}
+
+/* 玫瑰红渐变 */
+.progress-gradient-red {
+  background: linear-gradient(90deg, #FF4081 0%, #FF80AB 50%, #FF4081 100%);
+}
+
+/* 紫色渐变 */
+.progress-gradient-purple {
+  background: linear-gradient(90deg, #7C4DFF 0%, #B388FF 50%, #7C4DFF 100%);
+}
+
+/* 彩虹渐变 */
+.progress-gradient-rainbow {
+  background: linear-gradient(
+    90deg,
+    #FF6B6B 0%,
+    #FFD93D 20%,
+    #6BCB77 40%,
+    #4D96FF 60%,
+    #B388FF 80%,
+    #FF6B6B 100%
+  );
+  background-size: 200% 100%;
+  animation: rainbow-shift 3s ease-in-out infinite;
+}
+
+@keyframes rainbow-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* ====================
+   条纹背景变体
+   ==================== */
+.progress-striped {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10rpx,
+    rgba(255, 255, 255, 0.1) 10rpx,
+    rgba(255, 255, 255, 0.1) 20rpx
+  );
+  background-size: 200% 100%;
+  animation: stripe-move 1s linear infinite;
+}
+
+@keyframes stripe-move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40rpx 40rpx;
+  }
+}
+
+/* ====================
+   组合样式（预设）
+   ==================== */
+
+/* 科技风格：蓝光 + 流光 */
+.progress-tech {
+  composes: progress-gradient-blue progress-shine-effect progress-glow-effect;
+}
+
+/* 高端风格：金光 + 脉冲 */
+.progress-premium {
+  composes: progress-gradient-gold progress-pulse-effect;
+}
+
+/* 活力风格：橙光 + 条纹 */
+.progress-energy {
+  composes: progress-gradient-orange progress-striped;
+}
+
+/* 自然风格：绿光 + 流光 */
+.progress-nature {
+  composes: progress-gradient-green progress-shine-effect;
+}
+
+/* 热情风格：红光 + 流光 */
+.progress-passion {
+  composes: progress-gradient-red progress-shine-effect progress-glow-effect;
+}
+
+/* 梦幻风格：紫光 + 脉冲 */
+.progress-dream {
+  composes: progress-gradient-purple progress-pulse-effect;
+}
+
+/* 彩虹风格：彩虹 + 流光 + 条纹 */
+.progress-rainbow {
+  composes: progress-gradient-rainbow progress-shine-effect progress-striped;
+}
+
+/* ====================
+   状态指示变体
+   ==================== */
+
+/* 处理中：蓝色流光 */
+.progress-processing {
+  composes: progress-gradient-blue progress-shine-effect;
+}
+
+/* 成功：绿色脉冲 */
+.progress-success {
+  composes: progress-gradient-green progress-pulse-effect;
+}
+
+/* 警告：橙色条纹 */
+.progress-warning {
+  composes: progress-gradient-orange progress-striped;
+}
+
+/* 错误：红色闪烁 */
+.progress-error {
+  composes: progress-gradient-red;
+  animation: progress-error-blink 1s ease-in-out infinite;
+}
+
+@keyframes progress-error-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ====================
+   尺寸变体
+   ==================== */
+
+/* 细进度条 */
+.progress-sm {
+  height: 8rpx;
+}
+
+/* 标准进度条 */
+.progress-md {
+  height: 16rpx;
+}
+
+/* 粗进度条 */
+.progress-lg {
+  height: 24rpx;
+}
+
+/* 超粗进度条 */
+.progress-xl {
+  height: 32rpx;
+}
+
+/* ====================
+   圆角变体
+   ==================== */
+
+/* 无圆角 */
+.progress-square {
+  border-radius: 0;
+}
+
+/* 小圆角 */
+.progress-rounded-sm {
+  border-radius: 4rpx;
+}
+
+/* 标准圆角 */
+.progress-rounded {
+  border-radius: 8rpx;
+}
+
+/* 大圆角 */
+.progress-rounded-lg {
+  border-radius: 16rpx;
+}
+
+/* 完全圆角（胶囊形） */
+.progress-rounded-full {
+  border-radius: 9999rpx;
+}
+
+/* ====================
+   毛玻璃容器
+   ==================== */
+.progress-glass-container {
+  width: 100%;
+  height: 16rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8rpx;
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.2);
+}
+
+/* ====================
+   使用示例
+   ==================== */
+/*
+WXML:
+<view class="progress-glass-container">
+  <view class="progress-inner progress-tech progress-md progress-rounded-full" style="width: {{progress}}%"></view>
+</view>
+
+<view class="progress-base">
+  <view class="progress-inner progress-premium progress-lg" style="width: {{progress}}%"></view>
+</view>
+
+<view class="progress-base">
+  <view class="progress-inner progress-rainbow progress-md progress-striped" style="width: {{progress}}%"></view>
+</view>
+*/

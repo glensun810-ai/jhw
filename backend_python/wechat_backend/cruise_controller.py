@@ -11,10 +11,10 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor
 import logging
 
-from .logging_config import api_logger
-from .database import DB_PATH
-from .security.sql_protection import SafeDatabaseQuery, sql_protector
-from .models import get_brand_test_result
+from wechat_backend.logging_config import api_logger
+from wechat_backend.database import DB_PATH
+from wechat_backend.security.sql_protection import SafeDatabaseQuery, sql_protector
+from wechat_backend.models import get_brand_test_result
 
 
 class CruiseController:

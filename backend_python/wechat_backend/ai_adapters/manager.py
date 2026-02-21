@@ -6,13 +6,13 @@ import os
 import time
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
-from .base_adapter import AIClient, AIResponse, AIPlatformType
-from .sync_providers import (
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType
+from wechat_backend.ai_adapters.sync_providers import (
     DeepSeekProvider, DoubaoProvider, YuanbaoProvider,
     QwenProvider, ErnieProvider, KimiProvider
 )
-from .factory import AIAdapterFactory
-from ..logging_config import api_logger
+from wechat_backend.ai_adapters.factory import AIAdapterFactory
+from wechat_backend.logging_config import api_logger
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 

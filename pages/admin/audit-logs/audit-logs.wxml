@@ -1,0 +1,124 @@
+<!--pages/admin/audit-logs/audit-logs.wxml-->
+<!-- 审计日志页面 -->
+<view class="audit-container">
+  <view class="audit-header">
+    <text class="audit-title">审计日志</text>
+    <text class="audit-subtitle">管理员操作记录与监控</text>
+  </view>
+
+  <!-- 筛选工具栏 -->
+  <view class="filter-toolbar">
+    <view class="filter-group">
+      <input class="filter-input" placeholder="管理员 ID" bindinput="onAdminIdInput" value="{{filters.admin_id}}" />
+    </view>
+    <view class="filter-group">
+      <picker mode="selector" range="{{actionOptions}}" value="{{filters.actionIndex}}" bindchange="onActionChange">
+        <view class="filter-picker">
+          <text>{{actionOptions[filters.actionIndex] || '操作类型'}}</text>
+        </view>
+      </picker>
+    </view>
+    <view class="filter-group">
+      <picker mode="date" value="{{filters.end_date}}" bindchange="onDateChange">
+        <view class="filter-picker">
+          <text>{{filters.end_date || '结束日期'}}</text>
+        </view>
+      </picker>
+    </view>
+    <button class="filter-btn" bindtap="applyFilters">查询</button>
+    <button class="filter-btn secondary" bindtap="resetFilters">重置</button>
+  </view>
+
+  <!-- 统计卡片 -->
+  <view class="stats-section" wx:if="{{statistics}}">
+    <view class="stat-card">
+      <text class="stat-value">{{statistics.total_actions}}</text>
+      <text class="stat-label">总操作数</text>
+    </view>
+    <view class="stat-card">
+      <text class="stat-value">{{statistics.error_count}}</text>
+      <text class="stat-label">错误数</text>
+    </view>
+    <view class="stat-card {{statistics.error_rate > 5 ? 'warning' : ''}}">
+      <text class="stat-value">{{statistics.error_rate}}%</text>
+      <text class="stat-label">错误率</text>
+    </view>
+  </view>
+
+  <!-- 可疑活动告警 -->
+  <view class="alert-section" wx:if="{{suspiciousActivities && suspiciousActivities.length > 0}}">
+    <view class="alert-header">
+      <text class="alert-icon">⚠️</text>
+      <text class="alert-title">发现 {{suspiciousActivities.length}} 个可疑活动</text>
+    </view>
+    <view class="alert-list">
+      <view class="alert-item" wx:for="{{suspiciousActivities}}" wx:key="type" wx:for-item="activity">
+        <text class="alert-text">{{activity.type === 'frequent_action' ? '频繁操作' : '频繁错误'}} - {{activity.admin_id}}</text>
+        <text class="alert-count">{{activity.count || activity.error_count}} 次</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 日志列表 -->
+  <view class="logs-section">
+    <view class="logs-header">
+      <text class="logs-title">操作日志</text>
+      <view class="logs-actions">
+        <button class="action-btn-small" bindtap="exportLogs">导出日志</button>
+      </view>
+    </view>
+
+    <view class="logs-list">
+      <view class="log-item" wx:for="{{logs}}" wx:key="id" wx:for-item="log">
+        <view class="log-header">
+          <view class="log-meta">
+            <text class="log-action {{log.response_status >= 400 ? 'error' : ''}}">{{log.action}}</text>
+            <text class="log-admin">管理员：{{log.admin_id}}</text>
+          </view>
+          <text class="log-status {{log.response_status >= 400 ? 'error' : 'success'}}">
+            {{log.response_status >= 400 ? '❌' : '✅'}} {{log.response_status}}
+          </text>
+        </view>
+        
+        <view class="log-details">
+          <view class="log-detail-item" wx:if="{{log.resource}}">
+            <text class="detail-label">资源:</text>
+            <text class="detail-value">{{log.resource}}</text>
+            <text class="detail-value" wx:if="{{log.resource_id}}">({{log.resource_id}})</text>
+          </view>
+          <view class="log-detail-item">
+            <text class="detail-label">IP:</text>
+            <text class="detail-value">{{log.ip_address || '未知'}}</text>
+          </view>
+          <view class="log-detail-item">
+            <text class="detail-label">时间:</text>
+            <text class="detail-value">{{formatDateTime(log.created_at)}}</text>
+          </view>
+          <view class="log-detail-item error" wx:if="{{log.error_message}}">
+            <text class="detail-label">错误:</text>
+            <text class="detail-value">{{log.error_message}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:if="{{!loading && logs.length === 0}}" class="empty-state">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">暂无审计日志</text>
+    </view>
+
+    <!-- 加载状态 -->
+    <view wx:if="{{loading}}" class="loading-container">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">加载中...</text>
+    </view>
+  </view>
+
+  <!-- 分页 -->
+  <view class="pagination" wx:if="{{pagination.total_pages > 1}}">
+    <button class="page-btn" bindtap="prevPage" disabled="{{pagination.page <= 1}}">上一页</button>
+    <text class="page-info">{{pagination.page}} / {{pagination.total_pages}}</text>
+    <button class="page-btn" bindtap="nextPage" disabled="{{pagination.page >= pagination.total_pages}}">下一页</button>
+  </view>
+</view>

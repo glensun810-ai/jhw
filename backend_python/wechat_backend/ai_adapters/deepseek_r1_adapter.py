@@ -6,13 +6,13 @@ import time
 import json
 import requests
 from typing import Dict, Any, Optional, List
-from ..logging_config import api_logger
-from .base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
-from ..network.request_wrapper import get_ai_request_wrapper
-from ..circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
-from ..monitoring.metrics_collector import record_api_call, record_error
-from ..monitoring.logging_enhancements import log_api_request, log_api_response
-from ..config_manager import Config as PlatformConfigManager
+from wechat_backend.logging_config import api_logger
+from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
+from wechat_backend.network.request_wrapper import get_ai_request_wrapper
+from wechat_backend.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+from wechat_backend.monitoring.metrics_collector import record_api_call, record_error
+from wechat_backend.monitoring.logging_enhancements import log_api_request, log_api_response
+from config_manager import Config as PlatformConfigManager
 
 
 class DeepSeekR1Adapter(AIClient):
@@ -83,7 +83,7 @@ class DeepSeekR1Adapter(AIClient):
             
             # Log failed response to enhanced logger with context
             try:
-                from utils.ai_response_wrapper import log_detailed_response
+                from wechat_backend.utils.ai_response_wrapper import log_detailed_response
                 execution_id = kwargs.get('execution_id', 'unknown')
                 log_detailed_response(
                     question=prompt,  # 使用原始prompt
@@ -156,7 +156,7 @@ class DeepSeekR1Adapter(AIClient):
                 
                 # Log failed response to enhanced logger with context
                 try:
-                    from utils.ai_response_wrapper import log_detailed_response
+                    from wechat_backend.utils.ai_response_wrapper import log_detailed_response
                     execution_id = kwargs.get('execution_id', 'unknown')
                     log_detailed_response(
                         question=prompt,  # 使用原始prompt
@@ -225,7 +225,7 @@ class DeepSeekR1Adapter(AIClient):
             
             # Log response to enhanced logger with context
             try:
-                from utils.ai_response_wrapper import log_detailed_response
+                from wechat_backend.utils.ai_response_wrapper import log_detailed_response
                 execution_id = kwargs.get('execution_id', 'unknown')
                 log_detailed_response(
                     question=prompt,
@@ -249,7 +249,7 @@ class DeepSeekR1Adapter(AIClient):
             
             # Log failed response to enhanced logger with context
             try:
-                from utils.ai_response_wrapper import log_detailed_response
+                from wechat_backend.utils.ai_response_wrapper import log_detailed_response
                 execution_id = kwargs.get('execution_id', 'unknown')
                 log_detailed_response(
                     question=prompt,  # 使用原始prompt
@@ -276,7 +276,7 @@ class DeepSeekR1Adapter(AIClient):
             
             # Log failed response to enhanced logger with context
             try:
-                from utils.ai_response_wrapper import log_detailed_response
+                from wechat_backend.utils.ai_response_wrapper import log_detailed_response
                 execution_id = kwargs.get('execution_id', 'unknown')
                 log_detailed_response(
                     question=prompt,  # 使用原始prompt
@@ -312,7 +312,7 @@ class DeepSeekR1Adapter(AIClient):
             
             # Log failed response to enhanced logger with context
             try:
-                from utils.ai_response_wrapper import log_detailed_response
+                from wechat_backend.utils.ai_response_wrapper import log_detailed_response
                 execution_id = kwargs.get('execution_id', 'unknown')
                 log_detailed_response(
                     question=prompt,  # 使用原始prompt
@@ -344,7 +344,7 @@ class DeepSeekR1Adapter(AIClient):
             
             # Log failed response to enhanced logger with context
             try:
-                from utils.ai_response_wrapper import log_detailed_response
+                from wechat_backend.utils.ai_response_wrapper import log_detailed_response
                 execution_id = kwargs.get('execution_id', 'unknown')
                 log_detailed_response(
                     question=prompt,  # 使用原始prompt

@@ -39,6 +39,9 @@ from wechat_backend.config_manager import config_manager
 from wechat_backend.logging_config import api_logger
 from wechat_backend.database import save_test_record
 
+# SSE 推送服务
+from wechat_backend.services.sse_service import send_progress_update, send_intelligence_update
+
 
 # ==================== 模块四：熔断机制 ====================
 
@@ -329,12 +332,23 @@ def _atomic_update_execution_store(
         
         # 更新进度
         completed_count = len(execution_store[execution_id]['results'])
+        progress = int((completed_count / max(total_executions, 1)) * 100)
+        
         execution_store[execution_id].update({
-            'progress': int((completed_count / max(total_executions, 1)) * 100),
+            'progress': progress,
             'completed': completed_count,
             'last_updated': datetime.now().isoformat()
         })
+
+        # 【SSE 推送】发送进度更新
+        stage = 'analyzing'
+        if progress >= 80:
+            stage = 'generating'
+        elif progress >= 50:
+            stage = 'aggregating'
         
+        send_progress_update(execution_id, progress, stage, f'已完成 {completed_count}/{total_executions}')
+
         api_logger.debug(
             f"[AtomicUpdate] Updated store for {execution_id}: "
             f"progress={execution_store[execution_id]['progress']}%, "
@@ -704,6 +718,17 @@ def execute_nxm_test(
                     
                     # 3. 调用适配器获取回答
                     start_time = time.time()
+                    
+                    # 【SSE 推送】发送情报更新 - 开始处理
+                    send_intelligence_update(execution_id, {
+                        'question': question_text[:50] + '...' if len(question_text) > 50 else question_text,
+                        'model': model_name,
+                        'brand': main_brand,
+                        'status': 'processing',
+                        'questionIndex': q_idx + 1,
+                        'totalQuestions': expected_total
+                    })
+                    
                     ai_response = adapter.send_prompt(
                         geo_prompt,
                         brand_name=main_brand,
@@ -713,6 +738,25 @@ def execute_nxm_test(
                         total_questions=expected_total
                     )
                     latency = time.time() - start_time
+
+                    # 【SSE 推送】发送情报更新 - 完成
+                    if ai_response.success:
+                        send_intelligence_update(execution_id, {
+                            'question': question_text[:50] + '...' if len(question_text) > 50 else question_text,
+                            'model': model_name,
+                            'brand': main_brand,
+                            'status': 'success',
+                            'latency': int(latency * 1000),
+                            'preview': (ai_response.content or '')[:100] + '...' if len(ai_response.content or '') > 100 else ai_response.content
+                        })
+                    else:
+                        send_intelligence_update(execution_id, {
+                            'question': question_text[:50] + '...' if len(question_text) > 50 else question_text,
+                            'model': model_name,
+                            'brand': main_brand,
+                            'status': 'error',
+                            'error': ai_response.error_message or '请求失败'
+                        })
                     
                     # 4. 归因解析 (Attribution Parsing) - 从文本中提取 JSON 块
                     if ai_response.success:
@@ -734,9 +778,13 @@ def execute_nxm_test(
                         
                         # 【重构点 1】流式持久化 - 先写日志，再更新内存
                         log_success = False
+                        log_record_id = None
+                        
                         try:
-                            from wechat_backend.utils.ai_response_logger_v2 import log_ai_response
-                            log_record = log_ai_response(
+                            # 使用增强的日志记录（带异步和重试机制）
+                            from wechat_backend.utils.ai_response_logger_enhanced import log_ai_response_enhanced
+                            
+                            log_result = log_ai_response_enhanced(
                                 question=geo_prompt,
                                 response=response_text,
                                 platform=normalized_model_name,
@@ -757,11 +805,17 @@ def execute_nxm_test(
                                     "error_code": error_code
                                 }
                             )
+                            
+                            log_record_id = log_result.get('record_id', 'unknown')
+                            log_status = log_result.get('status', 'unknown')
+                            
                             api_logger.info(
-                                f"[AIResponseLogger] Task [Q:{q_idx+1}] [Model:{model_name}] logged successfully, "
-                                f"record_id={log_record.get('record_id', 'unknown')}"
+                                f"[AIResponseLogger] Task [Q:{q_idx+1}] [Model:{model_name}] logged, "
+                                f"record_id={log_record_id}, status={log_status}"
                             )
-                            log_success = True
+                            
+                            log_success = (log_status in ['queued', 'written', 'written_sync'])
+                            
                         except Exception as log_error:
                             api_logger.error(
                                 f"[AIResponseLogger] CRITICAL: Failed to log [Q:{q_idx+1}] [Model:{model_name}]: {log_error}"
@@ -801,8 +855,9 @@ def execute_nxm_test(
                         
                         # 【重构点 1】记录失败的调用到日志文件（同步写入）
                         try:
-                            from wechat_backend.utils.ai_response_logger_v2 import log_ai_response
-                            log_record = log_ai_response(
+                            from wechat_backend.utils.ai_response_logger_enhanced import log_ai_response_enhanced
+                            
+                            log_result = log_ai_response_enhanced(
                                 question=geo_prompt,
                                 response="",
                                 platform=normalized_model_name,
@@ -817,9 +872,13 @@ def execute_nxm_test(
                                 total_questions=expected_total,
                                 metadata={"source": "nxm_execution_engine", "error_phase": "api_call"}
                             )
+                            
+                            log_record_id = log_result.get('record_id', 'unknown')
+                            log_status = log_result.get('status', 'unknown')
+                            
                             api_logger.info(
                                 f"[AIResponseLogger] Error logged for [Q:{q_idx+1}] [Model:{model_name}], "
-                                f"record_id={log_record.get('record_id', 'unknown')}"
+                                f"record_id={log_record_id}, status={log_status}"
                             )
                         except Exception as log_error:
                             api_logger.error(

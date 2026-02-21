@@ -1,0 +1,95 @@
+<!--
+  等待页面 - 情报流水线风格
+  功能：显示诊断进度和实时情报流水线
+-->
+<view class="container">
+  <!-- 高斯模糊背景层 -->
+  <view class="blur-background"></view>
+  
+  <!-- 动态光斑 -->
+  <view class="blur-orb orb-1"></view>
+  <view class="blur-orb orb-2"></view>
+  <view class="blur-orb orb-3"></view>
+
+  <!-- 主内容区域 -->
+  <view class="content-wrapper">
+    <!-- 标题 -->
+    <view class="title-section">
+      <text class="main-title">🔍 AI 品牌诊断中</text>
+      <text class="subtitle">正在聚合多模型智能分析</text>
+    </view>
+
+    <!-- 加载动画 -->
+    <view class="loading-spinner"></view>
+
+    <!-- 进度条（带流光特效） -->
+    <view class="progress-container">
+      <view class="progress-glow"></view>
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{progress}}%;">
+          <view class="progress-shine"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 时间显示 -->
+    <view class="time-section">
+      <text class="time-label">预计剩余时间</text>
+      <text class="time-value">{{smoothedRemainingTime || formatTime(remainingTime)}}</text>
+      <text class="time-range" wx:if="{{timeRange}}">{{timeRange}}</text>
+    </view>
+
+    <!-- 状态文本 -->
+    <view class="status-section">
+      <text class="status-text">{{statusText}}</text>
+      <text class="status-detail">{{stageDescription}}</text>
+    </view>
+
+    <!-- 情报流水线组件 -->
+    <view class="intelligence-pipeline">
+      <view class="pipeline-header">
+        <view class="pipeline-title">
+          <text class="pipeline-icon">⚡</text>
+          情报流水线
+        </view>
+        <text class="pipeline-count">已完成 {{completedTasks}} / {{totalTasks}}</text>
+      </view>
+
+      <view class="pipeline-list" wx:if="{{intelligenceItems.length > 0}}">
+        <view class="intelligence-item {{item.status}}" wx:for="{{intelligenceItems}}" wx:key="id">
+          <view class="item-status status-{{item.status}}"></view>
+          <view class="item-content">
+            <text class="item-question">{{item.question}}</text>
+            <view class="item-meta">
+              <text class="item-model">
+                <text class="model-badge">{{item.model}}</text>
+              </text>
+              <text class="item-time">{{item.time}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="empty-state" wx:else>
+        <text class="empty-icon">📡</text>
+        <text class="empty-text">等待情报数据...</text>
+      </view>
+    </view>
+
+    <!-- 底部提示 -->
+    <view class="footer-tips">
+      <view class="tip-item">
+        <text class="tip-icon">💡</text>
+        <text>诊断过程可能需要 1-3 分钟，请耐心等待</text>
+      </view>
+      <view class="tip-item">
+        <text class="tip-icon">🎯</text>
+        <text>每个 AI 模型将独立分析并生成洞察</text>
+      </view>
+      <view class="tip-item">
+        <text class="tip-icon">📊</text>
+        <text>完成后将生成完整的品牌战略报告</text>
+      </view>
+    </view>
+  </view>
+</view>

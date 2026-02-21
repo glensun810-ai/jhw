@@ -1,0 +1,86 @@
+<!--pages/admin/users/users.wxml-->
+<!-- 用户管理页面 -->
+<view class="admin-container">
+  <view class="admin-header">
+    <text class="admin-title">用户管理</text>
+    <text class="admin-subtitle">用户列表与权限管理</text>
+  </view>
+
+  <!-- 搜索框 -->
+  <view class="search-bar">
+    <input class="search-input" placeholder="搜索手机号或昵称" bindinput="onSearchInput" value="{{searchKeyword}}" />
+    <button class="search-btn" bindtap="searchUsers">搜索</button>
+  </view>
+
+  <!-- 批量操作工具栏 -->
+  <view class="batch-toolbar" wx:if="{{selectedUsers.length > 0}}">
+    <view class="toolbar-info">已选择 {{selectedUsers.length}} 个用户</view>
+    <view class="toolbar-actions">
+      <button class="action-btn" bindtap="batchGrantAdmin">授予管理员</button>
+      <button class="action-btn warning" bindtap="batchRevokeAdmin">撤销管理员</button>
+      <button class="action-btn secondary" bindtap="batchExport">导出数据</button>
+      <button class="action-btn secondary" bindtap="batchNotify">发送通知</button>
+      <button class="action-btn danger" bindtap="clearSelection">取消选择</button>
+    </view>
+  </view>
+
+  <!-- 全选工具栏 -->
+  <view class="select-all-bar">
+    <checkbox-group bindchange="onSelectAll">
+      <label class="select-all-label">
+        <checkbox checked="{{selectAll}}" />
+        <text>全选</text>
+      </label>
+    </checkbox-group>
+    <button class="export-btn" bindtap="exportAllUsers">导出全部用户</button>
+  </view>
+
+  <!-- 用户列表 -->
+  <view class="user-list">
+    <view class="user-item" wx:for="{{users}}" wx:key="id" wx:for-item="user">
+      <view class="user-select">
+        <checkbox 
+          checked="{{selectedUsers.includes(user.id)}}" 
+          bindchange="onSelectUser" 
+          data-id="{{user.id}}"
+        />
+      </view>
+      <view class="user-info">
+        <text class="user-phone">{{user.phone}}</text>
+        <text class="user-nickname">{{user.nickname}}</text>
+        <view class="user-tags">
+          <text class="tag admin" wx:if="{{user.roles && user.roles.includes('admin')}}">管理员</text>
+          <text class="tag date">{{formatDate(user.created_at)}}</text>
+        </view>
+      </view>
+      <view class="user-actions">
+        <button class="action-btn-small" bindtap="viewUserDetail" data-id="{{user.id}}">详情</button>
+        <button class="action-btn-small {{user.roles && user.roles.includes('admin') ? 'warning' : ''}}" 
+                bindtap="toggleUserRole" 
+                data-id="{{user.id}}"
+                data-action="{{user.roles && user.roles.includes('admin') ? 'revoke' : 'grant'}}">
+          {{user.roles && user.roles.includes('admin') ? '撤销' : '授予'}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{!loading && users.length === 0}}" class="empty-state">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无用户数据</text>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 分页 -->
+  <view class="pagination" wx:if="{{pagination.total_pages > 1}}">
+    <button class="page-btn" bindtap="prevPage" disabled="{{pagination.page <= 1}}">上一页</button>
+    <text class="page-info">{{pagination.page}} / {{pagination.total_pages}}</text>
+    <button class="page-btn" bindtap="nextPage" disabled="{{pagination.page >= pagination.total_pages}}">下一页</button>
+  </view>
+</view>

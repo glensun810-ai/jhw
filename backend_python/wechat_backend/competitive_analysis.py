@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 from enum import Enum
 import re
 from datetime import datetime
-from .logging_config import api_logger
+from wechat_backend.logging_config import api_logger
 
 
 class MentionType(Enum):

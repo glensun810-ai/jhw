@@ -1,0 +1,148 @@
+<!--pages/admin/analytics/analytics.wxml-->
+<!-- 使用分析仪表盘 -->
+<view class="analytics-container">
+  <!-- 头部 -->
+  <view class="analytics-header">
+    <text class="analytics-title">使用分析</text>
+    <text class="analytics-subtitle">数据统计与监控</text>
+  </view>
+
+  <!-- 时间选择 -->
+  <view class="time-selector">
+    <view class="time-btn {{days === 7 ? 'active' : ''}}" bindtap="selectDays" data-days="7">7 天</view>
+    <view class="time-btn {{days === 30 ? 'active' : ''}}" bindtap="selectDays" data-days="30">30 天</view>
+    <view class="time-btn {{days === 90 ? 'active' : ''}}" bindtap="selectDays" data-days="90">90 天</view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 数据内容 -->
+  <view wx:else class="content-wrapper">
+    <!-- 核心指标 -->
+    <view class="metrics-section">
+      <view class="metric-card">
+        <view class="metric-icon">👥</view>
+        <view class="metric-content">
+          <text class="metric-value">{{userMetrics.dau}}</text>
+          <text class="metric-label">日活用户</text>
+          <text class="metric-sub">月活：{{userMetrics.mau}}</text>
+        </view>
+      </view>
+
+      <view class="metric-card">
+        <view class="metric-icon">📊</view>
+        <view class="metric-content">
+          <text class="metric-value">{{testMetrics.tests_today}}</text>
+          <text class="metric-label">今日测试</text>
+          <text class="metric-sub">周期：{{testMetrics.tests_period}}</text>
+        </view>
+      </view>
+
+      <view class="metric-card">
+        <view class="metric-icon">🤖</view>
+        <view class="metric-content">
+          <text class="metric-value">{{platformMetrics.platform_count}}</text>
+          <text class="metric-label">AI 平台</text>
+          <text class="metric-sub">热门：{{platformMetrics.top_platform}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 活跃用户趋势图 -->
+    <view class="chart-section">
+      <view class="section-header">
+        <text class="section-title">活跃用户趋势</text>
+      </view>
+      <view class="chart-container">
+        <ec-canvas 
+          id="activeTrendChart"
+          canvasId="activeTrendChart"
+          ec="{{activeTrendChartOption}}"
+          height="250"
+          bindchartReady="onChartReady"
+        ></ec-canvas>
+      </view>
+    </view>
+
+    <!-- AI 平台使用占比 -->
+    <view class="chart-section">
+      <view class="section-header">
+        <text class="section-title">AI 平台使用占比</text>
+        <text class="section-subtitle">总调用：{{platformOverview.total_calls}}</text>
+      </view>
+      <view class="chart-container">
+        <ec-canvas 
+          id="platformPieChart"
+          canvasId="platformPieChart"
+          ec="{{platformPieChartOption}}"
+          height="300"
+          bindchartReady="onChartReady"
+        ></ec-canvas>
+      </view>
+    </view>
+
+    <!-- AI 平台详细统计 -->
+    <view class="chart-section">
+      <view class="section-header">
+        <text class="section-title">AI 平台详细统计</text>
+      </view>
+      <view class="platform-list">
+        <view class="platform-item" wx:for="{{platformStats}}" wx:key="name" wx:for-item="platform">
+          <view class="platform-header">
+            <text class="platform-name">{{platform.name}}</text>
+            <text class="platform-count">{{platform.count}} 次</text>
+          </view>
+          <view class="platform-bar">
+            <view class="platform-bar-fill" style="width: {{platform.percentage}}%;"></view>
+          </view>
+          <view class="platform-stats">
+            <text class="stat-item">成功：{{platform.success}}</text>
+            <text class="stat-item">成功率：{{platform.success_rate}}%</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 错误率趋势图 -->
+    <view class="chart-section" wx:if="{{errorTrend.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">错误率趋势</text>
+        <text class="section-subtitle">平均：{{errorOverview.overall_error_rate}}%</text>
+      </view>
+      <view class="chart-container">
+        <ec-canvas 
+          id="errorTrendChart"
+          canvasId="errorTrendChart"
+          ec="{{errorTrendChartOption}}"
+          height="200"
+          bindchartReady="onChartReady"
+        ></ec-canvas>
+      </view>
+    </view>
+
+    <!-- 功能使用频率 -->
+    <view class="chart-section">
+      <view class="section-header">
+        <text class="section-title">功能使用</text>
+      </view>
+      <view class="feature-grid">
+        <view class="feature-item">
+          <text class="feature-value">{{featureStats.brand_test}}</text>
+          <text class="feature-label">品牌测试</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-value">{{featureStats.ai_diagnosis}}</text>
+          <text class="feature-label">AI 诊断</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-value">{{featureStats.unique_users}}</text>
+          <text class="feature-label">独立用户</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
