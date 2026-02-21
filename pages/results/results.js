@@ -1618,9 +1618,27 @@ Page({
 
   // 从本地存储加载数据
   loadFromCache: function() {
-    const cachedResults = wx.getStorageSync('latestTestResults');
-    const cachedAnalysis = wx.getStorageSync('latestCompetitiveAnalysis');
+    // 【P0 修复】优先尝试带 executionId 的 key，然后尝试不带 executionId 的 key
+    const executionId = this.data.executionId || '';
+    
+    // 尝试多种 key 组合
+    let cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
+    if (!cachedResults || !cachedResults.length) {
+      cachedResults = wx.getStorageSync('latestTestResults');
+    }
+    
+    let cachedAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
+    if (!cachedAnalysis || !cachedAnalysis.brandScores) {
+      cachedAnalysis = wx.getStorageSync('latestCompetitiveAnalysis');
+    }
+    
     const cachedBrand = wx.getStorageSync('latestTargetBrand');
+    const cachedCompetitors = wx.getStorageSync('latestCompetitorBrands');
+    
+    // 新增：加载语义偏移和优化建议数据
+    const cachedSemanticDrift = wx.getStorageSync('latestSemanticDrift_' + executionId) || wx.getStorageSync('latestSemanticDrift');
+    const cachedRecommendations = wx.getStorageSync('latestRecommendations_' + executionId) || wx.getStorageSync('latestRecommendations');
+    const cachedNegativeSources = wx.getStorageSync('latestNegativeSources_' + executionId) || wx.getStorageSync('latestNegativeSources');
 
     if (cachedResults && cachedAnalysis && cachedBrand) {
       try {
