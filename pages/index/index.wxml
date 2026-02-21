@@ -316,6 +316,24 @@
       </view>
     </view>
 
+    <!-- 【新增】最新诊断结果入口 -->
+    <view class="latest-diagnosis-section" wx:if="{{!isTesting && hasLatestDiagnosis && latestDiagnosisInfo}}">
+      <view class="latest-diagnosis-banner" bindtap="viewLatestDiagnosis">
+        <view class="banner-header">
+          <text class="banner-icon">📊</text>
+          <text class="banner-title">最新诊断报告</text>
+        </view>
+        <view class="banner-content">
+          <text class="brand-name">{{latestDiagnosisInfo.brand}}</text>
+          <text class="diagnosis-time">{{latestDiagnosisInfo.time}}</text>
+        </view>
+        <view class="banner-action">
+          <text class="view-btn">查看详情</text>
+          <text class="arrow-right">›</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 历史记录入口 -->
     <view class="history-link-section" wx:if="{{!isTesting}}">
       <view class="history-link" bindtap="viewHistory">
