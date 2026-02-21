@@ -77,19 +77,31 @@ Page({
     if (options.executionId) {
       const executionId = decodeURIComponent(options.executionId);
       const brandName = decodeURIComponent(options.brandName || '');
-      
+
       console.log('📥 从 executionId 加载数据:', executionId, brandName);
-      
+
       // 从本地存储获取数据
       const cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
       const cachedBrand = wx.getStorageSync('latestTargetBrand');
       const cachedCompetitors = wx.getStorageSync('latestCompetitorBrands');
-      
+      const cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
+      const cachedNegativeSources = wx.getStorageSync('latestNegativeSources_' + executionId);
+      const cachedSemanticDrift = wx.getStorageSync('latestSemanticDrift_' + executionId);
+      const cachedRecommendations = wx.getStorageSync('latestRecommendations_' + executionId);
+
       if (cachedResults && Array.isArray(cachedResults) && cachedResults.length > 0) {
         console.log('✅ 从本地存储加载成功，结果数量:', cachedResults.length);
-        
+
         // 使用加载的数据初始化页面
-        this.initializePageWithData(cachedResults, cachedBrand || brandName, cachedCompetitors || []);
+        this.initializePageWithData(
+          cachedResults,
+          cachedBrand || brandName,
+          cachedCompetitors || [],
+          cachedCompetitiveAnalysis,
+          cachedNegativeSources,
+          cachedSemanticDrift,
+          cachedRecommendations
+        );
       } else {
         console.warn('⚠️ 本地存储无数据，尝试从 URL 参数加载');
         this.loadFromUrlParams(options);
@@ -211,12 +223,14 @@ Page({
   /**
    * P0-1 修复：使用加载的数据初始化页面
    */
-  initializePageWithData: function(results, targetBrand, competitorBrands) {
+  initializePageWithData: function(results, targetBrand, competitorBrands, competitiveAnalysis, negativeSources, semanticDriftData, recommendationData) {
     try {
       console.log('📊 初始化页面数据，结果数量:', results.length);
 
-      // 构建 competitiveAnalysis 数据结构
-      const competitiveAnalysis = this.buildCompetitiveAnalysis(results, targetBrand, competitorBrands);
+      // 如果没有传入 competitiveAnalysis，则构建它
+      if (!competitiveAnalysis) {
+        competitiveAnalysis = this.buildCompetitiveAnalysis(results, targetBrand, competitorBrands);
+      }
 
       // 生成平台对比数据
       const { pkDataByPlatform, platforms, platformDisplayNames } = this.generatePKDataByPlatform(competitiveAnalysis, targetBrand, results);
@@ -225,22 +239,22 @@ Page({
       const insights = this.generateInsights(competitiveAnalysis, targetBrand);
       const groupedResults = this.groupResultsByBrand(results, targetBrand);
       const dimensionComparison = this.generateDimensionComparison(results, targetBrand);
-      
+
       // P0-3 修复：处理竞争分析数据
       const competitiveAnalysisData = this.processCompetitiveAnalysisData(competitiveAnalysis, results, targetBrand, competitorBrands);
-      
-      // P1-1 修复：处理语义偏移数据
-      const semanticDriftAnalysisData = this.processSemanticDriftData(competitiveAnalysis, results, targetBrand);
-      
-      // P1-2 修复：处理信源纯净度数据
-      const sourcePurityAnalysisData = this.processSourcePurityData(competitiveAnalysis, results);
-      
-      // P1-3 修复：处理优化建议数据
-      const recommendationAnalysisData = this.processRecommendationData(competitiveAnalysis, results);
-      
+
+      // P1-1 修复：处理语义偏移数据 - 使用后端数据
+      const semanticDriftAnalysisData = this.processSemanticDriftData(competitiveAnalysis, results, targetBrand, semanticDriftData);
+
+      // P1-2 修复：处理信源纯净度数据 - 使用负面信源数据
+      const sourcePurityAnalysisData = this.processSourcePurityData(competitiveAnalysis, results, negativeSources);
+
+      // P1-3 修复：处理优化建议数据 - 使用后端数据
+      const recommendationAnalysisData = this.processRecommendationData(competitiveAnalysis, results, negativeSources, recommendationData);
+
       // P2-2 修复：准备雷达图数据
       const radarData = this.prepareRadarChartData(competitiveAnalysis, targetBrand, competitorBrands);
-      
+
       // P2-3 修复：准备关键词云数据
       const keywordCloudResult = this.prepareKeywordCloudData(semanticDriftAnalysisData.semanticDriftData, results, targetBrand);
 
@@ -278,7 +292,7 @@ Page({
             this.renderRadarChart();
           }, 100);
         }
-        
+
         // 渲染词云
         if (keywordCloudResult.keywordCloudData.length > 0) {
           setTimeout(() => {
@@ -585,38 +599,47 @@ Page({
   /**
    * P1-1 修复：处理语义偏移数据
    */
-  processSemanticDriftData: function(competitiveAnalysis, results, targetBrand) {
+  processSemanticDriftData: function(competitiveAnalysis, results, targetBrand, backendSemanticDriftData) {
     try {
+      // 【优先使用后端数据】如果传入了后端语义偏移数据，直接使用
+      if (backendSemanticDriftData && backendSemanticDriftData.driftScore !== undefined) {
+        console.log('✅ 使用后端语义偏移数据');
+        return {
+          semanticDriftData: backendSemanticDriftData,
+          semanticContrastData: competitiveAnalysis.semanticContrastData || null
+        };
+      }
+      
       // 从 backend 获取语义对比数据
       const semanticContrastData = competitiveAnalysis.semanticContrastData || null;
-      
+
       // 计算语义偏移分数
       let driftScore = 0;
       let driftSeverity = 'low';
       let driftSeverityText = '偏移轻微';
       let similarityScore = 0;
-      
+
       // 如果有语义对比数据，计算偏移分数
       if (semanticContrastData) {
         const officialWords = semanticContrastData.official_words || [];
         const aiWords = semanticContrastData.ai_generated_words || [];
-        
+
         // 计算偏移分数（基于 AI 生成词中的风险词比例）
         const riskyWords = aiWords.filter(w => w.category === 'AI_Generated_Risky');
         const totalWords = officialWords.length + aiWords.length;
-        
+
         if (totalWords > 0) {
           driftScore = Math.round((riskyWords.length / totalWords) * 100);
         }
-        
+
         // 计算相似度分数
         const commonKeywords = this.extractCommonKeywordsFromWords(officialWords, aiWords);
         const allKeywords = [...new Set([...officialWords.map(w => w.name), ...aiWords.map(w => w.name)])];
-        
+
         if (allKeywords.length > 0) {
           similarityScore = Math.round((commonKeywords.length / allKeywords.length) * 100);
         }
-        
+
         // 判断偏移严重程度
         if (driftScore >= 60) {
           driftSeverity = 'high';
@@ -629,34 +652,34 @@ Page({
           driftSeverityText = '偏移轻微';
         }
       }
-      
+
       // 提取缺失和意外的关键词
       let missingKeywords = [];
       let unexpectedKeywords = [];
       let negativeTerms = [];
       let positiveTerms = [];
-      
+
       if (semanticContrastData) {
         const officialWords = semanticContrastData.official_words || [];
         const aiWords = semanticContrastData.ai_generated_words || [];
-        
+
         // 官方有但 AI 没有的词
         const officialNames = officialWords.map(w => w.name);
         const aiNames = aiWords.map(w => w.name);
-        
+
         missingKeywords = officialNames.filter(name => !aiNames.includes(name));
         unexpectedKeywords = aiNames.filter(name => !officialNames.includes(name));
-        
+
         // 提取负面和正面术语
         negativeTerms = aiWords
           .filter(w => w.sentiment_valence < 0 || w.category === 'AI_Generated_Risky')
           .map(w => w.name);
-        
+
         positiveTerms = aiWords
           .filter(w => w.sentiment_valence > 0 && w.category !== 'AI_Generated_Risky')
           .map(w => w.name);
       }
-      
+
       // 如果没有语义对比数据，尝试从结果中提取
       if (!semanticContrastData) {
         const targetResults = results.filter(r => r.brand === targetBrand);
@@ -1148,11 +1171,17 @@ Page({
   /**
    * P1-3 修复：处理优化建议数据
    */
-  processRecommendationData: function(competitiveAnalysis, results) {
+  processRecommendationData: function(competitiveAnalysis, results, negativeSources, backendRecommendationData) {
     try {
+      // 【优先使用后端数据】如果传入了后端优化建议数据，直接使用
+      if (backendRecommendationData && backendRecommendationData.recommendations) {
+        console.log('✅ 使用后端优化建议数据');
+        return { recommendationData: backendRecommendationData };
+      }
+      
       // 从 backend 获取建议数据
       const recommendations = competitiveAnalysis.recommendations || [];
-      
+
       if (!recommendations || recommendations.length === 0) {
         return { recommendationData: null };
       }

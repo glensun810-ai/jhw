@@ -24,11 +24,17 @@ class ReportDataService:
     def __init__(self):
         self.logger = api_logger
         self.db = None
-    
+
     def _get_db_connection(self):
         """获取数据库连接"""
         if self.db is None:
-            self.db = get_connection()
+            # get_connection 返回上下文管理器，需要获取实际连接
+            from wechat_backend.database_core import get_connection as get_db_conn
+            import sqlite3
+            
+            # 直接使用 sqlite3 连接
+            db_path = '/Users/sgl/PycharmProjects/PythonProject/backend_python/database.db'
+            self.db = sqlite3.connect(db_path)
         return self.db
     
     def generate_full_report(self, execution_id: str) -> Dict[str, Any]:
@@ -121,49 +127,137 @@ class ReportDataService:
     
     def _get_base_data(self, execution_id: str) -> Dict[str, Any]:
         """获取基础诊断数据"""
+        import gzip
+
         conn = self._get_db_connection()
         cursor = conn.cursor()
-        
-        # 从 test_results 表获取
+
+        # 修复 1: 从 test_records 表获取（实际存在的表）
+        # 修复 2: 从 results_summary 中提取 execution_id 进行匹配
+        # 修复 3: 使用 test_date 替代 created_at 排序
         cursor.execute("""
-            SELECT * FROM test_results 
-            WHERE execution_id = ? OR result_id = ?
-            LIMIT 1
-        """, (execution_id, execution_id))
+            SELECT id, user_id, brand_name, test_date, ai_models_used, questions_used,
+                   overall_score, total_tests, results_summary, detailed_results,
+                   is_summary_compressed, is_detailed_compressed
+            FROM test_records
+            ORDER BY test_date DESC
+            LIMIT 10
+        """)
+
+        rows = cursor.fetchall()
         
-        row = cursor.fetchone()
-        
-        if not row:
+        if not rows:
             # 尝试从 deep_intelligence_results 获取
             cursor.execute("""
-                SELECT * FROM deep_intelligence_results 
-                WHERE execution_id = ?
+                SELECT task_id, exposure_analysis, source_intelligence, evidence_chain
+                FROM deep_intelligence_results
+                WHERE task_id = ?
                 LIMIT 1
             """, (execution_id,))
             row = cursor.fetchone()
-        
-        if not row:
-            return {}
-        
-        # 转换为字典
-        columns = [description[0] for description in cursor.description]
-        base_data = dict(zip(columns, row))
-        
-        # 解析 JSON 字段
-        for field in ['ai_models_used', 'questions_used', 'results_summary', 'detailed_results']:
+
+            if not row:
+                return {}
+
+            # 从 deep_intelligence_results 构建基础数据
+            columns = [description[0] for description in cursor.description]
+            deep_data = dict(zip(columns, row))
+            
+            # 解析 JSON 字段
+            for field in ['exposure_analysis', 'source_intelligence', 'evidence_chain']:
+                try:
+                    if deep_data.get(field):
+                        deep_data[field] = json.loads(deep_data[field])
+                except (json.JSONDecodeError, TypeError):
+                    deep_data[field] = {} if field in ['exposure_analysis', 'source_intelligence'] else []
+            
+            return {
+                'execution_id': deep_data.get('task_id', execution_id),
+                'exposure_analysis': deep_data.get('exposure_analysis', {}),
+                'source_intelligence': deep_data.get('source_intelligence', {}),
+                'evidence_chain': deep_data.get('evidence_chain', []),
+                'overall_score': 0,
+                'brand_name': '未知品牌'
+            }
+
+        # 修复 3: 查找匹配 execution_id 的记录（从 results_summary 中提取）
+        for row in rows:
+            columns = [description[0] for description in cursor.description]
+            record_data = dict(zip(columns, row))
+            
+            # 解析 results_summary（可能需要解压）
+            results_summary_raw = record_data.get('results_summary')
+            is_compressed = record_data.get('is_summary_compressed', 0)
+            
             try:
-                if base_data.get(field):
-                    base_data[field] = json.loads(base_data[field])
-            except (json.JSONDecodeError, TypeError):
-                base_data[field] = [] if field in ['ai_models_used', 'questions_used'] else {}
-        
-        # 构建平台评分
-        base_data['platform_scores'] = self._build_platform_scores(base_data)
-        
-        # 构建维度评分
-        base_data['dimension_scores'] = self._build_dimension_scores(base_data)
-        
-        return base_data
+                if is_compressed and results_summary_raw:
+                    # 解压缩数据
+                    results_summary_bytes = gzip.decompress(results_summary_raw)
+                    results_summary = json.loads(results_summary_bytes.decode('utf-8'))
+                elif results_summary_raw:
+                    results_summary = json.loads(results_summary_raw)
+                else:
+                    results_summary = {}
+            except (json.JSONDecodeError, TypeError, gzip.BadGzipFile) as e:
+                self.logger.warning(f"解析 results_summary 失败：{e}")
+                results_summary = {}
+            
+            # 检查是否匹配 execution_id
+            summary_exec_id = results_summary.get('execution_id', '')
+            if summary_exec_id == execution_id or not execution_id:
+                # 解析 detailed_results（可能需要解压）
+                detailed_results_raw = record_data.get('detailed_results')
+                is_detailed_compressed = record_data.get('is_detailed_compressed', 0)
+                
+                try:
+                    if is_detailed_compressed and detailed_results_raw:
+                        detailed_results_bytes = gzip.decompress(detailed_results_raw)
+                        detailed_results = json.loads(detailed_results_bytes.decode('utf-8'))
+                    elif detailed_results_raw:
+                        detailed_results = json.loads(detailed_results_raw)
+                    else:
+                        detailed_results = []
+                except (json.JSONDecodeError, TypeError, gzip.BadGzipFile) as e:
+                    self.logger.warning(f"解析 detailed_results 失败：{e}")
+                    detailed_results = []
+
+                # 解析其他 JSON 字段
+                ai_models_used = record_data.get('ai_models_used', '[]')
+                questions_used = record_data.get('questions_used', '[]')
+                
+                try:
+                    ai_models_used = json.loads(ai_models_used) if ai_models_used else []
+                    questions_used = json.loads(questions_used) if questions_used else []
+                except (json.JSONDecodeError, TypeError):
+                    ai_models_used = []
+                    questions_used = []
+
+                # 构建完整的 base_data
+                base_data = {
+                    'execution_id': summary_exec_id or execution_id,
+                    'result_id': record_data.get('id'),
+                    'brand_name': record_data.get('brand_name', '未知品牌'),
+                    'test_date': record_data.get('test_date', ''),
+                    'ai_models_used': ai_models_used,
+                    'questions_used': questions_used,
+                    'overall_score': record_data.get('overall_score', 0) or 0,
+                    'total_tests': record_data.get('total_tests', 0) or 0,
+                    'results_summary': results_summary,
+                    'detailed_results': detailed_results,
+                    'is_summary_compressed': is_compressed,
+                    'is_detailed_compressed': is_detailed_compressed
+                }
+
+                # 构建平台评分
+                base_data['platform_scores'] = self._build_platform_scores(base_data)
+
+                # 构建维度评分
+                base_data['dimension_scores'] = self._build_dimension_scores(base_data)
+
+                return base_data
+
+        # 如果没有找到匹配的 execution_id，返回空
+        return {}
     
     def _build_platform_scores(self, base_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """构建平台评分列表"""

@@ -938,52 +938,61 @@ export const buildQuestionMap = (results) => {
  *   _meta: { data_completeness, total_records, ... }
  * }
  */
-export const aggregateReport = (results, brandName, competitors) => {
+export const aggregateReport = (results, brandName, competitors, additionalData = {}) => {
   // 2.1 数据清洗与归一化
   const preprocessed = preprocessData(results);
-  
+
   if (preprocessed.sanitizedResults.length === 0) {
     return null;
   }
-  
+
   const { sanitizedResults, totalModels, totalQuestions, dataCompleteness } = preprocessed;
-  
+
   // 构建问题分组映射
   const questionMap = buildQuestionMap(sanitizedResults);
-  
+
   // 2.2 核心算法计算
   const sov = calculateSOV(sanitizedResults, totalModels);
   const sentimentData = calculateSentimentIndex(sanitizedResults);
   const topCompetitors = calculateInterceptionMatrix(sanitizedResults);
-  
+
   // 计算提及率
   const mentionRate = sanitizedResults.filter(r => r.geo_data?.brand_mentioned === true).length / sanitizedResults.length;
-  
+
   // 品牌健康度
   const healthData = calculateBrandHealth(sov, sentimentData.sentimentIndex, mentionRate);
-  
+
   // 2.3 信源威胁归因
   const toxicSources = calculateSourceThreats(sanitizedResults);
   const sourceProfiles = mapSourceProfiles(sanitizedResults);
-  
+
   // 2.4 UI 适配层结构导出
   const brandHealth = buildBrandHealth(healthData, sov, sentimentData);
   const diagnosticGrid = buildDiagnosticGrid(sanitizedResults, questionMap);
   const riskRadar = buildRiskRadar(toxicSources, topCompetitors);
-  
+
   // 构建最终输出
   return {
     // 【2.4 UI 适配层】三个顶级字段
     brand_health: brandHealth,
     diagnostic_grid: diagnosticGrid,
     risk_radar: riskRadar,
-    
+
     // 附加数据
     source_profiles: sourceProfiles,
     top_competitors: topCompetitors,
     competitors: competitors || [],
     brand_name: brandName,
-    
+
+    // 【新增】语义偏移数据（从后端传入）
+    semantic_drift_data: additionalData.semantic_drift_data || null,
+    semantic_contrast_data: additionalData.semantic_contrast_data || null,
+    recommendation_data: additionalData.recommendation_data || null,
+    negative_sources: additionalData.negative_sources || null,
+    brand_scores: additionalData.brand_scores || null,
+    competitive_analysis: additionalData.competitive_analysis || null,
+    overall_score: additionalData.overall_score || null,
+
     // 【数据降级】元数据标记
     _meta: {
       data_completeness: dataCompleteness,
