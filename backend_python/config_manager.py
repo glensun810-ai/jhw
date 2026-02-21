@@ -24,6 +24,15 @@ class Config:
     def __init__(self):
         self.platform_configs = {}
         # 不再加载配置，直接使用环境变量
+        
+        # 数据库配置
+        self.database_path = os.environ.get('DATABASE_PATH') or 'database.db'
+        database_dir = os.environ.get('DATABASE_DIR') or ''
+        if database_dir:
+            self.database_path = os.path.join(database_dir, 'database.db')
+        
+        # 同步数据配置
+        self.sync_retention_days = int(os.environ.get('SYNC_RETENTION_DAYS', '90'))
 
     def get_platform_config(self, platform_name: str):
         """获取平台配置，直接从环境变量获取"""
@@ -58,3 +67,11 @@ class Config:
         """检查平台是否已配置"""
         config = self.get_platform_config(platform_name)
         return config is not None and bool(config.api_key)
+    
+    def get_database_path(self) -> str:
+        """获取数据库路径"""
+        return self.database_path
+    
+    def get_sync_retention_days(self) -> int:
+        """获取同步数据保留天数"""
+        return self.sync_retention_days

@@ -17,6 +17,18 @@ class Config:
     LOG_FILE = os.environ.get('LOG_FILE') or 'logs/app.log'  # 默认日志文件
     LOG_MAX_BYTES = int(os.environ.get('LOG_MAX_BYTES', '10485760'))  # 10MB default
     LOG_BACKUP_COUNT = int(os.environ.get('LOG_BACKUP_COUNT', '5'))
+
+    # 数据库配置
+    DATABASE_PATH = os.environ.get('DATABASE_PATH') or 'database.db'
+    DATABASE_DIR = os.environ.get('DATABASE_DIR') or ''
+    
+    # 如果设置了 DATABASE_DIR，则使用完整路径
+    if DATABASE_DIR:
+        DATABASE_PATH = os.path.join(DATABASE_DIR, 'database.db')
+    
+    # 同步数据存储配置
+    SYNC_STORAGE_ENABLED = os.environ.get('SYNC_STORAGE_ENABLED', 'true').lower() == 'true'
+    SYNC_RETENTION_DAYS = int(os.environ.get('SYNC_RETENTION_DAYS', '90'))
     
     # 新日志系统配置
     USE_UNIFIED_LOGGING = os.environ.get('USE_UNIFIED_LOGGING', 'true').lower() == 'true'

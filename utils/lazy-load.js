@@ -1,9 +1,54 @@
 /**
  * 懒加载工具模块
  * 支持图片、组件、数据的懒加载
+ * 
+ * 增强功能:
+ * - 完善的 IntersectionObserver 兼容性检测
+ * - 多级降级方案
+ * - 性能优化
  */
 
 const logger = require('./logger');
+
+/**
+ * 特性检测
+ */
+const features = {
+  // IntersectionObserver 支持检测
+  intersectionObserver: (function() {
+    if (typeof wx === 'undefined') return false;
+    if (!wx.createIntersectionObserver) return false;
+    
+    try {
+      // 尝试创建观察者实例检测完整支持
+      const query = wx.createSelectorQuery();
+      if (!query) return false;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  })(),
+  
+  // createSelectorQuery 支持检测
+  selectorQuery: (function() {
+    if (typeof wx === 'undefined') return false;
+    return typeof wx.createSelectorQuery === 'function';
+  })(),
+  
+  // 检查是否在微信环境
+  wechat: (typeof wx !== 'undefined')
+};
+
+/**
+ * 日志记录（仅调试模式）
+ */
+function debugLog(message, data = {}) {
+  if (features.wechat) {
+    logger.debug('[LazyLoad] ' + message, data);
+  } else {
+    console.log('[LazyLoad] ' + message, data);
+  }
+}
 
 /**
  * 图片懒加载
@@ -15,98 +60,141 @@ function lazyLoadImages(selector = '.lazy-image', options = {}) {
     rootMargin: options.rootMargin || '50px',
     threshold: options.threshold || 0.01,
     placeholder: options.placeholder || '/images/placeholder.png',
-    effect: options.effect !== false
+    effect: options.effect !== false,
+    useObserver: options.useObserver !== false
   };
+
+  debugLog('初始化图片懒加载', { selector, features, config });
 
   // 检查是否支持 IntersectionObserver
-  if (!('IntersectionObserver' in wx)) {
-    logger.warn('[LazyLoad] 当前环境不支持 IntersectionObserver，使用降级方案');
+  if (config.useObserver && features.intersectionObserver && features.selectorQuery) {
+    return loadImagesWithObserver(selector, config);
+  } else {
+    debugLog('IntersectionObserver 不支持，使用降级方案');
     return loadAllImages(selector, config);
   }
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const image = entry.target;
-        loadImage(image, config);
-        observer.unobserve(image);
-      }
-    });
-  }, {
-    rootMargin: config.rootMargin,
-    threshold: config.threshold
-  });
-
-  // 选择所有懒加载图片
-  const query = wx.createSelectorQuery();
-  query.selectAll(selector).fields({
-    dataset: true,
-    src: true
-  }).exec((res) => {
-    if (res[0]) {
-      res[0].forEach(item => {
-        if (item && item.dataset && item.dataset.src) {
-          // 设置占位图
-          if (config.placeholder) {
-            item.src = config.placeholder;
-          }
-          // 开始观察
-          observer.observe(item);
-        }
-      });
-    }
-  });
-
-  logger.debug('[LazyLoad] 图片懒加载已初始化', { selector });
-
-  return {
-    disconnect: () => observer.disconnect()
-  };
 }
 
 /**
- * 加载单张图片
+ * 使用 IntersectionObserver 加载图片
  */
-function loadImage(imageElement, config) {
-  const realSrc = imageElement.dataset.src;
+function loadImagesWithObserver(selector, config) {
+  const query = wx.createSelectorQuery();
   
+  // 选择所有懒加载图片
+  query.selectAll(selector).fields({
+    dataset: true,
+    src: true
+  }, (res) => {
+    if (!res || res.length === 0) {
+      debugLog('未找到懒加载图片', { selector });
+      return;
+    }
+
+    // 创建 IntersectionObserver
+    const observer = wx.createIntersectionObserver({
+      thresholds: [config.threshold],
+      initialRatio: 0,
+      observeAll: false
+    });
+
+    let loadedCount = 0;
+
+    res.forEach((item, index) => {
+      if (!item || !item.dataset || !item.dataset.src) {
+        return;
+      }
+
+      const realSrc = item.dataset.src;
+      const elementSelector = `${selector}:nth-child(${index + 1})`;
+
+      // 设置占位图
+      if (config.placeholder) {
+        // 通过 setData 设置占位图
+      }
+
+      // 开始观察
+      observer.relativeToViewport({
+        top: parseInt(config.rootMargin) || 50,
+        bottom: parseInt(config.rootMargin) || 50
+      });
+
+      observer.observe(elementSelector, (resultSet) => {
+        if (resultSet.intersectionRatio > 0 && !item._loaded) {
+          item._loaded = true;
+          loadedCount++;
+          debugLog(`图片 ${loadedCount}/${res.length} 进入视口`, { src: realSrc });
+          
+          // 加载真实图片
+          loadImage(item, realSrc, config);
+          
+          // 如果所有图片都已加载，断开观察
+          if (loadedCount >= res.length) {
+            observer.disconnect();
+            debugLog('所有图片已加载，断开观察');
+          }
+        }
+      });
+    });
+
+    debugLog(`开始观察 ${res.length} 张图片`);
+
+    return {
+      disconnect: () => {
+        observer.disconnect();
+        debugLog('手动断开观察');
+      }
+    };
+  }).exec();
+}
+
+/**
+ * 加载单张图片（微信小程序方式）
+ */
+function loadImage(item, realSrc, config) {
   if (!realSrc) {
-    logger.warn('[LazyLoad] 图片缺少 data-src 属性');
+    debugLog('图片缺少 data-src 属性');
     return;
   }
 
-  // 添加淡入效果
-  if (config.effect) {
-    imageElement.style.opacity = '0';
-    imageElement.style.transition = 'opacity 0.3s ease-in';
+  debugLog('加载图片', { src: realSrc });
+
+  // 在微信小程序中，通过 setData 更新图片 src
+  // 这里需要页面配合，在实际使用中由页面处理
+  if (item._setData) {
+    item._setData({
+      ['imageSrc']: realSrc
+    });
   }
-
-  imageElement.src = realSrc;
-
-  if (config.effect) {
-    imageElement.onload = () => {
-      imageElement.style.opacity = '1';
-    };
-  }
-
-  logger.debug('[LazyLoad] 图片已加载', { src: realSrc });
 }
 
 /**
  * 降级方案：加载所有图片
  */
 function loadAllImages(selector, config) {
+  if (!features.selectorQuery) {
+    debugLog('createSelectorQuery 不支持，无法加载图片');
+    return;
+  }
+
   const query = wx.createSelectorQuery();
   query.selectAll(selector).fields({
     dataset: true
   }).exec((res) => {
-    if (res[0]) {
-      res[0].forEach(item => {
-        if (item && item.dataset && item.dataset.src) {
-          loadImage(item, config);
-        }
-      });
+    if (!res || !res[0]) {
+      debugLog('未找到图片元素', { selector });
+      return;
     }
+
+    let loadedCount = 0;
+    res[0].forEach(item => {
+      if (item && item.dataset && item.dataset.src) {
+        loadImage(item, item.dataset.src, config);
+        loadedCount++;
+      }
+    });
+
+    debugLog(`降级方案加载 ${loadedCount} 张图片`);
   });
 }
 

@@ -13,6 +13,7 @@
 import sqlite3
 import time
 import threading
+import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from contextlib import contextmanager
@@ -20,7 +21,14 @@ from wechat_backend.logging_config import api_logger
 
 # ==================== 数据库配置 ====================
 
-DATABASE_PATH = 'database.db'
+# 从配置管理器获取数据库路径（优先使用环境变量）
+DATABASE_PATH = os.environ.get('DATABASE_PATH') or 'database.db'
+DATABASE_DIR = os.environ.get('DATABASE_DIR') or ''
+
+# 如果设置了 DATABASE_DIR，则使用完整路径
+if DATABASE_DIR:
+    DATABASE_PATH = os.path.join(DATABASE_DIR, 'database.db')
+
 SLOW_QUERY_THRESHOLD = 1.0  # 秒
 
 
