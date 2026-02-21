@@ -1024,8 +1024,8 @@ Page({
         });
         
         // 启动进度轮询
-        if (typeof this.startProgressPolling === 'function') {
-          this.startProgressPolling(executionId);
+        if (typeof this.pollTestProgress === 'function') {
+          this.pollTestProgress(executionId);
         } // 调用跳转
       } else {
         throw new Error('未能从响应中提取有效ID');
@@ -1123,7 +1123,10 @@ Page({
             this.renderReport(); // 触发报告渲染
             
             // 自动跳转到战略看板（第三阶段：麦肯锡看板）
-            this.navigateToDashboard();
+            // 【P0 修复】删除 detail 页后，直接跳转到结果页
+            wx.navigateTo({
+              url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
+            });
           }
         } else {
           console.error('获取任务状态失败:', res);
