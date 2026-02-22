@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-02-22T16:10:51.274Z",
+  "files": [
+    "test-dataProcessorService.js",
+    "test-brandTestService.js"
+  ],
+  "results": {
+    "total": 209,
+    "passed": 204,
+    "failed": 5,
+    "coverage": "97.61%"
+  }
+}
