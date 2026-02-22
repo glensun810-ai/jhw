@@ -1,0 +1,20 @@
+<!-- 诊断抽屉内容组件模板 -->
+<view class="drawer-content">
+  <!-- 渲染中提示 -->
+  <view wx:if="{{isRendering}}" class="rendering-hint">
+    <text>{{renderingText}}</text>
+  </view>
+
+  <!-- 渲染内容 -->
+  <view class="content-nodes">
+    <view wx:for="{{renderedNodes}}" wx:key="index" class="content-node node-{{item.type}}">
+      <text wx:if="{{item.type === 'text'}}">{{item.content}}</text>
+      <image wx:elif="{{item.type === 'image'}}" src="{{item.src}}" mode="widthFix" />
+    </view>
+  </view>
+
+  <!-- 滚动控制 -->
+  <view class="scroll-controls">
+    <button class="scroll-btn" bindtap="scrollToTop">↑ 顶部</button>
+  </view>
+</view>

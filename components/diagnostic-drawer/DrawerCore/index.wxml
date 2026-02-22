@@ -1,0 +1,62 @@
+<!-- 诊断抽屉核心组件模板 -->
+<view class="drawer-core {{showDrawer ? 'show' : ''}}" style="transform: translateY({{showDrawer ? 0 : 100}}%)">
+  <!-- 头部 -->
+  <view class="drawer-header" bindtap="closeDrawer">
+    <view class="drawer-handle"></view>
+    <view class="drawer-title">{{brandName}} - AI 诊断</view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{isLoading}}" class="drawer-loading">
+    <view class="loading-spinner"></view>
+    <text>加载中...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view wx:elif="{{hasError}}" class="drawer-error">
+    <text>{{errorMessage}}</text>
+    <button class="retry-btn" bindtap="loadDrawerData">重试</button>
+  </view>
+
+  <!-- 内容区域 -->
+  <view wx:else class="drawer-content">
+    <!-- 指标卡片 -->
+    <view class="metrics-card">
+      <view class="metric-item">
+        <text class="metric-label">平均排名</text>
+        <text class="metric-value">{{avgRank}}</text>
+      </view>
+      <view class="metric-item">
+        <text class="metric-label">情感倾向</text>
+        <text class="metric-value {{sentimentStatus}}">{{sentimentValue}}</text>
+      </view>
+      <view class="metric-item">
+        <text class="metric-label">风险等级</text>
+        <text class="metric-value {{riskLevel}}">{{riskLevelText}}</text>
+      </view>
+    </view>
+
+    <!-- 模型切换 -->
+    <view class="model-switcher">
+      <picker mode="selector" range="{{modelList}}" range-key="name" bindchange="onModelChange">
+        <view class="model-selector">
+          <text>{{currentModelName || '选择模型'}}</text>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 信源列表 -->
+    <view wx:if="{{sourceList.length > 0}}" class="source-list">
+      <view class="section-title">信源引用</view>
+      <view class="source-items">
+        <view wx:for="{{sourceList}}" wx:key="index" class="source-item" bindtap="onSourceTap" data-source="{{item}}">
+          <text class="source-name">{{item.title || item.name}}</text>
+          <text class="source-score">{{item.score}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 内容组件插槽 -->
+    <slot name="content"></slot>
+  </view>
+</view>
