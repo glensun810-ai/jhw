@@ -4,19 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/database.db-shm" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database.db-shm" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/database.db-wal" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database.db-wal" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/data/ai_responses/ai_responses.jsonl" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/data/ai_responses/ai_responses.jsonl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/ec-canvas/ec-canvas.js" beforeDir="false" afterPath="$PROJECT_DIR$/components/ec-canvas/ec-canvas.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fix_results_onload.py" beforeDir="false" afterPath="$PROJECT_DIR$/fix_results_onload.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/results/results.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/results/results.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.wxml" afterDir="false" />
-    </list>
+    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
