@@ -5,7 +5,7 @@ AI响应日志记录包装器
 """
 
 from typing import Optional, Dict, Any
-from wechat_backend.utils.ai_response_logger_enhanced import log_ai_response_enhanced
+from wechat_backend.utils.ai_response_logger_v3 import log_ai_response_enhanced
 from wechat_backend.security.auth import get_current_user_id
 
 

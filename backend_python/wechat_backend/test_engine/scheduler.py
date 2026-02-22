@@ -303,7 +303,7 @@ class TestScheduler:
 
                 # 【新增】记录AI响应到日志（所有平台通用）
                 try:
-                    from utils.ai_response_logger_v2 import log_ai_response
+                    from utils.ai_response_logger_v3 import log_ai_response
                     log_ai_response(
                         question=task.question,
                         response=ai_response.content if ai_response.success else '',
@@ -357,7 +357,7 @@ class TestScheduler:
         
         # 【新增】记录失败的调用
         try:
-            from utils.ai_response_logger_v2 import log_ai_response
+            from utils.ai_response_logger_v3 import log_ai_response
             log_ai_response(
                 question=task.question,
                 response='',
@@ -441,7 +441,7 @@ class TestScheduler:
 
                 # 【新增】记录 AI 响应到日志（所有平台通用）
                 try:
-                    from utils.ai_response_logger_v2 import log_ai_response
+                    from utils.ai_response_logger_v3 import log_ai_response
                     
                     # 构建 metadata，矩阵模式增加额外字段
                     log_metadata = {
@@ -506,7 +506,7 @@ class TestScheduler:
         
         # 【新增】记录失败的调用
         try:
-            from utils.ai_response_logger_v2 import log_ai_response
+            from utils.ai_response_logger_v3 import log_ai_response
             log_ai_response(
                 question=task.question,
                 response='',
