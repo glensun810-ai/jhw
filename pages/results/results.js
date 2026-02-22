@@ -140,8 +140,19 @@ Page({
         null, null, null
       );
     } else {
-      console.error('❌ 无有效数据，加载缓存');
-      this.loadFromCache();
+      console.error('❌ 无有效数据，显示友好提示');
+      // 显示友好提示，并提供返回首页选项
+      wx.showModal({
+        title: '暂无数据',
+        content: '未找到诊断结果数据，请重新运行诊断或返回首页。',
+        confirmText: '返回首页',
+        cancelText: '稍后',
+        success: (res) => {
+          if (res.confirm) {
+            wx.reLaunch({ url: '/pages/index/index' });
+          }
+        }
+      });
     }
   },
 
