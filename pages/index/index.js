@@ -2138,6 +2138,41 @@ Page({
       // 延迟 500ms 跳转，让用户看到完成提示
       setTimeout(() => {
         // 【P0 修复】直接跳转到结果页，而不是 dashboard 页
+        // 确保保存了所有必要的数据
+        const reportData = this.data.reportData || this.data.dashboardData;
+        const executionId = reportData?.executionId || this.data.executionId || Date.now().toString();
+        const brandName = this.data.brandName || reportData?.brand_name || '品牌';
+        
+        // 保存 detailed_results
+        const detailedResults = reportData?.detailed_results || reportData?.results || this.data.latestTestResults || [];
+        if (detailedResults && detailedResults.length > 0) {
+          wx.setStorageSync('latestTestResults_' + executionId, detailedResults);
+          wx.setStorageSync('latestTestResults', detailedResults);
+          console.log('✅ 测试结果已保存到本地存储:', detailedResults.length, '条');
+        }
+        
+        // 保存 competitiveAnalysis
+        const competitiveAnalysis = reportData?.competitiveAnalysis || 
+                                    this.data.latestCompetitiveAnalysis || 
+                                    { brandScores: {}, firstMentionByPlatform: {}, interceptionRisks: [] };
+        wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, competitiveAnalysis);
+        wx.setStorageSync('latestCompetitiveAnalysis', competitiveAnalysis);
+        console.log('✅ 竞品分析已保存');
+        
+        // 保存 brandScores
+        const brandScores = reportData?.brand_scores || 
+                           (reportData?.competitiveAnalysis && reportData.competitiveAnalysis.brandScores) || 
+                           {};
+        if (brandScores && Object.keys(brandScores).length > 0) {
+          wx.setStorageSync('latestBrandScores_' + executionId, brandScores);
+          wx.setStorageSync('latestBrandScores', brandScores);
+          console.log('✅ 品牌分数已保存:', Object.keys(brandScores));
+        }
+        
+        // 保存品牌名称
+        wx.setStorageSync('latestTargetBrand', brandName);
+        console.log('✅ 品牌名称已保存:', brandName);
+        
         wx.redirectTo({
           url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(brandName)}`,
           success: () => {
