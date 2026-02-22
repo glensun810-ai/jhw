@@ -413,6 +413,10 @@ Page({
     if (this.data.particleAnimateId) {
       cancelAnimationFrame(this.data.particleAnimateId);
     }
+    // 停止轮询控制器
+    if (this.pollingController && typeof this.pollingController.stop === 'function') {
+      this.pollingController.stop();
+    }
   },
 
   initParticleCanvas: function() {
@@ -912,201 +916,171 @@ Page({
     this.callBackendBrandTest(brand_list, selectedModels, customQuestions);
   },
 
-  async callBackendBrandTest(brand_list, selectedModels, customQuestions) {
+  async callBackendBrandTest(brandName, selectedModels, customQuestions) {
     wx.showLoading({ title: '启动诊断...' });
 
-    // 载荷标准化：将 selectedModels 对象数组平滑化为纯字符串 ID 数组
-    const processedSelectedModels = selectedModels.map(item => {
-      if (typeof item === 'object' && item !== null) {
-        // 如果 item 是对象，提取其 id 或 value
-        return item.id || item.value || item.name || item.label || '';
-      } else {
-        // 如果是字符串，直接保留
-        return item;
-      }
-    }).filter(id => id !== ''); // 过滤掉空字符串
-
-    // 类型降维处理：将问题数组转换为字符串
-    const custom_question = customQuestions.join(' ');
-
-    // 调试增强：打印请求数据
-    console.log('Request Payload:', {
-      brand_list: brand_list,
-      selectedModels: processedSelectedModels, // 确保格式正确并标准化模型名称
-      custom_question: custom_question  // 修正字段名和类型
-    });
-
     try {
-      const requestData = {
-        brand_list: brand_list,
-        selectedModels: processedSelectedModels, // 确保格式正确并标准化模型名称
-        custom_question: custom_question  // 修正字段名和类型
+      const inputData = {
+        brandName,
+        competitorBrands: this.data.competitorBrands,
+        selectedModels,
+        customQuestions
       };
 
-      console.log('Sending request to API:', requestData);
-
-      const res = await startBrandTestApi(requestData);
-
-      console.log('API Response:', res);
-
-      // 强制兼容多种返回格式
-      const responseData = res.data || res;
-      const executionId = responseData.execution_id || responseData.id || (responseData.data && responseData.data.execution_id);
-
-      if (executionId) {
-        console.log('✅ 战局指令下达成功，执行ID:', executionId);
-        wx.hideLoading(); // 确保配对关闭
-        // 【P0 修复】删除 detail 页后，直接在首页显示进度
-        this.setData({
-          isTesting: true,
-          executionId: executionId,
-          testProgress: 0,
-          progressText: '正在启动 AI 认知诊断...'
-        });
-        
-        // 启动进度轮询
-        if (typeof this.pollTestProgress === 'function') {
-          this.pollTestProgress(executionId);
-        } // 调用跳转
-      } else {
-        throw new Error('未能从响应中提取有效ID');
-      }
-    } catch (err) {
-      // 错误捕获防御：彻底重写 catch(err) 块
-      // 要求：第一时间执行 wx.hideLoading()
-      wx.hideLoading();
-    
-      console.error("Diagnostic Error:", err);
-      console.error("Error details:", err.errMsg, err.data);
-    
-      // 要求：使用 err.data?.error || err.data?.message || err.errMsg 提取信息
-      let extractedError = err.data?.error || err.data?.message || err.errMsg || "任务创建失败";
-    
-      // 如果错误信息包含网络相关错误，提供更友好的提示
-      if (extractedError && (extractedError.includes('request:fail') || extractedError.includes('network'))) {
-        extractedError = '网络连接失败，请检查网络设置或稍后重试';
-      }
-            
-      // 如果是400错误，特别处理AI模型未配置的情况
-      if (typeof extractedError === 'string' && (extractedError.includes('not registered or not configured') || extractedError.includes('API key'))) {
-        extractedError = '所选AI模型未正确配置，请检查API密钥设置或选择其他AI模型\n\n请确保：\n1. 已在 .env 文件中配置相应API密钥\n2. 后端服务已重启加载新配置\n3. API密钥格式正确且有效';
-      }
-    
-      // 要求：使用 wx.showModal 弹出提取到的真实错误信息
-      wx.showModal({
-        title: '启动失败',
-        content: String(extractedError),
-        showCancel: false
-      });
-    
-      this.setData({ isTesting: false });
-    } finally {
-      // 交互修复：确保在所有情况下都隐藏加载提示
-      // 注意：这里不再重复调用 wx.hideLoading()，因为在 catch 块中已经调用了
-      // 避免重复调用可能引起的错误
-    }
-  },
-
-  pollTestProgress(executionId) {
-    // 使用新的 /api/test/status/{id} 接口进行轮询
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await getTaskStatusApi(executionId);
-        console.log("返回数据：",res)//调试用，上线前删除
-        // 【P0 修复】getTaskStatusApi 返回的是 res.data，不是完整 res
-        // 检查是否有有效数据
-        if (res && (res.progress !== undefined || res.stage)) {
-          // 更新调试区域显示原始JSON
-          this.setData({ debugJson: JSON.stringify(res, null, 2) });
-
-          // 使用服务层解析任务状态数据
-          const parsedStatus = parseTaskStatus(res);
-
-          // 更新进度条、状态文本和当前阶段
+      const executionId = await startDiagnosis(
+        inputData,
+        (parsedStatus) => {
           this.setData({
             testProgress: parsedStatus.progress,
             progressText: parsedStatus.statusText,
             currentStage: parsedStatus.stage
           });
-
-          // 如果状态为 completed，停止轮询并处理结果
-          if (parsedStatus.stage === 'completed') {
-            clearInterval(pollInterval);
-
-            // 存储完整的报告数据
-            const reportData = parsedStatus.detailed_results || parsedStatus.results;
-
-            // 使用数据防御机制处理报告数据
-            const processedReportData = this.processReportData(reportData);
-
-            // 生成战略看板数据（第二阶段：聚合引擎）
-            const dashboardData = this.generateDashboardData(processedReportData);
-
-            this.setData({
-              reportData: processedReportData,
-              isTesting: false,
-              testCompleted: true,
-              completedTime: this.getCompletedTimeText(),
-              progressText: '诊断完成，正在生成报告...',
-              // 设置趋势图表数据
-              trendChartData: this.generateTrendChartData(processedReportData),
-              // 设置预测数据
-              predictionData: this.extractPredictionData(processedReportData),
-              // 设置评分数据
-              scoreData: this.extractScoreData(processedReportData),
-              // 设置竞争分析数据
-              competitionData: this.extractCompetitionData(processedReportData),
-              // 设置信源列表数据
-              sourceListData: this.extractSourceListData(processedReportData),
-              // 设置战略看板数据
-              dashboardData: dashboardData
-            });
-
-            wx.showToast({ title: '诊断完成', icon: 'success' });
-            this.renderReport();
-            
-            // 【P0 修复】保存完整数据并跳转到结果页
-            const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];
-            const competitiveAnalysisToSave = parsedStatus.competitive_analysis || this.data.latestCompetitiveAnalysis || {};
-            const brandScoresToSave = parsedStatus.brand_scores || (competitiveAnalysisToSave && competitiveAnalysisToSave.brandScores) || {};
-
-            // 【关键修复】使用 Storage 传递大数据，避免 URL 编码 2KB 限制
-            wx.setStorageSync('last_diagnostic_results', {
-              results: resultsToSave,
-              competitiveAnalysis: competitiveAnalysisToSave,
-              brandScores: brandScoresToSave,
-              targetBrand: this.data.brandName,
-              executionId: executionId,
-              timestamp: Date.now()
-            });
-
-            // 同时保存带 executionId 的缓存（兼容现有逻辑）
-            wx.setStorageSync('latestTestResults_' + executionId, resultsToSave);
-            wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, competitiveAnalysisToSave);
-            wx.setStorageSync('latestBrandScores_' + executionId, brandScoresToSave);
-            wx.setStorageSync('latestTargetBrand', this.data.brandName);
-
-            console.log('✅ 数据已保存到本地存储:', {
-              resultsCount: resultsToSave.length,
-              hasCompetitiveAnalysis: Object.keys(competitiveAnalysisToSave).length > 0,
-              hasBrandScores: Object.keys(brandScoresToSave).length > 0
-            });
-
-            // 【优化】只传递 executionId 和 brandName，不再通过 URL 传递大数据
-            wx.navigateTo({
-              url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
-            });
-          }
-        } else {
-          console.error('获取任务状态失败:', res);
-          this.setData({ progressText: '获取状态失败...' });
+        },
+        (parsedStatus) => {
+          wx.hideLoading();
+          this.handleDiagnosisComplete(parsedStatus, executionId);
+        },
+        (error) => {
+          wx.hideLoading();
+          this.handleDiagnosisError(error);
         }
-      } catch (err) {
-        console.error('获取任务状态异常:', err);
-        this.setData({ progressText: '状态连接异常...' });
-      }
-    }, 2000); // 每2秒轮询一次
+      );
+
+      this.pollingController = createPollingController(
+        executionId,
+        (parsedStatus) => {
+          this.setData({
+            testProgress: parsedStatus.progress,
+            progressText: parsedStatus.statusText,
+            currentStage: parsedStatus.stage,
+            debugJson: JSON.stringify(parsedStatus, null, 2)
+          });
+        },
+        (parsedStatus) => {
+          wx.hideLoading();
+          this.handleDiagnosisComplete(parsedStatus, executionId);
+        },
+        (error) => {
+          wx.hideLoading();
+          this.handleDiagnosisError(error);
+        }
+      );
+
+      this.pollingController.start(2000);
+    } catch (err) {
+      wx.hideLoading();
+      this.handleDiagnosisError(err);
+    }
   },
+
+  /**
+   * 处理诊断完成
+   * @param {Object} parsedStatus - 解析后的状态
+   * @param {string} executionId - 执行 ID
+   */
+  handleDiagnosisComplete(parsedStatus, executionId) {
+    try {
+      // 存储完整的报告数据
+      const reportData = parsedStatus.detailed_results || parsedStatus.results;
+
+      // 使用数据防御机制处理报告数据
+      const processedReportData = processReportData(reportData);
+
+      // 生成战略看板数据（第二阶段：聚合引擎）
+      const dashboardData = generateDashboardData(processedReportData, {
+        brandName: this.data.brandName,
+        competitorBrands: this.data.competitorBrands
+      });
+
+      this.setData({
+        reportData: processedReportData,
+        isTesting: false,
+        testCompleted: true,
+        completedTime: this.getCompletedTimeText(),
+        progressText: '诊断完成，正在生成报告...',
+        // 设置趋势图表数据
+        trendChartData: generateTrendChartData(processedReportData),
+        // 设置预测数据
+        predictionData: extractPredictionData(processedReportData),
+        // 设置评分数据
+        scoreData: extractScoreData(processedReportData),
+        // 设置竞争分析数据
+        competitionData: extractCompetitionData(processedReportData),
+        // 设置信源列表数据
+        sourceListData: extractSourceListData(processedReportData),
+        // 设置战略看板数据
+        dashboardData: dashboardData
+      });
+
+      wx.showToast({ title: '诊断完成', icon: 'success' });
+      this.renderReport();
+
+      // 保存完整数据并跳转到结果页
+      const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];
+      const competitiveAnalysisToSave = parsedStatus.competitive_analysis || this.data.latestCompetitiveAnalysis || {};
+      const brandScoresToSave = parsedStatus.brand_scores || (competitiveAnalysisToSave && competitiveAnalysisToSave.brandScores) || {};
+
+      // 使用 Storage 传递大数据，避免 URL 编码 2KB 限制
+      wx.setStorageSync('last_diagnostic_results', {
+        results: resultsToSave,
+        competitiveAnalysis: competitiveAnalysisToSave,
+        brandScores: brandScoresToSave,
+        targetBrand: this.data.brandName,
+        executionId: executionId,
+        timestamp: Date.now()
+      });
+
+      // 同时保存带 executionId 的缓存（兼容现有逻辑）
+      wx.setStorageSync('latestTestResults_' + executionId, resultsToSave);
+      wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, competitiveAnalysisToSave);
+      wx.setStorageSync('latestBrandScores_' + executionId, brandScoresToSave);
+      wx.setStorageSync('latestTargetBrand', this.data.brandName);
+
+      console.log('✅ 数据已保存到本地存储:', {
+        resultsCount: resultsToSave.length,
+        hasCompetitiveAnalysis: Object.keys(competitiveAnalysisToSave).length > 0,
+        hasBrandScores: Object.keys(brandScoresToSave).length > 0
+      });
+
+      // 只传递 executionId 和 brandName，不再通过 URL 传递大数据
+      wx.navigateTo({
+        url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
+      });
+    } catch (error) {
+      console.error('处理诊断完成失败:', error);
+      wx.showToast({ title: '处理结果失败', icon: 'none' });
+    }
+  },
+
+  /**
+   * 处理诊断错误
+   * @param {Error} error - 错误对象
+   */
+  handleDiagnosisError(error) {
+    console.error("Diagnostic Error:", error);
+
+    let extractedError = error?.data?.error || error?.data?.message || error?.errMsg || error?.message || "任务创建失败";
+
+    // 如果错误信息包含网络相关错误，提供更友好的提示
+    if (extractedError && (String(extractedError).includes('request:fail') || String(extractedError).includes('network'))) {
+      extractedError = '网络连接失败，请检查网络设置或稍后重试';
+    }
+
+    // 如果是 400 错误，特别处理 AI 模型未配置的情况
+    if (typeof extractedError === 'string' && (extractedError.includes('not registered or not configured') || extractedError.includes('API key'))) {
+      extractedError = '所选 AI 模型未正确配置，请检查 API 密钥设置或选择其他 AI 模型\n\n请确保：\n1. 已在 .env 文件中配置相应 API 密钥\n2. 后端服务已重启加载新配置\n3. API 密钥格式正确且有效';
+    }
+
+    wx.showModal({
+      title: '启动失败',
+      content: String(extractedError),
+      showCancel: false
+    });
+
+    this.setData({ isTesting: false });
+  },
+
+
 
   viewDetailedResults: function() {
     // 优先使用新的 reportData，如果不存在则使用旧的 latestTestResults
@@ -1133,122 +1107,7 @@ Page({
     }
   },
 
-  /**
-   * 生成趋势图表数据
-   * @param {Object} reportData - 报告数据
-   * @returns {Object} 图表配置对象
-   */
-  generateTrendChartData: function(reportData) {
-    // 防御性处理：检查参数是否存在且为对象
-    if (!reportData || typeof reportData !== 'object') {
-      console.warn('报告数据无效，无法生成趋势图表');
-      return null;
-    }
 
-    try {
-      // 检查 reportData 是否包含时间序列数据
-      if (reportData.timeSeries && Array.isArray(reportData.timeSeries)) {
-        // 如果有实际的时间序列数据，基于这些数据构建图表配置
-        const timeSeries = reportData.timeSeries;
-        const dates = timeSeries.map(item => item.period || item.date || '未知时间');
-        const values = timeSeries.map(item => item.value || 0);
-
-        // 如果有预测数据，也提取出来
-        const predictions = reportData.prediction && Array.isArray(reportData.prediction.forecast_points)
-          ? reportData.prediction.forecast_points.map(point => point.value || 0)
-          : [];
-
-        return {
-          dates: dates,
-          values: values,
-          predictions: predictions
-        };
-      } else {
-        // 如果没有实际数据，返回默认的示例数据
-        return {
-          dates: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-          values: [30, 45, 60, 75, 80, 85, 90],
-          predictions: [88, 92, 95, 97, 98, 99, 100]
-        };
-      }
-    } catch (error) {
-      console.error('生成趋势图表数据失败:', error);
-      // 返回默认的空数据结构
-      return {
-        dates: [],
-        values: [],
-        predictions: []
-      };
-    }
-  },
-
-  /**
-   * 提取信源列表数据
-   * @param {Object} reportData - 报告数据
-   * @returns {Array} 信源列表
-   */
-  extractSourceListData: function(reportData) {
-    // 防御性处理：检查参数是否存在且为对象
-    if (!reportData || typeof reportData !== 'object') {
-      console.warn('报告数据无效，无法提取信源列表');
-      return [];
-    }
-
-    try {
-      // 检查 reportData 是否包含 sources 属性
-      if (reportData.sources && Array.isArray(reportData.sources)) {
-        // 如果有实际的信源数据，直接返回
-        return reportData.sources.map(source => ({
-          title: source.title || source.name || '未知信源',
-          url: source.url || source.link || '',
-          score: source.score || source.confidence || 0,
-          type: source.type || '未知类型'
-        }));
-      } else if (reportData.results && Array.isArray(reportData.results)) {
-        // 如果没有 sources，尝试从 results 中提取信源信息
-        const sources = [];
-        reportData.results.forEach(result => {
-          if (result.sources && Array.isArray(result.sources)) {
-            result.sources.forEach(source => {
-              sources.push({
-                title: source.title || source.name || '未知信源',
-                url: source.url || source.link || '',
-                score: source.score || source.confidence || 0,
-                type: source.type || '未知类型'
-              });
-            });
-          }
-        });
-        return sources;
-      } else {
-        // 如果没有实际数据，返回默认的示例数据
-        return [
-          {
-            title: '品牌官网',
-            url: 'https://brand.example.com',
-            score: 95,
-            type: '官方'
-          },
-          {
-            title: '行业报告',
-            url: 'https://industry-report.com',
-            score: 87,
-            type: '第三方'
-          },
-          {
-            title: '社交媒体',
-            url: 'https://social-media.com',
-            score: 78,
-            type: 'UGC'
-          }
-        ];
-      }
-    } catch (error) {
-      console.error('提取信源列表数据失败:', error);
-      // 返回空数组作为最后的防线
-      return [];
-    }
-  },
 
   /**
    * 信源点击事件处理
@@ -1272,248 +1131,10 @@ Page({
     }
   },
 
-  /**
-   * 提取评分数据
-   * @param {Object} reportData - 报告数据
-   * @returns {Object} 评分数据
-   */
-  extractScoreData: function(reportData) {
-    // 防御性处理：检查参数是否存在且为对象
-    if (!reportData || typeof reportData !== 'object') {
-      console.warn('报告数据无效，无法提取评分数据');
-      return {};
-    }
 
-    try {
-      // 根据 API 文档规范，查找 scores 属性
-      if (reportData.scores) {
-        // 直接返回 scores 对象，确保字段名符合契约
-        return {
-          accuracy: reportData.scores.accuracy || reportData.scores.Accuracy || 0,
-          completeness: reportData.scores.completeness || reportData.scores.Completeness || 0,
-          relevance: reportData.scores.relevance || reportData.scores.Relevance || 0,
-          security: reportData.scores.security || reportData.scores.Security || 0,
-          sentiment: reportData.scores.sentiment || reportData.scores.Sentiment || 0,
-          competitiveness: reportData.scores.competitiveness || reportData.scores.Competitiveness || 0,
-          authority: reportData.scores.authority || reportData.scores.Authority || 0
-        };
-      } else if (reportData.results && Array.isArray(reportData.results) && reportData.results.length > 0) {
-        // 如果没有直接的 scores 属性，尝试从第一个结果中提取
-        const firstResult = reportData.results[0];
-        if (firstResult.scores) {
-          return {
-            accuracy: firstResult.scores.accuracy || firstResult.scores.Accuracy || 0,
-            completeness: firstResult.scores.completeness || firstResult.scores.Completeness || 0,
-            relevance: firstResult.scores.relevance || firstResult.scores.Relevance || 0,
-            security: firstResult.scores.security || firstResult.scores.Security || 0,
-            sentiment: firstResult.scores.sentiment || firstResult.scores.Sentiment || 0,
-            competitiveness: firstResult.scores.competitiveness || firstResult.scores.Competitiveness || 0,
-            authority: firstResult.scores.authority || firstResult.scores.Authority || 0
-          };
-        }
-      }
 
-      // 如果没有找到评分数据，返回默认值
-      return {
-        accuracy: 0,
-        completeness: 0,
-        relevance: 0,
-        security: 0,
-        sentiment: 0,
-        competitiveness: 0,
-        authority: 0
-      };
-    } catch (error) {
-      console.error('提取评分数据失败:', error);
-      // 返回默认结构作为最后的防线
-      return {
-        accuracy: 0,
-        completeness: 0,
-        relevance: 0,
-        security: 0,
-        sentiment: 0,
-        competitiveness: 0,
-        authority: 0
-      };
-    }
-  },
 
-  /**
-   * 提取竞争分析数据
-   * @param {Object} reportData - 报告数据
-   * @returns {Object} 竞争分析数据
-   */
-  extractCompetitionData: function(reportData) {
-    // 防御性处理：检查参数是否存在且为对象
-    if (!reportData || typeof reportData !== 'object') {
-      console.warn('报告数据无效，无法提取竞争分析数据');
-      return {};
-    }
 
-    try {
-      // 根据 API 文档规范，查找竞争分析相关属性
-      if (reportData.competition) {
-        // 直接返回竞争分析对象
-        return {
-          brand_keywords: reportData.competition.brand_keywords || reportData.competition.brandKeywords || [],
-          shared_keywords: reportData.competition.shared_keywords || reportData.competition.sharedKeywords || [],
-          competitors: reportData.competition.competitors || []
-        };
-      } else if (reportData.competitive_analysis) {
-        // 兼容另一种命名方式
-        return {
-          brand_keywords: reportData.competitive_analysis.brand_keywords || reportData.competitive_analysis.brandKeywords || [],
-          shared_keywords: reportData.competitive_analysis.shared_keywords || reportData.competitive_analysis.sharedKeywords || [],
-          competitors: reportData.competitive_analysis.competitors || []
-        };
-      } else if (reportData.results && Array.isArray(reportData.results) && reportData.results.length > 0) {
-        // 如果没有直接的竞争分析属性，尝试从第一个结果中提取
-        const firstResult = reportData.results[0];
-        if (firstResult.competition) {
-          return {
-            brand_keywords: firstResult.competition.brand_keywords || firstResult.competition.brandKeywords || [],
-            shared_keywords: firstResult.competition.shared_keywords || firstResult.competition.sharedKeywords || [],
-            competitors: firstResult.competition.competitors || []
-          };
-        } else if (firstResult.competitive_analysis) {
-          return {
-            brand_keywords: firstResult.competitive_analysis.brand_keywords || firstResult.competitive_analysis.brandKeywords || [],
-            shared_keywords: firstResult.competitive_analysis.shared_keywords || firstResult.competitive_analysis.sharedKeywords || [],
-            competitors: firstResult.competitive_analysis.competitors || []
-          };
-        }
-      }
-
-      // 如果没有找到竞争分析数据，返回默认值
-      return {
-        brand_keywords: [],
-        shared_keywords: [],
-        competitors: []
-      };
-    } catch (error) {
-      console.error('提取竞争分析数据失败:', error);
-      // 返回默认结构作为最后的防线
-      return {
-        brand_keywords: [],
-        shared_keywords: [],
-        competitors: []
-      };
-    }
-  },
-
-  /**
-   * 处理报告数据，应用数据防御机制
-   * @param {Object} reportData - 原始报告数据
-   * @returns {Object} 处理后的报告数据
-   */
-  processReportData: function(reportData) {
-    // 数据防御：永远假设后端可能返回 null、undefined 或空数组
-    if (!reportData || typeof reportData !== 'object') {
-      console.warn('报告数据无效，返回默认结构');
-      return this.getDefaultReportStructure();
-    }
-
-    // 使用数据防御法则处理各个数据部分
-    return {
-      // 预测数据防御
-      prediction: this.defensiveGet(reportData, 'prediction', {}) || {},
-
-      // 评分数据防御
-      scores: this.defensiveGet(reportData, 'scores', {}) || {},
-
-      // 竞争分析数据防御
-      competition: this.defensiveGet(reportData, 'competition', {}) || {},
-
-      // 信源数据防御
-      sources: this.defensiveGet(reportData, 'sources', []) || [],
-
-      // 趋势数据防御
-      trends: this.defensiveGet(reportData, 'trends', {}) || {},
-
-      // 结果数据防御
-      results: this.defensiveGet(reportData, 'results', []) || [],
-
-      // 原始数据备份
-      original: reportData
-    };
-  },
-
-  /**
-   * 安全获取对象属性，防止 null/undefined 错误
-   * @param {Object} obj - 源对象
-   * @param {String} prop - 属性路径，支持点号分隔如 'data.prediction.points'
-   * @param {*} defaultValue - 默认值
-   * @returns {*} 属性值或默认值
-   */
-  defensiveGet: function(obj, prop, defaultValue = null) {
-    try {
-      // 如果对象为空，返回默认值
-      if (!obj || typeof obj !== 'object') {
-        return defaultValue;
-      }
-
-      // 支持点号路径访问
-      const props = prop.split('.');
-      let result = obj;
-
-      for (const p of props) {
-        if (result == null || typeof result !== 'object') {
-          return defaultValue;
-        }
-        result = result[p];
-
-        // 如果中间某个属性为 null 或 undefined，返回默认值
-        if (result == null) {
-          return defaultValue;
-        }
-      }
-
-      // 如果结果是数组但为空，返回默认值（根据需要调整）
-      if (Array.isArray(defaultValue) && Array.isArray(result) && result.length === 0) {
-        return defaultValue;
-      }
-
-      return result;
-    } catch (error) {
-      console.error(`获取属性 ${prop} 时出错:`, error);
-      return defaultValue;
-    }
-  },
-
-  /**
-   * 获取默认报告结构
-   * @returns {Object} 默认报告结构
-   */
-  getDefaultReportStructure: function() {
-    return {
-      prediction: {
-        forecast_points: [],
-        confidence: 0,
-        trend: 'neutral'
-      },
-      scores: {
-        accuracy: 0,
-        completeness: 0,
-        relevance: 0,
-        security: 0,
-        sentiment: 0,
-        competitiveness: 0
-      },
-      competition: {
-        brand_keywords: [],
-        shared_keywords: [],
-        competitor_keywords: [],
-        competitors: []
-      },
-      sources: [],
-      trends: {
-        historical: [],
-        projected: []
-      },
-      results: [],
-      original: {}
-    };
-  },
 
   /**
    * 渲染报告 - 触发报告展示逻辑
@@ -1530,55 +1151,6 @@ Page({
     // 例如：动画效果、数据可视化初始化等
   },
 
-  /**
-   * 提取预测数据
-   * @param {Object} reportData - 报告数据
-   * @returns {Object} 预测数据
-   */
-  extractPredictionData: function(reportData) {
-    // 防御性处理：检查参数是否存在且为对象
-    if (!reportData || typeof reportData !== 'object') {
-      console.warn('报告数据无效，无法提取预测数据');
-      return {};
-    }
-
-    try {
-      // 根据 API 文档规范，查找预测相关属性
-      if (reportData.prediction) {
-        // 直接返回预测对象
-        return {
-          forecast_points: (reportData.prediction.forecast_points || reportData.prediction.forecastPoints) || [],
-          confidence: reportData.prediction.confidence || 0,
-          trend: reportData.prediction.trend || 'neutral'
-        };
-      } else if (reportData.results && Array.isArray(reportData.results) && reportData.results.length > 0) {
-        // 如果没有直接的预测属性，尝试从第一个结果中提取
-        const firstResult = reportData.results[0];
-        if (firstResult.prediction) {
-          return {
-            forecast_points: (firstResult.prediction.forecast_points || firstResult.prediction.forecastPoints) || [],
-            confidence: firstResult.prediction.confidence || 0,
-            trend: firstResult.prediction.trend || 'neutral'
-          };
-        }
-      }
-
-      // 如果没有找到预测数据，返回默认值
-      return {
-        forecast_points: [],
-        confidence: 0,
-        trend: 'neutral'
-      };
-    } catch (error) {
-      console.error('提取预测数据失败:', error);
-      // 返回默认结构作为最后的防线
-      return {
-        forecast_points: [],
-        confidence: 0,
-        trend: 'neutral'
-      };
-    }
-  },
 
   viewConfigManager: function() {
     wx.navigateTo({ url: '/pages/config-manager/config-manager' });
@@ -1966,54 +1538,6 @@ Page({
     });
   },
 
-  /**
-   * 生成战略看板数据（第二阶段：聚合引擎）
-   * @param {Object} processedReportData - 处理后的报告数据
-   * @returns {Object} 看板数据
-   */
-  generateDashboardData: function(processedReportData) {
-    try {
-      // 提取原始结果数组
-      const rawResults = Array.isArray(processedReportData)
-        ? processedReportData
-        : (processedReportData.detailed_results || processedReportData.results || []);
-
-      if (!rawResults || rawResults.length === 0) {
-        console.warn('没有可用的原始结果数据');
-        return null;
-      }
-
-      // 调用聚合引擎
-      const brandName = this.data.brandName;
-      const competitors = this.data.competitorBrands || [];
-
-      // 【新增】传递后端分析数据
-      const additionalData = {
-        semantic_drift_data: processedReportData.semantic_drift_data || null,
-        semantic_contrast_data: processedReportData.semantic_contrast_data || null,
-        recommendation_data: processedReportData.recommendation_data || null,
-        negative_sources: processedReportData.negative_sources || null,
-        brand_scores: processedReportData.brand_scores || null,
-        competitive_analysis: processedReportData.competitive_analysis || null,
-        overall_score: processedReportData.overall_score || null
-      };
-
-      const dashboardData = aggregateReport(rawResults, brandName, competitors, additionalData);
-
-      // 保存到全局存储（供 dashboard 页面使用）
-      const app = getApp();
-      app.globalData.lastReport = {
-        raw: rawResults,
-        dashboard: dashboardData,
-        competitors: competitors
-      };
-
-      return dashboardData;
-    } catch (error) {
-      console.error('生成战略看板数据失败:', error);
-      return null;
-    }
-  },
 
   /**
    * 跳转到战略看板（第三阶段：麦肯锡看板）
