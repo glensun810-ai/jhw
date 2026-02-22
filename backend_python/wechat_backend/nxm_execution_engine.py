@@ -1413,8 +1413,8 @@ def execute_nxm_test(
         }
         
         semantic_contrast_data = {
-            'official_words': official_words,
-            'ai_generated_words': ai_generated_words
+            'officialWords': official_words,
+            'aiGeneratedWords': ai_generated_words
         }
         
         api_logger.info(f"[Semantic] Drift score: {drift_score}, Severity: {drift_severity}, Missing: {len(missing_keywords)}, Unexpected: {len(unexpected_keywords)}")
