@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="" />
+    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.js" beforeDir="false" afterPath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_P2 级重构进度报告.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/2026-02-22_P2 级重构进度报告.md" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
