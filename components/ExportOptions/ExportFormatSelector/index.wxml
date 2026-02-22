@@ -1,0 +1,66 @@
+<!-- 导出格式选择器模板 -->
+<view class="export-format-selector">
+  <!-- 格式选择 -->
+  <view class="section">
+    <view class="section-title">导出格式</view>
+    <view class="format-options">
+      <view 
+        wx:for="{{formatOptions}}" 
+        wx:key="value"
+        class="format-item {{format === item.value ? 'selected' : ''}}"
+        data-format="{{item.value}}"
+        bindtap="onSelectFormat"
+      >
+        <view class="format-icon">{{item.icon}}</view>
+        <view class="format-label">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 报告级别选择 -->
+  <view class="section">
+    <view class="section-title">报告级别</view>
+    <view class="level-options">
+      <view 
+        wx:for="{{levelOptions}}" 
+        wx:key="value"
+        class="level-item {{level === item.value ? 'selected' : ''}}"
+        data-level="{{item.value}}"
+        bindtap="onSelectLevel"
+      >
+        <view class="level-icon">{{item.icon}}</view>
+        <view class="level-info">
+          <view class="level-label">{{item.label}}</view>
+          <view class="level-desc">{{item.desc}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 章节选择 -->
+  <view class="section">
+    <view class="section-header">
+      <view class="section-title">可选章节</view>
+      <view class="section-actions">
+        <text class="action-btn" bindtap="selectAllSections">全选</text>
+        <text class="action-btn" bindtap="resetSections">重置</text>
+        <text class="expand-btn" bindtap="toggleSectionExpand">{{expandedSection ? '收起' : '展开'}}</text>
+      </view>
+    </view>
+    
+    <view wx:if="{{expandedSection}}" class="section-list">
+      <view 
+        wx:for="{{sectionOptions}}" 
+        wx:key="key"
+        class="section-item {{selectedSections[item.key] ? 'selected' : ''}} {{item.required ? 'required' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="toggleSection"
+      >
+        <view class="section-icon">{{item.icon}}</view>
+        <view class="section-label">{{item.label}}</view>
+        <view wx:if="{{item.required}}" class="required-badge">必选</view>
+        <view wx:elif="{{selectedSections[item.key]}}" class="selected-indicator">✓</view>
+      </view>
+    </view>
+  </view>
+</view>

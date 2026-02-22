@@ -1,0 +1,38 @@
+<!-- 导出进度指示器模板 -->
+<view class="export-progress">
+  <!-- 生成中状态 -->
+  <view wx:if="{{generating}}" class="generating-state">
+    <view class="status-icon">🔄</view>
+    <view class="status-message">{{statusMessage || '正在生成报告...'}}</view>
+    
+    <!-- 进度条 -->
+    <view class="progress-bar">
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{progress}}%"></view>
+      </view>
+      <view class="progress-text">{{progress}}%</view>
+    </view>
+
+    <!-- 取消按钮 -->
+    <button class="cancel-btn" bindtap="onCancel">取消生成</button>
+  </view>
+
+  <!-- 完成状态 -->
+  <view wx:elif="{{progress === 100}}" class="completed-state">
+    <view class="status-icon">✅</view>
+    <view class="status-message">报告生成成功</view>
+    
+    <view class="action-buttons">
+      <button class="view-btn" bindtap="viewResult">查看报告</button>
+      <button class="retry-btn" bindtap="retry">重新生成</button>
+    </view>
+  </view>
+
+  <!-- 失败状态 -->
+  <view wx:if="{{!generating && progress < 100 && statusMessage.includes('失败')}}" class="error-state">
+    <view class="status-icon">❌</view>
+    <view class="status-message">{{statusMessage}}</view>
+    
+    <button class="retry-btn" bindtap="retry">重试</button>
+  </view>
+</view>
