@@ -1,0 +1,127 @@
+/* 流水线进度指示器样式 */
+
+.pipeline-progress {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 32rpx;
+  color: #fff;
+}
+
+/* 统计卡片 */
+.stats-card {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 24rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-value {
+  font-size: 40rpx;
+  font-weight: 600;
+}
+
+.stat-value.success {
+  color: #52c41a;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+}
+
+.stat-value.processing {
+  color: #1890ff;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+}
+
+.stat-value.error {
+  color: #ff4d4f;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+}
+
+.stat-value.pending {
+  color: #f0f0f0;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+}
+
+.stat-label {
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+/* 进度条 */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.progress-track {
+  flex: 1;
+  height: 12rpx;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #fff;
+  border-radius: 6rpx;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  min-width: 80rpx;
+  text-align: right;
+}
+
+/* 状态信息 */
+.status-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.2);
+}
+
+.status-text {
+  font-size: 26rpx;
+  opacity: 0.9;
+}
+
+.total-count {
+  font-size: 24rpx;
+  opacity: 0.7;
+}
+
+/* 连接状态 */
+.connection-status {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  justify-content: center;
+}
+
+.connection-connected,
+.connection-connecting,
+.connection-error {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+.refresh-btn {
+  color: #fff;
+  text-decoration: underline;
+  margin-left: 8rpx;
+}

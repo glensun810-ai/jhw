@@ -1,0 +1,56 @@
+<!-- 流水线进度指示器模板 -->
+<view class="pipeline-progress">
+  <!-- 统计卡片 -->
+  <view class="stats-card">
+    <view class="stat-item">
+      <view class="stat-value success">{{successCount}}</view>
+      <view class="stat-label">成功</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-value processing">{{processingCount}}</view>
+      <view class="stat-label">处理中</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-value error">{{errorCount}}</view>
+      <view class="stat-label">失败</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-value pending">{{pendingCount}}</view>
+      <view class="stat-label">等待</view>
+    </view>
+  </view>
+
+  <!-- 进度条 -->
+  <view class="progress-bar">
+    <view class="progress-track">
+      <view 
+        class="progress-fill" 
+        style="width: {{progressPercent}}%"
+      ></view>
+    </view>
+    <view class="progress-text">{{progressPercent}}%</view>
+  </view>
+
+  <!-- 状态信息 -->
+  <view class="status-info">
+    <text class="status-text">{{getStatusText()}}</text>
+    <text class="total-count">共 {{totalCount}} 项</text>
+  </view>
+
+  <!-- SSE 连接状态 -->
+  <view wx:if="{{sseConnected || sseConnecting || sseError}}" class="connection-status">
+    <view wx:if="{{sseConnected}}" class="connection-connected">
+      <text>🔴</text>
+      <text>实时连接中</text>
+    </view>
+    <view wx:elif="{{sseConnecting}}" class="connection-connecting">
+      <text>🟡</text>
+      <text>连接中...</text>
+    </view>
+    <view wx:elif="{{sseError}}" class="connection-error">
+      <text>⚪</text>
+      <text>连接失败</text>
+      <text class="refresh-btn" bindtap="refreshConnection">重试</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,196 @@
+/* 流水线阶段组件样式 */
+
+.pipeline-stage {
+  background: #fff;
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.pipeline-stage.status-pending {
+  border-left: 4rpx solid #f0f0f0;
+}
+
+.pipeline-stage.status-processing {
+  border-left: 4rpx solid #1890ff;
+}
+
+.pipeline-stage.status-success {
+  border-left: 4rpx solid #52c41a;
+}
+
+.pipeline-stage.status-error {
+  border-left: 4rpx solid #ff4d4f;
+}
+
+/* 阶段头部 */
+.stage-header {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  gap: 16rpx;
+}
+
+.stage-index {
+  width: 48rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  text-align: center;
+  background: #f0f0f0;
+  border-radius: 50%;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #666;
+}
+
+.status-processing .stage-index {
+  background: #1890ff;
+  color: #fff;
+}
+
+.status-success .stage-index {
+  background: #52c41a;
+  color: #fff;
+}
+
+.status-error .stage-index {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+.stage-icon {
+  font-size: 36rpx;
+}
+
+.stage-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.stage-title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.stage-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.stage-status {
+  font-size: 24rpx;
+  color: #666;
+  padding: 8rpx 16rpx;
+  background: #f8f8f8;
+  border-radius: 12rpx;
+}
+
+.status-success .stage-status {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.status-error .stage-status {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+/* 展开内容 */
+.stage-details {
+  padding: 0 24rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  border-top: 1rpx solid #f0f0f0;
+  margin-top: 16rpx;
+  padding-top: 24rpx;
+}
+
+.detail-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.detail-label {
+  font-size: 24rpx;
+  color: #999;
+  min-width: 100rpx;
+}
+
+.detail-value {
+  font-size: 26rpx;
+  color: #333;
+  flex: 1;
+  word-break: break-all;
+}
+
+.error-details {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: #fff2f0;
+  border-radius: 8rpx;
+}
+
+.error-text {
+  font-size: 24rpx;
+  color: #ff4d4f;
+  word-break: break-all;
+}
+
+/* 详情弹窗 */
+.details-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 90%;
+  max-height: 70vh;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.modal-header text {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-close {
+  font-size: 40rpx;
+  color: #999;
+}
+
+.modal-body {
+  padding: 32rpx;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.modal-body text {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}

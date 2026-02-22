@@ -1,0 +1,49 @@
+<!-- 流水线阶段组件模板 -->
+<view class="pipeline-stage {{getStatusClass(item.status)}} {{isExpanded ? 'expanded' : ''}}">
+  <!-- 阶段头部 -->
+  <view class="stage-header" bindtap="toggleExpand">
+    <view class="stage-index">{{index + 1}}</view>
+    <view class="stage-icon">{{getStatusIcon(item.status)}}</view>
+    <view class="stage-info">
+      <text class="stage-title">{{item.title || item.action}}</text>
+      <text class="stage-time">{{formatTime(item.timestamp)}}</text>
+    </view>
+    <view class="stage-status">
+      <text>{{statusText[item.status] || item.status}}</text>
+    </view>
+  </view>
+
+  <!-- 展开内容 -->
+  <view wx:if="{{isExpanded}}" class="stage-details">
+    <view class="detail-row">
+      <text class="detail-label">模型:</text>
+      <text class="detail-value">{{item.model || '-'}}</text>
+    </view>
+    <view class="detail-row">
+      <text class="detail-label">问题:</text>
+      <text class="detail-value">{{item.question || '-'}}</text>
+    </view>
+    <view wx:if="{{item.duration}}" class="detail-row">
+      <text class="detail-label">耗时:</text>
+      <text class="detail-value">{{item.duration}}ms</text>
+    </view>
+    
+    <!-- 错误详情 -->
+    <view wx:if="{{item.status === 'error' && item.error}}" class="error-details">
+      <text class="error-text">{{item.error}}</text>
+    </view>
+  </view>
+
+  <!-- 详情弹窗 -->
+  <view wx:if="{{showDetails}}" class="details-modal" bindtap="closeDetails">
+    <view class="modal-content" catchtap="true">
+      <view class="modal-header">
+        <text>详情</text>
+        <text class="modal-close" bindtap="closeDetails">✕</text>
+      </view>
+      <view class="modal-body">
+        <text>{{item.details || item.response || item.error}}</text>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,185 +1,59 @@
-<!--
-  情报流水线组件 - 增强版
-  功能：实时显示 AI 诊断情报流，支持 SSE 实时更新
--->
-<view class="intelligence-pipeline {{collapsed ? 'collapsed' : ''}} {{sseConnected ? 'sse-connected' : ''}}">
+<!-- 情报流水线主组件模板 -->
+<view class="intelligence-pipeline {{collapsed ? 'collapsed' : ''}}">
   <!-- 头部 -->
   <view class="pipeline-header" bindtap="toggleCollapse">
-    <view class="pipeline-title">
-      <view class="pipeline-icon-wrapper {{isLive ? 'live' : ''}}">
-        <text class="pipeline-icon">⚡</text>
-      </view>
-      <text class="pipeline-text">情报流水线</text>
-      <view class="live-indicator" wx:if="{{isLive}}">
-        <view class="live-dot"></view>
-        <text class="live-text">LIVE</text>
-      </view>
-      <view class="sse-status" wx:if="{{sseConnected}}">
-        <text class="sse-icon">📡</text>
-        <text class="sse-text">实时</text>
-      </view>
+    <view class="header-title">
+      <text>📡 情报流水线</text>
+      <text wx:if="{{isLive}}" class="live-badge">实时</text>
     </view>
-    <view class="pipeline-actions">
-      <view class="pipeline-count-wrapper">
-        <text class="pipeline-count">{{completedCount}}/{{totalCount}}</text>
-        <text class="count-label">完成</text>
-      </view>
-      <view class="collapse-icon-wrapper {{collapsed ? 'collapsed' : ''}}">
-        <text class="collapse-icon">▼</text>
-      </view>
+    <view class="header-action">
+      <text>{{collapsed ? '展开' : '收起'}}</text>
     </view>
   </view>
 
   <!-- 内容区域 -->
-  <view class="pipeline-content" wx:if="{{!collapsed}}">
-    <!-- 情报列表 -->
-    <scroll-view
-      class="pipeline-scroll"
-      scroll-y
+  <view wx:if="{{!collapsed}}" class="pipeline-content">
+    <!-- 进度指示器 -->
+    <pipeline-progress
+      totalCount="{{totalCount}}"
+      successCount="{{successCount}}"
+      processingCount="{{processingCount}}"
+      errorCount="{{errorCount}}"
+      pendingCount="{{pendingCount}}"
+      sseConnected="{{sseConnected}}"
+      sseConnecting="{{sseConnecting}}"
+      sseError="{{sseError}}"
+      bind:progresschange="onProgressChange"
+      bind:refresh="onRefresh"
+    />
+
+    <!-- 流水线列表 -->
+    <scroll-view 
+      class="pipeline-list" 
+      scroll-y 
+      scroll-top="{{scrollTop}}"
       enhanced
-      show-scrollbar="{{false}}"
-      scroll-into-view="{{scrollIntoView}}"
-      scroll-with-animation="true"
-      bindscroll="onScroll"
     >
-      <view class="pipeline-list">
-        <!-- 空状态 -->
-        <view class="empty-state" wx:if="{{items.length === 0 && !isLoading}}">
-          <view class="empty-animation">
-            <view class="empty-icon-wrapper">
-              <text class="empty-icon">📡</text>
-            </view>
-            <text class="empty-text">等待情报数据...</text>
-            <text class="empty-sub">正在连接 AI 模型集群</text>
-            <view class="empty-loading">
-              <view class="loading-ring"></view>
-            </view>
-          </view>
-        </view>
+      <view wx:if="{{isLoading}}" class="loading-state">
+        <view class="loading-spinner"></view>
+        <text>正在获取情报...</text>
+      </view>
 
-        <!-- 加载中状态 -->
-        <view class="loading-state" wx:if="{{isLoading}}">
-          <view class="loading-spinner-wrapper">
-            <view class="loading-spinner"></view>
-            <text class="loading-text">正在获取情报...</text>
-          </view>
-        </view>
+      <view wx:elif="{{items.length === 0}}" class="empty-state">
+        <text>暂无情报</text>
+      </view>
 
-        <!-- 情报项 -->
-        <view
-          class="intelligence-item item-{{item.status}}"
+      <view wx:else>
+        <pipeline-stage
           wx:for="{{items}}"
           wx:key="id"
-          id="item-{{item.id}}"
-          data-item="{{item}}"
-          bindtap="onItemTap"
-        >
-          <!-- 状态指示器 -->
-          <view class="item-status-wrapper">
-            <view class="item-status status-{{item.status}}">
-              <view class="status-ring" wx:if="{{item.status === 'processing'}}"></view>
-              <text class="status-icon" wx:if="{{item.status === 'success'}}">✓</text>
-              <text class="status-icon" wx:if="{{item.status === 'error'}}">!</text>
-            </view>
-            <view class="status-line"></view>
-          </view>
-
-          <!-- 内容卡片 -->
-          <view class="item-card">
-            <!-- 头部：问题和标签 -->
-            <view class="item-header">
-              <view class="item-question-wrapper">
-                <text class="item-question">{{item.question}}</text>
-              </view>
-              <view class="item-badges">
-                <view class="item-badge model-badge">
-                  <text class="badge-icon">{{getModelIcon(item.model)}}</text>
-                  <text class="badge-text">{{item.model}}</text>
-                </view>
-                <view class="item-badge status-badge status-{{item.status}}">
-                  <text class="badge-text">{{statusText[item.status]}}</text>
-                </view>
-              </view>
-            </view>
-
-            <!-- 元信息 -->
-            <view class="item-meta">
-              <view class="item-meta-item">
-                <text class="meta-icon">🕐</text>
-                <text class="meta-text">{{item.time}}</text>
-              </view>
-              <view class="item-meta-item" wx:if="{{item.latency}}">
-                <text class="meta-icon">⚡</text>
-                <text class="meta-text">{{item.latency}}ms</text>
-              </view>
-              <view class="item-meta-item" wx:if="{{item.brand}}">
-                <text class="meta-icon">🏷️</text>
-                <text class="meta-text">{{item.brand}}</text>
-              </view>
-              <view class="item-meta-item" wx:if="{{item.metadata && item.metadata.tokens_used}}">
-                <text class="meta-icon">📊</text>
-                <text class="meta-text">{{item.metadata.tokens_used}} tokens</text>
-              </view>
-            </view>
-
-            <!-- 响应预览（成功状态） -->
-            <view class="item-preview" wx:if="{{item.status === 'success' && item.preview}}">
-              <view class="preview-label">
-                <text class="label-icon">✨</text>
-                <text class="label-text">AI 响应</text>
-              </view>
-              <text class="preview-text">{{item.preview}}</text>
-            </view>
-
-            <!-- 错误信息（错误状态） -->
-            <view class="item-error" wx:if="{{item.status === 'error' && item.error}}">
-              <view class="error-wrapper">
-                <text class="error-icon">⚠️</text>
-                <text class="error-text">{{item.error}}</text>
-              </view>
-              <button class="retry-btn" bindtap="onRetryTap" data-item="{{item}}">
-                <text>🔄</text>
-                <text>重试</text>
-              </button>
-            </view>
-          </view>
-        </view>
-
-        <!-- 底部加载指示器 -->
-        <view class="bottom-loading" wx:if="{{isLoading && items.length > 0}}">
-          <view class="loading-dots">
-            <view class="dot"></view>
-            <view class="dot"></view>
-            <view class="dot"></view>
-          </view>
-        </view>
+          item="{{item}}"
+          index="{{index}}"
+          statusText="{{statusText}}"
+          bind:expand="onStageExpand"
+          bind:viewdetails="onViewDetails"
+        />
       </view>
     </scroll-view>
-
-    <!-- 底部操作栏 -->
-    <view class="pipeline-footer">
-      <view class="footer-stats">
-        <view class="stat-item success">
-          <view class="stat-value">{{successCount}}</view>
-          <view class="stat-label">成功</view>
-        </view>
-        <view class="stat-divider"></view>
-        <view class="stat-item processing">
-          <view class="stat-value">{{processingCount}}</view>
-          <view class="stat-label">进行中</view>
-        </view>
-        <view class="stat-divider"></view>
-        <view class="stat-item error">
-          <view class="stat-value">{{errorCount}}</view>
-          <view class="stat-label">失败</view>
-        </view>
-      </view>
-      <view class="footer-actions">
-        <button class="action-btn clear-btn" bindtap="clearItems" wx:if="{{items.length > 0}}">
-          <text class="btn-icon">🗑️</text>
-          <text class="btn-text">清空</text>
-        </button>
-      </view>
-    </view>
   </view>
 </view>
