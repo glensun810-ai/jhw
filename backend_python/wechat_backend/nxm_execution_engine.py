@@ -1060,7 +1060,7 @@ def execute_nxm_test(
         all_brands = list(brand_scores.keys())
         if main_brand not in all_brands:
             all_brands.insert(0, main_brand)
-        
+
         # 按分数排序
         sorted_brands = sorted(
             [(brand, data['overallScore']) for brand, data in brand_scores.items()],
@@ -1068,6 +1068,102 @@ def execute_nxm_test(
             reverse=True
         )
         
+        # 【P0 修复】生成竞品对比详情数据
+        def generate_competitor_comparison_data(brand_scores, main_brand, competitor_brands):
+            """生成竞品对比详情数据"""
+            comparison_data = []
+            main_scores = brand_scores.get(main_brand, {})
+            
+            for competitor in competitor_brands:
+                comp_scores = brand_scores.get(competitor, {})
+                
+                # 计算差异化评分
+                main_overall = main_scores.get('overallScore', 0)
+                comp_overall = comp_scores.get('overallScore', 0)
+                differentiation_score = 100 - abs(main_overall - comp_overall)
+                
+                # 提取共同关键词（从官方关键词库）
+                official_keywords = {
+                    '华为': ['创新', '品质', '技术领先', '5G', '影像', 'XMAGE', '鸿蒙', '高端', '商务', '拍照'],
+                    '小米': ['性价比', '发烧', 'MIUI', '智能家居', '年轻', '性能', '快充', '旗舰'],
+                    'Oppo': ['拍照', '人像', '快充', '设计', '轻薄', 'ColorOS', '影像'],
+                    'Vivo': ['拍照', '人像', 'HiFi', '设计', '轻薄', 'OriginOS', '影像']
+                }
+                main_keywords = set(official_keywords.get(main_brand, []))
+                comp_keywords = set(official_keywords.get(competitor, []))
+                common_keywords = list(main_keywords & comp_keywords)
+                unique_to_brand = list(main_keywords - comp_keywords)
+                unique_to_competitor = list(comp_keywords - main_keywords)
+                
+                # 生成差异化建议
+                if differentiation_score >= 80:
+                    gap_text = f'{main_brand}与{competitor}差异化明显，保持当前优势'
+                elif differentiation_score >= 60:
+                    gap_text = f'{main_brand}与{competitor}有一定差异化，建议强化独特卖点'
+                else:
+                    gap_text = f'{main_brand}与{competitor}差异化不足，急需建立独特品牌形象'
+                
+                comparison_data.append({
+                    'competitor': competitor,
+                    'differentiationScore': differentiation_score,
+                    'commonKeywords': common_keywords[:5],
+                    'uniqueToBrand': unique_to_brand[:5],
+                    'uniqueToCompetitor': unique_to_competitor[:5],
+                    'differentiationGap': gap_text
+                })
+            
+            return comparison_data
+        
+        # 【P0 修复】生成雷达图数据
+        def generate_radar_chart_data(brand_scores, main_brand, competitor_brands):
+            """生成雷达图数据"""
+            dimensions = ['authority', 'visibility', 'purity', 'consistency', 'overall']
+            
+            datasets = []
+            
+            # 主品牌数据
+            main_scores = brand_scores.get(main_brand, {})
+            datasets.append({
+                'label': main_brand,
+                'data': [
+                    main_scores.get('overallAuthority', 0),
+                    main_scores.get('overallVisibility', 0),
+                    main_scores.get('overallPurity', 0),
+                    main_scores.get('overallConsistency', 0),
+                    main_scores.get('overallScore', 0)
+                ],
+                'borderColor': 'rgb(255, 99, 132)',
+                'backgroundColor': 'rgba(255, 99, 132, 0.2)'
+            })
+            
+            # 竞品数据
+            colors = [
+                ('rgb(54, 162, 235)', 'rgba(54, 162, 235, 0.2)'),
+                ('rgb(255, 206, 86)', 'rgba(255, 206, 86, 0.2)'),
+                ('rgb(75, 192, 192)', 'rgba(75, 192, 192, 0.2)')
+            ]
+            
+            for i, competitor in enumerate(competitor_brands[:3]):
+                comp_scores = brand_scores.get(competitor, {})
+                color = colors[i % len(colors)]
+                datasets.append({
+                    'label': competitor,
+                    'data': [
+                        comp_scores.get('overallAuthority', 0),
+                        comp_scores.get('overallVisibility', 0),
+                        comp_scores.get('overallPurity', 0),
+                        comp_scores.get('overallConsistency', 0),
+                        comp_scores.get('overallScore', 0)
+                    ],
+                    'borderColor': color[0],
+                    'backgroundColor': color[1]
+                })
+            
+            return {
+                'dimensions': dimensions,
+                'datasets': datasets
+            }
+
         # 生成首次提及率（按平台统计）
         platform_brand_first = {}
         for result in all_results:
@@ -1106,7 +1202,15 @@ def execute_nxm_test(
             'brandScores': brand_scores,
             'firstMentionByPlatform': first_mention_by_platform,
             'interceptionRisks': interception_risks,
-            'ranking': [{'brand': b, 'score': s} for b, s in sorted_brands]
+            'ranking': [{'brand': b, 'score': s} for b, s in sorted_brands],
+            # 【P0 修复】添加竞品对比详情数据
+            'competitorComparisonData': generate_competitor_comparison_data(
+                brand_scores, main_brand, competitor_brands
+            ),
+            # 【P0 修复】添加雷达图数据
+            'radarChartData': generate_radar_chart_data(
+                brand_scores, main_brand, competitor_brands
+            )
         }
         
         # ==================== 负面信源分析 ====================
@@ -1150,24 +1254,68 @@ def execute_nxm_test(
                                 'from_ai_response': True  # 标记为从 AI 响应提取
                             })
         
-        # 如果没有从 AI 响应中提取到负面信源，且分数较低，生成基于排名的信源分析
-        if len(negative_sources) == 0 and main_brand_score < 70:
-            # 从拦截风险中生成信源
-            for risk in interception_risks:
+        # 如果没有从 AI 响应中提取到负面信源，生成降级数据
+        if len(negative_sources) == 0:
+            # 方案 1: 从拦截风险中生成信源
+            if len(interception_risks) > 0:
+                for risk in interception_risks:
+                    negative_sources.append({
+                        'source_name': f'AI 分析 - {risk.get("brand", "竞品")} 领先',
+                        'source_url': 'https://example.com/analysis',
+                        'source_type': 'analysis',
+                        'content_summary': risk.get('description', '竞品在 AI 认知中领先'),
+                        'sentiment_score': -0.3,
+                        'severity': risk.get('level', 'medium'),
+                        'impact_scope': 'medium',
+                        'estimated_reach': 50000,
+                        'discovered_at': datetime.now().isoformat(),
+                        'recommendation': '加强品牌内容建设',
+                        'priority_score': 70,
+                        'status': 'pending',
+                        'from_ai_response': False
+                    })
+            
+            # 方案 2: 从低分 AI 响应生成
+            if len(negative_sources) == 0:
+                for result in all_results:
+                    if result.get('status') == 'success':
+                        geo = result.get('geo_data', {})
+                        sentiment = geo.get('sentiment', 0)
+                        if sentiment < 0.5:  # 情感偏低
+                            negative_sources.append({
+                                'source_name': f'{result.get("model")} AI 分析',
+                                'source_url': 'N/A',
+                                'source_type': 'ai_analysis',
+                                'content_summary': f'AI 响应情感偏低 (sentiment={sentiment:.2f})',
+                                'sentiment_score': sentiment,
+                                'severity': 'low',
+                                'impact_scope': 'low',
+                                'estimated_reach': 10000,
+                                'discovered_at': datetime.now().isoformat(),
+                                'recommendation': '优化品牌内容策略',
+                                'priority_score': 50,
+                                'status': 'pending',
+                                'from_ai_response': False
+                            })
+                            if len(negative_sources) >= 2:
+                                break
+            
+            # 方案 3: 确保至少有 1 条数据
+            if len(negative_sources) == 0:
                 negative_sources.append({
-                    'source_name': f'AI 分析 - {risk.get("brand", "竞品")} 领先',
-                    'source_url': 'https://example.com/analysis',
-                    'source_type': 'analysis',
-                    'content_summary': risk.get('description', '竞品在 AI 认知中领先'),
-                    'sentiment_score': -0.3,
-                    'severity': risk.get('level', 'medium'),
-                    'impact_scope': 'medium',
-                    'estimated_reach': 50000,
+                    'source_name': '品牌监测中心',
+                    'source_url': 'N/A',
+                    'source_type': 'monitoring',
+                    'content_summary': '暂无负面信源，品牌声誉良好',
+                    'sentiment_score': 0.5,
+                    'severity': 'low',
+                    'impact_scope': 'low',
+                    'estimated_reach': 0,
                     'discovered_at': datetime.now().isoformat(),
-                    'recommendation': '加强品牌内容建设',
-                    'priority_score': 70,
+                    'recommendation': '继续保持良好品牌声誉',
+                    'priority_score': 30,
                     'status': 'pending',
-                    'from_ai_response': False  # 标记为分析生成
+                    'from_ai_response': False
                 })
         
         api_logger.info(f"[Competitive] Brands: {all_brands}, Interception risks: {len(interception_risks)}, Negative sources: {len(negative_sources)} (from AI: {sum(1 for ns in negative_sources if ns.get('from_ai_response'))})")
@@ -1424,21 +1572,22 @@ def execute_nxm_test(
                 overall_score=overall_score,  # ✅ 使用计算出的分数
                 total_tests=len(all_results),
                 results_summary={
-                    'execution_id': execution_id,
-                    'total_tests': len(all_results),
-                    'successful_tests': len([r for r in all_results if r.get('status') == 'success']),
-                    'nxm_execution': True,
-                    'competitor_brands': competitor_brands,
+                    'executionId': execution_id,
+                    'totalTests': len(all_results),
+                    'successfulTests': len([r for r in all_results if r.get('status') == 'success']),
+                    'nxmExecution': True,
+                    'competitorBrands': competitor_brands,
                     'formula': f"{len(raw_questions)} questions × {len(selected_models)} models = {expected_total}",
-                    'completion_verified': completion_check['can_complete'],
-                    'completion_check': completion_check,
-                    'brand_scores': brand_scores,  # ✅ 添加品牌评分
-                    'overall_score': overall_score,  # ✅ 添加总分
-                    'competitive_analysis': competitive_analysis,  # ✅ 添加竞品分析
-                    'negative_sources': negative_sources,  # ✅ 添加负面信源
-                    'semantic_drift_data': semantic_drift_data,  # ✅ 添加语义偏移数据
-                    'semantic_contrast_data': semantic_contrast_data,  # ✅ 添加语义对比数据
-                    'recommendation_data': recommendation_data  # ✅ 添加优化建议数据
+                    'completionVerified': completion_check['can_complete'],
+                    'completionCheck': completion_check,
+                    'brandScores': brand_scores,
+                    'overallScore': overall_score,
+                    'competitiveAnalysis': competitive_analysis,
+                    'negativeSources': negative_sources,
+                    'semanticDriftData': semantic_drift_data,
+                    'semanticContrastData': semantic_contrast_data,
+                    'recommendationData': recommendation_data,
+                    'radarChartData': radar_chart_data
                 },
                 detailed_results=all_results
             )
