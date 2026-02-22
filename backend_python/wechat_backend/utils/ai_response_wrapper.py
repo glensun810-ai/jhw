@@ -5,7 +5,7 @@ AI响应日志记录包装器
 """
 
 from typing import Optional, Dict, Any
-from wechat_backend.utils.ai_response_logger_v3 import log_ai_response_enhanced
+from wechat_backend.utils.ai_response_logger_v3 import log_ai_response
 from wechat_backend.security.auth import get_current_user_id
 
 
@@ -96,7 +96,7 @@ def log_ai_response_with_context(
         metadata.update(context_info)
 
     # 调用增强版日志记录器（修正函数名）
-    return log_ai_response_enhanced(
+    return log_ai_response(
         question=question,
         response=response,
         platform=platform,

@@ -5,15 +5,15 @@ Integrates scheduler, progress tracking, and AI adapters
 from typing import List, Dict, Any, Callable
 from datetime import datetime
 import uuid
-from ai_adapters import AIAdapterFactory
-from question_system import TestCase
+from wechat_backend.ai_adapters import AIAdapterFactory
+from wechat_backend.question_system import TestCase
 from wechat_backend.test_engine.scheduler import TestScheduler, TestTask, ExecutionStrategy
 from wechat_backend.test_engine.progress_tracker import ProgressTracker, TestProgress
 from wechat_backend.logging_config import api_logger
-from database import save_test_record
+from wechat_backend.database import save_test_record
 from wechat_backend.realtime_analyzer import get_analyzer, create_analyzer
 from wechat_backend.incremental_aggregator import get_aggregator, create_aggregator
-from realtime_persistence import get_persistence_service, create_persistence_service, remove_persistence_service
+from wechat_backend.realtime_persistence import get_persistence_service, create_persistence_service, remove_persistence_service
 
 
 class TestExecutor:

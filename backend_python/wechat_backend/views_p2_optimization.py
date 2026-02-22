@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from flask import Blueprint, jsonify, request
 from wechat_backend.logging_config import api_logger
-from database import DB_PATH
+from wechat_backend.database import DB_PATH
 from wechat_backend.security.sql_protection import SafeDatabaseQuery
 from wechat_backend.security.input_validator import validate_execution_id
 

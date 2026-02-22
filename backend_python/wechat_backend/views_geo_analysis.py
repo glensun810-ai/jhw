@@ -18,12 +18,12 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from flask import Blueprint, jsonify, request
 from wechat_backend.logging_config import api_logger
-from database import DB_PATH
+from wechat_backend.database import DB_PATH
 from wechat_backend.security.sql_protection import SafeDatabaseQuery
 from wechat_backend.security.input_validator import validate_execution_id
 from wechat_backend.analytics.report_generator import ReportGenerator
 from wechat_backend.analytics.impact_calculator import ImpactCalculator
-from models import get_deep_intelligence_result
+from wechat_backend.models import get_deep_intelligence_result
 
 # 创建 Blueprint
 geo_analysis_bp = Blueprint('geo_analysis', __name__)
