@@ -539,7 +539,7 @@ def mvp_deepseek_test():
                 latency = time.time() - start_time
                 
                 # 导入AI响应记录器（增强版V2）
-                from utils.ai_response_logger_v3 import log_ai_response
+                from utils.ai_response_logger_v2 import log_ai_response
                 
                 if ai_response.success:
                     result_item = {
@@ -734,7 +734,7 @@ def mvp_qwen_test():
                 latency = time.time() - start_time
                 
                 # 导入AI响应记录器（增强版V2）
-                from utils.ai_response_logger_v3 import log_ai_response
+                from utils.ai_response_logger_v2 import log_ai_response
                 
                 if ai_response.success:
                     result_item = {
@@ -929,7 +929,7 @@ def mvp_zhipu_test():
                 latency = time.time() - start_time
                 
                 # 导入AI响应记录器（增强版V2）
-                from utils.ai_response_logger_v3 import log_ai_response
+                from utils.ai_response_logger_v2 import log_ai_response
                 
                 if ai_response.success:
                     result_item = {
@@ -1130,7 +1130,7 @@ def mvp_brand_test():
                 latency = time.time() - start_time
                 
                 # 导入AI响应记录器（增强版V2）
-                from utils.ai_response_logger_v3 import log_ai_response
+                from utils.ai_response_logger_v2 import log_ai_response
                 
                 if ai_response.success:
                     result_item = {
@@ -2556,6 +2556,7 @@ def get_task_status_api(task_id):
             'stage': task_status.get('stage', 'init'),  # 【任务 C：前端同步】确保返回当前的 stage 描述
             'status': task_status.get('status', 'init'),
             'results': task_status.get('results', []),
+            'detailed_results': task_status.get('results', []),  # 添加 detailed_results
             'is_completed': task_status.get('status') == 'completed',
             'created_at': task_status.get('start_time', None)
         }
@@ -2573,27 +2574,30 @@ def get_task_status_api(task_id):
                 # 从数据库构建响应
                 response_data = {
                     'task_id': task_id,
-                    'progress': task_status.get('progress', 0),
-                    'stage': task_status.get('stage', 'init'),
-                    'status': task_status.get('status', 'init'),
-                    'results': task_status.get('results', []),
-                    'detailed_results': task_status.get('results', []),  # 添加这一行
-                    'is_completed': task_status.get('status') == 'completed',
-                    'created_at': task_status.get('start_time', None)
-                }
+                    'progress': 100 if db_task_status.is_completed else 50,
+                    'stage': db_task_status.stage.value,
+                    'status': 'completed' if db_task_status.is_completed else 'unknown',
+                    'is_completed': db_task_status.is_completed,
+                    'created_at': db_task_status.created_at,
+                    'from_database': True,  # 标记数据来源
+                    'message': 'Task found in database (server restarted)'
+                
                 # 【P0 修复】从数据库获取完整的 results_summary
+                from wechat_backend.database_core import get_connection
+                import gzip, json
                 conn = get_connection()
                 cursor = conn.cursor()
                 cursor.execute("""
-                               SELECT results_summary, is_summary_compressed
-                               FROM test_records
-                               WHERE id = (SELECT MAX(id)
-                                           FROM test_records
-                                           WHERE json_extract(results_summary, '$.execution_id') = ?)
-                               """, (task_id,))
+                    SELECT results_summary, is_summary_compressed
+                    FROM test_records
+                    WHERE id = (
+                        SELECT MAX(id) FROM test_records 
+                        WHERE json_extract(results_summary, '$.execution_id') = ?
+                    )
+                """, (task_id,))
                 db_row = cursor.fetchone()
                 conn.close()
-
+                
                 # 解析 results_summary
                 if db_row:
                     summary_raw, summary_comp = db_row
@@ -2604,7 +2608,7 @@ def get_task_status_api(task_id):
                             summary = json.loads(summary_raw)
                         else:
                             summary = {}
-
+                        
                         # 提取关键字段
                         response_data['detailed_results'] = summary.get('detailed_results', [])
                         response_data['brand_scores'] = summary.get('brand_scores', {})
@@ -2613,14 +2617,19 @@ def get_task_status_api(task_id):
                         response_data['semantic_drift_data'] = summary.get('semantic_drift_data', {})
                         response_data['recommendation_data'] = summary.get('recommendation_data', {})
                         response_data['overall_score'] = summary.get('overall_score', 0)
-
-                        api_logger.info(f'✅ 从数据库加载 results_summary: {len(summary)} 字段')
+                        print(f'✅ 从数据库加载 results_summary: {len(summary)} 字段')
                     except Exception as e:
-                        api_logger.error(f'❌ 解析 results_summary 失败：{e}')
+                        print(f'❌ 解析 results_summary 失败：{e}')
                         response_data['detailed_results'] = []
                         response_data['brand_scores'] = {}
                         response_data['competitive_analysis'] = {}
-
+                }
+                
+                # 如果任务已完成，尝试获取结果
+                if db_task_status.is_completed:
+                    deep_result = get_deep_intelligence_result(task_id)
+                    if deep_result:
+                        response_data['has_result'] = True
                 
                 api_logger.info(f"[TaskStatus] Found task {task_id} in database")
                 return jsonify(response_data), 200
@@ -2718,9 +2727,6 @@ def get_dashboard_aggregate():
         if execution_id:
             # 从数据库获取测试结果
             from wechat_backend.models import TestRecord
-            from wechat_backend.models import get_task_status as get_db_task_status, get_deep_intelligence_result
-            from wechat_backend.database_core import get_connection  # 添加这一行
-            import gzip, json  # 添加这一行
             record = TestRecord.query.filter_by(execution_id=execution_id).first()
 
             if record and record.results:

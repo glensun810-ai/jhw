@@ -261,7 +261,7 @@ def _get_or_create_logger(execution_id: str) -> Tuple[Any, Path]:
     """
     with _logger_cache_lock:
         if execution_id not in _logger_cache:
-            from wechat_backend.utils.ai_response_logger_v2 import AIResponseLogger
+            from wechat_backend.utils.ai_response_logger_v3 import AIResponseLogger
             logger = AIResponseLogger()
             _logger_cache[execution_id] = logger
             api_logger.info(f"[LogWriter] Created logger for execution_id: {execution_id}, file: {logger.log_file}")
@@ -905,7 +905,7 @@ def execute_nxm_test(
                     
                     # 【重构点 1】记录异常调用到日志文件（同步写入）
                     try:
-                        from wechat_backend.utils.ai_response_logger_v2 import log_ai_response
+                        from wechat_backend.utils.ai_response_logger_v3 import log_ai_response
                         log_record = log_ai_response(
                             question=geo_prompt,
                             response="",

@@ -21,7 +21,7 @@ from typing import Dict, Any, Optional
 import traceback
 
 # 导入原有的 logger
-from wechat_backend.utils.ai_response_logger_v2 import AIResponseLogger, DEFAULT_LOG_FILE, _file_lock
+from wechat_backend.utils.ai_response_logger_v3 import AIResponseLogger, DEFAULT_LOG_FILE, _file_lock
 
 # 日志队列配置
 LOG_QUEUE_MAX_SIZE = 1000  # 队列最大容量
