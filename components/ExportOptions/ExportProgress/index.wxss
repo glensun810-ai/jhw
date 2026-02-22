@@ -1,0 +1,98 @@
+/* 导出进度指示器样式 */
+
+.export-progress {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 48rpx 32rpx;
+  text-align: center;
+}
+
+/* 状态图标 */
+.status-icon {
+  font-size: 100rpx;
+  margin-bottom: 24rpx;
+}
+
+.status-message {
+  font-size: 32rpx;
+  color: #333;
+  margin-bottom: 32rpx;
+}
+
+/* 进度条 */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.progress-track {
+  flex: 1;
+  height: 12rpx;
+  background: #f0f0f0;
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 6rpx;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #667eea;
+  min-width: 80rpx;
+  text-align: left;
+}
+
+/* 按钮 */
+.cancel-btn,
+.view-btn,
+.retry-btn {
+  margin-top: 16rpx;
+  padding: 20rpx 48rpx;
+  border-radius: 32rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.cancel-btn {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.view-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.retry-btn {
+  background: #667eea;
+  color: #fff;
+}
+
+/* 状态容器 */
+.generating-state,
+.completed-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 16rpx;
+  width: 100%;
+}
+
+.action-buttons .view-btn,
+.action-buttons .retry-btn {
+  flex: 1;
+  margin-top: 0;
+}

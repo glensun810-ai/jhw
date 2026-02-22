@@ -1,0 +1,171 @@
+/* 导出格式选择器样式 */
+
+.export-format-selector {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+}
+
+.section {
+  margin-bottom: 32rpx;
+}
+
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.section-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.action-btn,
+.expand-btn {
+  font-size: 24rpx;
+  color: #667eea;
+  padding: 8rpx 16rpx;
+}
+
+/* 格式选择 */
+.format-options {
+  display: flex;
+  gap: 16rpx;
+}
+
+.format-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx;
+  background: #f8f8f8;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
+}
+
+.format-item.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.format-icon {
+  font-size: 48rpx;
+  margin-bottom: 8rpx;
+}
+
+.format-label {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.format-item.selected .format-label {
+  color: #fff;
+}
+
+/* 级别选择 */
+.level-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.level-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  background: #f8f8f8;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
+}
+
+.level-item.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.level-icon {
+  font-size: 40rpx;
+  margin-right: 24rpx;
+}
+
+.level-info {
+  flex: 1;
+}
+
+.level-label {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 4rpx;
+}
+
+.level-desc {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.level-item.selected .level-label,
+.level-item.selected .level-desc {
+  color: #fff;
+}
+
+/* 章节选择 */
+.section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.section-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: #f8f8f8;
+  border-radius: 8rpx;
+  transition: all 0.3s ease;
+}
+
+.section-item.selected {
+  background: #f0f0ff;
+}
+
+.section-item.required {
+  opacity: 0.7;
+}
+
+.section-icon {
+  font-size: 32rpx;
+  margin-right: 16rpx;
+}
+
+.section-label {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333;
+}
+
+.required-badge {
+  font-size: 20rpx;
+  color: #999;
+  padding: 4rpx 12rpx;
+  background: #f0f0f0;
+  border-radius: 8rpx;
+}
+
+.selected-indicator {
+  font-size: 28rpx;
+  color: #667eea;
+  font-weight: 600;
+}
