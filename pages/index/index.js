@@ -2088,17 +2088,28 @@ Page({
           wx.setStorageSync('latestCompetitorBrands', this.data.competitorBrands);
         }
 
-        // 【新增】保存 competitiveAnalysis 和 negativeSources
-        if (reportData.competitiveAnalysis) {
-          wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, reportData.competitiveAnalysis);
-          wx.setStorageSync('latestCompetitiveAnalysis', reportData.competitiveAnalysis);
-          console.log('✅ 竞品分析已保存');
-        }
+        // 【P0 修复】保存 competitiveAnalysis（确保不为空）
+        const competitiveAnalysis = reportData.competitiveAnalysis || 
+                                    this.data.latestCompetitiveAnalysis || 
+                                    { brandScores: {}, firstMentionByPlatform: {}, interceptionRisks: [] };
+        wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, competitiveAnalysis);
+        wx.setStorageSync('latestCompetitiveAnalysis', competitiveAnalysis);
+        console.log('✅ 竞品分析已保存:', competitiveAnalysis.brandScores ? '有 brandScores' : '无 brandScores');
         if (reportData.negativeSources) {
           wx.setStorageSync('latestNegativeSources_' + executionId, reportData.negativeSources);
           console.log('✅ 负面信源已保存');
         }
 
+        // 【P0 修复】保存 brand_scores（最关键！）
+        const brandScores = reportData.brand_scores || 
+                           (reportData.competitiveAnalysis && reportData.competitiveAnalysis.brandScores) ||
+                           {};
+        if (brandScores && Object.keys(brandScores).length > 0) {
+          wx.setStorageSync('latestBrandScores_' + executionId, brandScores);
+          wx.setStorageSync('latestBrandScores', brandScores);
+          console.log('✅ 品牌分数已保存:', Object.keys(brandScores));
+        }
+        
         // 【新增】保存语义偏移数据和优化建议
         if (reportData.semanticDriftData) {
           wx.setStorageSync('latestSemanticDrift_' + executionId, reportData.semanticDriftData);

@@ -80,11 +80,37 @@ Page({
 
       console.log('📥 从 executionId 加载数据:', executionId, brandName);
 
-      // 从本地存储获取数据
+      // 【P0 修复】从本地存储获取数据，优先获取 brand_scores
       const cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
       const cachedBrand = wx.getStorageSync('latestTargetBrand');
       const cachedCompetitors = wx.getStorageSync('latestCompetitorBrands');
-      const cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
+      
+      // 优先从 brand_scores 获取（最准确）
+      let cachedBrandScores = wx.getStorageSync('latestBrandScores_' + executionId);
+      if (!cachedBrandScores || !cachedBrandScores[brandName]) {
+        cachedBrandScores = wx.getStorageSync('latestBrandScores');
+      }
+      
+      // 从 competitiveAnalysis 获取
+      let cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
+      if (!cachedCompetitiveAnalysis || !cachedCompetitiveAnalysis.brandScores) {
+        cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis');
+      }
+      
+      // 如果有 brand_scores，构建 competitiveAnalysis
+      if (cachedBrandScores && Object.keys(cachedBrandScores).length > 0) {
+        if (!cachedCompetitiveAnalysis) {
+          cachedCompetitiveAnalysis = {
+            brandScores: cachedBrandScores,
+            firstMentionByPlatform: {},
+            interceptionRisks: []
+          };
+        } else {
+          cachedCompetitiveAnalysis.brandScores = cachedBrandScores;
+        }
+        console.log('✅ 使用 brand_scores:', Object.keys(cachedBrandScores));
+      }
+      
       const cachedNegativeSources = wx.getStorageSync('latestNegativeSources_' + executionId);
       const cachedSemanticDrift = wx.getStorageSync('latestSemanticDrift_' + executionId);
       const cachedRecommendations = wx.getStorageSync('latestRecommendations_' + executionId);
