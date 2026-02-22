@@ -24,6 +24,14 @@ from wechat_backend.database_connection_pool import (
 
 DB_PATH = Path(__file__).parent.parent / 'database.db'
 
+# ==================== 加密配置 ====================
+# 默认关闭加密，确保系统能先跑起来
+ENCRYPTION_ENABLED = False  # 数据库加密开关
+ENCRYPTION_KEY = None       # 加密密钥（未启用）
+
+# 增加别名兼容
+DATABASE_ENCRYPTION = ENCRYPTION_ENABLED
+
 
 # ==================== 数据库连接 ====================
 
