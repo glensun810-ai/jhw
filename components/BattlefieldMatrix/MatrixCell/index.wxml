@@ -1,0 +1,28 @@
+<!-- 矩阵单元格组件模板 -->
+<view 
+  class="matrix-cell {{getStatusClass()}} {{highlight ? 'highlight' : ''}} {{disabled ? 'disabled' : ''}}"
+  bindtap="onTap"
+>
+  <!-- 状态图标 -->
+  <view class="cell-icon">{{getStatusIcon()}}</view>
+  
+  <!-- 分数 -->
+  <view wx:if="{{cellData.score !== undefined}}" class="cell-score">
+    {{formatScore(cellData.score)}}
+  </view>
+  
+  <!-- 排名 -->
+  <view wx:if="{{cellData.rank}}" class="cell-rank">
+    #{{cellData.rank}}
+  </view>
+  
+  <!-- 品牌名称 -->
+  <view wx:if="{{cellData.brand}}" class="cell-brand">
+    {{cellData.brand}}
+  </view>
+  
+  <!-- 模型名称 -->
+  <view wx:if="{{cellData.model}}" class="cell-model">
+    {{cellData.model}}
+  </view>
+</view>

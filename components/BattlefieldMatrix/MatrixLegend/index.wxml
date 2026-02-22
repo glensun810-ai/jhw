@@ -1,0 +1,25 @@
+<!-- 矩阵图例组件模板 -->
+<view class="matrix-legend">
+  <!-- 视图切换 -->
+  <view class="view-switcher">
+    <view 
+      wx:for="{{viewOptions}}" 
+      wx:key="value"
+      class="view-option {{currentView === item.value ? 'active' : ''}}"
+      data-view="{{item.value}}"
+      bindtap="onViewChange"
+    >
+      <text class="view-icon">{{item.icon}}</text>
+      <text class="view-label">{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- 图例说明 -->
+  <view class="legend-items">
+    <view wx:for="{{legendItems}}" wx:key="status" class="{{getLegendItemClass(item)}}">
+      <view class="legend-icon">{{item.icon}}</view>
+      <view class="legend-label">{{item.label}}</view>
+      <view class="legend-color" style="background: {{item.color}}"></view>
+    </view>
+  </view>
+</view>

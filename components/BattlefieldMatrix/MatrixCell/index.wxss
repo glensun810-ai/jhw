@@ -1,0 +1,85 @@
+/* 矩阵单元格组件样式 */
+
+.matrix-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 120rpx;
+  min-height: 120rpx;
+  padding: 16rpx;
+  background: #f8f8f8;
+  border-radius: 8rpx;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.matrix-cell.highlight {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transform: scale(1.05);
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.4);
+}
+
+.matrix-cell.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 状态样式 */
+.cell-success {
+  background: #f6ffed;
+  border: 2rpx solid #52c41a;
+}
+
+.cell-error {
+  background: #fff2f0;
+  border: 2rpx solid #ff4d4f;
+}
+
+.cell-positive {
+  background: #e6f7ff;
+  border: 2rpx solid #1890ff;
+}
+
+.cell-negative {
+  background: #fff7e6;
+  border: 2rpx solid #fa8c16;
+}
+
+.cell-neutral {
+  background: #f5f5f5;
+  border: 1rpx solid #d9d9d9;
+}
+
+/* 单元格内容 */
+.cell-icon {
+  font-size: 40rpx;
+  margin-bottom: 8rpx;
+}
+
+.cell-score {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.cell-rank {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.cell-brand,
+.cell-model {
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
+  word-break: break-all;
+}
+
+.matrix-cell.highlight .cell-score,
+.matrix-cell.highlight .cell-rank,
+.matrix-cell.highlight .cell-brand,
+.matrix-cell.highlight .cell-model {
+  color: #fff;
+}
