@@ -1,78 +1,49 @@
-<!-- components/BattlefieldMatrix/BattlefieldMatrix.wxml -->
+<!-- 战地矩阵主组件模板 -->
 <view class="battlefield-matrix">
-  <view class="matrix-header">
-    <text class="matrix-title">战略对阵矩阵</text>
-  </view>
+  <!-- 图例 -->
+  <matrix-legend
+    currentView="{{currentView}}"
+    bind:viewchange="onViewChange"
+  />
 
-  <view class="matrix-container" wx:if="{{!loading && matrixData}}">
-    <!-- 横向滚动容器 -->
-    <scroll-view
-      class="horizontal-scroll"
-      scroll-x="true"
-      scroll-with-animation="true"
-      bindscroll="onHorizontalScroll">
+  <!-- 矩阵内容 -->
+  <view wx:if="{{viewMatrixData}}" class="matrix-content {{isAnimating ? 'animating' : ''}}">
+    <!-- 表头 -->
+    <view class="matrix-header">
+      <view class="header-cell"></view>
+      <view wx:for="{{viewMatrixData.headers}}" wx:key="index" class="header-cell">
+        <text>{{item.label}}</text>
+      </view>
+    </view>
 
-      <!-- 表格容器 -->
-      <!-- START: Matrix Render Block - Critical for N×M×Q logic iteration -->
-      <view class="matrix-table {{isAnimating ? 'fade-transition' : ''}}">
-        <!-- 表头行 -->
-        <view class="table-header">
-          <!-- 左上角空白单元格 -->
-          <view class="cell header-cell corner-cell">
-            {{currentView === 'question' ? '品牌' : currentView === 'model' ? '问题' : '诊断问题'}}
-          </view>
-
-          <!-- 品牌/模型头部 -->
-          <view
-            class="cell header-cell brand-header"
-            wx:for="{{viewMatrixData.headers.slice(1)}}"
-            wx:key="index">
-            {{item}}
-          </view>
-        </view>
-
-        <!-- 数据行 -->
-        <view class="table-body">
-          <view
-            class="table-row"
-            wx:for="{{viewMatrixData.rows}}"
-            wx:key="index">
-
-            <!-- 问题/品牌列（固定） -->
-            <view class="cell question-cell">
-              <text class="question-text">{{item[0]}}</text>
-            </view>
-
-            <!-- 评分单元格 -->
-            <view
-              class="cell score-cell"
-              wx:for="{{item.slice(1)}}"
-              wx:for-item="cellData"
-              wx:key="index2"
-              style="background: {{getScoreBgColor(cellData.score)}};"
-              data-brand="{{cellData.brand || (currentView === 'question' ? item[0] : selectedBrand)}}"
-              data-question="{{cellData.question || (currentView === 'model' ? item[0] : selectedQuestion)}}"
-              data-answer="{{cellData.answer}}"
-              data-score="{{cellData.score}}"
-              data-model="{{cellData.model}}"
-              bindtap="showIntelligenceDrawer">
-
-              <text class="score-number number-font">{{cellData.score || '-'}}</text>
-            </view>
-          </view>
+    <!-- 行 -->
+    <view class="matrix-rows">
+      <view wx:for="{{viewMatrixData.rows}}" wx:key="index" class="matrix-row">
+        <view class="row-label">{{item.label}}</view>
+        <view class="row-cells">
+          <matrix-cell
+            wx:for="{{item.cells}}"
+            wx:key="index"
+            wx:for-item="cellData"
+            wx:for-index="cellIndex"
+            cell-data="{{cellData}}"
+            row-index="{{index}}"
+            col-index="{{cellIndex}}"
+            bind:tap="onCellTap"
+          />
         </view>
       </view>
-      <!-- END: Matrix Render Block - Critical for N×M×Q logic iteration -->
-    </scroll-view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!loading && !viewMatrixData}}" class="empty-state">
+    <text>暂无矩阵数据</text>
   </view>
 
   <!-- 加载状态 -->
-  <view class="loading-container" wx:if="{{loading}}">
-    <text class="loading-text">正在构建战略矩阵...</text>
-  </view>
-
-  <!-- 空数据状态 -->
-  <view class="empty-container" wx:if="{{!loading && !matrixData}}">
-    <text class="empty-text">暂无数据</text>
+  <view wx:if="{{loading}}" class="loading-state">
+    <view class="loading-spinner"></view>
+    <text>矩阵加载中...</text>
   </view>
 </view>

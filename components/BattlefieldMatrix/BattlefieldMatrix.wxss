@@ -1,140 +1,103 @@
-/* components/BattlefieldMatrix/BattlefieldMatrix.wxss */
+/* 战地矩阵主组件样式 - 简化版 */
+
 .battlefield-matrix {
-  width: 100%;
-  background-color: #0D1117; /* 深空黑 */
-  padding: 20rpx;
-  box-sizing: border-box;
+  background: #f8f8f8;
+  border-radius: 16rpx;
+  padding: 32rpx;
 }
 
-.matrix-header {
-  margin-bottom: 30rpx;
-  text-align: center;
+/* 矩阵内容 */
+.matrix-content {
+  transition: opacity 0.3s ease;
 }
 
-.matrix-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #00F2FF; /* 高亮科技青 */
-  display: block;
-}
-
-.matrix-container {
-  width: 100%;
-  overflow: hidden;
-}
-
-.horizontal-scroll {
-  width: 100%;
-  white-space: nowrap;
-}
-
-.matrix-table {
-  display: inline-block;
-  min-width: 100%;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.matrix-table.fade-transition {
+.matrix-content.animating {
   opacity: 0.5;
-  transform: translateY(10rpx);
 }
 
-.table-header {
+/* 表头 */
+.matrix-header {
   display: flex;
-  width: fit-content;
-}
-
-.table-body {
-  width: fit-content;
-}
-
-.table-row {
-  display: flex;
-  width: fit-content;
-}
-
-.cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 180rpx;
-  height: 120rpx;
-  padding: 20rpx;
-  box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.05); /* 玻璃拟态背景 */
-  backdrop-filter: blur(10px); /* 玻璃拟态模糊 */
-  border-radius: 8rpx;
-  margin-right: -1px;
-  margin-bottom: -1px;
+  margin-bottom: 16rpx;
 }
 
 .header-cell {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.15) 100%);
-  font-weight: bold;
-  color: #00F2FF; /* 高亮科技青 */
-  font-size: 24rpx;
-}
-
-.corner-cell {
-  min-width: 250rpx;
-  background: linear-gradient(135deg, rgba(0, 242, 255, 0.1) 0%, rgba(0, 242, 255, 0.2) 100%);
-}
-
-.brand-header {
-  min-width: 180rpx;
+  min-width: 120rpx;
+  padding: 16rpx;
   text-align: center;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
 }
 
-.question-cell {
-  min-width: 250rpx;
-  background: linear-gradient(135deg, rgba(0, 242, 255, 0.05) 0%, rgba(0, 242, 255, 0.1) 100%);
-  align-items: flex-start;
+.header-cell:first-child {
+  min-width: 160rpx;
   text-align: left;
 }
 
-.question-text {
-  font-size: 24rpx;
-  color: #e8e8e8;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
+/* 行 */
+.matrix-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.matrix-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.row-label {
+  min-width: 160rpx;
+  padding: 16rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #333;
   text-align: left;
-  word-break: break-all;
 }
 
-.score-cell {
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.row-cells {
+  display: flex;
+  gap: 12rpx;
+  flex: 1;
+  overflow-x: auto;
 }
 
-.score-cell:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 15rpx rgba(0, 242, 255, 0.5);
-}
-
-.score-number {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #e8e8e8;
-  font-family: 'Courier New', 'DIN', monospace; /* 等宽字体 */
-}
-
-.number-font {
-  font-family: 'Courier New', 'DIN', monospace;
-  font-weight: bold;
-}
-
-.loading-container, .empty-container {
+/* 空状态 */
+.empty-state {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 400rpx;
-  width: 100%;
+  height: 300rpx;
+  color: #999;
+  font-size: 28rpx;
 }
 
-.loading-text, .empty-text {
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300rpx;
+  gap: 24rpx;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid #f0f0f0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-state text {
+  color: #999;
   font-size: 28rpx;
-  color: #8c8c8c;
 }
