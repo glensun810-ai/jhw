@@ -1,13 +1,15 @@
 {
-  "timestamp": "2026-02-22T16:10:51.274Z",
+  "timestamp": "2026-02-22T16:37:56.133Z",
   "files": [
     "test-dataProcessorService.js",
-    "test-brandTestService.js"
+    "test-brandTestService.js",
+    "test-pages-index.js",
+    "test-pages-results.js"
   ],
   "results": {
-    "total": 209,
-    "passed": 204,
-    "failed": 5,
-    "coverage": "97.61%"
+    "total": 752,
+    "passed": 730,
+    "failed": 22,
+    "coverage": "97.07%"
   }
 }
