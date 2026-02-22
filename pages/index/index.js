@@ -2137,14 +2137,14 @@ Page({
 
       // 延迟 500ms 跳转，让用户看到完成提示
       setTimeout(() => {
+        // 【P0 修复】直接跳转到结果页，而不是 dashboard 页
         wx.redirectTo({
-          url: '/pages/report/dashboard/index?executionId=' + (reportData.executionId || ''),
+          url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(brandName)}`,
           success: () => {
-            console.log('✅ 诊断完成，已跳转到 Dashboard');
+            console.log('✅ 诊断完成，已跳转到结果页');
           },
           fail: (err) => {
-            console.error('跳转到战略看板失败:', err);
-            // 如果跳转失败，显示提示
+            console.error('跳转到结果页失败:', err);
             wx.showToast({
               title: '请前往"我的"查看报告',
               icon: 'none'
