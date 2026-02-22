@@ -169,9 +169,7 @@ def test_api():
     # 处理CORS预检请求
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-WX-OpenID,X-OpenID,X-Wechat-OpenID')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
+        # CORS 已在 app.py 中统一配置，此处无需重复设置
         return response, 200
     return jsonify({'message': 'Backend is working correctly!', 'status': 'success'})
 

@@ -111,21 +111,22 @@
     <view class="platform-content">
       <view class="radar-chart-container">
         <!-- P2-2 雷达图组件 -->
-        <view class="radar-canvas-wrapper" wx:if="{{radarChartData && radarChartData.length > 0}}">
-          <canvas 
-            type="2d" 
+        <!-- 【关键修复】使用 hidden 替代 wx:if，确保 DOM 节点存在后再渲染 ECharts -->
+        <view class="radar-canvas-wrapper" hidden="{{!(radarChartData && radarChartData.length > 0)}}">
+          <canvas
+            type="2d"
             id="radarChartCanvas"
             class="radar-chart-canvas"
             style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
           ></canvas>
         </view>
-        <view class="radar-placeholder" wx:else>
+        <view class="radar-placeholder" hidden="{{radarChartData && radarChartData.length > 0}}">
           <text>暂无雷达图数据</text>
         </view>
       </view>
-      
+
       <!-- 维度说明 -->
-      <view class="radar-legend" wx:if="{{radarChartData && radarChartData.length > 0}}">
+      <view class="radar-legend" hidden="{{!(radarChartData && radarChartData.length > 0)}}">
         <view class="legend-item">
           <view class="legend-color my-brand"></view>
           <text class="legend-text">{{targetBrand}}</text>
@@ -359,18 +360,19 @@
   <!-- P2-3 关键词云 -->
   <view class="keyword-cloud-section" wx:if="{{keywordCloudData && keywordCloudData.length > 0}}">
     <text class="section-title">☁️ 品牌关键词云</text>
-    
+
     <!-- 词云展示区 -->
+    <!-- 【关键修复】使用 hidden 替代 wx:if，确保 DOM 节点存在后再渲染 ECharts -->
     <view class="word-cloud-container">
-      <view class="word-cloud-wrapper" wx:if="{{wordCloudRendered}}">
-        <canvas 
-          type="2d" 
+      <view class="word-cloud-wrapper" hidden="{{!wordCloudRendered}}">
+        <canvas
+          type="2d"
           id="wordCloudCanvas"
           class="word-cloud-canvas"
           style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;"
         ></canvas>
       </view>
-      <view class="word-cloud-placeholder" wx:else>
+      <view class="word-cloud-placeholder" hidden="{{wordCloudRendered}}">
         <text>正在生成词云...</text>
       </view>
     </view>

@@ -1,30 +1,79 @@
-const { checkServerConnectionApi, startBrandTestApi, getTestProgressApi, getTaskStatusApi } = require('../../api/home');
+// ==================== 模块化重构后引入的服务 ====================
+// 工具函数
 const {
-  processTestProgress,
-  getProgressTextByValue,
-  formatTestResults,
-  formatCompetitiveAnalysis,
-  isTestCompleted,
-  isTestFailed
-} = require('../../services/homeService.js');
+  calculateTotalScore,
+  getTrendIndicator,
+  getCompletedTimeText
+} = require('../../utils/helperUtils');
+
+// 数据处理服务
+const {
+  processReportData,
+  extractPredictionData,
+  extractScoreData,
+  extractCompetitionData,
+  extractSourceListData,
+  generateTrendChartData
+} = require('../../services/dataProcessorService');
+
+// 诊断执行服务
+const {
+  validateInput,
+  buildPayload,
+  startDiagnosis,
+  createPollingController,
+  generateDashboardData
+} = require('../../services/brandTestService');
+
+// 草稿管理服务
+const {
+  saveDraft,
+  restoreDraft,
+  clearDraft,
+  formatDraftQuestions,
+  formatDraftModels,
+  STORAGE_KEY: DRAFT_STORAGE_KEY,
+  DRAFT_EXPIRY
+} = require('../../services/draftService');
+
+// 配置管理服务
+const {
+  saveConfig,
+  loadConfig,
+  deleteConfig,
+  getAllConfigs,
+  configExists,
+  STORAGE_KEY: CONFIG_STORAGE_KEY
+} = require('../../services/configService');
+
+// 导航服务
+const {
+  saveAndNavigateToResults,
+  navigateToDashboard,
+  navigateToReportDetail,
+  navigateToHistory,
+  navigateToConfigManager,
+  navigateToPermissionManager,
+  navigateToDataManager,
+  navigateToUserGuide
+} = require('../../services/navigationService');
+
+// 初始化服务
+const {
+  initializeDefaults,
+  checkServerConnection,
+  loadUserPlatformPreferences,
+  saveUserPlatformPreferences,
+  DEFAULT_AI_PLATFORMS,
+  STORAGE_KEY_PLATFORM_PREFS
+} = require('../../services/initService');
+
+// 原有引入保留
+const { checkServerConnectionApi, startBrandTestApi, getTestProgressApi, getTaskStatusApi } = require('../../api/home');
 const { parseTaskStatus } = require('../../services/taskStatusService');
 const { aggregateReport } = require('../../services/reportAggregator');
 
 const appid = 'wx8876348e089bc261'; // 您的 AppID
-
-/**
- * P2 新增：AI 平台默认配置
- * 原则：默认选择已验证可用的中文平台，降低首诊用户配置门槛
- */
-const DEFAULT_AI_PLATFORMS = {
-  // 国内平台默认选中（已验证可用）
-  domestic: ['DeepSeek', '豆包', '通义千问', '智谱 AI'],
-  // 海外平台默认不选中（网络延迟高，需手动开启）
-  overseas: []
-};
-
-// 存储 Key
-const STORAGE_KEY_PLATFORM_PREFS = 'user_ai_platform_preferences';
 
 Page({
   /**
@@ -147,29 +196,26 @@ Page({
     try {
       console.log('品牌 AI 雷达 - 页面加载完成');
 
-      // 1. 初始化默认值（确保 config.estimate 有默认值）
-      this.initializeDefaults();
+      // 1. 初始化默认值（使用服务）
+      initializeDefaults(this);
 
-      // 2. 检查服务器连接
-      this.checkServerConnection();
+      // 2. 检查服务器连接（使用服务，异步）
+      checkServerConnection(this);
 
-      // 3. 加载用户 AI 平台偏好
-      this.loadUserPlatformPreferences();
+      // 3. 加载用户 AI 平台偏好（使用服务）
+      loadUserPlatformPreferences(this);
       this.updateSelectedModelCount();
       this.updateSelectedQuestionCount();
 
       // 4. 防御性读取 config.estimate（多层保护）
-      // 先检查 this.data 是否存在
-      let estimate = { duration: '30s', steps: 5 }; // 默认值
-      
-      // 使用最安全的访问方式，避免访问 null 对象的属性
+      let estimate = { duration: '30s', steps: 5 };
       if (this.data && this.data.config) {
         const config = this.data.config;
         if (config.estimate && typeof config.estimate === 'object') {
           estimate = config.estimate;
         }
       }
-      
+
       console.log('诊断预估配置:', estimate);
 
       // 5. 检查是否需要立即启动快速搜索
@@ -487,22 +533,20 @@ Page({
   },
 
   /**
-   * P2 修复：保存当前输入到本地存储
+   * P2 修复：保存当前输入到本地存储（使用服务）
    */
   saveCurrentInput: function() {
     const { brandName, currentCompetitor, competitorBrands, customQuestions, domesticAiModels, overseasAiModels } = this.data;
 
-    // 提取选中的国内平台
     const selectedDomestic = domesticAiModels
       .filter(model => model.checked)
       .map(model => model.name);
 
-    // 提取选中的海外平台
     const selectedOverseas = overseasAiModels
       .filter(model => model.checked)
       .map(model => model.name);
 
-    wx.setStorageSync('draft_diagnostic_input', {
+    saveDraft({
       brandName: brandName || '',
       currentCompetitor: currentCompetitor || '',
       competitorBrands: competitorBrands || [],
@@ -513,174 +557,71 @@ Page({
       },
       updatedAt: Date.now()
     });
-
-    console.log('草稿已自动保存', { brandName, currentCompetitor, customQuestionsCount: customQuestions?.length });
   },
 
   /**
-   * P2 修复：从本地存储恢复草稿（增强完整性校验 + 合并 setData）
+   * P2 修复：从本地存储恢复草稿（使用服务）
    */
   restoreDraft: function() {
-    try {
-      const draft = wx.getStorageSync('draft_diagnostic_input');
+    const draft = restoreDraft(); // 调用服务函数
 
-      // 完整性校验：只有数据完整才更新
-      if (draft && draft.brandName) {
-        // 检查是否是 7 天内的草稿
-        const now = Date.now();
-        const draftAge = now - (draft.updatedAt || 0);
-        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    if (draft) {
+      // 恢复自定义问题（确保格式正确）
+      const formattedQuestions = formatDraftQuestions(draft.customQuestions);
 
-        if (draftAge < sevenDays) {
-          // 恢复自定义问题（确保格式正确）
-          const customQuestionsConfig = Array.isArray(draft.customQuestions) ? draft.customQuestions : [];
-          const formattedQuestions = customQuestionsConfig.map(q => ({
-            text: (q && q.text) || '',
-            show: (q && q.show !== undefined) ? q.show : true
-          }));
+      // 恢复 AI 平台选择状态
+      const formattedModels = formatDraftModels(
+        this.data.domesticAiModels.concat(this.data.overseasAiModels),
+        draft.selectedModels
+      );
 
-          // 恢复 AI 平台选择状态
-          const selectedDomestic = draft.selectedModels?.domestic || [];
-          const selectedOverseas = draft.selectedModels?.overseas || [];
+      // 合并为一次 setData，提高性能
+      const updateData = {
+        brandName: draft.brandName || '',
+        currentCompetitor: draft.currentCompetitor || '',
+        competitorBrands: Array.isArray(draft.competitorBrands) ? draft.competitorBrands : [],
+        customQuestions: formattedQuestions.length > 0 ? formattedQuestions : this.data.customQuestions,
+        domesticAiModels: formattedModels.domestic || this.data.domesticAiModels,
+        overseasAiModels: formattedModels.overseas || this.data.overseasAiModels
+      };
 
-          const updatedDomestic = this.data.domesticAiModels.map(model => ({
-            ...model,
-            checked: selectedDomestic.includes(model.name) && !model.disabled
-          }));
+      this.setData(updateData);
+      console.log('草稿已恢复', draft);
 
-          const updatedOverseas = this.data.overseasAiModels.map(model => ({
-            ...model,
-            checked: selectedOverseas.includes(model.name)
-          }));
-
-          // 合并为一次 setData，提高性能
-          const updateData = {
-            brandName: draft.brandName || '',
-            currentCompetitor: draft.currentCompetitor || '',
-            competitorBrands: Array.isArray(draft.competitorBrands) ? draft.competitorBrands : [],
-            customQuestions: formattedQuestions.length > 0 ? formattedQuestions : this.data.customQuestions,
-            domesticAiModels: updatedDomestic,
-            overseasAiModels: updatedOverseas
-          };
-          
-          this.setData(updateData);
-          console.log('草稿已恢复', draft);
-          
-          // 更新计数（这些不依赖 setData，可以直接调用）
-          this.updateSelectedModelCount();
-          this.updateSelectedQuestionCount();
-        } else {
-          // 草稿过期，清除
-          wx.removeStorageSync('draft_diagnostic_input');
-          console.log('草稿已过期，已清除');
-        }
-      }
-    } catch (error) {
-      // 恢复失败不影响页面使用
-      console.error('恢复草稿失败:', error);
+      // 更新计数
+      this.updateSelectedModelCount();
+      this.updateSelectedQuestionCount();
     }
   },
 
   /**
-   * P2 新增：加载用户 AI 平台偏好
+   * P2 新增：加载用户 AI 平台偏好（使用服务）
    * 优先级：用户上次选择 > 默认配置
    */
   loadUserPlatformPreferences: function() {
-    try {
-      // 尝试从存储加载用户偏好
-      const userPrefs = wx.getStorageSync(STORAGE_KEY_PLATFORM_PREFS);
-      
-      let selectedDomestic = [];
-      let selectedOverseas = [];
-      
-      if (userPrefs && typeof userPrefs === 'object') {
-        // 有用户偏好，使用用户上次选择
-        selectedDomestic = userPrefs.domestic || [];
-        selectedOverseas = userPrefs.overseas || [];
-        console.log('加载用户 AI 平台偏好', userPrefs);
-      } else {
-        // 无用户偏好，使用默认配置
-        selectedDomestic = DEFAULT_AI_PLATFORMS.domestic;
-        selectedOverseas = DEFAULT_AI_PLATFORMS.overseas;
-        console.log('使用默认 AI 平台配置', selectedDomestic);
-      }
-      
-      // 更新国内平台选中状态
-      const updatedDomestic = this.data.domesticAiModels.map(model => ({
-        ...model,
-        checked: selectedDomestic.includes(model.name) && !model.disabled
-      }));
-      
-      // 更新海外平台选中状态
-      const updatedOverseas = this.data.overseasAiModels.map(model => ({
-        ...model,
-        checked: selectedOverseas.includes(model.name)
-      }));
-      
-      this.setData({
-        domesticAiModels: updatedDomestic,
-        overseasAiModels: updatedOverseas
-      });
-      
-      // 更新选中数量
-      this.updateSelectedModelCount();
-      
-    } catch (error) {
-      console.error('加载用户平台偏好失败', error);
-      // 降级：使用默认配置
-      this.applyDefaultPlatformConfig();
-    }
+    // 已由 initService.loadUserPlatformPreferences 处理
   },
 
   /**
    * P2 新增：应用默认平台配置
    */
   applyDefaultPlatformConfig: function() {
-    const updatedDomestic = this.data.domesticAiModels.map(model => ({
-      ...model,
-      checked: DEFAULT_AI_PLATFORMS.domestic.includes(model.name) && !model.disabled
-    }));
-    
-    const updatedOverseas = this.data.overseasAiModels.map(model => ({
-      ...model,
-      checked: DEFAULT_AI_PLATFORMS.overseas.includes(model.name)
-    }));
-    
-    this.setData({
-      domesticAiModels: updatedDomestic,
-      overseasAiModels: updatedOverseas
-    });
-    
-    this.updateSelectedModelCount();
+    // 已由 initService 处理
   },
 
   /**
-   * P2 新增：保存用户 AI 平台偏好
+   * P2 新增：保存用户 AI 平台偏好（使用服务）
    */
   saveUserPlatformPreferences: function() {
-    try {
-      // 获取当前选中的平台
-      const selectedDomestic = this.data.domesticAiModels
-        .filter(model => model.checked)
-        .map(model => model.name);
-      
-      const selectedOverseas = this.data.overseasAiModels
-        .filter(model => model.checked)
-        .map(model => model.name);
-      
-      // 保存到存储
-      const userPrefs = {
-        domestic: selectedDomestic,
-        overseas: selectedOverseas,
-        updatedAt: Date.now()
-      };
-      
-      wx.setStorageSync(STORAGE_KEY_PLATFORM_PREFS, userPrefs);
-      console.log('用户 AI 平台偏好已保存', userPrefs);
-      
-    } catch (error) {
-      console.error('保存用户平台偏好失败', error);
-    }
+    const selectedDomestic = this.data.domesticAiModels
+      .filter(model => model.checked)
+      .map(model => model.name);
+
+    const selectedOverseas = this.data.overseasAiModels
+      .filter(model => model.checked)
+      .map(model => model.name);
+
+    saveUserPlatformPreferences({ domestic: selectedDomestic, overseas: selectedOverseas });
   },
 
   addCompetitor: function() {
@@ -1128,20 +1069,32 @@ Page({
             const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];
             const competitiveAnalysisToSave = parsedStatus.competitive_analysis || this.data.latestCompetitiveAnalysis || {};
             const brandScoresToSave = parsedStatus.brand_scores || (competitiveAnalysisToSave && competitiveAnalysisToSave.brandScores) || {};
-            
+
+            // 【关键修复】使用 Storage 传递大数据，避免 URL 编码 2KB 限制
+            wx.setStorageSync('last_diagnostic_results', {
+              results: resultsToSave,
+              competitiveAnalysis: competitiveAnalysisToSave,
+              brandScores: brandScoresToSave,
+              targetBrand: this.data.brandName,
+              executionId: executionId,
+              timestamp: Date.now()
+            });
+
+            // 同时保存带 executionId 的缓存（兼容现有逻辑）
             wx.setStorageSync('latestTestResults_' + executionId, resultsToSave);
             wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, competitiveAnalysisToSave);
             wx.setStorageSync('latestBrandScores_' + executionId, brandScoresToSave);
             wx.setStorageSync('latestTargetBrand', this.data.brandName);
-            
+
             console.log('✅ 数据已保存到本地存储:', {
               resultsCount: resultsToSave.length,
               hasCompetitiveAnalysis: Object.keys(competitiveAnalysisToSave).length > 0,
               hasBrandScores: Object.keys(brandScoresToSave).length > 0
             });
-            
+
+            // 【优化】只传递 executionId 和 brandName，不再通过 URL 传递大数据
             wx.navigateTo({
-              url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}&results=${encodeURIComponent(JSON.stringify(resultsToSave))}&competitiveAnalysis=${encodeURIComponent(JSON.stringify(competitiveAnalysisToSave))}`
+              url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
             });
           }
         } else {
@@ -1160,9 +1113,20 @@ Page({
     const resultsToUse = this.data.reportData || this.data.latestTestResults;
 
     if (resultsToUse) {
-      // 直接传递对象，让微信小程序处理URL编码
+      // 【关键修复】使用 Storage 传递大数据，避免 URL 编码 2KB 限制
+      const executionId = wx.getStorageSync('latestExecutionId') || Date.now().toString();
+      wx.setStorageSync('last_diagnostic_results', {
+        results: resultsToUse,
+        competitiveAnalysis: this.data.latestCompetitiveAnalysis || {},
+        brandScores: this.data.latestBrandScores || {},
+        targetBrand: this.data.brandName,
+        executionId: executionId,
+        timestamp: Date.now()
+      });
+
+      // 【优化】只传递 executionId 和 brandName
       wx.navigateTo({
-        url: `/pages/results/results?results=${encodeURIComponent(JSON.stringify(resultsToUse))}&competitiveAnalysis=${encodeURIComponent(JSON.stringify(this.data.latestCompetitiveAnalysis || {}))}&targetBrand=${encodeURIComponent(this.data.brandName)}`
+        url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
       });
     } else {
       wx.showToast({ title: '暂无诊断结果', icon: 'none' });
@@ -1625,57 +1589,37 @@ Page({
   },
 
   viewDataManager: function() {
-    wx.navigateTo({ url: '/pages/data-manager/data-manager' });
+    navigateToDataManager();
   },
 
   viewUserGuide: function() {
-    wx.navigateTo({ url: '/pages/user-guide/user-guide' });
+    navigateToUserGuide();
   },
 
   viewHistory: function() {
-    // 跳转到个人历史记录页面（查看本地保存的结果，无需登录）
-    wx.navigateTo({ url: '/pages/personal-history/personal-history' });
+    navigateToHistory();
   },
 
   /**
-   * 【新增】查看最新诊断结果
+   * 【新增】查看最新诊断结果（使用服务）
    */
   viewLatestDiagnosis: function() {
     try {
       const executionId = this.data.latestDiagnosisInfo.executionId;
-      const brandList = [
-        this.data.latestDiagnosisInfo.brand,
-        ...(wx.getStorageSync('latestCompetitorBrands') || [])
-      ];
+      const brandName = this.data.latestDiagnosisInfo.brand;
 
       if (executionId) {
-        // 跳转到详情页面
-        // 【P0 修复】删除 detail 页后，进度轮询在首页进行
-        wx.navigateTo({
-          url: url,
-          success: () => {
-            console.log('✅ 跳转到最新诊断结果页面');
-          },
-          fail: (err) => {
-            console.error('❌ 跳转失败:', err);
-            wx.showToast({
-              title: '跳转失败，请重试',
-              icon: 'none'
-            });
-          }
-        });
+        const resultData = {
+          executionId: executionId,
+          brand_name: brandName
+        };
+        navigateToReportDetail(resultData);
       } else {
-        wx.showToast({
-          title: '暂无诊断结果',
-          icon: 'none'
-        });
+        wx.showToast({ title: '暂无诊断结果', icon: 'none' });
       }
     } catch (e) {
       console.error('查看最新诊断结果失败:', e);
-      wx.showToast({
-        title: '操作失败，请重试',
-        icon: 'none'
-      });
+      wx.showToast({ title: '操作失败，请重试', icon: 'none' });
     }
   },
 

@@ -34,20 +34,21 @@ Component({
       return;
     }
 
-    const systemInfo = wx.getSystemInfoSync();
+    // 【兼容性修复】使用 wx.getWindowInfo() 替代已废弃的 wx.getSystemInfoSync()
+    const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
     const query = wx.createSelectorQuery().in(this);
-    
+
     query.select('.ec-canvas').boundingClientRect((res) => {
       if (!res) {
         console.error('无法获取 canvas 元素');
         return;
       }
-      
+
       this.setData({
-        canvasWidth: res.width || systemInfo.windowWidth,
+        canvasWidth: res.width || windowInfo.windowWidth,
         canvasHeight: this.data.height
       });
-      
+
       this.initChart();
     }).exec();
   },
@@ -55,15 +56,17 @@ Component({
   methods: {
     initChart: function() {
       const canvasNode = this.selectComponent('#' + this.data.canvasId);
-      
+
       if (!canvasNode) {
         console.error('无法找到 canvas 节点');
         return;
       }
 
       const ctx = canvasNode.getContext('2d');
-      const dpr = wx.getSystemInfoSync().pixelRatio;
-      
+      // 【兼容性修复】使用 wx.getWindowInfo() 替代已废弃的 wx.getSystemInfoSync()
+      const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+      const dpr = windowInfo.pixelRatio;
+
       canvasNode.width = this.data.canvasWidth * dpr;
       canvasNode.height = this.data.canvasHeight * dpr;
       ctx.scale(dpr, dpr);
