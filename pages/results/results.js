@@ -69,92 +69,232 @@ Page({
 
   /**
    * P0-1 修复：支持从 executionId 加载本地存储的数据
+   * 【关键优化】优先从 Storage 加载，支持后端 API 拉取
+   * 【P0 修复】优化数据加载判断逻辑，避免无效数据走后端 API
    */
   onLoad: function(options) {
     console.log('📥 结果页加载 options:', options);
-    
+
     const executionId = decodeURIComponent(options.executionId || '');
     const brandName = decodeURIComponent(options.brandName || '');
-    
-    // 【多层降级策略】
-    // 1. 优先从本地存储加载
-    const cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
-    const cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
-    const cachedBrandScores = wx.getStorageSync('latestBrandScores_' + executionId);
-    const cachedBrand = wx.getStorageSync('latestTargetBrand');
-    
-    console.log('📦 本地存储数据:', {
-      hasResults: !!cachedResults && cachedResults.length > 0,
-      hasCompetitiveAnalysis: !!cachedCompetitiveAnalysis,
-      hasBrandScores: !!cachedBrandScores
+
+    // 【关键修复】优先从统一 Storage 加载（避免 URL 编码 2KB 限制）
+    const lastDiagnosticResults = wx.getStorageSync('last_diagnostic_results');
+
+    console.log('📦 检查统一 Storage (last_diagnostic_results):', {
+      exists: !!lastDiagnosticResults,
+      executionId: lastDiagnosticResults?.executionId,
+      timestamp: lastDiagnosticResults?.timestamp,
+      hasResults: !!(lastDiagnosticResults?.results && lastDiagnosticResults.results.length > 0),
+      hasBrandScores: !!(lastDiagnosticResults?.brandScores)
     });
-    
-    // 2. 从 URL 参数加载（降级）
+
+    // 【多层降级策略】
     let results = null;
     let competitiveAnalysis = null;
-    
-    if (cachedResults && cachedResults.length > 0) {
-      results = cachedResults;
-    } else if (options.results) {
-      try {
-        results = JSON.parse(decodeURIComponent(options.results));
-      } catch (e) {
-        console.error('解析 URL results 失败:', e);
+    let targetBrand = brandName;
+    let useStorageData = false;
+
+    // 1. 优先从统一 Storage 加载（最新策略）
+    // 【关键修复】确保 Storage 数据包含核心 results 数组且 executionId 匹配
+    if (lastDiagnosticResults &&
+        lastDiagnosticResults.results &&
+        Array.isArray(lastDiagnosticResults.results) &&
+        lastDiagnosticResults.results.length > 0 &&
+        (!executionId || lastDiagnosticResults.executionId === executionId)) {
+      console.log('✅ 从统一 Storage 加载有效数据');
+      results = lastDiagnosticResults.results;
+      competitiveAnalysis = lastDiagnosticResults.competitiveAnalysis || {};
+      targetBrand = lastDiagnosticResults.targetBrand || brandName;
+      useStorageData = true;
+    }
+    // 2. 从 executionId 缓存加载（兼容旧逻辑）
+    else if (executionId) {
+      const cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
+      const cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
+      const cachedBrandScores = wx.getStorageSync('latestBrandScores_' + executionId);
+      const cachedBrand = wx.getStorageSync('latestTargetBrand');
+
+      console.log('📦 本地存储数据 (executionId 缓存):', {
+        hasResults: !!cachedResults && cachedResults.length > 0,
+        hasCompetitiveAnalysis: !!cachedCompetitiveAnalysis,
+        hasBrandScores: !!cachedBrandScores
+      });
+
+      if (cachedResults && Array.isArray(cachedResults) && cachedResults.length > 0) {
+        results = cachedResults;
+        competitiveAnalysis = cachedCompetitiveAnalysis || {};
+        targetBrand = cachedBrand || brandName;
+        useStorageData = true;
       }
     }
-    
-    if (cachedCompetitiveAnalysis) {
-      competitiveAnalysis = cachedCompetitiveAnalysis;
-    } else if (options.competitiveAnalysis) {
-      try {
-        competitiveAnalysis = JSON.parse(decodeURIComponent(options.competitiveAnalysis));
-      } catch (e) {
-        console.error('解析 URL competitiveAnalysis 失败:', e);
-      }
-    }
-    
+
     // 3. 数据完整性检查
-    if (!competitiveAnalysis || !competitiveAnalysis.brandScores) {
-      if (cachedBrandScores) {
-        competitiveAnalysis = {
-          brandScores: cachedBrandScores,
-          firstMentionByPlatform: {},
-          interceptionRisks: []
-        };
+    if (competitiveAnalysis && !competitiveAnalysis.brandScores) {
+      if (lastDiagnosticResults && lastDiagnosticResults.brandScores) {
+        competitiveAnalysis.brandScores = lastDiagnosticResults.brandScores;
       } else {
-        competitiveAnalysis = {
-          brandScores: {},
-          firstMentionByPlatform: {},
-          interceptionRisks: []
-        };
+        competitiveAnalysis.brandScores = {};
       }
     }
-    
-    // 4. 初始化页面
-    if (results && results.length > 0) {
+
+    // 4. 初始化页面或从后端拉取
+    // 【关键修复】只有 Storage 数据有效时才直接使用，否则从后端 API 拉取
+    if (useStorageData && results && results.length > 0) {
+      console.log('✅ 使用本地 Storage 数据初始化页面，结果数量:', results.length);
       this.initializePageWithData(
         results,
-        brandName || cachedBrand || '',
+        targetBrand || '',
         [],
         competitiveAnalysis,
         null, null, null
       );
+    } else if (executionId) {
+      // 【专家调优】从后端 API 拉取最新数据
+      console.log('🔄 Storage 无有效数据，从后端 API 拉取...');
+      this.fetchResultsFromServer(executionId, targetBrand);
     } else {
       console.error('❌ 无有效数据，显示友好提示');
-      // 显示友好提示，并提供返回首页选项
-      wx.showModal({
-        title: '暂无数据',
-        content: '未找到诊断结果数据，请重新运行诊断或返回首页。',
-        confirmText: '返回首页',
-        cancelText: '稍后',
-        success: (res) => {
-          if (res.confirm) {
-            wx.reLaunch({ url: '/pages/index/index' });
-          }
-        }
-      });
+      this.showNoDataModal();
     }
   },
+
+  /**
+   * 【新增】从后端 API 拉取结果数据
+   * 【P0 修复】添加 Token 认证头和 403 自动重试机制
+   */
+  fetchResultsFromServer: function(executionId, brandName, isRetry) {
+    const app = getApp();
+    const baseUrl = app.globalData?.apiUrl || 'http://localhost:5000';
+
+    // 【关键修复】从 Storage 获取最新 Token
+    const accessToken = wx.getStorageSync('access_token') || '';
+
+    console.log('📡 请求后端 API，executionId:', executionId, 'hasToken:', !!accessToken);
+
+    wx.request({
+      url: `${baseUrl}/api/test-progress?executionId=${executionId}`,
+      method: 'GET',
+      header: {
+        'Authorization': accessToken ? 'Bearer ' + accessToken : ''
+      },
+      success: (res) => {
+        console.log('📡 后端 API 响应:', res.data);
+
+        // 【关键修复】处理 403 错误
+        if (res.statusCode === 403) {
+          console.warn('⚠️ Token 已过期 (403)，尝试刷新 Token...');
+          // 如果不是重试，则尝试刷新 Token 后重新请求
+          if (!isRetry && app.globalData?.refreshToken) {
+            app.globalData.refreshToken(() => {
+              console.log('✅ Token 刷新成功，重新请求数据...');
+              // 递归调用自己，传入 isRetry=true
+              this.fetchResultsFromServer(executionId, brandName, true);
+            }, () => {
+              console.error('❌ Token 刷新失败');
+              wx.showModal({
+                title: '登录已过期',
+                content: '请重新登录后再查看结果',
+                confirmText: '去登录',
+                success: (modalRes) => {
+                  if (modalRes.confirm) {
+                    wx.reLaunch({ url: '/pages/login/login' });
+                  }
+                }
+              });
+            });
+          } else {
+            // 已经是重试，仍然 403，显示错误
+            console.error('❌ 刷新 Token 后仍然 403，请重新登录');
+            this.showAuthFailedModal();
+          }
+          return;
+        }
+
+        if (res.statusCode === 200 && res.data && (res.data.detailed_results || res.data.results)) {
+          const resultsToUse = res.data.detailed_results || res.data.results || [];
+          const competitiveAnalysisToUse = res.data.competitive_analysis || {};
+
+          // 保存到 Storage
+          wx.setStorageSync('last_diagnostic_results', {
+            results: resultsToUse,
+            competitiveAnalysis: competitiveAnalysisToUse,
+            brandScores: res.data.brand_scores || competitiveAnalysisToUse.brandScores || {},
+            targetBrand: brandName,
+            executionId: executionId,
+            timestamp: Date.now()
+          });
+
+          // 初始化页面
+          this.initializePageWithData(
+            resultsToUse,
+            brandName,
+            [],
+            competitiveAnalysisToUse,
+            null, null, null
+          );
+
+          wx.showToast({ title: '数据加载成功', icon: 'success' });
+        } else if (res.statusCode === 404) {
+          console.error('❌ 后端 API 返回 404，结果不存在');
+          this.showNoDataModal();
+        } else {
+          console.error('❌ 后端 API 返回数据为空或状态码异常:', res.statusCode);
+          this.showNoDataModal();
+        }
+      },
+      fail: (err) => {
+        console.error('❌ 后端 API 请求失败:', err);
+        // 网络错误或其他错误
+        wx.showModal({
+          title: '加载失败',
+          content: '网络连接失败，请检查网络后重试',
+          confirmText: '重试',
+          cancelText: '取消',
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              this.fetchResultsFromServer(executionId, brandName, false);
+            }
+          }
+        });
+      }
+    });
+  },
+
+  /**
+   * 【新增】显示认证失败提示
+   */
+  showAuthFailedModal: function() {
+    wx.showModal({
+      title: '认证失败',
+      content: '登录已过期，请重新登录',
+      confirmText: '去登录',
+      cancelText: '稍后',
+      success: (res) => {
+        if (res.confirm) {
+          wx.reLaunch({ url: '/pages/login/login' });
+        }
+      }
+    });
+  },
+
+  /**
+   * 【新增】显示无数据提示
+   */
+  showNoDataModal: function() {
+    wx.showModal({
+      title: '暂无数据',
+      content: '未找到诊断结果数据，请重新运行诊断或返回首页。',
+      confirmText: '返回首页',
+      cancelText: '稍后',
+      success: (res) => {
+        if (res.confirm) {
+          wx.reLaunch({ url: '/pages/index/index' });
+        }
+      }
+    });
+  },
+
 
   /**
    * 从 URL 参数加载数据
@@ -328,17 +468,22 @@ Page({
         keywordStats: keywordCloudResult.keywordStats
       }, () => {
         // 数据设置完成后渲染雷达图
+        // 【关键修复】使用 wx.nextTick 确保 DOM 完全渲染后再初始化 ECharts
         if (radarData.length > 0) {
-          setTimeout(() => {
-            this.renderRadarChart();
-          }, 100);
+          wx.nextTick(() => {
+            setTimeout(() => {
+              this.renderRadarChart();
+            }, 300);
+          });
         }
 
         // 渲染词云
         if (keywordCloudResult.keywordCloudData.length > 0) {
-          setTimeout(() => {
-            this.renderWordCloud();
-          }, 200);
+          wx.nextTick(() => {
+            setTimeout(() => {
+              this.renderWordCloud();
+            }, 500);
+          });
         }
       });
 
@@ -872,40 +1017,50 @@ Page({
 
   /**
    * P2-3 修复：渲染关键词云
+   * 【关键修复】添加重试机制和更好的错误处理
    */
-  renderWordCloud: function() {
+  renderWordCloud: function(retryCount) {
     try {
       const query = wx.createSelectorQuery();
       query.select('#wordCloudCanvas')
         .fields({ node: true, size: true })
         .exec((res) => {
           if (!res[0] || !res[0].node) {
-            console.error('Canvas not found');
+            console.error('❌ 词云 Canvas not found');
+            // 【关键修复】重试机制，最多重试 3 次
+            const currentRetry = retryCount || 0;
+            if (currentRetry < 3) {
+              console.log(`🔄 词云 Canvas 未找到，${currentRetry + 1}/3 重试...`);
+              setTimeout(() => {
+                this.renderWordCloud(currentRetry + 1);
+              }, 500);
+            }
             return;
           }
-          
+
           const canvas = res[0].node;
           const ctx = canvas.getContext('2d');
           const dpr = wx.getSystemInfoSync().pixelRatio;
-          
+
           // 设置 Canvas 尺寸
           const width = this.data.wordCloudCanvasWidth;
           const height = this.data.wordCloudCanvasHeight;
           canvas.width = width * dpr;
           canvas.height = height * dpr;
           ctx.scale(dpr, dpr);
-          
+
           const data = this.data.keywordCloudData;
           const centerX = width / 2;
           const centerY = height / 2;
-          
+
           // 清空画布
           ctx.clearRect(0, 0, width, height);
-          
+
           // 绘制词云
           this.drawWordCloud(ctx, centerX, centerY, data);
-          
+
           this.setData({ wordCloudRendered: true });
+          console.log('✅ 词云渲染成功');
         });
     } catch (e) {
       console.error('渲染词云失败:', e);
@@ -1031,44 +1186,54 @@ Page({
 
   /**
    * P2-2 修复：渲染雷达图
+   * 【关键修复】添加重试机制和更好的错误处理
    */
-  renderRadarChart: function() {
+  renderRadarChart: function(retryCount) {
     try {
       const query = wx.createSelectorQuery();
       query.select('#radarChartCanvas')
         .fields({ node: true, size: true })
         .exec((res) => {
           if (!res[0] || !res[0].node) {
-            console.error('Canvas not found');
+            console.error('❌ 雷达图 Canvas not found');
+            // 【关键修复】重试机制，最多重试 3 次
+            const currentRetry = retryCount || 0;
+            if (currentRetry < 3) {
+              console.log(`🔄 雷达图 Canvas 未找到，${currentRetry + 1}/3 重试...`);
+              setTimeout(() => {
+                this.renderRadarChart(currentRetry + 1);
+              }, 500);
+            }
             return;
           }
-          
+
           const canvas = res[0].node;
           const ctx = canvas.getContext('2d');
           const dpr = wx.getSystemInfoSync().pixelRatio;
-          
+
           // 设置 Canvas 尺寸
           const width = this.data.canvasWidth;
           const height = this.data.canvasHeight;
           canvas.width = width * dpr;
           canvas.height = height * dpr;
           ctx.scale(dpr, dpr);
-          
+
           const centerX = width / 2;
           const centerY = height / 2;
           const radius = Math.min(width, height) / 2 - 40;
           const data = this.data.radarChartData;
-          
+
           // 清空画布
           ctx.clearRect(0, 0, width, height);
-          
+
           // 绘制背景网格（5 边形）
           this.drawRadarGrid(ctx, centerX, centerY, radius);
-          
+
           // 绘制数据区域
           this.drawRadarData(ctx, centerX, centerY, radius, data);
-          
+
           this.setData({ radarChartRendered: true });
+          console.log('✅ 雷达图渲染成功');
         });
     } catch (e) {
       console.error('渲染雷达图失败:', e);

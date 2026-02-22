@@ -1,167 +1,203 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-修复结果页数据加载逻辑，实现多层降级策略
+Fix results.js onLoad function - robust version using line-by-line parsing
 """
 
-# 读取文件
 with open('/Users/sgl/PycharmProjects/PythonProject/pages/results/results.js', 'r', encoding='utf-8') as f:
-    content = f.read()
+    lines = f.readlines()
 
-# 修复 1: onLoad 函数
-old_onload = '''onLoad: function(options) {
-    console.log('Results page loaded with options:', options);
+# Find onLoad function start
+onload_start = -1
+for i, line in enumerate(lines):
+    if 'onLoad: function(options)' in line:
+        onload_start = i
+        break
 
-    // P0-1 修复：支持从 executionId 加载本地存储的数据
-    if (options.executionId) {
-      const executionId = decodeURIComponent(options.executionId);
-      const brandName = decodeURIComponent(options.brandName || '');
+if onload_start == -1:
+    print('❌ Could not find onLoad function')
+    exit(1)
 
-      console.log('📥 从 executionId 加载数据:', executionId, brandName);
+# Find the end of onLoad function (next function or closing brace)
+brace_count = 0
+onload_end = -1
+in_onload = False
 
-      // 【P0 修复】从本地存储获取数据，优先获取 brand_scores
-      const cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
-      const cachedBrand = wx.getStorageSync('latestTargetBrand');
-      const cachedCompetitors = wx.getStorageSync('latestCompetitorBrands');
-      
-      // 优先从 brand_scores 获取（最准确）
-      let cachedBrandScores = wx.getStorageSync('latestBrandScores_' + executionId);
-      if (!cachedBrandScores || !cachedBrandScores[brandName]) {
-        cachedBrandScores = wx.getStorageSync('latestBrandScores');
-      }
-      
-      // 从 competitiveAnalysis 获取
-      let cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
-      if (!cachedCompetitiveAnalysis || !cachedCompetitiveAnalysis.brandScores) {
-        cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis');
-      }
-      
-      // 如果有 brand_scores，构建 competitiveAnalysis
-      if (cachedBrandScores && Object.keys(cachedBrandScores).length > 0) {
-        if (!cachedCompetitiveAnalysis) {
-          cachedCompetitiveAnalysis = {
-            brandScores: cachedBrandScores,
-            firstMentionByPlatform: {},
-            interceptionRisks: []
-          };
-        } else {
-          cachedCompetitiveAnalysis.brandScores = cachedBrandScores;
-        }
-        console.log('✅ 使用 brand_scores:', Object.keys(cachedBrandScores));
-      }
-      
-      const cachedNegativeSources = wx.getStorageSync('latestNegativeSources_' + executionId);
-      const cachedSemanticDrift = wx.getStorageSync('latestSemanticDrift_' + executionId);
-      const cachedRecommendations = wx.getStorageSync('latestRecommendations_' + executionId);
-
-      if (cachedResults && Array.isArray(cachedResults) && cachedResults.length > 0) {
-        console.log('✅ 从本地存储加载成功，结果数量:', cachedResults.length);
-
-        // 使用加载的数据初始化页面
-        this.initializePageWithData(
-          cachedResults,
-          cachedBrand || brandName,
-          cachedCompetitors || [],
-          cachedCompetitiveAnalysis,
-          cachedNegativeSources,
-          cachedSemanticDrift,
-          cachedRecommendations
-        );
-      } else {
-        console.warn('⚠️ 本地存储无数据，尝试从 URL 参数加载');
-        this.loadFromUrlParams(options);
-      }
-    } else if (options.results && options.targetBrand) {
-      // 原有的 URL 参数加载逻辑
-      this.loadFromUrlParams(options);
-    } else {
-      // 如果 URL 参数不完整，尝试从本地存储加载
-      this.loadFromCache();
-    }
-  },'''
-
-new_onload = '''onLoad: function(options) {
-    console.log('📥 结果页加载 options:', options);
+for i in range(onload_start, len(lines)):
+    line = lines[i]
+    if 'onLoad:' in line or 'onLoad :' in line:
+        in_onload = True
+        brace_count = 0
     
+    if in_onload:
+        brace_count += line.count('{') - line.count('}')
+        if brace_count <= 0 and '{' in ''.join(lines[onload_start:i+1]):
+            onload_end = i + 1
+            break
+
+if onload_end == -1:
+    print('❌ Could not find end of onLoad function')
+    exit(1)
+
+print(f'Found onLoad function from line {onload_start+1} to {onload_end}')
+
+# Create new onLoad function
+new_onload = '''  /**
+   * P0-1 修复：支持从 executionId 加载本地存储的数据
+   * 【关键优化】优先从 Storage 加载，支持后端 API 拉取
+   */
+  onLoad: function(options) {
+    console.log('📥 结果页加载 options:', options);
+
     const executionId = decodeURIComponent(options.executionId || '');
     const brandName = decodeURIComponent(options.brandName || '');
+
+    // 【关键修复】优先从统一 Storage 加载（避免 URL 编码 2KB 限制）
+    const lastDiagnosticResults = wx.getStorageSync('last_diagnostic_results');
     
-    // 【多层降级策略】
-    // 1. 优先从本地存储加载
-    const cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
-    const cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
-    const cachedBrandScores = wx.getStorageSync('latestBrandScores_' + executionId);
-    const cachedBrand = wx.getStorageSync('latestTargetBrand');
-    
-    console.log('📦 本地存储数据:', {
-      hasResults: !!cachedResults && cachedResults.length > 0,
-      hasCompetitiveAnalysis: !!cachedCompetitiveAnalysis,
-      hasBrandScores: !!cachedBrandScores
+    console.log('📦 检查统一 Storage (last_diagnostic_results):', {
+      exists: !!lastDiagnosticResults,
+      executionId: lastDiagnosticResults?.executionId,
+      timestamp: lastDiagnosticResults?.timestamp
     });
-    
-    // 2. 从 URL 参数加载（降级）
+
+    // 【多层降级策略】
     let results = null;
     let competitiveAnalysis = null;
-    
-    if (cachedResults && cachedResults.length > 0) {
-      results = cachedResults;
-    } else if (options.results) {
-      try {
-        results = JSON.parse(decodeURIComponent(options.results));
-      } catch (e) {
-        console.error('解析 URL results 失败:', e);
+    let targetBrand = brandName;
+
+    // 1. 优先从统一 Storage 加载（最新策略）
+    if (lastDiagnosticResults && lastDiagnosticResults.results) {
+      console.log('✅ 从统一 Storage 加载数据');
+      results = lastDiagnosticResults.results;
+      competitiveAnalysis = lastDiagnosticResults.competitiveAnalysis || {};
+      targetBrand = lastDiagnosticResults.targetBrand || brandName;
+    } 
+    // 2. 从 executionId 缓存加载（兼容旧逻辑）
+    else if (executionId) {
+      const cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
+      const cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
+      const cachedBrandScores = wx.getStorageSync('latestBrandScores_' + executionId);
+      const cachedBrand = wx.getStorageSync('latestTargetBrand');
+
+      console.log('📦 本地存储数据 (executionId 缓存):', {
+        hasResults: !!cachedResults && cachedResults.length > 0,
+        hasCompetitiveAnalysis: !!cachedCompetitiveAnalysis,
+        hasBrandScores: !!cachedBrandScores
+      });
+
+      if (cachedResults && cachedResults.length > 0) {
+        results = cachedResults;
+        competitiveAnalysis = cachedCompetitiveAnalysis || {};
+        targetBrand = cachedBrand || brandName;
       }
     }
-    
-    if (cachedCompetitiveAnalysis) {
-      competitiveAnalysis = cachedCompetitiveAnalysis;
-    } else if (options.competitiveAnalysis) {
-      try {
-        competitiveAnalysis = JSON.parse(decodeURIComponent(options.competitiveAnalysis));
-      } catch (e) {
-        console.error('解析 URL competitiveAnalysis 失败:', e);
-      }
-    }
-    
+
     // 3. 数据完整性检查
     if (!competitiveAnalysis || !competitiveAnalysis.brandScores) {
-      if (cachedBrandScores) {
-        competitiveAnalysis = {
-          brandScores: cachedBrandScores,
-          firstMentionByPlatform: {},
-          interceptionRisks: []
-        };
+      if (lastDiagnosticResults && lastDiagnosticResults.brandScores) {
+        competitiveAnalysis.brandScores = lastDiagnosticResults.brandScores;
       } else {
         competitiveAnalysis = {
-          brandScores: {},
+          brandScores: competitiveAnalysis.brandScores || {},
           firstMentionByPlatform: {},
           interceptionRisks: []
         };
       }
     }
-    
-    // 4. 初始化页面
+
+    // 4. 初始化页面或从后端拉取
     if (results && results.length > 0) {
+      console.log('✅ 使用本地数据初始化页面，结果数量:', results.length);
       this.initializePageWithData(
         results,
-        brandName || cachedBrand || '',
+        targetBrand || '',
         [],
         competitiveAnalysis,
         null, null, null
       );
+    } else if (executionId) {
+      // 【专家调优】从后端 API 拉取最新数据
+      console.log('🔄 本地无数据，从后端 API 拉取...');
+      this.fetchResultsFromServer(executionId, targetBrand);
     } else {
-      console.error('❌ 无有效数据，加载缓存');
-      this.loadFromCache();
+      console.error('❌ 无有效数据，显示友好提示');
+      this.showNoDataModal();
     }
-  },'''
+  },
 
-if old_onload in content:
-    content = content.replace(old_onload, new_onload)
-    print('✅ 修复 1 成功：onLoad 多层降级策略')
-else:
-    print('❌ 修复 1 失败：未找到匹配内容')
+  /**
+   * 【新增】从后端 API 拉取结果数据
+   */
+  fetchResultsFromServer: function(executionId, brandName) {
+    const app = getApp();
+    const baseUrl = app.globalData?.apiUrl || 'http://localhost:5000';
+    
+    wx.request({
+      url: `${baseUrl}/api/test-progress?executionId=${executionId}`,
+      method: 'GET',
+      success: (res) => {
+        console.log('📡 后端 API 响应:', res.data);
+        
+        if (res.data && (res.data.detailed_results || res.data.results)) {
+          const resultsToUse = res.data.detailed_results || res.data.results || [];
+          const competitiveAnalysisToUse = res.data.competitive_analysis || {};
+          
+          // 保存到 Storage
+          wx.setStorageSync('last_diagnostic_results', {
+            results: resultsToUse,
+            competitiveAnalysis: competitiveAnalysisToUse,
+            brandScores: res.data.brand_scores || competitiveAnalysisToUse.brandScores || {},
+            targetBrand: brandName,
+            executionId: executionId,
+            timestamp: Date.now()
+          });
+          
+          // 初始化页面
+          this.initializePageWithData(
+            resultsToUse,
+            brandName,
+            [],
+            competitiveAnalysisToUse,
+            null, null, null
+          );
+          
+          wx.showToast({ title: '数据加载成功', icon: 'success' });
+        } else {
+          console.error('❌ 后端 API 返回数据为空');
+          this.showNoDataModal();
+        }
+      },
+      fail: (err) => {
+        console.error('❌ 后端 API 请求失败:', err);
+        this.showNoDataModal();
+      }
+    });
+  },
 
-# 保存文件
+  /**
+   * 【新增】显示无数据提示
+   */
+  showNoDataModal: function() {
+    wx.showModal({
+      title: '暂无数据',
+      content: '未找到诊断结果数据，请重新运行诊断或返回首页。',
+      confirmText: '返回首页',
+      cancelText: '稍后',
+      success: (res) => {
+        if (res.confirm) {
+          wx.reLaunch({ url: '/pages/index/index' });
+        }
+      }
+    });
+  },
+
+'''
+
+# Replace onLoad function
+new_lines = lines[:onload_start] + [new_onload] + lines[onload_end:]
+
 with open('/Users/sgl/PycharmProjects/PythonProject/pages/results/results.js', 'w', encoding='utf-8') as f:
-    f.write(content)
+    f.writelines(new_lines)
 
-print('✅ 文件保存成功')
+print('✅ results.js onLoad function updated successfully')
