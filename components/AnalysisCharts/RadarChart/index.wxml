@@ -1,0 +1,15 @@
+<!-- 雷达图组件模板 -->
+<view class="radar-chart-container">
+  <view wx:if="{{loading}}" class="loading-state">
+    <view class="loading-spinner"></view>
+    <text>图表加载中...</text>
+  </view>
+  
+  <ec-canvas 
+    wx:else
+    id="radar-chart" 
+    canvas-id="radar-chart"
+    ec="{{radarEc}}"
+    style="height: {{height}}px"
+  />
+</view>
