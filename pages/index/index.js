@@ -1122,12 +1122,26 @@ Page({
             });
 
             wx.showToast({ title: '诊断完成', icon: 'success' });
-            this.renderReport(); // 触发报告渲染
+            this.renderReport();
             
-            // 自动跳转到战略看板（第三阶段：麦肯锡看板）
-            // 【P0 修复】删除 detail 页后，直接跳转到结果页
+            // 【P0 修复】保存完整数据并跳转到结果页
+            const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];
+            const competitiveAnalysisToSave = parsedStatus.competitive_analysis || this.data.latestCompetitiveAnalysis || {};
+            const brandScoresToSave = parsedStatus.brand_scores || (competitiveAnalysisToSave && competitiveAnalysisToSave.brandScores) || {};
+            
+            wx.setStorageSync('latestTestResults_' + executionId, resultsToSave);
+            wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, competitiveAnalysisToSave);
+            wx.setStorageSync('latestBrandScores_' + executionId, brandScoresToSave);
+            wx.setStorageSync('latestTargetBrand', this.data.brandName);
+            
+            console.log('✅ 数据已保存到本地存储:', {
+              resultsCount: resultsToSave.length,
+              hasCompetitiveAnalysis: Object.keys(competitiveAnalysisToSave).length > 0,
+              hasBrandScores: Object.keys(brandScoresToSave).length > 0
+            });
+            
             wx.navigateTo({
-              url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
+              url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}&results=${encodeURIComponent(JSON.stringify(resultsToSave))}&competitiveAnalysis=${encodeURIComponent(JSON.stringify(competitiveAnalysisToSave))}`
             });
           }
         } else {
