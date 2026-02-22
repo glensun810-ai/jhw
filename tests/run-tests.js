@@ -18,8 +18,12 @@ const path = require('path');
 
 // 测试文件列表
 const testFiles = [
+  // 阶段 1：核心服务测试
   'test-dataProcessorService.js',
-  'test-brandTestService.js'
+  'test-brandTestService.js',
+  // 阶段 2：页面组件测试
+  'test-pages-index.js',
+  'test-pages-results.js'
   // 后续添加更多测试文件
 ];
 
