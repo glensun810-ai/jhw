@@ -11,7 +11,8 @@ const { API_ENDPOINTS } = require('../utils/config');
  * @returns {Promise}
  */
 const checkServerConnectionApi = () => {
-  return get(API_ENDPOINTS.SYSTEM.TEST_CONNECTION);
+  // Step 1: 健康检查接口不需要认证，跳过 Token 携带
+  return get(API_ENDPOINTS.SYSTEM.TEST_CONNECTION, {}, { skipAuth: true });
 };
 
 /**

@@ -15,6 +15,15 @@ from typing import List, Dict, Any, Callable, Optional
 from wechat_backend.logging_config import api_logger
 from wechat_backend.nxm_circuit_breaker import get_circuit_breaker
 
+# P1 修复：导入 SSE 推送函数
+try:
+    from wechat_backend.services.sse_service import send_progress_update
+except ImportError:
+    # 如果 SSE 服务不可用，使用空函数替代
+    def send_progress_update(execution_id: str, **kwargs):
+        """空实现的 SSE 推送函数"""
+        pass
+
 
 class NxMScheduler:
     """
@@ -60,10 +69,21 @@ class NxMScheduler:
 
                 # SSE 推送
                 try:
+                    # P1 修复：添加 status_text 参数
+                    status_texts = {
+                        'init': '正在初始化',
+                        'ai_fetching': '正在连接 AI 平台',
+                        'intelligence_analyzing': '正在分析数据',
+                        'competition_analyzing': '正在比对竞品',
+                        'completed': '诊断完成'
+                    }
+                    status_text = status_texts.get(stage, stage)
+                    
                     send_progress_update(
                         execution_id=self.execution_id,
                         progress=progress,
                         stage=stage,
+                        status_text=status_text,
                         completed=completed,
                         total=total
                     )

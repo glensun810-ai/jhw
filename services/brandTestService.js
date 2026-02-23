@@ -15,8 +15,10 @@ const { aggregateReport } = require('./reportAggregator');
 const validateInput = (inputData) => {
   const { brandName, selectedModels, customQuestions } = inputData;
 
-  if (!brandName || brandName.trim() === '') {
-    return { valid: false, message: '请输入您的品牌名称' };
+  // 类型保护：确保 brandName 是字符串，或从对象中提取
+  const nameToTrim = (typeof brandName === 'string') ? brandName : (brandName?.brandName || '');
+  if (!nameToTrim || nameToTrim.trim() === '') {
+    return { valid: false, message: '品牌名称不能为空' };
   }
 
   if (!selectedModels || selectedModels.length === 0) {
@@ -36,12 +38,35 @@ const buildPayload = (inputData) => {
 
   const brand_list = [brandName, ...(competitorBrands || [])];
 
-  const processedSelectedModels = selectedModels.map(item => {
+  // P4 修复：前端逻辑保护 - 只保留后端支持的模型
+  // 后端支持的模型列表：deepseek, qwen, doubao, chatgpt, gemini, zhipu, wenxin
+  const SUPPORTED_MODELS = ['deepseek', 'qwen', 'doubao', 'chatgpt', 'gemini', 'zhipu', 'wenxin'];
+  
+  // 每个模型对象应该包含 name 字段
+  const processedSelectedModels = (selectedModels || []).map(item => {
     if (typeof item === 'object' && item !== null) {
-      return item.id || item.value || item.name || '';
+      // 保持对象格式，优先使用 id 字段（英文），其次使用 name（中文）
+      const modelName = (item.id || item.name || item.value || '').toLowerCase();
+      return {
+        name: modelName,
+        checked: item.checked !== undefined ? item.checked : true
+      };
+    } else if (typeof item === 'string') {
+      // 如果是字符串，转为对象
+      return { name: item.toLowerCase(), checked: true };
     }
-    return item;
-  }).filter(id => id !== '');
+    return null;
+  })
+  // 过滤掉 null、空字符串和后端不支持的模型
+  .filter(item => {
+    if (!item || !item.name) return false;
+    // 检查是否在后端支持的模型列表中
+    const isSupported = SUPPORTED_MODELS.includes(item.name);
+    if (!isSupported) {
+      console.warn(`⚠️  过滤掉后端不支持的模型：${item.name}`);
+    }
+    return isSupported;
+  });
 
   const custom_question = (customQuestions || []).join(' ');
 
@@ -100,6 +125,10 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
   let isStopped = false;
   const maxDuration = 5 * 60 * 1000; // 5 分钟超时
   const startTime = Date.now();
+  
+  // Step 1: 错误计数器，实现熔断机制
+  let consecutiveAuthErrors = 0;
+  const MAX_AUTH_ERRORS = 2;  // 连续 2 次 403/401 错误即熔断
 
   const stop = () => {
     if (pollInterval) {
@@ -109,7 +138,36 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
     }
   };
 
-  const start = (interval = 2000) => {
+  const start = (interval = 800, immediate = true) => {
+    // P2 优化：立即触发第一次轮询，减少等待延迟
+    if (immediate) {
+      (async () => {
+        try {
+          const res = await getTaskStatusApi(executionId);
+          if (res && (res.progress !== undefined || res.stage)) {
+            const parsedStatus = parseTaskStatus(res);
+            if (onProgress) onProgress(parsedStatus);
+
+            // 如果已完成，直接触发完成回调
+            if (parsedStatus.stage === 'completed' && onComplete) {
+              stop();
+              onComplete(parsedStatus);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('立即轮询失败:', err);
+          // Step 1: 检查是否为认证错误
+          if (err.statusCode === 403 || err.statusCode === 401 || err.isAuthError) {
+            stop();
+            if (onError) onError(new Error('权限验证失败，请重新登录'));
+            return;
+          }
+        }
+      })();
+    }
+
+    // 启动定时轮询
     pollInterval = setInterval(async () => {
       // 超时检查
       if (Date.now() - startTime > maxDuration) {
@@ -150,6 +208,23 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
         }
       } catch (err) {
         console.error('轮询异常:', err);
+        
+        // Step 1: 403/401 错误熔断机制
+        if (err.statusCode === 403 || err.statusCode === 401 || err.isAuthError) {
+          consecutiveAuthErrors++;
+          console.error(`认证错误计数：${consecutiveAuthErrors}/${MAX_AUTH_ERRORS}`);
+          
+          if (consecutiveAuthErrors >= MAX_AUTH_ERRORS) {
+            stop();
+            console.error('认证错误熔断，停止轮询');
+            if (onError) onError(new Error('权限验证失败，请重新登录'));
+            return;
+          }
+        } else {
+          // 非认证错误，重置计数器
+          consecutiveAuthErrors = 0;
+        }
+        
         if (onError) onError(err);
       }
     }, interval);
