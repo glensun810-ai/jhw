@@ -16,6 +16,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from utils.debug_manager import ai_io_log, exception_log, debug_log
+from wechat_backend.ai_adapters.retry_decorator import retry_ai_call
 
 # Import the new DEBUG_AI_CODE logger
 from utils.logger import debug_log_ai_io, debug_log_exception, ENABLE_DEBUG_AI_CODE
@@ -110,6 +111,7 @@ class DoubaoAdapter(AIClient):
             "Content-Type": "application/json"
         }
 
+    @retry_ai_call(max_retries=3, delay=1.0, backoff=2.0, max_delay=10.0)
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
         """
         向 Doubao API 发送请求 (带熔断保护和延迟统计)

@@ -1,0 +1,27 @@
+{
+  "total_requests": 1,
+  "total_limited": 1,
+  "limited_by_endpoint": {
+    "/api/test": 1
+  },
+  "limited_by_ip": {
+    "192.168.1.1": 1
+  },
+  "limited_by_user": {},
+  "hourly_stats": {
+    "2026-02-23-17": {
+      "requests": 1,
+      "limited": 1
+    }
+  },
+  "recent_limits": [
+    {
+      "timestamp": "2026-02-23T17:21:41.660323",
+      "endpoint": "/api/test",
+      "ip": "192.168.1.1",
+      "user_id": null,
+      "limit_type": "endpoint",
+      "limit_value": null
+    }
+  ]
+}

@@ -2195,6 +2195,7 @@ def get_platform_status():
 
 
 @wechat_bp.route('/api/test-progress', methods=['GET'])
+@monitored_endpoint('/api/test-progress', require_auth=False, validate_inputs=False)  # P2 修复：明确不需要认证
 def get_test_progress():
     """
     获取测试进度 - 【任务 3 优化】
@@ -2561,74 +2562,99 @@ def get_task_status_api(task_id):
         # 返回任务状态信息
         return jsonify(response_data), 200
     else:
-        # 【新增 P0 修复】从数据库查询（降级逻辑）
+        # 【P0 修复】从数据库查询（降级逻辑）
         # 当 execution_store 中找不到时（如服务器重启后），从数据库查询
         try:
             from wechat_backend.models import get_task_status as get_db_task_status, get_deep_intelligence_result
-            
+            from wechat_backend.database import get_connection
+
             db_task_status = get_db_task_status(task_id)
             if db_task_status:
-                # 从数据库构建响应
+                # P0 修复：TaskStatus 是对象，不是字典，使用属性访问
                 response_data = {
-                    'task_id': task_id,
-                    'progress': task_status.get('progress', 0),
-                    'stage': task_status.get('stage', 'init'),
-                    'status': task_status.get('status', 'init'),
-                    'results': task_status.get('results', []),
-                    'detailed_results': task_status.get('results', []),  # 添加这一行
-                    'is_completed': task_status.get('status') == 'completed',
-                    'created_at': task_status.get('start_time', None)
+                    'task_id': db_task_status.task_id,
+                    'progress': db_task_status.progress,
+                    'stage': db_task_status.stage.value,  # ✅ 修复：枚举转字符串
+                    'status': 'completed' if db_task_status.is_completed else 'processing',
+                    'is_completed': db_task_status.is_completed,
+                    'created_at': db_task_status.created_at,
+                    'results': [],
+                    'detailed_results': []
                 }
-                # 【P0 修复】从数据库获取完整的 results_summary
-                conn = get_connection()
-                cursor = conn.cursor()
-                cursor.execute("""
-                               SELECT results_summary, is_summary_compressed
-                               FROM test_records
-                               WHERE id = (SELECT MAX(id)
-                                           FROM test_records
-                                           WHERE json_extract(results_summary, '$.execution_id') = ?)
-                               """, (task_id,))
-                db_row = cursor.fetchone()
-                conn.close()
-
-                # 解析 results_summary
-                if db_row:
-                    summary_raw, summary_comp = db_row
-                    try:
-                        if summary_comp and summary_raw:
-                            summary = json.loads(gzip.decompress(summary_raw).decode('utf-8'))
-                        elif summary_raw:
-                            summary = json.loads(summary_raw)
-                        else:
-                            summary = {}
-
-                        # 提取关键字段
-                        response_data['detailed_results'] = summary.get('detailed_results', [])
-                        response_data['brand_scores'] = summary.get('brand_scores', {})
-                        response_data['competitive_analysis'] = summary.get('competitive_analysis', {})
-                        response_data['negative_sources'] = summary.get('negative_sources', [])
-                        response_data['semantic_drift_data'] = summary.get('semantic_drift_data', {})
-                        response_data['recommendation_data'] = summary.get('recommendation_data', {})
-                        response_data['overall_score'] = summary.get('overall_score', 0)
-
-                        api_logger.info(f'✅ 从数据库加载 results_summary: {len(summary)} 字段')
-                    except Exception as e:
-                        api_logger.error(f'❌ 解析 results_summary 失败：{e}')
-                        response_data['detailed_results'] = []
-                        response_data['brand_scores'] = {}
-                        response_data['competitive_analysis'] = {}
-
                 
-                api_logger.info(f"[TaskStatus] Found task {task_id} in database")
+                # 【P0 修复】从数据库获取完整的 results_summary
+                # 使用 execution_id 直接查询，添加索引优化
+                conn = None
+                cursor = None
+                try:
+                    conn = get_connection()
+                    cursor = conn.cursor()
+                    # P0 修复：直接使用 execution_id 查询，避免子查询和 json_extract
+                    cursor.execute("""
+                                   SELECT results_summary, is_summary_compressed
+                                   FROM test_records
+                                   WHERE execution_id = ?
+                                   ORDER BY id DESC
+                                   LIMIT 1
+                                   """, (task_id,))
+                    db_row = cursor.fetchone()
+
+                    # 解析 results_summary
+                    if db_row:
+                        summary_raw, summary_comp = db_row
+                        try:
+                            if summary_comp and summary_raw:
+                                summary = json.loads(gzip.decompress(summary_raw).decode('utf-8'))
+                            elif summary_raw:
+                                summary = json.loads(summary_raw)
+                            else:
+                                summary = {}
+
+                            # 提取关键字段
+                            response_data['results'] = summary.get('detailed_results', [])
+                            response_data['detailed_results'] = summary.get('detailed_results', [])
+                            response_data['brand_scores'] = summary.get('brand_scores', {})
+                            response_data['competitive_analysis'] = summary.get('competitive_analysis', {})
+                            response_data['negative_sources'] = summary.get('negative_sources', [])
+                            response_data['semantic_drift_data'] = summary.get('semantic_drift_data', {})
+                            response_data['recommendation_data'] = summary.get('recommendation_data', {})
+                            response_data['overall_score'] = summary.get('overall_score', 0)
+
+                            api_logger.info(f'✅ 从数据库加载 results_summary: {len(summary)} 字段')
+                        except Exception as parse_error:
+                            api_logger.error(f'❌ 解析 results_summary 失败：{parse_error}')
+                            # 解析失败时返回空数据，不中断整个流程
+                            response_data['results'] = []
+                            response_data['detailed_results'] = []
+                    else:
+                        api_logger.info(f'ℹ️  test_records 中未找到 execution_id: {task_id}')
+
+                except Exception as db_error:
+                    api_logger.error(f'❌ 数据库查询失败：{db_error}', exc_info=True)
+                    # 数据库查询失败时返回基本状态，不中断
+                    response_data['results'] = []
+                    response_data['detailed_results'] = []
+                finally:
+                    # P0 修复：确保连接关闭
+                    if cursor:
+                        cursor.close()
+                    if conn:
+                        conn.close()
+
+                api_logger.info(f"[TaskStatus] Found task {task_id} in database, progress: {response_data['progress']}, stage: {response_data['stage']}")
                 return jsonify(response_data), 200
             else:
                 # 数据库中也找不到，返回 404
                 api_logger.warning(f"[TaskStatus] Task {task_id} not found in execution_store or database")
                 return jsonify({'error': 'Task not found', 'suggestion': 'Please check execution ID or start a new diagnosis'}), 404
         except Exception as e:
-            api_logger.error(f"[TaskStatus] Error querying database for task {task_id}: {e}")
-            return jsonify({'error': 'Task not found'}), 404
+            api_logger.error(f"[TaskStatus] Error querying database for task {task_id}: {e}", exc_info=True)
+            # 返回更详细的错误信息
+            return jsonify({
+                'error': 'Task status query failed',
+                'details': str(e),
+                'suggestion': 'Please try again or start a new diagnosis'
+            }), 500
 
 
 @wechat_bp.route('/test/result/<task_id>', methods=['GET'])
