@@ -8,6 +8,29 @@ const { parseTaskStatus } = require('./taskStatusService');
 const { aggregateReport } = require('./reportAggregator');
 
 /**
+ * P2 性能优化：计算动态轮询间隔
+ * @param {number} progress - 当前进度 (0-100)
+ * @param {string} stage - 当前阶段
+ * @returns {number} 轮询间隔（毫秒）
+ */
+const getPollingInterval = (progress, stage) => {
+  // 初期阶段（0-30%）：2 秒，给后端足够时间启动
+  if (progress < 30) {
+    return 2000;
+  }
+  // 中期阶段（30-70%）：1.5 秒，平衡响应速度和服务器压力
+  if (progress < 70) {
+    return 1500;
+  }
+  // 后期阶段（70-90%）：1 秒，加快响应
+  if (progress < 90) {
+    return 1000;
+  }
+  // 完成阶段（90-100%）：500ms，快速响应完成
+  return 500;
+};
+
+/**
  * 验证输入数据
  * @param {Object} inputData - 输入数据
  * @returns {Object} 验证结果
