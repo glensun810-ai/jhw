@@ -18,7 +18,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # 获取项目根目录
-script_dir = Path(__file__).parent.parent
+script_dir = Path(__file__).parent
 root_dir = script_dir.parent
 env_file = root_dir / '.env'
 
@@ -42,9 +42,12 @@ print("✅ .env 文件加载成功")
 print()
 
 # 导入配置和适配器
+import sys
+sys.path.insert(0, str(root_dir / 'backend_python'))
+
 from config import Config
-from backend_python.wechat_backend.ai_adapters.factory import AIAdapterFactory
-from backend_python.wechat_backend.ai_adapters.base_adapter import AIPlatformType
+from wechat_backend.ai_adapters.factory import AIAdapterFactory
+from wechat_backend.ai_adapters.base_adapter import AIPlatformType
 
 print("="*70)
 print("🔍 配置验证")
@@ -73,7 +76,7 @@ print(f"\n✅ 使用 API Key: {actual_api_key[:20]}...{actual_api_key[-10:]}")
 
 # 检查优先级模型配置
 priority_models = Config.get_doubao_priority_models()
-all_models = Config.get_doubao_models()
+all_models = priority_models if priority_models else Config.get_api_key('doubao')
 
 print(f"\n📌 模型配置:")
 print(f"  自动选择模式：{'✅ 启用' if auto_select else '❌ 禁用'}")
