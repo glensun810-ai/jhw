@@ -3013,3 +3013,142 @@
 2026-02-23 13:14:33,188 - wechat_backend.api - INFO - app.py:241 - warm_up_adapters() - Adapter warm-up completed
 2026-02-23 13:14:33,225 - werkzeug - WARNING - _internal.py:97 - _log() -  * Debugger is active!
 2026-02-23 13:14:33,253 - werkzeug - INFO - _internal.py:97 - _log() -  * Debugger PIN: 884-445-834
+2026-02-23 14:37:53,828 - wechat_backend.database - INFO - database_core.py:57 - init_db() - 初始化数据库于 /Users/sgl/PycharmProjects/PythonProject/backend_python/database.db
+2026-02-23 14:37:53,831 - wechat_backend.database - INFO - database_core.py:160 - init_db() - 数据库表结构初始化完成
+2026-02-23 14:37:53,833 - wechat_backend.database - INFO - models.py:125 - init_task_status_db() - Initializing task status database at /Users/sgl/PycharmProjects/PythonProject/backend_python/database.db
+2026-02-23 14:37:53,835 - wechat_backend.database - INFO - models.py:181 - init_task_status_db() - Task status database initialization completed
+2026-02-23 14:37:53,989 - wechat_backend.api - INFO - factory.py:8 - <module>() - === Starting AI Adapter Imports ===
+2026-02-23 14:37:53,995 - wechat_backend.api - INFO - factory.py:13 - <module>() - Successfully imported DeepSeekAdapter
+2026-02-23 14:37:53,996 - wechat_backend.api - INFO - factory.py:22 - <module>() - Successfully imported DeepSeekR1Adapter
+2026-02-23 14:37:53,997 - wechat_backend.api - INFO - factory.py:31 - <module>() - Successfully imported QwenAdapter
+2026-02-23 14:37:54,001 - wechat_backend.api - INFO - factory.py:40 - <module>() - Successfully imported DoubaoAdapter
+2026-02-23 14:37:54,001 - wechat_backend.api - INFO - factory.py:50 - <module>() - Successfully imported DoubaoPriorityAdapter
+2026-02-23 14:37:54,002 - wechat_backend.api - INFO - factory.py:59 - <module>() - Successfully imported ChatGPTAdapter
+2026-02-23 14:37:54,002 - wechat_backend.api - INFO - factory.py:68 - <module>() - Successfully imported GeminiAdapter
+2026-02-23 14:37:54,002 - wechat_backend.api - INFO - factory.py:77 - <module>() - Successfully imported ZhipuAdapter
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:86 - <module>() - Successfully imported ErnieBotAdapter
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:93 - <module>() - === Completed AI Adapter Imports ===
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:261 - <module>() - === Adapter Registration Debug Info ===
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:262 - <module>() - DeepSeekAdapter status: True
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:263 - <module>() - DeepSeekR1Adapter status: True
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:264 - <module>() - QwenAdapter status: True
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:265 - <module>() - DoubaoAdapter status: True
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:266 - <module>() - ChatGPTAdapter status: True
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:267 - <module>() - GeminiAdapter status: True
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:268 - <module>() - ZhipuAdapter status: True
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:269 - <module>() - ErnieBotAdapter status: True
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:273 - <module>() - Registering DeepSeekAdapter
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:167 - register() - Registered adapter for deepseek
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:279 - <module>() - Registering DeepSeekR1Adapter
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:167 - register() - Registered adapter for deepseekr1
+2026-02-23 14:37:54,003 - wechat_backend.api - INFO - factory.py:285 - <module>() - Registering QwenAdapter
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:167 - register() - Registered adapter for qwen
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:291 - <module>() - Registering DoubaoAdapter
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:167 - register() - Registered adapter for doubao
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:297 - <module>() - Registering ChatGPTAdapter
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:167 - register() - Registered adapter for chatgpt
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:303 - <module>() - Registering GeminiAdapter
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:167 - register() - Registered adapter for gemini
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:309 - <module>() - Registering ZhipuAdapter
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:167 - register() - Registered adapter for zhipu
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:315 - <module>() - Registering ErnieBotAdapter
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:167 - register() - Registered adapter for wenxin
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:321 - <module>() - Final registered models: ['deepseek', 'deepseekr1', 'qwen', 'doubao', 'chatgpt', 'gemini', 'zhipu', 'wenxin']
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:322 - <module>() - === End Adapter Registration Debug Info ===
+2026-02-23 14:37:54,004 - wechat_backend.api - INFO - factory.py:325 - <module>() - Current Registered Models: ['deepseek', 'deepseekr1', 'qwen', 'doubao', 'chatgpt', 'gemini', 'zhipu', 'wenxin']
+2026-02-23 14:37:54,006 - wechat_backend.api - INFO - provider_factory.py:30 - register() - Registered provider for platform: doubao
+2026-02-23 14:37:54,006 - wechat_backend.api - INFO - provider_factory.py:30 - register() - Registered provider for platform: deepseek
+2026-02-23 14:37:54,006 - wechat_backend.api - INFO - provider_factory.py:30 - register() - Registered provider for platform: qwen
+2026-02-23 14:37:54,006 - wechat_backend.api - INFO - provider_factory.py:73 - <module>() - ProviderFactory initialized with default providers
+2026-02-23 14:38:03,170 - wechat_backend.api - INFO - sse_service.py:299 - start_cleanup_thread() - [SSE] Cleanup thread started
+2026-02-23 14:38:03,185 - wechat_backend.api - INFO - circuit_breaker.py:77 - __init__() - CircuitBreaker 'webhook_dispatcher' initialized: threshold=3, recovery_timeout=30s, expected_exceptions=8
+2026-02-23 14:38:03,185 - wechat_backend.api - INFO - workflow_manager.py:175 - _start_background_processor() - Workflow background processor started
+2026-02-23 14:38:03,186 - wechat_backend.api - INFO - workflow_manager.py:208 - _start_retry_processor() - Workflow retry processor started
+2026-02-23 14:38:03,217 - apscheduler.scheduler - INFO - base.py:214 - start() - Scheduler started
+2026-02-23 14:38:03,219 - wechat_backend.api - INFO - cruise_controller.py:53 - _init_scheduler() - Cruise controller scheduler initialized and started
+2026-02-23 14:38:03,222 - wechat_backend.api - INFO - semantic_analyzer.py:22 - __init__() - SemanticAnalyzer initialized
+2026-02-23 14:38:04,941 - apscheduler.scheduler - INFO - base.py:214 - start() - Scheduler started
+2026-02-23 14:38:04,942 - wechat_backend.api - INFO - cruise_controller.py:53 - _init_scheduler() - Cruise controller scheduler initialized and started
+2026-02-23 14:38:04,949 - wechat_backend.api - INFO - views_geo_analysis.py:394 - init_geo_analysis_routes() - GEO Analysis API routes registered
+2026-02-23 14:38:04,951 - wechat_backend.api - INFO - views_p1_analysis.py:585 - init_p1_analysis_routes() - P1 Analysis API routes registered
+2026-02-23 14:38:04,952 - wechat_backend.api - INFO - views_p2_optimization.py:430 - init_p2_optimization_routes() - P2 Optimization API routes registered
+2026-02-23 14:38:04,954 - wechat_backend.api - INFO - views_permission.py:551 - init_permission_routes() - Permission API routes registered
+2026-02-23 14:38:04,955 - wechat_backend.api - INFO - views_permission.py:576 - init_permission_db() - Permission database tables initialized
+2026-02-23 14:38:04,956 - wechat_backend.api - INFO - views_admin.py:28 - init_admin_routes() - Initializing admin routes...
+2026-02-23 14:38:04,958 - wechat_backend.api - INFO - admin_user_management.py:229 - init_user_management_routes() - User management routes initialized
+2026-02-23 14:38:04,959 - wechat_backend.api - INFO - admin_test_management.py:249 - init_test_management_routes() - Test management routes initialized
+2026-02-23 14:38:04,960 - wechat_backend.api - INFO - admin_system.py:236 - init_system_management_routes() - System management routes initialized
+2026-02-23 14:38:04,960 - wechat_backend.api - INFO - views_admin.py:43 - init_admin_routes() - Admin routes initialized successfully
+2026-02-23 14:38:04,961 - wechat_backend.api - INFO - views_analytics.py:571 - init_analytics_routes() - Analytics routes initialized
+2026-02-23 14:38:04,963 - wechat_backend.database - INFO - audit_logs.py:60 - init_audit_logs_table() - Audit logs table initialized
+2026-02-23 14:38:04,964 - wechat_backend.api - INFO - views_audit.py:279 - init_audit_routes() - Audit routes initialized
+2026-02-23 14:38:04,965 - wechat_backend.api - INFO - views_intelligence.py:488 - register_blueprints() - Intelligence Blueprint registered
+2026-02-23 14:38:04,968 - wechat_backend.api - INFO - sync_storage.py:102 - _init_tables() - 同步数据存储表初始化完成
+2026-02-23 14:38:04,968 - wechat_backend.api - INFO - sync_storage.py:411 - init_sync_storage() - 同步存储初始化完成
+2026-02-23 14:38:04,969 - wechat_backend.api - INFO - views_sync.py:322 - register_blueprints() - Sync Blueprint registered
+2026-02-23 14:38:04,971 - wechat_backend.api - INFO - views_analytics_behavior.py:570 - register_blueprints() - Analytics Blueprint registered
+2026-02-23 14:38:04,973 - wechat_backend.api - INFO - views_audit_full.py:705 - register_blueprints() - Audit Blueprint registered
+2026-02-23 14:38:04,974 - wechat_backend.api - INFO - views_pdf_export.py:326 - register_blueprints() - PDF Export Blueprint registered
+2026-02-23 14:38:04,975 - wechat_backend.api - INFO - views_pdf_export_v2.py:330 - register_blueprints() - PDF Export Blueprint registered
+2026-02-23 14:38:04,977 - wechat_backend.api - INFO - async_export_service.py:46 - _worker_loop() - ExportWorker-0 started
+2026-02-23 14:38:04,977 - wechat_backend.api - INFO - async_export_service.py:46 - _worker_loop() - ExportWorker-1 started
+2026-02-23 14:38:04,977 - wechat_backend.api - INFO - async_export_service.py:292 - start_cleanup_thread() - Cleanup thread started (interval=1h, max_age=24h)
+2026-02-23 14:38:04,977 - wechat_backend.api - INFO - async_export_service.py:34 - __init__() - AsyncExportService started with 4 workers
+2026-02-23 14:38:04,977 - wechat_backend.api - INFO - async_export_service.py:46 - _worker_loop() - ExportWorker-3 started
+2026-02-23 14:38:04,977 - wechat_backend.api - INFO - async_export_service.py:46 - _worker_loop() - ExportWorker-2 started
+2026-02-23 14:38:04,979 - wechat_backend.api - INFO - api_cache.py:217 - __init__() - 持久化缓存初始化：/Users/sgl/PycharmProjects/PythonProject/backend_python/cache.db
+2026-02-23 14:38:04,979 - wechat_backend.api - INFO - api_cache.py:408 - __init__() - 混合缓存初始化：L1=MemoryCache, L2=PersistentCache
+2026-02-23 14:38:04,980 - wechat_backend.api - INFO - api_cache.py:781 - start_cache_maintenance() - 缓存维护任务已启动
+2026-02-23 14:38:04,981 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_users_openid on users(openid)
+2026-02-23 14:38:04,982 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_users_created_at on users(created_at)
+2026-02-23 14:38:04,982 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_test_records_user_id on test_records(user_id)
+2026-02-23 14:38:04,982 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_test_records_brand_name on test_records(brand_name)
+2026-02-23 14:38:04,982 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_test_records_test_date on test_records(test_date)
+2026-02-23 14:38:04,983 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_test_records_overall_score on test_records(overall_score)
+2026-02-23 14:38:04,983 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_test_records_user_id_test_date on test_records(user_id, test_date)
+2026-02-23 14:38:04,983 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_test_records_brand_name_test_date on test_records(brand_name, test_date)
+2026-02-23 14:38:04,983 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_brand_test_results_task_id on brand_test_results(task_id)
+2026-02-23 14:38:04,983 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_brand_test_results_brand_name on brand_test_results(brand_name)
+2026-02-23 14:38:04,983 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_brand_test_results_created_at on brand_test_results(created_at)
+2026-02-23 14:38:04,984 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_brand_test_results_task_id_brand_name on brand_test_results(task_id, brand_name)
+2026-02-23 14:38:04,984 - wechat_backend.api - ERROR - query_optimizer.py:272 - create_index() - 索引创建失败：no such table: main.audit_logs
+2026-02-23 14:38:04,984 - wechat_backend.api - ERROR - query_optimizer.py:272 - create_index() - 索引创建失败：no such table: main.audit_logs
+2026-02-23 14:38:04,984 - wechat_backend.api - ERROR - query_optimizer.py:272 - create_index() - 索引创建失败：no such table: main.audit_logs
+2026-02-23 14:38:04,984 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_sync_results_user_id on sync_results(user_id)
+2026-02-23 14:38:04,984 - wechat_backend.api - INFO - query_optimizer.py:262 - create_index() - 索引创建成功：idx_sync_results_sync_timestamp on sync_results(sync_timestamp)
+2026-02-23 14:38:04,985 - wechat_backend.api - ERROR - query_optimizer.py:272 - create_index() - 索引创建失败：no such table: main.cache_entries
+2026-02-23 14:38:04,985 - wechat_backend.api - ERROR - query_optimizer.py:272 - create_index() - 索引创建失败：no such table: main.cache_entries
+2026-02-23 14:38:04,985 - wechat_backend.api - INFO - query_optimizer.py:514 - init_recommended_indexes() - 推荐索引初始化完成，创建 14 个索引
+2026-02-23 14:38:04,986 - wechat_backend.monitoring.alert_system - INFO - alert_system.py:160 - add_alert() - 添加告警: high_error_rate
+2026-02-23 14:38:04,986 - wechat_backend.monitoring.alert_system - INFO - alert_system.py:160 - add_alert() - 添加告警: slow_response_time
+2026-02-23 14:38:04,986 - wechat_backend.monitoring.alert_system - INFO - alert_system.py:160 - add_alert() - 添加告警: high_request_frequency
+2026-02-23 14:38:04,986 - wechat_backend.monitoring.alert_system - INFO - alert_system.py:160 - add_alert() - 添加告警: high_security_events
+2026-02-23 14:38:04,986 - wechat_backend.monitoring.alert_system - INFO - alert_system.py:160 - add_alert() - 添加告警: service_down
+2026-02-23 14:38:04,987 - wechat_backend.api - INFO - alert_system.py:67 - add_condition() - Alert condition added: error_rate
+2026-02-23 14:38:04,987 - wechat_backend.api - INFO - alert_system.py:67 - add_condition() - Alert condition added: response_time
+2026-02-23 14:38:04,987 - wechat_backend.api - INFO - alert_system.py:67 - add_condition() - Alert condition added: cpu_usage
+2026-02-23 14:38:04,987 - wechat_backend.api - INFO - alert_system.py:139 - init_default_alerts() - Default alerts initialized
+2026-02-23 14:38:04,987 - wechat_backend.api - INFO - alert_system.py:145 - start_alert_monitoring() - Alert monitoring started
+2026-02-23 14:38:04,987 - wechat_backend.api - INFO - app.py:212 - warm_up_adapters() - Starting adapter warm-up...
+2026-02-23 14:38:04,988 - wechat_backend.api - WARNING - app.py:236 - warm_up_adapters() - Adapter doubao has no API key configured, skipping warm-up
+2026-02-23 14:38:04,988 - wechat_backend.api - ERROR - factory.py:226 - create() - REGISTERED_MODELS: [<AIPlatformType.DEEPSEEK: 'deepseek'>, <AIPlatformType.DEEPSEEKR1: 'deepseekr1'>, <AIPlatformType.QWEN: 'qwen'>, <AIPlatformType.DOUBAO: 'doubao'>, <AIPlatformType.CHATGPT: 'chatgpt'>, <AIPlatformType.GEMINI: 'gemini'>, <AIPlatformType.ZHIPU: 'zhipu'>, <AIPlatformType.WENXIN: 'wenxin'>]
+2026-02-23 14:38:04,988 - wechat_backend.api - INFO - circuit_breaker.py:77 - __init__() - CircuitBreaker 'deepseek_test-deepseek' initialized: threshold=5, recovery_timeout=60s, expected_exceptions=8
+2026-02-23 14:38:04,988 - wechat_backend.api - INFO - deepseek_adapter.py:62 - __init__() - DeepSeekAdapter initialized for model: test-deepseek with unified request wrapper and circuit breaker
+2026-02-23 14:38:04,989 - wechat_backend.api - INFO - app.py:234 - warm_up_adapters() - Adapter deepseek created successfully (no health check method)
+2026-02-23 14:38:04,989 - wechat_backend.api - ERROR - factory.py:226 - create() - REGISTERED_MODELS: [<AIPlatformType.DEEPSEEK: 'deepseek'>, <AIPlatformType.DEEPSEEKR1: 'deepseekr1'>, <AIPlatformType.QWEN: 'qwen'>, <AIPlatformType.DOUBAO: 'doubao'>, <AIPlatformType.CHATGPT: 'chatgpt'>, <AIPlatformType.GEMINI: 'gemini'>, <AIPlatformType.ZHIPU: 'zhipu'>, <AIPlatformType.WENXIN: 'wenxin'>]
+2026-02-23 14:38:04,989 - wechat_backend.api - INFO - circuit_breaker.py:77 - __init__() - CircuitBreaker 'qwen_test-qwen' initialized: threshold=3, recovery_timeout=30s, expected_exceptions=8
+2026-02-23 14:38:04,989 - wechat_backend.api - INFO - qwen_adapter.py:36 - __init__() - QwenAdapter initialized for model: test-qwen with unified request wrapper and circuit breaker
+2026-02-23 14:38:04,989 - wechat_backend.api - INFO - app.py:234 - warm_up_adapters() - Adapter qwen created successfully (no health check method)
+2026-02-23 14:38:04,989 - wechat_backend.api - INFO - factory.py:188 - get_normalized_model_name() - Fuzzy match found for 'chatgpt' -> 'ChatGPT' -> 'chatgpt'
+2026-02-23 14:38:04,990 - wechat_backend.api - ERROR - factory.py:226 - create() - REGISTERED_MODELS: [<AIPlatformType.DEEPSEEK: 'deepseek'>, <AIPlatformType.DEEPSEEKR1: 'deepseekr1'>, <AIPlatformType.QWEN: 'qwen'>, <AIPlatformType.DOUBAO: 'doubao'>, <AIPlatformType.CHATGPT: 'chatgpt'>, <AIPlatformType.GEMINI: 'gemini'>, <AIPlatformType.ZHIPU: 'zhipu'>, <AIPlatformType.WENXIN: 'wenxin'>]
+2026-02-23 14:38:04,991 - wechat_backend.api - INFO - chatgpt_adapter.py:31 - __init__() - ChatGPTAdapter initialized for model: test-chatgpt with unified request wrapper
+2026-02-23 14:38:04,991 - wechat_backend.api - INFO - app.py:234 - warm_up_adapters() - Adapter chatgpt created successfully (no health check method)
+2026-02-23 14:38:04,991 - wechat_backend.api - ERROR - factory.py:226 - create() - REGISTERED_MODELS: [<AIPlatformType.DEEPSEEK: 'deepseek'>, <AIPlatformType.DEEPSEEKR1: 'deepseekr1'>, <AIPlatformType.QWEN: 'qwen'>, <AIPlatformType.DOUBAO: 'doubao'>, <AIPlatformType.CHATGPT: 'chatgpt'>, <AIPlatformType.GEMINI: 'gemini'>, <AIPlatformType.ZHIPU: 'zhipu'>, <AIPlatformType.WENXIN: 'wenxin'>]
+2026-02-23 14:38:04,991 - wechat_backend.api - INFO - gemini_adapter.py:31 - __init__() - GeminiAdapter initialized for model: test-gemini using REST API with unified request wrapper
+2026-02-23 14:38:04,991 - wechat_backend.api - INFO - app.py:234 - warm_up_adapters() - Adapter gemini created successfully (no health check method)
+2026-02-23 14:38:04,991 - wechat_backend.api - ERROR - factory.py:226 - create() - REGISTERED_MODELS: [<AIPlatformType.DEEPSEEK: 'deepseek'>, <AIPlatformType.DEEPSEEKR1: 'deepseekr1'>, <AIPlatformType.QWEN: 'qwen'>, <AIPlatformType.DOUBAO: 'doubao'>, <AIPlatformType.CHATGPT: 'chatgpt'>, <AIPlatformType.GEMINI: 'gemini'>, <AIPlatformType.ZHIPU: 'zhipu'>, <AIPlatformType.WENXIN: 'wenxin'>]
+2026-02-23 14:38:04,991 - wechat_backend.api - INFO - circuit_breaker.py:77 - __init__() - CircuitBreaker 'zhipu_test-zhipu' initialized: threshold=3, recovery_timeout=30s, expected_exceptions=8
+2026-02-23 14:38:04,991 - wechat_backend.api - INFO - zhipu_adapter.py:35 - __init__() - ZhipuAdapter initialized for model: test-zhipu with unified request wrapper and circuit breaker
+2026-02-23 14:38:04,991 - wechat_backend.api - INFO - app.py:234 - warm_up_adapters() - Adapter zhipu created successfully (no health check method)
+2026-02-23 14:38:04,991 - wechat_backend.api - WARNING - app.py:236 - warm_up_adapters() - Adapter wenxin has no API key configured, skipping warm-up
+2026-02-23 14:38:04,991 - wechat_backend.api - INFO - app.py:241 - warm_up_adapters() - Adapter warm-up completed
