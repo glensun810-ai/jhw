@@ -12,6 +12,8 @@ NxM 执行引擎 - 主入口
 
 import time
 import threading
+import os
+import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -21,6 +23,9 @@ from wechat_backend.ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE
 # from wechat_backend.config_manager import config_manager
 from wechat_backend.logging_config import api_logger
 from wechat_backend.database import save_test_record
+
+# BUG-NEW-002 修复：异步执行引擎
+from wechat_backend.performance.async_execution_engine import execute_async
 
 # 导入模块
 from wechat_backend.nxm_circuit_breaker import get_circuit_breaker
@@ -293,7 +298,169 @@ def verify_nxm_execution(
     
     return {
         'verified': verification['success'],
-        'message': verification['message'],
-        'results_count': len(results),
-        'expected_total': total
+        'message': verification['message'] if not verification['success'] else '验证通过'
+    }
+
+
+# =============================================================================
+# BUG-NEW-002 修复：异步执行支持
+# =============================================================================
+
+def call_ai_api_wrapper(
+    question: str,
+    model_name: str,
+    execution_id: str,
+    main_brand: str,
+    competitor_brands: List[str],
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    AI 调用包装函数（适配异步引擎）
+    
+    Args:
+        question: 问题
+        model_name: 模型名称
+        execution_id: 执行 ID
+        main_brand: 主品牌
+        competitor_brands: 竞品品牌列表
+        **kwargs: 其他参数
+    
+    Returns:
+        AI 调用结果
+    """
+    from config import Config
+    
+    try:
+        # 创建 AI 客户端
+        client = AIAdapterFactory.create(model_name)
+        api_key = Config.get_api_key(model_name)
+        
+        if not api_key:
+            raise ValueError(f"模型 {model_name} API Key 未配置")
+        
+        # 构建提示词
+        prompt = GEO_PROMPT_TEMPLATE.format(
+            brand_name=main_brand,
+            competitors=', '.join(competitor_brands) if competitor_brands else '无',
+            question=question
+        )
+        
+        # 调用 AI（带重试）
+        max_retries = 2
+        retry_count = 0
+        response = None
+        geo_data = None
+        
+        while retry_count <= max_retries:
+            try:
+                response = client.generate_response(
+                    prompt=prompt,
+                    api_key=api_key
+                )
+                
+                geo_data, parse_error = parse_geo_with_validation(
+                    response,
+                    execution_id,
+                    0,  # q_idx
+                    model_name
+                )
+                
+                if not parse_error and not geo_data.get('_error'):
+                    break
+                    
+            except Exception as e:
+                api_logger.error(f"AI 调用失败：{model_name}: {e}")
+                retry_count += 1
+        
+        # 返回结果
+        return {
+            'brand': main_brand,
+            'question': question,
+            'model': model_name,
+            'response': response,
+            'geo_data': geo_data or {'_error': 'AI 调用或解析失败'},
+            'timestamp': datetime.now().isoformat(),
+            '_failed': not geo_data or geo_data.get('_error')
+        }
+        
+    except Exception as e:
+        api_logger.error(f"AI 调用异常：{model_name}: {e}")
+        return {
+            'brand': main_brand,
+            'question': question,
+            'model': model_name,
+            'response': None,
+            'geo_data': {'_error': str(e)},
+            'timestamp': datetime.now().isoformat(),
+            '_failed': True
+        }
+
+
+async def execute_nxm_test_async(
+    execution_id: str,
+    main_brand: str,
+    competitor_brands: List[str],
+    selected_models: List[Dict[str, Any]],
+    raw_questions: List[str],
+    user_id: str,
+    user_level: str,
+    execution_store: Dict[str, Any],
+    timeout_seconds: int = 300
+) -> Dict[str, Any]:
+    """
+    异步执行 NxM 测试（BUG-NEW-002 修复）
+    
+    Args:
+        execution_id: 执行 ID
+        main_brand: 主品牌
+        competitor_brands: 竞品品牌列表
+        selected_models: 选中的模型列表
+        raw_questions: 问题列表
+        user_id: 用户 ID
+        user_level: 用户等级
+        execution_store: 执行状态存储
+        timeout_seconds: 超时时间（秒）
+    
+    Returns:
+        执行结果
+    """
+    # 获取最大并发数
+    max_concurrent = int(os.getenv('ASYNC_MAX_CONCURRENT', '3'))
+    
+    api_logger.info(f"[Async] 开始异步执行：{len(raw_questions)}问题 × {len(selected_models)}模型，并发数：{max_concurrent}")
+    
+    # 使用异步引擎执行
+    results = await execute_async(
+        questions=raw_questions,
+        models=[m['name'] for m in selected_models],
+        execute_func=call_ai_api_wrapper,
+        max_concurrent=max_concurrent,
+        execution_id=execution_id,
+        main_brand=main_brand,
+        competitor_brands=competitor_brands
+    )
+    
+    # 更新执行状态
+    if execution_store and execution_id in execution_store:
+        execution_store[execution_id].update({
+            'progress': 100,
+            'status': 'completed',
+            'results': results,
+            'completed': len([r for r in results if not r.get('_failed')]),
+            'total': len(results)
+        })
+    
+    # 统计结果
+    success_count = len([r for r in results if not r.get('_failed')])
+    failed_count = len([r for r in results if r.get('_failed')])
+    
+    api_logger.info(f"[Async] 异步执行完成：成功 {success_count}/{len(results)}, 失败 {failed_count}/{len(results)}")
+    
+    return {
+        'success': True,
+        'execution_id': execution_id,
+        'results': results,
+        'formula': f'{len(raw_questions)}问题 × {len(selected_models)}模型 = {len(results)}次请求 (异步执行，并发数={max_concurrent})',
+        'success_count': success_count,
+        'failed_count': failed_count
     }
