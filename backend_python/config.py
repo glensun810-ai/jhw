@@ -51,9 +51,24 @@ class Config:
     DOUBAO_ACCESS_KEY_ID = os.environ.get('DOUBAO_ACCESS_KEY_ID') or ''
     DOUBAO_SECRET_ACCESS_KEY = os.environ.get('DOUBAO_SECRET_ACCESS_KEY') or ''
     DOUBAO_API_KEY = os.environ.get('DOUBAO_API_KEY') or ''
-    # 豆包部署点 ID 配置（2026 年 2 月更新）
-    # 默认使用新的有效部署点：ep-20260212000000-gd5tq
-    # 可通过环境变量 DOUBAO_MODEL_ID 覆盖
+    
+    # 豆包多模型优先级配置（2026 年 2 月更新）
+    # 按优先级顺序加载多个模型 ID
+    DOUBAO_MODEL_PRIORITY_1 = os.environ.get('DOUBAO_MODEL_PRIORITY_1') or ''
+    DOUBAO_MODEL_PRIORITY_2 = os.environ.get('DOUBAO_MODEL_PRIORITY_2') or ''
+    DOUBAO_MODEL_PRIORITY_3 = os.environ.get('DOUBAO_MODEL_PRIORITY_3') or ''
+    DOUBAO_MODEL_PRIORITY_4 = os.environ.get('DOUBAO_MODEL_PRIORITY_4') or ''
+    DOUBAO_MODEL_PRIORITY_5 = os.environ.get('DOUBAO_MODEL_PRIORITY_5') or ''
+    DOUBAO_MODEL_PRIORITY_6 = os.environ.get('DOUBAO_MODEL_PRIORITY_6') or ''
+    DOUBAO_MODEL_PRIORITY_7 = os.environ.get('DOUBAO_MODEL_PRIORITY_7') or ''
+    DOUBAO_MODEL_PRIORITY_8 = os.environ.get('DOUBAO_MODEL_PRIORITY_8') or ''
+    DOUBAO_MODEL_PRIORITY_9 = os.environ.get('DOUBAO_MODEL_PRIORITY_9') or ''
+    DOUBAO_MODEL_PRIORITY_10 = os.environ.get('DOUBAO_MODEL_PRIORITY_10') or ''
+    
+    # 自动选择模式
+    DOUBAO_AUTO_SELECT_MODEL = os.environ.get('DOUBAO_AUTO_SELECT_MODEL', 'true').lower() == 'true'
+    
+    # 兼容旧配置（如果未设置优先级模型，则使用此配置）
     DOUBAO_MODEL_ID = os.environ.get('DOUBAO_MODEL_ID', 'ep-20260212000000-gd5tq')
 
     DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY') or ''
@@ -123,15 +138,58 @@ class Config:
     def get_doubao_models() -> list:
         """
         获取豆包所有可用的模型列表（按优先级顺序）
-        2026 年 2 月更新：使用新的部署点 ID
+        2026 年 2 月更新：使用新的部署点 ID 和多模型优先级配置
 
         Returns:
-            模型列表
+            模型列表（按优先级排序）
         """
-        # 返回新的有效部署点
+        # 收集所有优先级模型配置
+        priority_models = []
+        
+        # 按优先级顺序添加模型（优先级 1-10）
+        for i in range(1, 11):
+            model_key = f'DOUBAO_MODEL_PRIORITY_{i}'
+            model_id = os.environ.get(model_key, '')
+            if model_id and model_id.strip():
+                priority_models.append(model_id.strip())
+        
+        # 如果配置了优先级模型，则返回优先级列表
+        if priority_models:
+            return priority_models
+        
+        # 否则使用兼容旧配置
         return [
-            os.environ.get('DOUBAO_MODEL_ID', 'ep-20260212000000-gd5tq'),  # 新的部署点
+            os.environ.get('DOUBAO_MODEL_ID', 'ep-20260212000000-gd5tq'),  # 兼容旧配置
         ]
+    
+    @staticmethod
+    def get_doubao_priority_models() -> list:
+        """
+        获取豆包优先级模型列表（仅包含配置的优先级模型）
+        
+        Returns:
+            优先级模型列表
+        """
+        priority_models = []
+        
+        # 按优先级顺序添加模型（优先级 1-10）
+        for i in range(1, 11):
+            model_key = f'DOUBAO_MODEL_PRIORITY_{i}'
+            model_id = os.environ.get(model_key, '')
+            if model_id and model_id.strip():
+                priority_models.append(model_id.strip())
+        
+        return priority_models
+    
+    @staticmethod
+    def is_doubao_auto_select() -> bool:
+        """
+        检查是否启用豆包自动选择模式
+        
+        Returns:
+            bool: 是否启用自动选择
+        """
+        return os.environ.get('DOUBAO_AUTO_SELECT_MODEL', 'true').lower() == 'true'
 
     @classmethod
     def is_api_key_configured(cls, platform: str) -> bool:

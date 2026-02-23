@@ -44,6 +44,16 @@ except ImportError as e:
     api_logger.error(f"Traceback for DoubaoAdapter import error: {traceback.format_exc()}")
     DoubaoAdapter = None
 
+# 导入豆包优先级适配器（支持多模型自动选择）
+try:
+    from wechat_backend.ai_adapters.doubao_priority_adapter import DoubaoPriorityAdapter
+    api_logger.info("Successfully imported DoubaoPriorityAdapter")
+except ImportError as e:
+    api_logger.error(f"Failed to import DoubaoPriorityAdapter: {e}")
+    import traceback
+    api_logger.error(f"Traceback for DoubaoPriorityAdapter import error: {traceback.format_exc()}")
+    DoubaoPriorityAdapter = None
+
 try:
     from .chatgpt_adapter import ChatGPTAdapter
     api_logger.info("Successfully imported ChatGPTAdapter")
@@ -201,6 +211,8 @@ class AIAdapterFactory:
         Create an instance of an AI adapter for the specified platform
         If api_key is not provided, attempts to load from environment variables
         If model_name is not provided, uses platform-specific default
+        
+        For Doubao platform, uses DoubaoPriorityAdapter for automatic model selection
         """
         if isinstance(platform_type, str):
             # 先将输入名称通过 MODEL_NAME_MAP 转换
@@ -218,16 +230,30 @@ class AIAdapterFactory:
 
         # If API key is not provided, try to get it from config
         if not api_key:
-            from config_manager import config_manager
+            # 修复导入问题：使用 wechat_backend.config_manager 而不是 config_manager
+            from wechat_backend.config_manager import config_manager
             api_key = config_manager.get_api_key(platform_type.value)
             if not api_key:
                 raise ValueError(f"No API key provided or configured for platform: {platform_type.value}")
 
         # If model name is not provided, try to get default from config
         if not model_name:
-            from config_manager import config_manager
+            # 修复导入问题：使用 wechat_backend.config_manager 而不是 config_manager
+            from wechat_backend.config_manager import config_manager
             model_name = config_manager.get_platform_model(platform_type.value) or f"default-{platform_type.value}-model"
 
+        # 特殊处理：豆包平台使用优先级适配器
+        if platform_type == AIPlatformType.DOUBAO and DoubaoPriorityAdapter:
+            # 检查是否配置了优先级模型
+            from config import Config
+            priority_models = Config.get_doubao_priority_models()
+            
+            if priority_models and Config.is_doubao_auto_select():
+                # 使用优先级适配器（自动选择可用模型）
+                api_logger.info(f"[Factory] 使用豆包优先级适配器，模型列表：{priority_models}")
+                return DoubaoPriorityAdapter(api_key, model_name, **kwargs)
+        
+        # 使用普通适配器
         adapter_class = cls._adapters[platform_type]
         return adapter_class(api_key, model_name, **kwargs)
 

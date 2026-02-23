@@ -25,6 +25,15 @@ const {
   generateDashboardData
 } = require('../../services/brandTestService');
 
+// 缓存服务（P2 优化）
+const {
+  getCachedDiagnosis,
+  cacheDiagnosis,
+  clearAllCache,
+  getCacheStats,
+  isCacheHit
+} = require('../../services/cacheService');
+
 // 草稿管理服务
 const {
   saveDraft,
@@ -99,14 +108,14 @@ Page({
 
     // AI模型选择
     domesticAiModels: [
-      { name: 'DeepSeek', checked: true, logo: 'DS', tags: ['综合', '代码'] },
-      { name: '豆包', checked: true, logo: 'DB', tags: ['综合', '创意'] },
-      { name: '通义千问', checked: true, logo: 'QW', tags: ['综合', '长文本'] },
-      { name: '元宝', checked: false, logo: 'YB', tags: ['综合']},
+      { name: 'DeepSeek', id: 'deepseek', checked: true, logo: 'DS', tags: ['综合', '代码'] },
+      { name: '豆包', id: 'doubao', checked: true, logo: 'DB', tags: ['综合', '创意'] },
+      { name: '通义千问', id: 'qwen', checked: true, logo: 'QW', tags: ['综合', '长文本'] },
+      { name: '元宝', id: 'yuanbao', checked: false, logo: 'YB', tags: ['综合']},
       { name: 'Kimi', checked: false, logo: 'KM', tags: ['长文本'] },
       { name: '文心一言', checked: false, logo: 'WX', tags: ['综合', '创意'] },
       { name: '讯飞星火', checked: false, logo: 'XF', tags: ['综合', '语音'] },
-      { name: '智谱AI', checked: false, logo: 'ZP', tags: ['综合', 'GLM'] },      
+      { name: '智谱AI', id: 'zhipu', checked: false, logo: 'ZP', tags: ['综合', 'GLM'] },      
     ],
     overseasAiModels: [
       { name: 'ChatGPT', checked: true, logo: 'GPT', tags: ['综合', '代码'] },
@@ -916,13 +925,16 @@ Page({
     this.callBackendBrandTest(brand_list, selectedModels, customQuestions);
   },
 
-  async callBackendBrandTest(brandName, selectedModels, customQuestions) {
+  async callBackendBrandTest(brandList, selectedModels, customQuestions) {
     wx.showLoading({ title: '启动诊断...' });
 
     try {
+      // 从品牌列表中提取主品牌名称（第一个元素）
+      const mainBrandName = Array.isArray(brandList) ? brandList[0] : brandList;
+      
       const inputData = {
-        brandName,
-        competitorBrands: this.data.competitorBrands,
+        brandName: mainBrandName,
+        competitorBrands: Array.isArray(brandList) ? brandList.slice(1) : [],
         selectedModels,
         customQuestions
       };
@@ -966,7 +978,8 @@ Page({
         }
       );
 
-      this.pollingController.start(2000);
+      // P2 优化：轮询间隔从 2000ms 缩短到 800ms，并立即触发第一次轮询
+      this.pollingController.start(800, true);
     } catch (err) {
       wx.hideLoading();
       this.handleDiagnosisError(err);
@@ -980,47 +993,13 @@ Page({
    */
   handleDiagnosisComplete(parsedStatus, executionId) {
     try {
-      // 存储完整的报告数据
-      const reportData = parsedStatus.detailed_results || parsedStatus.results;
-
-      // 使用数据防御机制处理报告数据
-      const processedReportData = processReportData(reportData);
-
-      // 生成战略看板数据（第二阶段：聚合引擎）
-      const dashboardData = generateDashboardData(processedReportData, {
-        brandName: this.data.brandName,
-        competitorBrands: this.data.competitorBrands
-      });
-
-      this.setData({
-        reportData: processedReportData,
-        isTesting: false,
-        testCompleted: true,
-        completedTime: this.getCompletedTimeText(),
-        progressText: '诊断完成，正在生成报告...',
-        // 设置趋势图表数据
-        trendChartData: generateTrendChartData(processedReportData),
-        // 设置预测数据
-        predictionData: extractPredictionData(processedReportData),
-        // 设置评分数据
-        scoreData: extractScoreData(processedReportData),
-        // 设置竞争分析数据
-        competitionData: extractCompetitionData(processedReportData),
-        // 设置信源列表数据
-        sourceListData: extractSourceListData(processedReportData),
-        // 设置战略看板数据
-        dashboardData: dashboardData
-      });
-
-      wx.showToast({ title: '诊断完成', icon: 'success' });
-      this.renderReport();
-
-      // 保存完整数据并跳转到结果页
+      // P2 优化：先跳转结果页，再异步处理数据，减少等待时间
+      // 保存核心数据并跳转
       const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];
-      const competitiveAnalysisToSave = parsedStatus.competitive_analysis || this.data.latestCompetitiveAnalysis || {};
-      const brandScoresToSave = parsedStatus.brand_scores || (competitiveAnalysisToSave && competitiveAnalysisToSave.brandScores) || {};
+      const competitiveAnalysisToSave = parsedStatus.competitive_analysis || {};
+      const brandScoresToSave = competitiveAnalysisToSave.brandScores || {};
 
-      // 使用 Storage 传递大数据，避免 URL 编码 2KB 限制
+      // 使用 Storage 传递大数据
       wx.setStorageSync('last_diagnostic_results', {
         results: resultsToSave,
         competitiveAnalysis: competitiveAnalysisToSave,
@@ -1030,22 +1009,49 @@ Page({
         timestamp: Date.now()
       });
 
-      // 同时保存带 executionId 的缓存（兼容现有逻辑）
+      // 保存带 executionId 的缓存
       wx.setStorageSync('latestTestResults_' + executionId, resultsToSave);
       wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, competitiveAnalysisToSave);
       wx.setStorageSync('latestBrandScores_' + executionId, brandScoresToSave);
       wx.setStorageSync('latestTargetBrand', this.data.brandName);
 
-      console.log('✅ 数据已保存到本地存储:', {
-        resultsCount: resultsToSave.length,
-        hasCompetitiveAnalysis: Object.keys(competitiveAnalysisToSave).length > 0,
-        hasBrandScores: Object.keys(brandScoresToSave).length > 0
-      });
+      console.log('✅ 数据已保存到本地存储');
 
-      // 只传递 executionId 和 brandName，不再通过 URL 传递大数据
+      // P2 优化：立即跳转，不等待本地数据处理完成
       wx.navigateTo({
         url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
       });
+
+      // P2 优化：异步处理本地数据聚合（不阻塞跳转）
+      // 使用 setTimeout 将计算任务放到下一个事件循环
+      setTimeout(() => {
+        try {
+          const reportData = parsedStatus.detailed_results || parsedStatus.results;
+          const processedReportData = processReportData(reportData);
+          const dashboardData = generateDashboardData(processedReportData, {
+            brandName: this.data.brandName,
+            competitorBrands: this.data.competitorBrands
+          });
+
+          this.setData({
+            reportData: processedReportData,
+            isTesting: false,
+            testCompleted: true,
+            completedTime: this.getCompletedTimeText(),
+            trendChartData: generateTrendChartData(processedReportData),
+            predictionData: extractPredictionData(processedReportData),
+            scoreData: extractScoreData(processedReportData),
+            competitionData: extractCompetitionData(processedReportData),
+            sourceListData: extractSourceListData(processedReportData),
+            dashboardData: dashboardData
+          });
+
+          console.log('✅ 异步数据处理完成');
+        } catch (error) {
+          console.error('异步数据处理失败:', error);
+        }
+      }, 0);
+
     } catch (error) {
       console.error('处理诊断完成失败:', error);
       wx.showToast({ title: '处理结果失败', icon: 'none' });
@@ -1053,30 +1059,98 @@ Page({
   },
 
   /**
+   * 【防御性异常拦截器】统一处理所有核心请求的异常
+   * 确保任何报错都能弹出友好提示而不是直接白屏
+   * @param {Error} error - 错误对象
+   * @param {string} context - 错误发生的上下文
+   * @returns {string} 处理后的错误信息
+   */
+  handleException(error, context = '操作') {
+    // 记录完整错误堆栈用于调试
+    console.error(`[${context}] 异常捕获:`, error);
+    console.error(`[${context}] 错误堆栈:`, error?.stack);
+
+    // 提取错误信息
+    let extractedError = '系统繁忙，请稍后重试';
+
+    // 多层错误提取
+    if (error) {
+      extractedError = error?.data?.error || 
+                       error?.data?.message || 
+                       error?.errMsg || 
+                       error?.message || 
+                       error?.toString() || 
+                       extractedError;
+    }
+
+    // 确保错误信息是字符串
+    extractedError = String(extractedError);
+
+    // 网络错误友好提示
+    if (extractedError.includes('request:fail') || 
+        extractedError.includes('network') || 
+        extractedError.includes('timeout') ||
+        extractedError.includes('ETIMEDOUT') ||
+        extractedError.includes('ENOTFOUND')) {
+      extractedError = '网络连接失败，请检查：\n1. 设备是否已连接互联网\n2. 后端服务是否已启动\n3. 防火墙设置是否允许访问';
+    }
+
+    // 403 权限错误
+    if (extractedError.includes('403') || extractedError.includes('Unauthorized') || extractedError.includes('Token')) {
+      extractedError = '权限验证失败，请：\n1. 检查是否已登录\n2. 确认 Token 是否有效\n3. 联系管理员获取权限';
+    }
+
+    // 404 路径错误
+    if (extractedError.includes('404') || extractedError.includes('Not Found')) {
+      extractedError = '服务接口不存在，请：\n1. 检查后端服务是否已启动\n2. 确认 API 路径配置是否正确\n3. 联系开发人员修复';
+    }
+
+    // AI 模型配置错误
+    if (extractedError.includes('not registered or not configured') || 
+        extractedError.includes('API key') ||
+        extractedError.includes('API_KEY')) {
+      extractedError = '所选 AI 模型未正确配置，请：\n1. 在 .env 文件中配置相应 API 密钥\n2. 重启后端服务加载新配置\n3. 确认 API 密钥格式正确且有效\n4. 或选择其他已配置的 AI 模型';
+    }
+
+    // 画布/渲染错误
+    if (extractedError.includes('canvas') || 
+        extractedError.includes('Canvas') ||
+        extractedError.includes('getContext') ||
+        extractedError.includes('requestAnimationFrame')) {
+      extractedError = '页面渲染异常，请：\n1. 刷新页面重试\n2. 清除缓存后重试\n3. 如问题持续，请联系技术支持';
+    }
+
+    // 数据类型错误
+    if (extractedError.includes('trim') || 
+        extractedError.includes('TypeError') ||
+        extractedError.includes('Cannot read')) {
+      extractedError = '数据处理异常，请：\n1. 检查输入数据格式\n2. 清除本地缓存\n3. 刷新页面重试';
+    }
+
+    // 显示友好错误提示
+    wx.showModal({
+      title: `${context}失败`,
+      content: extractedError,
+      showCancel: false,
+      confirmText: '我知道了'
+    });
+
+    // 返回处理后的错误信息
+    return extractedError;
+  },
+
+  /**
    * 处理诊断错误
    * @param {Error} error - 错误对象
    */
   handleDiagnosisError(error) {
-    console.error("Diagnostic Error:", error);
+    // Step 1: 确保隐藏加载框
+    wx.hideLoading();
+    
+    // 使用统一异常拦截器处理
+    const friendlyError = this.handleException(error, '诊断启动');
 
-    let extractedError = error?.data?.error || error?.data?.message || error?.errMsg || error?.message || "任务创建失败";
-
-    // 如果错误信息包含网络相关错误，提供更友好的提示
-    if (extractedError && (String(extractedError).includes('request:fail') || String(extractedError).includes('network'))) {
-      extractedError = '网络连接失败，请检查网络设置或稍后重试';
-    }
-
-    // 如果是 400 错误，特别处理 AI 模型未配置的情况
-    if (typeof extractedError === 'string' && (extractedError.includes('not registered or not configured') || extractedError.includes('API key'))) {
-      extractedError = '所选 AI 模型未正确配置，请检查 API 密钥设置或选择其他 AI 模型\n\n请确保：\n1. 已在 .env 文件中配置相应 API 密钥\n2. 后端服务已重启加载新配置\n3. API 密钥格式正确且有效';
-    }
-
-    wx.showModal({
-      title: '启动失败',
-      content: String(extractedError),
-      showCancel: false
-    });
-
+    // 重置测试状态
     this.setData({ isTesting: false });
   },
 

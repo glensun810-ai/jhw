@@ -55,13 +55,19 @@ def parse_geo_with_validation(
 ) -> Tuple[Dict[str, Any], Optional[str]]:
     """
     解析 GEO 数据并验证
-    
+
     返回：
     - geo_data: 解析后的 GEO 数据
     - error: 错误信息（如果有）
     """
     try:
-        geo_data, error = parse_geo_json_enhanced(response_text, execution_id, q_idx, model_name)
+        # 修复 1: 传递 execution_id, q_idx, model_name 参数
+        geo_data = parse_geo_json_enhanced(response_text, execution_id, q_idx, model_name)
+
+        # 修复 1: 检查是否有错误标记
+        if geo_data.get('_error'):
+            api_logger.warning(f"[GeoParser] 解析失败（有错误标记）：{execution_id}, Q{q_idx}, {model_name}: {geo_data['_error']}")
+            return geo_data, geo_data.get('_error')
 
         if not geo_data:
             api_logger.warning(f"[GeoParser] 解析失败：{execution_id}, Q{q_idx}, {model_name}")
@@ -71,8 +77,9 @@ def parse_geo_with_validation(
                 'sentiment': 0.0,
                 'cited_sources': [],
                 'interception': '',
-                '_error': error or '解析失败'
-            }, error
+                '_error': '解析失败',
+                '_raw_response': response_text[:1000]
+            }, '解析失败'
 
         # 验证必填字段
         if 'brand_mentioned' not in geo_data:
@@ -102,7 +109,8 @@ def parse_geo_with_validation(
             'sentiment': 0.0,
             'cited_sources': [],
             'interception': '',
-            '_error': str(e)
+            '_error': str(e),
+            '_raw_response': response_text[:1000]
         }, str(e)
 
 
@@ -137,12 +145,95 @@ def verify_completion(
     }
 
 
+def calculate_result_quality(geo_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    修复 4: 计算结果质量评分
+
+    评分标准：
+    - brand_mentioned: 10 分
+    - rank > 0: 20 分
+    - sentiment != 0: 20 分
+    - cited_sources > 0: 30 分 (每个信源 10 分，最多 30 分)
+    - interception 非空：20 分
+
+    返回：
+    - quality_score: 0-100 分
+    - quality_level: 'high', 'medium', 'low', 'failed'
+    - quality_details: 详细评分信息
+    """
+    score = 0
+    details = {}
+
+    # brand_mentioned: 10 分
+    if geo_data.get('brand_mentioned'):
+        score += 10
+        details['brand_mentioned'] = True
+    else:
+        details['brand_mentioned'] = False
+
+    # rank > 0: 20 分
+    rank = geo_data.get('rank', -1)
+    if rank > 0:
+        score += 20
+        details['rank'] = rank
+    else:
+        details['rank'] = '无效'
+
+    # sentiment != 0: 20 分
+    sentiment = geo_data.get('sentiment', 0.0)
+    if sentiment != 0.0:
+        score += 20
+        details['sentiment'] = sentiment
+    else:
+        details['sentiment'] = '中性/默认'
+
+    # cited_sources > 0: 30 分 (每个信源 10 分，最多 30 分)
+    sources = geo_data.get('cited_sources', [])
+    if sources and len(sources) > 0:
+        source_score = min(len(sources) * 10, 30)
+        score += source_score
+        details['sources'] = len(sources)
+    else:
+        details['sources'] = 0
+
+    # interception 非空：20 分
+    interception = geo_data.get('interception', '')
+    if interception and len(interception.strip()) > 0:
+        score += 20
+        details['interception'] = True
+    else:
+        details['interception'] = False
+
+    # 确定质量等级
+    if score >= 80:
+        quality_level = 'high'
+    elif score >= 60:
+        quality_level = 'medium'
+    elif score >= 30:
+        quality_level = 'low'
+    else:
+        quality_level = 'failed'
+
+    return {
+        'quality_score': score,
+        'quality_level': quality_level,
+        'quality_details': details
+    }
+
+
 def deduplicate_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """去重结果"""
     seen_hashes = set()
     deduplicated = []
 
     for result in results:
+        # 修复 4: 添加质量评分
+        if 'geo_data' in result:
+            quality_info = calculate_result_quality(result['geo_data'])
+            result['quality_score'] = quality_info['quality_score']
+            result['quality_level'] = quality_info['quality_level']
+            result['quality_details'] = quality_info['quality_details']
+
         result_hash = generate_result_hash(result)
         if result_hash not in seen_hashes:
             seen_hashes.add(result_hash)

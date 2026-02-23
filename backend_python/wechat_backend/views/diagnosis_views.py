@@ -1,8 +1,10 @@
 """
 诊断相关视图模块
 包含品牌诊断、测试执行、进度查询等路由
+
+注意：本模块使用 views/__init__.py 中定义的 wechat_bp 蓝图
 """
-from flask import Blueprint, request, jsonify, g
+from flask import request, jsonify, g
 import hashlib
 import hmac
 import json
@@ -59,8 +61,8 @@ from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimite
 # Monitoring imports
 from wechat_backend.monitoring.monitoring_decorator import monitored_endpoint
 
-# Create a blueprint
-wechat_bp = Blueprint('wechat', __name__)
+# 从主模块导入蓝图（修复 P0-3: 确保路由注册到正确的蓝图）
+from . import wechat_bp
 
 # Global store for execution progress (in production, use Redis or database)
 execution_store = {}

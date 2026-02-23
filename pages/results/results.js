@@ -162,6 +162,7 @@ Page({
   /**
    * 【新增】从后端 API 拉取结果数据
    * 【P0 修复】添加 Token 认证头和 403 自动重试机制
+   * 【修复 2】添加空数据和默认值验证
    */
   fetchResultsFromServer: function(executionId, brandName, isRetry) {
     const app = getApp();
@@ -214,6 +215,41 @@ Page({
         if (res.statusCode === 200 && res.data && (res.data.detailed_results || res.data.results)) {
           const resultsToUse = res.data.detailed_results || res.data.results || [];
           const competitiveAnalysisToUse = res.data.competitive_analysis || {};
+
+          // 修复 2: 验证结果是否为空
+          if (!resultsToUse || resultsToUse.length === 0) {
+            console.error('❌ 后端 API 返回结果为空');
+            this.showNoDataModal();
+            return;
+          }
+
+          // 修复 2: 验证结果是否包含真实数据（非默认值）
+          const hasRealData = resultsToUse.some(r => {
+            const geoData = r.geo_data || {};
+            // 检查是否有错误标记
+            if (geoData._error) {
+              console.warn('⚠️ 结果包含解析错误:', geoData._error);
+              return false;
+            }
+            // 检查是否有真实数据（非全默认值）
+            const hasBrandMentioned = geoData.brand_mentioned !== undefined;
+            const hasValidRank = geoData.rank !== -1;
+            const hasValidSentiment = geoData.sentiment !== 0.0;
+            const hasSources = geoData.cited_sources && geoData.cited_sources.length > 0;
+            
+            return hasBrandMentioned && (hasValidRank || hasValidSentiment || hasSources);
+          });
+
+          if (!hasRealData) {
+            console.error('❌ 后端 API 返回数据均为默认值，无真实分析结果');
+            wx.showModal({
+              title: '数据异常',
+              content: '诊断结果数据异常（可能为默认值），请重试',
+              showCancel: false,
+              confirmText: '我知道了'
+            });
+            return;
+          }
 
           // 保存到 Storage
           wx.setStorageSync('last_diagnostic_results', {

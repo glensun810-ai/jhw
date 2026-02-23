@@ -17,7 +17,8 @@ from datetime import datetime
 
 from wechat_backend.ai_adapters.factory import AIAdapterFactory
 from wechat_backend.ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE
-from wechat_backend.config_manager import config_manager
+# P0 修复：延迟导入 config_manager，避免循环依赖
+# from wechat_backend.config_manager import config_manager
 from wechat_backend.logging_config import api_logger
 from wechat_backend.database import save_test_record
 
@@ -96,55 +97,93 @@ def execute_nxm_test(
                         continue
                     
                     try:
+                        # P0 修复：直接使用 Config 类获取 API Key，避免循环依赖
+                        from config import Config
+
                         # 创建 AI 客户端
                         client = AIAdapterFactory.create(model_name)
-                        api_key = config_manager.get_api_key(model_name)
-                        
+                        api_key = Config.get_api_key(model_name)
+
                         if not api_key:
                             raise ValueError(f"模型 {model_name} API Key 未配置")
-                        
+
                         # 构建提示词
                         prompt = GEO_PROMPT_TEMPLATE.format(
                             brand=main_brand,
                             question=question
                         )
-                        
-                        # 调用 AI 接口
-                        response = client.generate_response(
-                            prompt=prompt,
-                            api_key=api_key
-                        )
-                        
-                        # 解析 GEO 数据
-                        geo_data, error = parse_geo_with_validation(
-                            response,
-                            execution_id,
-                            q_idx,
-                            model_name
-                        )
-                        
-                        if error:
+
+                        # 修复 3: 添加 AI 响应重试机制
+                        max_retries = 2
+                        retry_count = 0
+                        response = None
+                        geo_data = None
+                        parse_error = None
+
+                        while retry_count <= max_retries:
+                            try:
+                                # 调用 AI 接口
+                                response = client.generate_response(
+                                    prompt=prompt,
+                                    api_key=api_key
+                                )
+
+                                # 解析 GEO 数据
+                                geo_data, parse_error = parse_geo_with_validation(
+                                    response,
+                                    execution_id,
+                                    q_idx,
+                                    model_name
+                                )
+
+                                # 如果解析成功，跳出重试循环
+                                if not parse_error and not geo_data.get('_error'):
+                                    break
+
+                                # 解析失败，记录日志并准备重试
+                                api_logger.warning(f"[NxM] 解析失败，准备重试：{model_name}, Q{q_idx}, 尝试 {retry_count + 1}/{max_retries}")
+                                retry_count += 1
+
+                            except Exception as call_error:
+                                api_logger.error(f"[NxM] AI 调用失败：{model_name}, Q{q_idx}: {call_error}")
+                                retry_count += 1
+
+                        # 检查最终结果
+                        if not response or not geo_data or geo_data.get('_error'):
+                            api_logger.error(f"[NxM] 重试耗尽，标记为失败：{model_name}, Q{q_idx}")
                             scheduler.record_model_failure(model_name)
+                            # 仍然添加结果，但标记为失败
+                            result = {
+                                'brand': main_brand,
+                                'question': question,
+                                'model': model_name,
+                                'response': response,
+                                'geo_data': geo_data or {'_error': 'AI 调用或解析失败'},
+                                'timestamp': datetime.now().isoformat(),
+                                '_failed': True
+                            }
+                            scheduler.add_result(result)
+                            results.append(result)
                         else:
                             scheduler.record_model_success(model_name)
-                        
-                        # 构建结果
-                        result = {
-                            'brand': main_brand,
-                            'question': question,
-                            'model': model_name,
-                            'response': response,
-                            'geo_data': geo_data,
-                            'timestamp': datetime.now().isoformat()
-                        }
-                        
-                        scheduler.add_result(result)
-                        results.append(result)
-                        
+
+                            # 构建结果
+                            result = {
+                                'brand': main_brand,
+                                'question': question,
+                                'model': model_name,
+                                'response': response,
+                                'geo_data': geo_data,
+                                'timestamp': datetime.now().isoformat()
+                            }
+
+                            scheduler.add_result(result)
+                            results.append(result)
+
                         # 更新进度
                         completed += 1
                         scheduler.update_progress(completed, total_tasks, 'ai_fetching')
-                        
+
                     except Exception as e:
                         api_logger.error(f"[NxM] 执行失败：{model_name}, Q{q_idx}: {e}")
                         scheduler.record_model_failure(model_name)
