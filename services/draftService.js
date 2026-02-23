@@ -43,7 +43,14 @@ const restoreDraft = () => {
   try {
     const draft = wx.getStorageSync(STORAGE_KEY);
 
-    if (!draft || !draft.brandName) {
+    // 防御性检查：确保 draft 是对象
+    if (!draft || typeof draft !== 'object') {
+      return null;
+    }
+
+    // 类型强制转换：确保 brandName 是字符串
+    const brandName = String(draft.brandName || '');
+    if (!brandName) {
       return null;
     }
 
@@ -57,8 +64,21 @@ const restoreDraft = () => {
       return null;
     }
 
-    console.log('草稿已恢复', draft);
-    return draft;
+    // 返回经过类型清洗的数据
+    const cleanedDraft = {
+      brandName: brandName,
+      currentCompetitor: String(draft.currentCompetitor || ''),
+      competitorBrands: Array.isArray(draft.competitorBrands) ? draft.competitorBrands : [],
+      customQuestions: Array.isArray(draft.customQuestions) ? draft.customQuestions : [],
+      selectedModels: {
+        domestic: Array.isArray(draft.selectedModels?.domestic) ? draft.selectedModels.domestic : [],
+        overseas: Array.isArray(draft.selectedModels?.overseas) ? draft.selectedModels.overseas : []
+      },
+      updatedAt: draft.updatedAt || 0
+    };
+
+    console.log('草稿已恢复', cleanedDraft);
+    return cleanedDraft;
   } catch (error) {
     console.error('恢复草稿失败:', error);
     return null;

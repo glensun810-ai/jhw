@@ -299,8 +299,12 @@ const generateTrendChartData = (reportData) => {
       const dates = timeSeries.map(item => item.period || item.date || '未知时间');
       const values = timeSeries.map(item => item.value || 0);
 
+      // 修复 P0-2: 支持数值数组和对象数组两种格式
       const predictions = reportData.prediction && Array.isArray(reportData.prediction.forecast_points)
-        ? reportData.prediction.forecast_points.map(point => point.value || 0)
+        ? reportData.prediction.forecast_points.map(point => {
+            // 如果是对象，提取 value 字段；如果是数值，直接使用
+            return (typeof point === 'object' && point !== null) ? (point.value || 0) : (point || 0);
+          })
         : [];
 
       return { dates, values, predictions };

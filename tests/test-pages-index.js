@@ -1,6 +1,6 @@
 /**
  * pages/index/index.js 页面交互测试
- * 
+ *
  * 测试覆盖：
  * - onLoad 生命周期
  * - startBrandTest 交互
@@ -8,7 +8,7 @@
  * - saveCurrentInput 输入保存
  */
 
-const { describe, test, beforeEach, afterEach, expect, mockWx } = require('./test-utils');
+const { describe, test, beforeEach, afterEach, expect, mockWx, createMockFn } = require('./test-utils');
 const { createMockPageContext, simulatePageLoad, simulateUserAction, verifySetDataCalled } = require('./test-page-utils');
 
 // Mock 服务模块

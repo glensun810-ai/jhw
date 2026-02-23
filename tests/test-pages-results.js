@@ -1,6 +1,6 @@
 /**
  * pages/results/results.js 页面测试
- * 
+ *
  * 测试覆盖：
  * - onLoad 数据加载
  * - initializePageWithData 数据初始化
@@ -8,7 +8,7 @@
  * - 错误处理
  */
 
-const { describe, test, beforeEach, afterEach, expect, mockWx } = require('./test-utils');
+const { describe, test, beforeEach, afterEach, expect, mockWx, createMockFn } = require('./test-utils');
 const { createMockPageContext, simulatePageLoad } = require('./test-page-utils');
 
 describe('pages/results/results.js 页面测试', () => {

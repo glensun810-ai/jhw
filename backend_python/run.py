@@ -6,6 +6,7 @@ Flask 应用启动文件
 
 P1 修复：解决 ImportError 相对路径越界问题
 P2 修复：统一配置文件加载机制
+P3 修复：使用新的目录结构
 """
 
 import os
@@ -20,6 +21,11 @@ from dotenv import load_dotenv
 base_dir = os.path.dirname(os.path.abspath(__file__))
 if base_dir not in sys.path:
     sys.path.insert(0, base_dir)
+
+# 添加 src 到路径（新结构）
+src_dir = os.path.join(base_dir, 'src')
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
 
 # 添加 wechat_backend 到路径
 wechat_backend_dir = os.path.join(base_dir, 'wechat_backend')
@@ -58,6 +64,7 @@ if __name__ == '__main__':
     print(f"🚀 Starting WeChat Backend API server on port {port}")
     print(f"🔧 Debug mode: {'on' if debug else 'off'}")
     print(f"📝 Log file: logs/app.log")
+    print(f"📁 Using new directory structure: src/")
 
     app.run(
         host='127.0.0.1',

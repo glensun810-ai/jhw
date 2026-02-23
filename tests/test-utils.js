@@ -151,10 +151,26 @@ class Expect {
   }
 
   /**
+   * 已定义
+   */
+  toBeDefined() {
+    const passed = this.actual !== undefined;
+    this.assert(passed, `期望 ${this.actual} 不为 undefined`);
+  }
+
+  /**
+   * 包含属性
+   */
+  toHaveProperty(prop) {
+    const passed = this.actual && typeof this.actual === 'object' && prop in this.actual;
+    this.assert(passed, `期望 ${JSON.stringify(this.actual)} 包含属性 ${prop}`);
+  }
+
+  /**
    * 包含
    */
   toContain(expected) {
-    const passed = Array.isArray(this.actual) 
+    const passed = Array.isArray(this.actual)
       ? this.actual.includes(expected)
       : this.actual.includes(expected);
     this.assert(passed, `期望 ${this.actual} 包含 ${expected}`);
@@ -225,18 +241,53 @@ function expect(actual) {
 function createMockFn() {
   const mockFn = function() {
     mockFn.calls.push(Array.from(arguments));
+    // 如果有自定义实现，使用自定义实现
+    if (mockFn.implementation) {
+      return mockFn.implementation.apply(this, arguments);
+    }
     return mockFn.returnValue;
   };
   mockFn.calls = [];
   mockFn.returnValue = undefined;
+  mockFn.implementation = null;
+  
+  /**
+   * 设置返回值
+   */
   mockFn.mockReturnValue = function(value) {
+    mockFn.implementation = null;  // 清除自定义实现
     mockFn.returnValue = value;
     return mockFn;
   };
-  mockFn.mockClear = function() {
-    mockFn.calls = [];
+  
+  /**
+   * 设置自定义实现
+   */
+  mockFn.mockImplementation = function(impl) {
+    mockFn.implementation = impl;
     return mockFn;
   };
+  
+  /**
+   * 清空调用记录
+   */
+  mockFn.mockClear = function() {
+    mockFn.calls = [];
+    mockFn.returnValue = undefined;
+    mockFn.implementation = null;
+    return mockFn;
+  };
+  
+  /**
+   * 重置 Mock 函数
+   */
+  mockFn.mockReset = function() {
+    mockFn.calls = [];
+    mockFn.returnValue = undefined;
+    mockFn.implementation = null;
+    return mockFn;
+  };
+  
   return mockFn;
 }
 
@@ -347,5 +398,6 @@ module.exports = {
   expect,
   mockWx,
   clearAllMocks,
-  runTests
+  runTests,
+  createMockFn  // 修复 P1-1/P1-3: 导出 createMockFn
 };

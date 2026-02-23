@@ -1,0 +1,149 @@
+{
+  "timestamp": "2026-02-23T01:39:57.560Z",
+  "total": 35,
+  "passed": 35,
+  "failed": 0,
+  "tests": [
+    {
+      "name": "文件存在：backend_python/wechat_backend/nxm_execution_engine.py",
+      "passed": true
+    },
+    {
+      "name": "文件存在：backend_python/wechat_backend/nxm_scheduler.py",
+      "passed": true
+    },
+    {
+      "name": "文件存在：utils/request.js",
+      "passed": true
+    },
+    {
+      "name": "文件存在：services/brandTestService.js",
+      "passed": true
+    },
+    {
+      "name": "文件存在：api/home.js",
+      "passed": true
+    },
+    {
+      "name": "文件存在：pages/index/index.js",
+      "passed": true
+    },
+    {
+      "name": "使用 Config 类导入",
+      "passed": true
+    },
+    {
+      "name": "使用 Config.get_api_key() 获取 API Key",
+      "passed": true
+    },
+    {
+      "name": "不再使用 wechat_backend.config_manager 导入（注释除外）",
+      "passed": true
+    },
+    {
+      "name": "定义 status_texts 字典",
+      "passed": true
+    },
+    {
+      "name": "传递 status_text 参数",
+      "passed": true
+    },
+    {
+      "name": "包含完整状态文本映射",
+      "passed": true
+    },
+    {
+      "name": "定义 skipAuth 参数",
+      "passed": true
+    },
+    {
+      "name": "从 Storage 读取 Token",
+      "passed": true
+    },
+    {
+      "name": "设置 Authorization 头",
+      "passed": true
+    },
+    {
+      "name": "处理 403 错误",
+      "passed": true
+    },
+    {
+      "name": "标记认证错误",
+      "passed": true
+    },
+    {
+      "name": "检查 403 状态码",
+      "passed": true
+    },
+    {
+      "name": "403 错误不重试注释",
+      "passed": true
+    },
+    {
+      "name": "403 错误立即抛出",
+      "passed": true
+    },
+    {
+      "name": "定义错误计数器",
+      "passed": true
+    },
+    {
+      "name": "定义最大错误数 (2 次)",
+      "passed": true
+    },
+    {
+      "name": "错误计数器递增",
+      "passed": true
+    },
+    {
+      "name": "熔断判断逻辑",
+      "passed": true
+    },
+    {
+      "name": "熔断时停止轮询",
+      "passed": true
+    },
+    {
+      "name": "非认证错误重置计数器",
+      "passed": true
+    },
+    {
+      "name": "定义 immediate 参数 (默认 true)",
+      "passed": true
+    },
+    {
+      "name": "检查 immediate 条件",
+      "passed": true
+    },
+    {
+      "name": "立即调用 getTaskStatusApi",
+      "passed": true
+    },
+    {
+      "name": "轮询间隔 800ms",
+      "passed": true
+    },
+    {
+      "name": "健康检查设置 skipAuth: true",
+      "passed": true
+    },
+    {
+      "name": "注释说明跳过认证",
+      "passed": true
+    },
+    {
+      "name": "错误处理中调用 wx.hideLoading()",
+      "passed": true
+    },
+    {
+      "name": "使用 setTimeout 异步处理",
+      "passed": true
+    },
+    {
+      "name": "先跳转后异步处理",
+      "passed": true
+    }
+  ],
+  "passRate": 100
+}

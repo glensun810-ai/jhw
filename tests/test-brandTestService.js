@@ -238,7 +238,7 @@ describe('brandTestService 测试', () => {
       expect(controller.isStopped).toBeDefined();
     });
 
-    test('应该启动和停止轮询', (done) => {
+    test('应该启动和停止轮询', async () => {
       let progressCalled = false;
       let completeCalled = false;
 
@@ -257,12 +257,12 @@ describe('brandTestService 测试', () => {
 
       controller.start(10); // 10ms 轮询间隔
 
-      setTimeout(() => {
-        controller.stop();
-        
-        expect(controller.isStopped()).toBe(true);
-        done();
-      }, 50);
+      // 使用 Promise 包装 setTimeout
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      controller.stop();
+
+      expect(controller.isStopped()).toBe(true);
     });
   });
 });
