@@ -10,31 +10,41 @@
 
 ### 1.1 快速入口
 
-| 文档 | 说明 | 位置 |
-|-----|------|------|
-| [README](../README.md) | 项目总览 | 根目录 |
-| [架构文档](./architecture/README.md) | 系统架构 | docs/architecture/ |
-| [配置规范](./standards/config_standard.md) | 配置管理 | docs/standards/ |
-| [代码规范](./standards/code_standard.md) | 代码风格 | docs/standards/ |
+| 文档 | 说明 | 位置 | 行数 | 状态 |
+|-----|------|------|------|------|
+| [README](../README.md) | 项目总览 | 根目录 | 400+ | ✅ |
+| [架构文档](./architecture/README.md) | 系统架构 | docs/architecture/ | 392 | ✅ |
+| [配置规范](./standards/config_standard.md) | 配置管理 | docs/standards/ | 415 | ✅ |
+| [代码规范](./standards/code_standard.md) | 代码风格 | docs/standards/ | 542 | ✅ |
+| [文档索引](./README.md) | 本文档 | docs/ | 250+ | ✅ |
 
 ### 1.2 文档分类
 
 ```
 docs/
-├── architecture/              # 架构文档
-│   └── README.md              # 系统架构
-├── api/                       # API 文档
-│   └── (待创建)
-├── config/                    # 配置文档
-│   └── (待创建)
-├── standards/                 # 规范文档
-│   ├── config_standard.md     # 配置规范
-│   └── code_standard.md       # 代码规范
-├── deployment/                # 部署指南
-│   └── (待创建)
-└── reports/                   # 报告归档
-    └── 2026-02/               # 按月归档
+├── README.md                    # 文档索引（本文件）
+├── architecture/                # 架构文档
+│   └── README.md                # 系统架构（392 行）
+├── standards/                   # 规范文档
+│   ├── config_standard.md       # 配置规范（415 行）
+│   └── code_standard.md         # 代码规范（542 行）
+├── reports/                     # 报告归档
+│   └── 2026-02/                 # 2026 年 2 月报告（153 个）
+└── (待扩展)
+    ├── api/                     # API 文档
+    ├── config/                  # 配置文档
+    └── deployment/              # 部署指南
 ```
+
+### 1.3 阶段执行报告
+
+| 阶段 | 报告 | 状态 |
+|-----|------|------|
+| 阶段 1 | [准备与备份](./2026-02-23_阶段 1 执行报告.md) | ✅ 完成 |
+| 阶段 2 | [清理与整理](./2026-02-23_阶段 2 执行报告.md) | ✅ 完成 |
+| 阶段 3 | [代码整合](./2026-02-23_阶段 3 执行报告.md) | ✅ 完成 |
+| 阶段 4 | [文档与规范](./2026-02-23_阶段 4 执行报告.md) | ✅ 完成 |
+| 阶段 5 | [测试与验证](./2026-02-23_阶段 5 执行报告.md) | ✅ 完成 |
 
 ---
 
