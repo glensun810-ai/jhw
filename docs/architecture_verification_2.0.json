@@ -1,0 +1,73 @@
+{
+  "P0_issues": {
+    "P0-1": {
+      "description": "execution_store 降级查询",
+      "status": "✅ 已修复",
+      "file": "/Users/sgl/PycharmProjects/PythonProject/backend_python/wechat_backend/views.py"
+    },
+    "P0-2": {
+      "description": "数据库 execution_id 索引",
+      "status": "✅ 已修复",
+      "file": "/Users/sgl/PycharmProjects/PythonProject/backend_python/migrate_execution_id.py"
+    }
+  },
+  "P1_issues": {
+    "P1-1": {
+      "description": "统一 Storage 数据格式",
+      "status": "✅ 已修复",
+      "file": "/Users/sgl/PycharmProjects/PythonProject/utils/storage-manager.js"
+    },
+    "P1-2": {
+      "description": "完善错误处理链路",
+      "status": "✅ 已修复",
+      "file": "/Users/sgl/PycharmProjects/PythonProject/backend_python/wechat_backend/nxm_execution_engine.py"
+    },
+    "P1-3": {
+      "description": "简化 selectedModels 格式",
+      "status": "✅ 已修复",
+      "file": "/Users/sgl/PycharmProjects/PythonProject/services/brandTestService.js"
+    },
+    "P1-5": {
+      "description": "数据库连接关闭",
+      "status": "✅ 已修复",
+      "file": "/Users/sgl/PycharmProjects/PythonProject/backend_python/wechat_backend/views.py"
+    }
+  },
+  "P2_issues": {
+    "P2-1": {
+      "description": "优化日志记录级别",
+      "status": "✅ 已修复",
+      "file": "/Users/sgl/PycharmProjects/PythonProject/backend_python/wechat_backend/log_level_config.py"
+    },
+    "P2-2": {
+      "description": "添加请求限流监控",
+      "status": "✅ 已修复",
+      "file": "/Users/sgl/PycharmProjects/PythonProject/backend_python/wechat_backend/security/rate_limit_monitor.py"
+    }
+  },
+  "new_issues": [
+    {
+      "type": "技术债务",
+      "severity": "🟡 中",
+      "description": "发现 1634 个 TODO/FIXME 注释",
+      "suggestion": "优先处理高优先级的 TODO"
+    }
+  ],
+  "summary": {
+    "code_P0-1 降级查询修复": "✅",
+    "file_P0-2 数据库迁移": "✅",
+    "file_P1-1 Storage 管理器": "✅",
+    "code_P1-1 index.js 集成": "✅",
+    "code_P1-2 后端错误处理": "✅",
+    "code_P1-2 前端错误处理": "✅",
+    "code_P1-3 前端简化": "✅",
+    "code_P1-5 数据库连接关闭": "✅",
+    "file_P2-1 日志优化": "✅",
+    "code_P2-1 集成到 run.py": "✅",
+    "file_P2-2 限流监控": "✅",
+    "P0 修复率": "2/2 (100%)",
+    "P1 修复率": "4/4 (100%)",
+    "P2 修复率": "2/2 (100%)",
+    "新问题数量": 1
+  }
+}

@@ -108,8 +108,10 @@ def execute_nxm_test(
                             raise ValueError(f"模型 {model_name} API Key 未配置")
 
                         # 构建提示词
+                        # P0 修复：模板需要 brand_name, competitors, question 三个参数
                         prompt = GEO_PROMPT_TEMPLATE.format(
-                            brand=main_brand,
+                            brand_name=main_brand,
+                            competitors=', '.join(competitor_brands) if competitor_brands else '无',
                             question=question
                         )
 
@@ -185,10 +187,40 @@ def execute_nxm_test(
                         scheduler.update_progress(completed, total_tasks, 'ai_fetching')
 
                     except Exception as e:
-                        api_logger.error(f"[NxM] 执行失败：{model_name}, Q{q_idx}: {e}")
+                        # P1-2 修复：完善错误处理，记录详细错误信息
+                        error_message = f"AI 调用失败：{model_name}, 问题{q_idx+1}: {str(e)}"
+                        api_logger.error(f"[NxM] {error_message}")
+                        
+                        # 记录模型失败
                         scheduler.record_model_failure(model_name)
+                        
+                        # 更新进度，包含错误信息
                         completed += 1
                         scheduler.update_progress(completed, total_tasks, 'ai_fetching')
+                        
+                        # P1-2 修复：在 execution_store 中记录错误详情
+                        try:
+                            from wechat_backend.views import execution_store
+                            if execution_id in execution_store:
+                                # 累积错误信息
+                                if 'error_details' not in execution_store[execution_id]:
+                                    execution_store[execution_id]['error_details'] = []
+                                
+                                execution_store[execution_id]['error_details'].append({
+                                    'model': model_name,
+                                    'question_index': q_idx,
+                                    'error_type': type(e).__name__,
+                                    'error_message': str(e),
+                                    'timestamp': datetime.now().isoformat()
+                                })
+                                
+                                # 更新状态为部分失败
+                                execution_store[execution_id].update({
+                                    'status': 'partial_failure' if completed < total_tasks else 'completed_with_errors',
+                                    'error': f'{len(execution_store[execution_id]["error_details"])} 个 AI 调用失败'
+                                })
+                        except Exception as store_error:
+                            api_logger.error(f"[NxM] 更新 execution_store 失败：{store_error}")
             
             # 验证执行完成
             verification = verify_completion(results, total_tasks)

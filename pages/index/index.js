@@ -25,6 +25,12 @@ const {
   generateDashboardData
 } = require('../../services/brandTestService');
 
+// P1-1 修复：统一 Storage 管理器
+const {
+  saveDiagnosisResult,
+  cleanupExpiredData
+} = require('../../utils/storage-manager');
+
 // 缓存服务（P2 优化）
 const {
   getCachedDiagnosis,
@@ -999,21 +1005,39 @@ Page({
       const competitiveAnalysisToSave = parsedStatus.competitive_analysis || {};
       const brandScoresToSave = competitiveAnalysisToSave.brandScores || {};
 
-      // 使用 Storage 传递大数据
-      wx.setStorageSync('last_diagnostic_results', {
+      // P1-1 修复：使用统一 Storage 管理器保存
+      const saveSuccess = saveDiagnosisResult(executionId, {
+        brandName: this.data.brandName,
         results: resultsToSave,
         competitiveAnalysis: competitiveAnalysisToSave,
         brandScores: brandScoresToSave,
-        targetBrand: this.data.brandName,
-        executionId: executionId,
-        timestamp: Date.now()
+        detailedResults: parsedStatus.detailed_results || {},
+        semanticDriftData: parsedStatus.semantic_drift_data || null,
+        recommendationData: parsedStatus.recommendation_data || null
       });
 
-      // 保存带 executionId 的缓存
-      wx.setStorageSync('latestTestResults_' + executionId, resultsToSave);
-      wx.setStorageSync('latestCompetitiveAnalysis_' + executionId, competitiveAnalysisToSave);
-      wx.setStorageSync('latestBrandScores_' + executionId, brandScoresToSave);
-      wx.setStorageSync('latestTargetBrand', this.data.brandName);
+      if (saveSuccess) {
+        console.log('✅ P1-1 数据已保存到统一 Storage:', executionId);
+      } else {
+        console.warn('⚠️  Storage 保存失败，使用备用方案');
+        // 备用方案：旧格式保存（但添加 version 字段）
+        wx.setStorageSync('last_diagnostic_results', {
+          version: '2.0',  // P2 修复：添加版本号
+          results: resultsToSave,
+          competitiveAnalysis: competitiveAnalysisToSave,
+          brandScores: brandScoresToSave,
+          targetBrand: this.data.brandName,
+          executionId: executionId,
+          timestamp: Date.now()
+        });
+      }
+
+      // P1-1 修复：清理过期数据（定期执行）
+      try {
+        cleanupExpiredData();
+      } catch (cleanupError) {
+        console.warn('[Storage] 清理过期数据失败:', cleanupError);
+      }
 
       console.log('✅ 数据已保存到本地存储');
 

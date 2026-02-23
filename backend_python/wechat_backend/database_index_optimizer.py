@@ -105,7 +105,14 @@ def analyze_indexes():
     if 'idx_test_records_created_at' not in existing_indexes:
         if create_index_if_not_exists(conn, 'idx_test_records_created_at', 'test_records', 'created_at'):
             created_count += 1
-    
+
+    # P0 修复：添加 execution_id 索引（用于轮询查询优化）
+    total_count += 1
+    if 'idx_test_records_execution_id' not in existing_indexes:
+        if create_index_if_not_exists(conn, 'idx_test_records_execution_id', 'test_records', 'execution_id'):
+            created_count += 1
+            db_logger.info('[DB Index] ✅ 添加 execution_id 索引，优化轮询查询性能')
+
     # 添加组合索引 (brand_name, test_date) - 用于按品牌查询历史记录
     total_count += 1
     if 'idx_test_records_brand_date' not in existing_indexes:

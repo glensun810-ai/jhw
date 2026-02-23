@@ -1,6 +1,9 @@
 const { saveResult } = require('../../utils/saved-results-sync');
 const { generateFullReport } = require('../../utils/pdf-export');
 
+// P1-1 修复：统一 Storage 管理器
+const { loadDiagnosisResult, loadLastDiagnosis } = require('../../utils/storage-manager');
+
 Page({
   data: {
     targetBrand: '',
@@ -68,9 +71,8 @@ Page({
   },
 
   /**
-   * P0-1 修复：支持从 executionId 加载本地存储的数据
-   * 【关键优化】优先从 Storage 加载，支持后端 API 拉取
-   * 【P0 修复】优化数据加载判断逻辑，避免无效数据走后端 API
+   * P1-1 修复：使用统一 Storage 管理器加载数据
+   * 【关键优化】优先从统一 Storage 加载，支持版本控制和过期检查
    */
   onLoad: function(options) {
     console.log('📥 结果页加载 options:', options);
@@ -78,16 +80,32 @@ Page({
     const executionId = decodeURIComponent(options.executionId || '');
     const brandName = decodeURIComponent(options.brandName || '');
 
-    // 【关键修复】优先从统一 Storage 加载（避免 URL 编码 2KB 限制）
-    const lastDiagnosticResults = wx.getStorageSync('last_diagnostic_results');
+    // P1-1 修复：优先从统一 Storage 加载
+    let storageData = null;
+    if (executionId) {
+      storageData = loadDiagnosisResult(executionId);
+      console.log('📦 P1-1 统一 Storage 加载结果:', {
+        exists: !!storageData,
+        version: storageData?.version,
+        hasResults: !!(storageData?.data?.results && storageData.data.results.length > 0)
+      });
+    }
 
-    console.log('📦 检查统一 Storage (last_diagnostic_results):', {
-      exists: !!lastDiagnosticResults,
-      executionId: lastDiagnosticResults?.executionId,
-      timestamp: lastDiagnosticResults?.timestamp,
-      hasResults: !!(lastDiagnosticResults?.results && lastDiagnosticResults.results.length > 0),
-      hasBrandScores: !!(lastDiagnosticResults?.brandScores)
-    });
+    // 降级：从旧 Storage 加载（兼容旧数据）
+    if (!storageData) {
+      const lastDiagnosticResults = loadLastDiagnosis();
+      if (lastDiagnosticResults && lastDiagnosticResults.executionId === executionId) {
+        storageData = {
+          version: '1.0',
+          data: {
+            results: lastDiagnosticResults.results,
+            competitiveAnalysis: lastDiagnosticResults.competitiveAnalysis || {},
+            brandScores: lastDiagnosticResults.brandScores || {}
+          }
+        };
+        console.log('📦 从旧 Storage 降级加载成功');
+      }
+    }
 
     // 【多层降级策略】
     let results = null;
@@ -95,17 +113,15 @@ Page({
     let targetBrand = brandName;
     let useStorageData = false;
 
-    // 1. 优先从统一 Storage 加载（最新策略）
-    // 【关键修复】确保 Storage 数据包含核心 results 数组且 executionId 匹配
-    if (lastDiagnosticResults &&
-        lastDiagnosticResults.results &&
-        Array.isArray(lastDiagnosticResults.results) &&
-        lastDiagnosticResults.results.length > 0 &&
-        (!executionId || lastDiagnosticResults.executionId === executionId)) {
+    // 1. 优先从统一 Storage 加载
+    if (storageData && storageData.data &&
+        storageData.data.results &&
+        Array.isArray(storageData.data.results) &&
+        storageData.data.results.length > 0) {
       console.log('✅ 从统一 Storage 加载有效数据');
-      results = lastDiagnosticResults.results;
-      competitiveAnalysis = lastDiagnosticResults.competitiveAnalysis || {};
-      targetBrand = lastDiagnosticResults.targetBrand || brandName;
+      results = storageData.data.results;
+      competitiveAnalysis = storageData.data.competitiveAnalysis || {};
+      targetBrand = storageData.brandName || brandName;
       useStorageData = true;
     }
     // 2. 从 executionId 缓存加载（兼容旧逻辑）
@@ -124,6 +140,9 @@ Page({
       if (cachedResults && Array.isArray(cachedResults) && cachedResults.length > 0) {
         results = cachedResults;
         competitiveAnalysis = cachedCompetitiveAnalysis || {};
+        if (cachedBrandScores) {
+          competitiveAnalysis.brandScores = cachedBrandScores;
+        }
         targetBrand = cachedBrand || brandName;
         useStorageData = true;
       }
@@ -131,15 +150,14 @@ Page({
 
     // 3. 数据完整性检查
     if (competitiveAnalysis && !competitiveAnalysis.brandScores) {
-      if (lastDiagnosticResults && lastDiagnosticResults.brandScores) {
-        competitiveAnalysis.brandScores = lastDiagnosticResults.brandScores;
+      if (storageData && storageData.data && storageData.data.brandScores) {
+        competitiveAnalysis.brandScores = storageData.data.brandScores;
       } else {
         competitiveAnalysis.brandScores = {};
       }
     }
 
     // 4. 初始化页面或从后端拉取
-    // 【关键修复】只有 Storage 数据有效时才直接使用，否则从后端 API 拉取
     if (useStorageData && results && results.length > 0) {
       console.log('✅ 使用本地 Storage 数据初始化页面，结果数量:', results.length);
       this.initializePageWithData(
@@ -219,7 +237,18 @@ Page({
           // 修复 2: 验证结果是否为空
           if (!resultsToUse || resultsToUse.length === 0) {
             console.error('❌ 后端 API 返回结果为空');
-            this.showNoDataModal();
+            // P1 修复：显示友好的空状态提示
+            wx.showModal({
+              title: '暂无数据',
+              content: '诊断结果暂无数据，可能原因：\n1. AI 调用失败\n2. 网络异常\n3. 数据解析错误\n\n建议：重新运行诊断或联系客服',
+              showCancel: false,
+              confirmText: '重新诊断',
+              success: (modalRes) => {
+                if (modalRes.confirm) {
+                  wx.navigateBack();  // 返回上一页
+                }
+              }
+            });
             return;
           }
 
@@ -236,19 +265,47 @@ Page({
             const hasValidRank = geoData.rank !== -1;
             const hasValidSentiment = geoData.sentiment !== 0.0;
             const hasSources = geoData.cited_sources && geoData.cited_sources.length > 0;
-            
+
             return hasBrandMentioned && (hasValidRank || hasValidSentiment || hasSources);
           });
 
           if (!hasRealData) {
             console.error('❌ 后端 API 返回数据均为默认值，无真实分析结果');
+            // P1 修复：显示友好的错误提示
             wx.showModal({
               title: '数据异常',
-              content: '诊断结果数据异常（可能为默认值），请重试',
+              content: '诊断结果数据异常（可能为默认值），可能原因：\n1. AI 模型配置错误\n2. API Key 无效\n3. 网络异常\n\n建议：检查配置后重试',
               showCancel: false,
-              confirmText: '我知道了'
+              confirmText: '知道了'
             });
             return;
+          }
+          
+          // P1 修复：检查是否有部分失败的结果
+          const failedCount = resultsToUse.filter(r => r._failed === true).length;
+          if (failedCount > 0) {
+            console.warn(`⚠️ 有 ${failedCount}/${resultsToUse.length} 个结果失败`);
+            // 过滤掉失败的结果
+            const validResults = resultsToUse.filter(r => !r._failed);
+            if (validResults.length === 0) {
+              // 全部失败
+              wx.showModal({
+                title: '诊断失败',
+                content: '所有 AI 调用均失败，请检查配置或重试',
+                showCancel: false,
+                confirmText: '重新诊断',
+                success: (modalRes) => {
+                  if (modalRes.confirm) {
+                    wx.navigateBack();
+                  }
+                }
+              });
+              return;
+            }
+            // 使用有效结果继续
+            console.log(`✅ 使用 ${validResults.length} 个有效结果继续处理`);
+            // 更新 resultsToUse 为有效结果
+            resultsToUse = validResults;
           }
 
           // 保存到 Storage

@@ -1,0 +1,2457 @@
+{
+  "summary": {
+    "total_api_endpoints": 148,
+    "total_functions": 822,
+    "total_classes": 100,
+    "total_data_models": 6,
+    "total_import_relationships": 83
+  },
+  "api_endpoints": [
+    {
+      "path": "/api/export/report-data",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py"
+    },
+    {
+      "path": "/api/export/pdf",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py"
+    },
+    {
+      "path": "/api/export/status/<task_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py"
+    },
+    {
+      "path": "/api/export/download/<task_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py"
+    },
+    {
+      "path": "/api/export/html",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py"
+    },
+    {
+      "path": "/api/export/stats",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py"
+    },
+    {
+      "path": "/api/user/permissions",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_permission.py"
+    },
+    {
+      "path": "/api/user/permission/grant",
+      "methods": [
+        "POST"
+      ],
+      "file": "backend_python/wechat_backend/views_permission.py"
+    },
+    {
+      "path": "/api/user/permission/revoke",
+      "methods": [
+        "DELETE"
+      ],
+      "file": "backend_python/wechat_backend/views_permission.py"
+    },
+    {
+      "path": "/api/user/permissions/all",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_permission.py"
+    },
+    {
+      "path": "/api/user/roles",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_permission.py"
+    },
+    {
+      "path": "/users/active",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics.py"
+    },
+    {
+      "path": "/features/usage",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics.py"
+    },
+    {
+      "path": "/ai-platforms/stats",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics.py"
+    },
+    {
+      "path": "/errors/stats",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics.py"
+    },
+    {
+      "path": "/dashboard",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics.py"
+    },
+    {
+      "path": "/api/analytics/track",
+      "methods": [
+        "POST"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py"
+    },
+    {
+      "path": "/api/analytics/user-journey",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py"
+    },
+    {
+      "path": "/api/analytics/statistics",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py"
+    },
+    {
+      "path": "/api/analytics/heatmap",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py"
+    },
+    {
+      "path": "/api/analytics/funnel",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py"
+    },
+    {
+      "path": "/api/trend-forecast/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_p2_optimization.py"
+    },
+    {
+      "path": "/api/monetization-analysis/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_p2_optimization.py"
+    },
+    {
+      "path": "/api/source-intelligence/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_p1_analysis.py"
+    },
+    {
+      "path": "/api/competitive-analysis/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_p1_analysis.py"
+    },
+    {
+      "path": "/api/recommendations/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_p1_analysis.py"
+    },
+    {
+      "path": "/api/interception-analysis/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_p1_analysis.py"
+    },
+    {
+      "path": "/api/sync/data",
+      "methods": [
+        "POST"
+      ],
+      "file": "backend_python/wechat_backend/views_sync.py"
+    },
+    {
+      "path": "/api/sync/download",
+      "methods": [
+        "POST"
+      ],
+      "file": "backend_python/wechat_backend/views_sync.py"
+    },
+    {
+      "path": "/api/sync/upload-result",
+      "methods": [
+        "POST"
+      ],
+      "file": "backend_python/wechat_backend/views_sync.py"
+    },
+    {
+      "path": "/api/sync/delete-result",
+      "methods": [
+        "POST"
+      ],
+      "file": "backend_python/wechat_backend/views_sync.py"
+    },
+    {
+      "path": "/api/sync/status",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_sync.py"
+    },
+    {
+      "path": "/api/geo-analysis/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_geo_analysis.py"
+    },
+    {
+      "path": "/api/workflow-results/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_geo_analysis.py"
+    },
+    {
+      "path": "/api/roi-metrics/<execution_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_geo_analysis.py"
+    },
+    {
+      "path": "/api/export/pdf",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_pdf_export.py"
+    },
+    {
+      "path": "/api/export/html",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_pdf_export.py"
+    },
+    {
+      "path": "/api/audit/log",
+      "methods": [
+        "POST"
+      ],
+      "file": "backend_python/wechat_backend/views_audit_full.py"
+    },
+    {
+      "path": "/api/audit/logs",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit_full.py"
+    },
+    {
+      "path": "/api/audit/report",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit_full.py"
+    },
+    {
+      "path": "/api/audit/compliance",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit_full.py"
+    },
+    {
+      "path": "/api/audit/user-activity/<user_id>",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit_full.py"
+    },
+    {
+      "path": "/logs",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit.py"
+    },
+    {
+      "path": "/statistics",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit.py"
+    },
+    {
+      "path": "/suspicious",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit.py"
+    },
+    {
+      "path": "/export",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit.py"
+    },
+    {
+      "path": "/admin-stats",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_audit.py"
+    },
+    {
+      "path": "/api/intelligence/pipeline",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_intelligence.py"
+    },
+    {
+      "path": "/api/intelligence/stream",
+      "methods": [
+        "GET"
+      ],
+      "file": "backend_python/wechat_backend/views_intelligence.py"
+    },
+    {
+      "path": "/api/intelligence/add",
+      "methods": [
+        "POST"
+      ],
+      "file": "backend_python/wechat_backend/views_intelligence.py"
+    }
+  ],
+  "core_functions": [
+    {
+      "name": "analyze_result",
+      "params": [
+        {
+          "name": "result",
+          "type": "Dict[str"
+        },
+        {
+          "name": "Any]",
+          "type": "Any"
+        }
+      ],
+      "return_type": "Dict[str, Any]",
+      "file": "backend_python/wechat_backend/realtime_analyzer.py",
+      "line": 61
+    },
+    {
+      "name": "get_realtime_progress",
+      "params": [],
+      "return_type": "Dict[str, Any]",
+      "file": "backend_python/wechat_backend/realtime_analyzer.py",
+      "line": 217
+    },
+    {
+      "name": "get_summary",
+      "params": [],
+      "return_type": "Dict[str, Any]",
+      "file": "backend_python/wechat_backend/realtime_analyzer.py",
+      "line": 314
+    },
+    {
+      "name": "get_analyzer",
+      "params": [
+        {
+          "name": "execution_id",
+          "type": "str"
+        }
+      ],
+      "return_type": "RealtimeAnalyzer",
+      "file": "backend_python/wechat_backend/realtime_analyzer.py",
+      "line": 339
+    },
+    {
+      "name": "create_analyzer",
+      "params": [
+        {
+          "name": "execution_id",
+          "type": "str"
+        },
+        {
+          "name": "main_brand",
+          "type": "str"
+        },
+        {
+          "name": "all_brands",
+          "type": "List[str]"
+        }
+      ],
+      "return_type": "RealtimeAnalyzer",
+      "file": "backend_python/wechat_backend/realtime_analyzer.py",
+      "line": 344
+    },
+    {
+      "name": "remove_analyzer",
+      "params": [
+        {
+          "name": "execution_id",
+          "type": "str"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/realtime_analyzer.py",
+      "line": 351
+    },
+    {
+      "name": "get_full_report_data",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py",
+      "line": 24
+    },
+    {
+      "name": "export_pdf_report",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py",
+      "line": 106
+    },
+    {
+      "name": "get_export_status",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py",
+      "line": 173
+    },
+    {
+      "name": "download_export_file",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py",
+      "line": 208
+    },
+    {
+      "name": "export_html_report",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py",
+      "line": 243
+    },
+    {
+      "name": "get_export_stats",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py",
+      "line": 284
+    },
+    {
+      "name": "register_blueprints",
+      "params": [
+        {
+          "name": "app",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_pdf_export_v2.py",
+      "line": 327
+    },
+    {
+      "name": "calculate_category_benchmarks",
+      "params": [
+        {
+          "name": "brand_name",
+          "type": "str"
+        },
+        {
+          "name": "category",
+          "type": "str"
+        },
+        {
+          "name": "days",
+          "type": "int"
+        }
+      ],
+      "return_type": "Dict[str, any]",
+      "file": "backend_python/wechat_backend/market_intelligence_service.py",
+      "line": 25
+    },
+    {
+      "name": "get_market_benchmark_data",
+      "params": [
+        {
+          "name": "brand_name",
+          "type": "str"
+        },
+        {
+          "name": "category",
+          "type": "str"
+        },
+        {
+          "name": "days",
+          "type": "int"
+        }
+      ],
+      "return_type": "Dict[str, any]",
+      "file": "backend_python/wechat_backend/market_intelligence_service.py",
+      "line": 323
+    },
+    {
+      "name": "get_user_permissions",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "str"
+        }
+      ],
+      "return_type": "Dict[str, Any]",
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 40
+    },
+    {
+      "name": "assign_default_role",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "str"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 96
+    },
+    {
+      "name": "grant_permission",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "str"
+        },
+        {
+          "name": "permission_id",
+          "type": "int"
+        },
+        {
+          "name": "granted_by",
+          "type": "str"
+        },
+        {
+          "name": "reason",
+          "type": "str"
+        },
+        {
+          "name": "expires_days",
+          "type": "int"
+        }
+      ],
+      "return_type": "bool",
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 115
+    },
+    {
+      "name": "revoke_permission",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "str"
+        },
+        {
+          "name": "permission_id",
+          "type": "int"
+        },
+        {
+          "name": "revoked_by",
+          "type": "str"
+        },
+        {
+          "name": "reason",
+          "type": "str"
+        }
+      ],
+      "return_type": "bool",
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 178
+    },
+    {
+      "name": "get_all_permissions",
+      "params": [],
+      "return_type": "List[Dict[str, Any]]",
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 223
+    },
+    {
+      "name": "get_all_roles",
+      "params": [],
+      "return_type": "List[Dict[str, Any]]",
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 244
+    },
+    {
+      "name": "get_user_permissions",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 276
+    },
+    {
+      "name": "grant_permission",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 335
+    },
+    {
+      "name": "revoke_permission",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 423
+    },
+    {
+      "name": "get_all_permissions",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 505
+    },
+    {
+      "name": "get_all_roles",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 525
+    },
+    {
+      "name": "init_permission_routes",
+      "params": [
+        {
+          "name": "app",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 548
+    },
+    {
+      "name": "init_permission_db",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 554
+    },
+    {
+      "name": "require_admin",
+      "params": [
+        {
+          "name": "f",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 22
+    },
+    {
+      "name": "decorated_function",
+      "params": [
+        {
+          "name": "*args",
+          "type": "Any"
+        },
+        {
+          "name": "**kwargs",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 27
+    },
+    {
+      "name": "is_admin_user",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 36
+    },
+    {
+      "name": "get_active_users",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 63
+    },
+    {
+      "name": "get_feature_usage",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 170
+    },
+    {
+      "name": "get_ai_platform_stats",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 266
+    },
+    {
+      "name": "get_error_stats",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 371
+    },
+    {
+      "name": "get_analytics_dashboard",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 486
+    },
+    {
+      "name": "init_analytics_routes",
+      "params": [
+        {
+          "name": "app",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics.py",
+      "line": 568
+    },
+    {
+      "name": "get_ai_client",
+      "params": [
+        {
+          "name": "platform_name",
+          "type": "str"
+        },
+        {
+          "name": "api_key",
+          "type": "str"
+        },
+        {
+          "name": "model_name",
+          "type": "str"
+        },
+        {
+          "name": "**kwargs",
+          "type": "Any"
+        }
+      ],
+      "return_type": "AIClient",
+      "file": "backend_python/wechat_backend/ai_utils.py",
+      "line": 9
+    },
+    {
+      "name": "run_brand_test_with_ai",
+      "params": [
+        {
+          "name": "client",
+          "type": "AIClient"
+        },
+        {
+          "name": "brand_name",
+          "type": "str"
+        },
+        {
+          "name": "question",
+          "type": "str"
+        }
+      ],
+      "return_type": "AIResponse",
+      "file": "backend_python/wechat_backend/ai_utils.py",
+      "line": 47
+    },
+    {
+      "name": "evaluate_response_accuracy",
+      "params": [
+        {
+          "name": "response_content",
+          "type": "str"
+        },
+        {
+          "name": "brand_name",
+          "type": "str"
+        }
+      ],
+      "return_type": "Dict[str, float]",
+      "file": "backend_python/wechat_backend/ai_utils.py",
+      "line": 63
+    },
+    {
+      "name": "analyze_semantic_drift",
+      "params": [
+        {
+          "name": "official_definition",
+          "type": "str"
+        },
+        {
+          "name": "ai_responses",
+          "type": "List[str]"
+        },
+        {
+          "name": "brand_name",
+          "type": "str"
+        }
+      ],
+      "return_type": "Dict[str, any]",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 53
+    },
+    {
+      "name": "extract_keywords",
+      "params": [
+        {
+          "name": "text",
+          "type": "str"
+        },
+        {
+          "name": "top_k",
+          "type": "int"
+        }
+      ],
+      "return_type": "List[str]",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 122
+    },
+    {
+      "name": "calculate_semantic_similarity",
+      "params": [
+        {
+          "name": "text1",
+          "type": "str"
+        },
+        {
+          "name": "text2",
+          "type": "str"
+        }
+      ],
+      "return_type": "float",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 150
+    },
+    {
+      "name": "tokenize_chinese",
+      "params": [
+        {
+          "name": "text",
+          "type": "str"
+        }
+      ],
+      "return_type": "List[str]",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 195
+    },
+    {
+      "name": "simple_overlap_ratio",
+      "params": [
+        {
+          "name": "text1",
+          "type": "str"
+        },
+        {
+          "name": "text2",
+          "type": "str"
+        }
+      ],
+      "return_type": "float",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 209
+    },
+    {
+      "name": "calculate_drift_score",
+      "params": [
+        {
+          "name": "official_text",
+          "type": "str"
+        },
+        {
+          "name": "ai_text",
+          "type": "str"
+        },
+        {
+          "name": "similarity_score",
+          "type": "float"
+        }
+      ],
+      "return_type": "float",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 233
+    },
+    {
+      "name": "classify_drift_severity",
+      "params": [
+        {
+          "name": "drift_score",
+          "type": "float"
+        }
+      ],
+      "return_type": "str",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 267
+    },
+    {
+      "name": "identify_negative_terms",
+      "params": [
+        {
+          "name": "text",
+          "type": "str"
+        }
+      ],
+      "return_type": "List[str]",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 286
+    },
+    {
+      "name": "identify_positive_terms",
+      "params": [
+        {
+          "name": "text",
+          "type": "str"
+        }
+      ],
+      "return_type": "List[str]",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 325
+    },
+    {
+      "name": "clean_text",
+      "params": [
+        {
+          "name": "text",
+          "type": "str"
+        }
+      ],
+      "return_type": "str",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 364
+    },
+    {
+      "name": "analyze_attribution",
+      "params": [
+        {
+          "name": "official_definition",
+          "type": "str"
+        },
+        {
+          "name": "ai_responses",
+          "type": "List[str]"
+        },
+        {
+          "name": "response_sources",
+          "type": "List[str]"
+        },
+        {
+          "name": "# List of source URLs from AI responses\n        brand_name",
+          "type": "str"
+        }
+      ],
+      "return_type": "Dict[str, any]",
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 399
+    },
+    {
+      "name": "get_logger",
+      "params": [
+        {
+          "name": "name",
+          "type": "str"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/logging_config.py",
+      "line": 67
+    },
+    {
+      "name": "app_logger",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/logging_config.py",
+      "line": 106
+    },
+    {
+      "name": "api_logger",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/logging_config.py",
+      "line": 110
+    },
+    {
+      "name": "db_logger",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/logging_config.py",
+      "line": 114
+    },
+    {
+      "name": "wechat_logger",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/logging_config.py",
+      "line": 118
+    },
+    {
+      "name": "setup_logging",
+      "params": [
+        {
+          "name": "log_level",
+          "type": "Any"
+        },
+        {
+          "name": "log_file",
+          "type": "Any"
+        },
+        {
+          "name": "max_bytes",
+          "type": "Any"
+        },
+        {
+          "name": "backup_count",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/logging_config.py",
+      "line": 131
+    },
+    {
+      "name": "shutdown_logging",
+      "params": [
+        {
+          "name": "timeout",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/logging_config.py",
+      "line": 207
+    },
+    {
+      "name": "get_api_key",
+      "params": [
+        {
+          "name": "platform_name",
+          "type": "str"
+        }
+      ],
+      "return_type": "Optional[str]",
+      "file": "backend_python/wechat_backend/config_manager.py",
+      "line": 27
+    },
+    {
+      "name": "is_platform_configured",
+      "params": [
+        {
+          "name": "platform_name",
+          "type": "str"
+        }
+      ],
+      "return_type": "bool",
+      "file": "backend_python/wechat_backend/config_manager.py",
+      "line": 40
+    },
+    {
+      "name": "get_platform_model",
+      "params": [
+        {
+          "name": "platform_name",
+          "type": "str"
+        }
+      ],
+      "return_type": "Optional[str]",
+      "file": "backend_python/wechat_backend/config_manager.py",
+      "line": 53
+    },
+    {
+      "name": "get_platform_config",
+      "params": [
+        {
+          "name": "platform_name",
+          "type": "str"
+        }
+      ],
+      "return_type": "Optional[ConfigData]",
+      "file": "backend_python/wechat_backend/config_manager.py",
+      "line": 78
+    },
+    {
+      "name": "track_event",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py",
+      "line": 39
+    },
+    {
+      "name": "get_user_journey",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py",
+      "line": 116
+    },
+    {
+      "name": "get_analytics_statistics",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py",
+      "line": 170
+    },
+    {
+      "name": "get_heatmap_data",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py",
+      "line": 217
+    },
+    {
+      "name": "get_funnel_data",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py",
+      "line": 255
+    },
+    {
+      "name": "register_blueprints",
+      "params": [
+        {
+          "name": "app",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/views_analytics_behavior.py",
+      "line": 566
+    },
+    {
+      "name": "to_dict",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 36
+    },
+    {
+      "name": "from_dict",
+      "params": [
+        {
+          "name": "data",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 48
+    },
+    {
+      "name": "to_dict",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 98
+    },
+    {
+      "name": "from_dict",
+      "params": [
+        {
+          "name": "data",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 107
+    },
+    {
+      "name": "init_task_status_db",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 123
+    },
+    {
+      "name": "save_task_status",
+      "params": [
+        {
+          "name": "task_status",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 184
+    },
+    {
+      "name": "get_task_status",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 242
+    },
+    {
+      "name": "save_deep_intelligence_result",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "Any"
+        },
+        {
+          "name": "deep_intelligence_result",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 274
+    },
+    {
+      "name": "get_deep_intelligence_result",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 319
+    },
+    {
+      "name": "update_task_stage",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "Any"
+        },
+        {
+          "name": "stage",
+          "type": "Any"
+        },
+        {
+          "name": "progress",
+          "type": "Any"
+        },
+        {
+          "name": "status_text",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 348
+    },
+    {
+      "name": "save_brand_test_result",
+      "params": [
+        {
+          "name": "brand_test_result",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 410
+    },
+    {
+      "name": "get_brand_test_result",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 487
+    },
+    {
+      "name": "get_db_connection",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/database_index_optimizer.py",
+      "line": 34
+    },
+    {
+      "name": "create_index_if_not_exists",
+      "params": [
+        {
+          "name": "conn",
+          "type": "Any"
+        },
+        {
+          "name": "index_name",
+          "type": "Any"
+        },
+        {
+          "name": "table_name",
+          "type": "Any"
+        },
+        {
+          "name": "columns",
+          "type": "Any"
+        },
+        {
+          "name": "unique",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/database_index_optimizer.py",
+      "line": 41
+    },
+    {
+      "name": "analyze_indexes",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/database_index_optimizer.py",
+      "line": 75
+    },
+    {
+      "name": "get_existing_indexes",
+      "params": [
+        {
+          "name": "conn",
+          "type": "Any"
+        },
+        {
+          "name": "table_name",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/database_index_optimizer.py",
+      "line": 208
+    },
+    {
+      "name": "analyze_query_performance",
+      "params": [
+        {
+          "name": "conn",
+          "type": "Any"
+        },
+        {
+          "name": "query",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/database_index_optimizer.py",
+      "line": 225
+    },
+    {
+      "name": "run_analyze",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/database_index_optimizer.py",
+      "line": 242
+    },
+    {
+      "name": "get_index_usage_stats",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/database_index_optimizer.py",
+      "line": 261
+    },
+    {
+      "name": "is_admin_user",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 23
+    },
+    {
+      "name": "require_admin",
+      "params": [
+        {
+          "name": "f",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 42
+    },
+    {
+      "name": "decorated_function",
+      "params": [
+        {
+          "name": "*args",
+          "type": "Any"
+        },
+        {
+          "name": "**kwargs",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 47
+    },
+    {
+      "name": "get_all_tests",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 59
+    },
+    {
+      "name": "get_ai_platforms",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 99
+    },
+    {
+      "name": "batch_delete_tests",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 124
+    },
+    {
+      "name": "batch_user_action",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 159
+    },
+    {
+      "name": "batch_send_notification",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 209
+    },
+    {
+      "name": "init_test_management_routes",
+      "params": [
+        {
+          "name": "app",
+          "type": "Any"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/admin_test_management.py",
+      "line": 246
+    },
+    {
+      "name": "check",
+      "params": [
+        {
+          "name": "value",
+          "type": "float"
+        }
+      ],
+      "return_type": "bool",
+      "file": "backend_python/wechat_backend/alert_system.py",
+      "line": 29
+    },
+    {
+      "name": "trigger",
+      "params": [
+        {
+          "name": "value",
+          "type": "float"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/alert_system.py",
+      "line": 33
+    },
+    {
+      "name": "acknowledge",
+      "params": [],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/alert_system.py",
+      "line": 50
+    },
+    {
+      "name": "add_condition",
+      "params": [
+        {
+          "name": "condition",
+          "type": "AlertCondition"
+        }
+      ],
+      "return_type": null,
+      "file": "backend_python/wechat_backend/alert_system.py",
+      "line": 64
+    }
+  ],
+  "core_classes": [
+    {
+      "name": "RealtimeAnalyzer",
+      "parents": [],
+      "file": "backend_python/wechat_backend/realtime_analyzer.py",
+      "line": 21
+    },
+    {
+      "name": "MarketIntelligenceService",
+      "parents": [],
+      "file": "backend_python/wechat_backend/market_intelligence_service.py",
+      "line": 17
+    },
+    {
+      "name": "PermissionModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_permission.py",
+      "line": 36
+    },
+    {
+      "name": "SemanticAnalyzer",
+      "parents": [],
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 16
+    },
+    {
+      "name": "AttributionAnalyzer",
+      "parents": [],
+      "file": "backend_python/wechat_backend/semantic_analyzer.py",
+      "line": 389
+    },
+    {
+      "name": "_LazyLoggers",
+      "parents": [],
+      "file": "backend_python/wechat_backend/logging_config.py",
+      "line": 104
+    },
+    {
+      "name": "ConfigData",
+      "parents": [],
+      "file": "backend_python/wechat_backend/config_manager.py",
+      "line": 9
+    },
+    {
+      "name": "ConfigurationManager",
+      "parents": [],
+      "file": "backend_python/wechat_backend/config_manager.py",
+      "line": 21
+    },
+    {
+      "name": "TaskStage",
+      "parents": [
+        "Enum"
+      ],
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 16
+    },
+    {
+      "name": "TaskStatus",
+      "parents": [],
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 25
+    },
+    {
+      "name": "BrandTestResult",
+      "parents": [],
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 61
+    },
+    {
+      "name": "DeepIntelligenceResult",
+      "parents": [],
+      "file": "backend_python/wechat_backend/models.py",
+      "line": 78
+    },
+    {
+      "name": "AlertSeverity",
+      "parents": [
+        "Enum"
+      ],
+      "file": "backend_python/wechat_backend/alert_system.py",
+      "line": 12
+    },
+    {
+      "name": "AlertCondition",
+      "parents": [],
+      "file": "backend_python/wechat_backend/alert_system.py",
+      "line": 20
+    },
+    {
+      "name": "Alert",
+      "parents": [],
+      "file": "backend_python/wechat_backend/alert_system.py",
+      "line": 40
+    },
+    {
+      "name": "AlertSystem",
+      "parents": [],
+      "file": "backend_python/wechat_backend/alert_system.py",
+      "line": 56
+    },
+    {
+      "name": "TrendForecastModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_p2_optimization.py",
+      "line": 32
+    },
+    {
+      "name": "MonetizationAnalysisModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_p2_optimization.py",
+      "line": 180
+    },
+    {
+      "name": "RealtimePersistence",
+      "parents": [],
+      "file": "backend_python/wechat_backend/realtime_persistence_original.py",
+      "line": 24
+    },
+    {
+      "name": "RecommendationPriority",
+      "parents": [
+        "Enum"
+      ],
+      "file": "backend_python/wechat_backend/recommendation_generator.py",
+      "line": 14
+    },
+    {
+      "name": "RecommendationType",
+      "parents": [
+        "Enum"
+      ],
+      "file": "backend_python/wechat_backend/recommendation_generator.py",
+      "line": 21
+    },
+    {
+      "name": "Recommendation",
+      "parents": [],
+      "file": "backend_python/wechat_backend/recommendation_generator.py",
+      "line": 30
+    },
+    {
+      "name": "RecommendationGenerator",
+      "parents": [],
+      "file": "backend_python/wechat_backend/recommendation_generator.py",
+      "line": 42
+    },
+    {
+      "name": "QueryOptimizer",
+      "parents": [],
+      "file": "backend_python/wechat_backend/database_query_optimizer.py",
+      "line": 27
+    },
+    {
+      "name": "SourceIntelligenceModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_p1_analysis.py",
+      "line": 34
+    },
+    {
+      "name": "CompetitiveAnalysisModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_p1_analysis.py",
+      "line": 130
+    },
+    {
+      "name": "RecommendationsModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_p1_analysis.py",
+      "line": 249
+    },
+    {
+      "name": "InterceptionAnalysisModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_p1_analysis.py",
+      "line": 388
+    },
+    {
+      "name": "SourceWeightLibrary",
+      "parents": [],
+      "file": "backend_python/wechat_backend/source_weight_library.py",
+      "line": 14
+    },
+    {
+      "name": "CruiseController",
+      "parents": [],
+      "file": "backend_python/wechat_backend/cruise_controller.py",
+      "line": 20
+    },
+    {
+      "name": "ModelCircuitBreaker",
+      "parents": [],
+      "file": "backend_python/wechat_backend/nxm_circuit_breaker.py",
+      "line": 22
+    },
+    {
+      "name": "RealtimePersistence",
+      "parents": [],
+      "file": "backend_python/wechat_backend/realtime_persistence.py",
+      "line": 82
+    },
+    {
+      "name": "SemanticAnalyzerOld",
+      "parents": [],
+      "file": "backend_python/wechat_backend/result_processor.py",
+      "line": 21
+    },
+    {
+      "name": "ResultProcessor",
+      "parents": [],
+      "file": "backend_python/wechat_backend/result_processor.py",
+      "line": 117
+    },
+    {
+      "name": "NxMScheduler",
+      "parents": [],
+      "file": "backend_python/wechat_backend/nxm_scheduler.py",
+      "line": 28
+    },
+    {
+      "name": "CircuitBreakerState",
+      "parents": [
+        "Enum"
+      ],
+      "file": "backend_python/wechat_backend/circuit_breaker.py",
+      "line": 8
+    },
+    {
+      "name": "CircuitBreakerError",
+      "parents": [
+        "Exception"
+      ],
+      "file": "backend_python/wechat_backend/circuit_breaker.py",
+      "line": 15
+    },
+    {
+      "name": "CircuitBreakerOpenError",
+      "parents": [
+        "CircuitBreakerError"
+      ],
+      "file": "backend_python/wechat_backend/circuit_breaker.py",
+      "line": 20
+    },
+    {
+      "name": "CircuitBreaker",
+      "parents": [],
+      "file": "backend_python/wechat_backend/circuit_breaker.py",
+      "line": 25
+    },
+    {
+      "name": "GeoAnalysisModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_geo_analysis.py",
+      "line": 36
+    },
+    {
+      "name": "WorkflowResultsModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_geo_analysis.py",
+      "line": 93
+    },
+    {
+      "name": "ROIMetricsModel",
+      "parents": [],
+      "file": "backend_python/wechat_backend/views_geo_analysis.py",
+      "line": 143
+    },
+    {
+      "name": "IncrementalAggregator",
+      "parents": [],
+      "file": "backend_python/wechat_backend/incremental_aggregator.py",
+      "line": 26
+    },
+    {
+      "name": "MentionType",
+      "parents": [
+        "Enum"
+      ],
+      "file": "backend_python/wechat_backend/competitive_analysis.py",
+      "line": 14
+    },
+    {
+      "name": "BrandMention",
+      "parents": [],
+      "file": "backend_python/wechat_backend/competitive_analysis.py",
+      "line": 23
+    },
+    {
+      "name": "CompetitorAnalysisResult",
+      "parents": [],
+      "file": "backend_python/wechat_backend/competitive_analysis.py",
+      "line": 35
+    },
+    {
+      "name": "MarketShareAnalyzer",
+      "parents": [],
+      "file": "backend_python/wechat_backend/competitive_analysis.py",
+      "line": 45
+    },
+    {
+      "name": "RecommendationWeightAnalyzer",
+      "parents": [],
+      "file": "backend_python/wechat_backend/competitive_analysis.py",
+      "line": 102
+    },
+    {
+      "name": "CompetitorIntelligenceAnalyzer",
+      "parents": [],
+      "file": "backend_python/wechat_backend/competitive_analysis.py",
+      "line": 204
+    },
+    {
+      "name": "CompetitiveAnalyzer",
+      "parents": [],
+      "file": "backend_python/wechat_backend/competitive_analysis.py",
+      "line": 307
+    }
+  ],
+  "data_models": [
+    {
+      "name": "Recommendation",
+      "type": "dataclass",
+      "fields": [
+        {
+          "name": "priority",
+          "type": "RecommendationPriority"
+        },
+        {
+          "name": "type",
+          "type": "RecommendationType"
+        },
+        {
+          "name": "title",
+          "type": "str"
+        },
+        {
+          "name": "description",
+          "type": "str"
+        },
+        {
+          "name": "target",
+          "type": "str  # 目标对象（如网站URL、负面内容等）"
+        },
+        {
+          "name": "estimated_impact",
+          "type": "str  # 预估影响程度"
+        },
+        {
+          "name": "action_steps",
+          "type": "List[str]  # 行动步骤"
+        },
+        {
+          "name": "urgency",
+          "type": "int  # 紧急程度（1-10）"
+        }
+      ],
+      "file": "backend_python/wechat_backend/recommendation_generator.py"
+    },
+    {
+      "name": "BrandMention",
+      "type": "dataclass",
+      "fields": [
+        {
+          "name": "brand_name",
+          "type": "str"
+        },
+        {
+          "name": "mention_type",
+          "type": "MentionType"
+        },
+        {
+          "name": "context",
+          "type": "str  # The surrounding text where the brand was mentioned"
+        },
+        {
+          "name": "position",
+          "type": "int  # Position in the response (0-indexed)"
+        },
+        {
+          "name": "sentiment_score",
+          "type": "float  # Sentiment associated with the mention (-1 to 1)"
+        },
+        {
+          "name": "strength",
+          "type": "float  # Strength of the mention (0-1)"
+        },
+        {
+          "name": "source_indicators",
+          "type": "List[str]  # Indicators of where the info might come from"
+        }
+      ],
+      "file": "backend_python/wechat_backend/competitive_analysis.py"
+    },
+    {
+      "name": "CompetitorAnalysisResult",
+      "type": "dataclass",
+      "fields": [
+        {
+          "name": "brand_mentions",
+          "type": "List[BrandMention]"
+        },
+        {
+          "name": "market_share_distribution",
+          "type": "Dict[str, float]  # Brand name to percentage"
+        },
+        {
+          "name": "recommendation_weights",
+          "type": "Dict[str, float]  # Brand name to recommendation weight"
+        },
+        {
+          "name": "competitor_intelligence",
+          "type": "Dict[str, Any]  # Detailed info about competitors"
+        },
+        {
+          "name": "category_performance",
+          "type": "Dict[str, Any]  # Performance by category"
+        },
+        {
+          "name": "summary_insights",
+          "type": "List[str]  # Key insights from the analysis"
+        }
+      ],
+      "file": "backend_python/wechat_backend/competitive_analysis.py"
+    },
+    {
+      "name": "WorkflowTask",
+      "type": "dataclass",
+      "fields": [
+        {
+          "name": "task_id",
+          "type": "str"
+        },
+        {
+          "name": "evidence_fragment",
+          "type": "str"
+        },
+        {
+          "name": "associated_url",
+          "type": "str"
+        },
+        {
+          "name": "source_name",
+          "type": "str"
+        },
+        {
+          "name": "risk_level",
+          "type": "str"
+        },
+        {
+          "name": "brand_name",
+          "type": "str"
+        },
+        {
+          "name": "intervention_script",
+          "type": "str"
+        },
+        {
+          "name": "source_meta",
+          "type": "Dict[str, Any]"
+        },
+        {
+          "name": "webhook_url",
+          "type": "str"
+        },
+        {
+          "name": "status",
+          "type": "TaskStatus"
+        },
+        {
+          "name": "created_at",
+          "type": "datetime"
+        },
+        {
+          "name": "updated_at",
+          "type": "datetime"
+        },
+        {
+          "name": "retry_count",
+          "type": "int = 0"
+        },
+        {
+          "name": "max_retries",
+          "type": "int = 3"
+        },
+        {
+          "name": "error_message",
+          "type": "Optional[str] = None"
+        },
+        {
+          "name": "next_retry_at",
+          "type": "Optional[datetime] = None"
+        }
+      ],
+      "file": "backend_python/wechat_backend/ai_adapters/workflow_manager.py"
+    },
+    {
+      "name": "AIResponse",
+      "type": "dataclass",
+      "fields": [
+        {
+          "name": "success",
+          "type": "bool"
+        },
+        {
+          "name": "content",
+          "type": "Optional[str] = None"
+        },
+        {
+          "name": "error_message",
+          "type": "Optional[str] = None"
+        },
+        {
+          "name": "error_type",
+          "type": "Optional[AIErrorType] = None # 新增错误类型字段"
+        },
+        {
+          "name": "model",
+          "type": "Optional[str] = None"
+        },
+        {
+          "name": "platform",
+          "type": "Optional[str] = None"
+        },
+        {
+          "name": "tokens_used",
+          "type": "int = 0"
+        },
+        {
+          "name": "latency",
+          "type": "float = 0.0"
+        },
+        {
+          "name": "metadata",
+          "type": "Optional[Dict[str, Any]] = None"
+        },
+        {
+          "name": "error_type",
+          "type": "data['error_type'] = self.error_type.value"
+        }
+      ],
+      "file": "backend_python/wechat_backend/ai_adapters/base_adapter.py"
+    },
+    {
+      "name": "StandardAIResponse",
+      "type": "dataclass",
+      "fields": [
+        {
+          "name": "content",
+          "type": "str  # The main response text"
+        },
+        {
+          "name": "sources",
+          "type": "List[str]  # Reference links/sources mentioned in the response"
+        },
+        {
+          "name": "usage",
+          "type": "Dict[str, int]  # Token usage information (input_tokens, output_tokens, total_tokens)"
+        },
+        {
+          "name": "latency",
+          "type": "float  # Time taken to generate response in seconds"
+        },
+        {
+          "name": "success",
+          "type": "bool  # Whether the request was successful"
+        },
+        {
+          "name": "error_message",
+          "type": "Optional[str] = None  # Error message if request failed"
+        },
+        {
+          "name": "provider",
+          "type": "str = \"\"  # Name of the AI provider"
+        },
+        {
+          "name": "model",
+          "type": "str = \"\"  # Model name that generated the response"
+        },
+        {
+          "name": "metadata",
+          "type": "Optional[Dict[str, Any]] = None  # Additional metadata specific to the provider"
+        }
+      ],
+      "file": "backend_python/wechat_backend/ai_adapters/base.py"
+    }
+  ],
+  "import_graph": {
+    "realtime_analyzer": [
+      "re",
+      "typing",
+      "datetime",
+      "Dict"
+    ],
+    "views_pdf_export_v2": [
+      "require_auth_optional",
+      "flask",
+      "wechat_backend.security.rate_limiting",
+      "wechat_backend.services.async_export_service",
+      "wechat_backend.security.auth",
+      "os",
+      "PDFExportService",
+      "start_cleanup_thread",
+      "get_report_data_service",
+      "wechat_backend.services.html_export_service"
+    ],
+    "market_intelligence_service": [
+      "DB_PATH",
+      "sqlite3",
+      "wechat_backend.security.sql_protection",
+      "typing",
+      "collections",
+      "statistics",
+      "pathlib",
+      "wechat_backend.database",
+      "datetime",
+      "wechat_backend.logging_config"
+    ],
+    "views_permission": [
+      "DB_PATH",
+      "sqlite3",
+      "flask",
+      "Blueprint",
+      "typing",
+      "wechat_backend.security.sql_protection",
+      "validate_string",
+      "wechat_backend.security.input_validator",
+      "os",
+      "wechat_backend.database"
+    ],
+    "views_analytics": [
+      "DB_PATH",
+      "sqlite3",
+      "wechat_backend.security.sql_protection",
+      "flask",
+      "Blueprint",
+      "collections",
+      "require_auth",
+      "wechat_backend.security.rate_limiting",
+      "wechat_backend.security.auth",
+      "functools"
+    ],
+    "ai_utils": [
+      "wechat_backend.ai_adapters.factory",
+      "AIPlatformType",
+      "AIAdapterFactory",
+      "typing",
+      "wechat_backend.ai_adapters.base_adapter",
+      "List"
+    ],
+    "semantic_analyzer": [
+      "sklearn.feature_extraction.text",
+      "typing",
+      "SourceWeightLibrary",
+      "collections",
+      "jieba.analyse",
+      "jieba",
+      "re",
+      "TfidfVectorizer",
+      "numpy",
+      "wechat_backend.logging_config"
+    ],
+    "logging_config": [
+      "init",
+      "logging.handlers",
+      "pathlib",
+      "backend_python.unified_logging.entry",
+      "wechat_backend.logging_config",
+      "get_logger",
+      "logging",
+      "app_logger",
+      "Path"
+    ],
+    "config_manager": [
+      "typing",
+      "Config",
+      "config",
+      "Optional"
+    ],
+    "views_analytics_behavior": [
+      "random",
+      "require_auth_optional",
+      "flask",
+      "typing",
+      "collections",
+      "wechat_backend.security.rate_limiting",
+      "time",
+      "wechat_backend.security.auth",
+      "datetime",
+      "wechat_backend.logging_config"
+    ],
+    "models": [
+      "status_flow_log",
+      "sqlite3",
+      "wechat_backend.security.sql_protection",
+      "debug_log",
+      "backend_python.utils.logger",
+      "debug_log_status_flow",
+      "db_logger",
+      "os",
+      "utils.debug_manager",
+      "pathlib"
+    ],
+    "database_index_optimizer": [
+      "logging",
+      "pathlib",
+      "sqlite3",
+      "db_logger",
+      "wechat_backend.logging_config",
+      "sys",
+      "Path"
+    ],
+    "admin_test_management": [
+      "DB_PATH",
+      "functools",
+      "sqlite3",
+      "AIAdapterFactory",
+      "flask",
+      "wechat_backend.database",
+      "wraps",
+      "datetime",
+      "wechat_backend.logging_config",
+      "require_auth"
+    ],
+    "alert_system": [
+      "api_logger",
+      "enum",
+      "typing",
+      "wechat_backend.logging_config",
+      "Enum",
+      "datetime",
+      "List"
+    ],
+    "views_p2_optimization": [
+      "DB_PATH",
+      "flask",
+      "wechat_backend.database",
+      "typing",
+      "datetime",
+      "wechat_backend.logging_config",
+      "json",
+      "validate_execution_id",
+      "api_logger",
+      "SafeDatabaseQuery"
+    ],
+    "realtime_persistence_original": [
+      "wechat_backend.database",
+      "typing",
+      "datetime",
+      "wechat_backend.logging_config",
+      "api_logger",
+      "Dict",
+      "SafeDatabaseQuery",
+      "json"
+    ],
+    "recommendation_generator": [
+      "dataclass",
+      "AIAdapterFactory",
+      "typing",
+      "dataclasses",
+      "wechat_backend.logging_config",
+      "Enum",
+      "Config",
+      "List",
+      "wechat_backend.ai_adapters.factory",
+      "api_logger"
+    ],
+    "database_query_optimizer": [
+      "pathlib",
+      "sqlite3",
+      "typing",
+      "datetime",
+      "wechat_backend.logging_config",
+      "List",
+      "db_logger",
+      "logging",
+      "sys",
+      "Path"
+    ],
+    "views_admin": [
+      "init_system_management_routes",
+      "flask",
+      "wechat_backend.admin_system",
+      "Blueprint",
+      "init_test_management_routes",
+      "wechat_backend.logging_config",
+      "init_user_management_routes",
+      "api_logger",
+      "wechat_backend.admin_user_management",
+      "wechat_backend.admin_test_management"
+    ],
+    "nxm_execution_engine": [
+      "save_test_record",
+      "config",
+      "AIAdapterFactory",
+      "wechat_backend.nxm_circuit_breaker",
+      "typing",
+      "wechat_backend.ai_adapters.base_adapter",
+      "wechat_backend.ai_adapters.factory",
+      "threading",
+      "time",
+      "wechat_backend.nxm_scheduler"
+    ],
+    "views_p1_analysis": [
+      "DB_PATH",
+      "flask",
+      "wechat_backend.database",
+      "typing",
+      "datetime",
+      "wechat_backend.logging_config",
+      "json",
+      "validate_execution_id",
+      "api_logger",
+      "SafeDatabaseQuery"
+    ],
+    "views_sync": [
+      "init_sync_storage",
+      "require_auth_optional",
+      "flask",
+      "typing",
+      "wechat_backend.security.rate_limiting",
+      "time",
+      "wechat_backend.security.auth",
+      "wechat_backend.sync.sync_storage",
+      "datetime",
+      "wechat_backend.logging_config"
+    ],
+    "source_weight_library": [
+      "re",
+      "urlparse",
+      "sqlite3",
+      "typing",
+      "wechat_backend.logging_config",
+      "datetime",
+      "urllib.parse",
+      "Dict",
+      "db_logger",
+      "os"
+    ],
+    "audit_decorator": [
+      "functools",
+      "request",
+      "flask",
+      "wechat_backend.audit_logs",
+      "wraps",
+      "save_audit_log",
+      "wechat_backend.security.auth",
+      "get_current_user_id"
+    ],
+    "cruise_controller": [
+      "DB_PATH",
+      "sqlite3",
+      "BackgroundScheduler",
+      "wechat_backend.security.sql_protection",
+      "typing",
+      "SQLAlchemyJobStore",
+      "apscheduler.executors.pool",
+      "logging",
+      "get_brand_test_result",
+      "ThreadPoolExecutor"
+    ],
+    "nxm_circuit_breaker": [
+      "pathlib",
+      "typing",
+      "datetime",
+      "wechat_backend.logging_config",
+      "threading",
+      "api_logger",
+      "Dict",
+      "json",
+      "Path"
+    ],
+    "realtime_persistence": [
+      "wechat_backend.security.data_validator",
+      "functools",
+      "wechat_backend.security.db_optimization",
+      "wechat_backend.database",
+      "typing",
+      "wraps",
+      "datetime",
+      "wechat_backend.logging_config",
+      "threading",
+      "api_logger"
+    ],
+    "result_processor": [
+      "sklearn.feature_extraction.text",
+      "wechat_backend.competitive_analysis",
+      "typing",
+      "SourceWeightLibrary",
+      "wechat_backend.source_weight_library",
+      "wechat_backend.semantic_analyzer",
+      "SemanticAnalyzer",
+      "jieba",
+      "re",
+      "TfidfVectorizer"
+    ],
+    "nxm_scheduler": [
+      "wechat_backend.services.sse_service",
+      "wechat_backend.nxm_circuit_breaker",
+      "typing",
+      "get_circuit_breaker",
+      "datetime",
+      "wechat_backend.logging_config",
+      "List",
+      "uuid",
+      "threading",
+      "api_logger"
+    ],
+    "circuit_breaker": [
+      "requests",
+      "typing",
+      "Optional",
+      "wechat_backend.logging_config",
+      "Enum",
+      "threading",
+      "enum",
+      "api_logger",
+      "time"
+    ]
+  }
+}

@@ -41,38 +41,44 @@ const buildPayload = (inputData) => {
   // P4 修复：前端逻辑保护 - 只保留后端支持的模型
   // 后端支持的模型列表：deepseek, qwen, doubao, chatgpt, gemini, zhipu, wenxin
   const SUPPORTED_MODELS = ['deepseek', 'qwen', 'doubao', 'chatgpt', 'gemini', 'zhipu', 'wenxin'];
-  
-  // 每个模型对象应该包含 name 字段
-  const processedSelectedModels = (selectedModels || []).map(item => {
-    if (typeof item === 'object' && item !== null) {
-      // 保持对象格式，优先使用 id 字段（英文），其次使用 name（中文）
-      const modelName = (item.id || item.name || item.value || '').toLowerCase();
-      return {
-        name: modelName,
-        checked: item.checked !== undefined ? item.checked : true
-      };
-    } else if (typeof item === 'string') {
-      // 如果是字符串，转为对象
-      return { name: item.toLowerCase(), checked: true };
-    }
-    return null;
-  })
-  // 过滤掉 null、空字符串和后端不支持的模型
-  .filter(item => {
-    if (!item || !item.name) return false;
-    // 检查是否在后端支持的模型列表中
-    const isSupported = SUPPORTED_MODELS.includes(item.name);
-    if (!isSupported) {
-      console.warn(`⚠️  过滤掉后端不支持的模型：${item.name}`);
-    }
-    return isSupported;
-  });
+
+  // P1-3 修复：直接发送字符串数组，简化后端处理
+  const modelNames = (selectedModels || [])
+    .map(item => {
+      // 从对象或字符串中提取模型名称
+      let modelName;
+      if (typeof item === 'object' && item !== null) {
+        modelName = (item.id || item.name || item.value || item.label || '').toLowerCase();
+      } else if (typeof item === 'string') {
+        modelName = item.toLowerCase();
+      } else {
+        return null;
+      }
+      
+      // 验证模型名称
+      if (!modelName || modelName.trim() === '') {
+        return null;
+      }
+      
+      return modelName;
+    })
+    .filter(name => {
+      // 过滤掉 null 和空字符串
+      if (!name) return false;
+      
+      // 检查是否在后端支持的模型列表中
+      const isSupported = SUPPORTED_MODELS.includes(name);
+      if (!isSupported) {
+        console.warn(`⚠️  过滤掉后端不支持的模型：${name}`);
+      }
+      return isSupported;
+    });
 
   const custom_question = (customQuestions || []).join(' ');
 
   return {
     brand_list,
-    selectedModels: processedSelectedModels,
+    selectedModels: modelNames,  // P1-3 修复：直接发送字符串数组
     custom_question
   };
 };
@@ -123,12 +129,16 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
 const createPollingController = (executionId, onProgress, onComplete, onError) => {
   let pollInterval = null;
   let isStopped = false;
-  const maxDuration = 5 * 60 * 1000; // 5 分钟超时
+  const maxDuration = 10 * 60 * 1000; // 10 分钟超时 (P0 修复：增加超时时间，防止复杂诊断任务超时)
   const startTime = Date.now();
-  
+
   // Step 1: 错误计数器，实现熔断机制
   let consecutiveAuthErrors = 0;
   const MAX_AUTH_ERRORS = 2;  // 连续 2 次 403/401 错误即熔断
+  
+  // P0 修复：无进度超时计数器（如果长时间没有进度更新，也视为超时）
+  let lastProgressTime = Date.now();
+  const noProgressTimeout = 8 * 60 * 1000; // 8 分钟无进度更新则超时
 
   const stop = () => {
     if (pollInterval) {
@@ -172,8 +182,16 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
       // 超时检查
       if (Date.now() - startTime > maxDuration) {
         stop();
-        console.error('轮询超时');
-        if (onError) onError(new Error('诊断超时'));
+        console.error('轮询超时 (总超时 10 分钟)');
+        if (onError) onError(new Error('诊断超时，请重试或联系管理员'));
+        return;
+      }
+
+      // P0 修复：无进度超时检查
+      if (Date.now() - lastProgressTime > noProgressTimeout) {
+        stop();
+        console.error('轮询超时 (8 分钟无进度更新)');
+        if (onError) onError(new Error('诊断超时，长时间无响应，请重试'));
         return;
       }
 
@@ -188,6 +206,20 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
 
         if (res && (res.progress !== undefined || res.stage)) {
           const parsedStatus = parseTaskStatus(res);
+
+          // P0 修复：更新最后进度时间
+          if (parsedStatus.progress > 0 || parsedStatus.stage !== 'init') {
+            lastProgressTime = Date.now();
+          }
+
+          // OPT-003 性能优化：动态调整轮询间隔
+          const newInterval = getPollingInterval(parsedStatus.progress, parsedStatus.stage);
+          if (newInterval !== interval && pollInterval) {
+            clearInterval(pollInterval);
+            interval = newInterval;
+            pollInterval = setInterval(arguments.callee, interval);
+            console.log(`[性能优化] 调整轮询间隔：${interval}ms -> ${newInterval}ms (进度：${parsedStatus.progress}%)`);
+          }
 
           if (onProgress) {
             onProgress(parsedStatus);
@@ -204,16 +236,26 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
             }
           }
         } else {
-          console.error('获取任务状态失败:', res);
+          console.warn('获取任务状态返回空数据，继续轮询');
         }
       } catch (err) {
         console.error('轮询异常:', err);
-        
+
+        // P1-2 修复：完善错误分类和处理
+        const errorInfo = {
+          originalError: err,
+          statusCode: err.statusCode,
+          isAuthError: err.isAuthError || err.statusCode === 403 || err.statusCode === 401,
+          isNetworkError: err.errMsg && err.errMsg.includes('request:fail'),
+          isTimeout: err.message && err.message.includes('timeout'),
+          timestamp: Date.now()
+        };
+
         // Step 1: 403/401 错误熔断机制
-        if (err.statusCode === 403 || err.statusCode === 401 || err.isAuthError) {
+        if (errorInfo.isAuthError) {
           consecutiveAuthErrors++;
           console.error(`认证错误计数：${consecutiveAuthErrors}/${MAX_AUTH_ERRORS}`);
-          
+
           if (consecutiveAuthErrors >= MAX_AUTH_ERRORS) {
             stop();
             console.error('认证错误熔断，停止轮询');
@@ -223,14 +265,70 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
         } else {
           // 非认证错误，重置计数器
           consecutiveAuthErrors = 0;
+          
+          // P1-2 修复：网络错误和超时错误给予更友好的提示
+          if (errorInfo.isNetworkError) {
+            console.warn('网络连接异常，请检查网络设置');
+          } else if (errorInfo.isTimeout) {
+            console.warn('请求超时，服务器响应缓慢');
+          }
         }
-        
-        if (onError) onError(err);
+
+        // P1-2 修复：传递详细的错误信息给前端
+        if (onError) {
+          const userFriendlyError = createUserFriendlyError(errorInfo);
+          onError(userFriendlyError);
+        }
       }
     }, interval);
   };
 
   return { start, stop, isStopped: () => isStopped };
+};
+
+/**
+ * P1-2 修复：生成用户友好的错误消息
+ * @param {Object} errorInfo - 错误信息对象
+ * @returns {Error} 用户友好的错误对象
+ */
+const createUserFriendlyError = (errorInfo) => {
+  const errorMessages = {
+    // 认证错误
+    auth: '登录已过期，请重新登录',
+    // 网络错误
+    network: '网络连接异常，请检查网络设置',
+    // 超时错误
+    timeout: '请求超时，服务器响应缓慢',
+    // AI 调用错误
+    ai_error: 'AI 服务暂时不可用，请稍后重试',
+    // 默认错误
+    default: '诊断过程出现异常，请重试'
+  };
+
+  // 确定错误类型
+  let errorType = 'default';
+  let httpStatusCode = null;
+
+  if (errorInfo.isAuthError) {
+    errorType = 'auth';
+    httpStatusCode = errorInfo.statusCode;
+  } else if (errorInfo.isNetworkError) {
+    errorType = 'network';
+  } else if (errorInfo.isTimeout) {
+    errorType = 'timeout';
+  } else if (errorInfo.statusCode === 500) {
+    errorType = 'ai_error';
+    httpStatusCode = errorInfo.statusCode;
+  }
+
+  // 创建错误对象
+  const error = new Error(errorMessages[errorType]);
+  error.errorType = errorType;
+  error.httpStatusCode = httpStatusCode;
+  error.originalError = errorInfo.originalError;
+  error.timestamp = errorInfo.timestamp;
+
+  return error;
 };
 
 /**

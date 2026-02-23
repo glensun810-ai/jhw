@@ -1,0 +1,102 @@
+{
+  "timestamp": "2026-02-23T18:24:07.231562",
+  "categories": {
+    "P0": {
+      "name": "P0 级修复",
+      "items": [
+        {
+          "name": "execution_id 索引",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "execution_id 数据完整性",
+          "status": "✅ 通过"
+        }
+      ],
+      "passed": 2,
+      "failed": 0
+    },
+    "P1": {
+      "name": "P1 级修复",
+      "items": [
+        {
+          "name": "Storage 管理器",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "后端错误处理",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "前端错误处理",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "selectedModels 简化",
+          "status": "✅ 通过"
+        }
+      ],
+      "passed": 4,
+      "failed": 0
+    },
+    "P2": {
+      "name": "P2 级修复",
+      "items": [
+        {
+          "name": "日志优化配置",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "限流监控模块",
+          "status": "✅ 通过"
+        }
+      ],
+      "passed": 2,
+      "failed": 0
+    },
+    "DS": {
+      "name": "DS 级修复",
+      "items": [
+        {
+          "name": "事务处理模块",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "数据清理模块",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "数据加密模块",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "Storage 校验工具",
+          "status": "✅ 通过"
+        }
+      ],
+      "passed": 4,
+      "failed": 0
+    },
+    "Backend": {
+      "name": "后端服务",
+      "items": [
+        {
+          "name": "/api/test",
+          "status": "✅ 通过"
+        },
+        {
+          "name": "/health",
+          "status": "✅ 通过"
+        }
+      ],
+      "passed": 2,
+      "failed": 0
+    }
+  },
+  "summary": {
+    "total_items": 14,
+    "passed": 14,
+    "failed": 0,
+    "pass_rate": "100.0%"
+  }
+}
