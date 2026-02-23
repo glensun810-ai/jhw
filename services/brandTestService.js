@@ -200,8 +200,10 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
       })();
     }
 
-    // 启动定时轮询
-    pollInterval = setInterval(async () => {
+    // 启动定时轮询 - BUG-NEW-001 修复：改用递归 setTimeout 避免并发请求
+    let pollTimeout = null;
+    
+    const poll = async () => {
       // 超时检查
       if (Date.now() - startTime > maxDuration) {
         stop();
@@ -220,7 +222,6 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
 
       // 已停止检查
       if (isStopped) {
-        stop();
         return;
       }
 
@@ -237,11 +238,9 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
 
           // OPT-003 性能优化：动态调整轮询间隔
           const newInterval = getPollingInterval(parsedStatus.progress, parsedStatus.stage);
-          if (newInterval !== interval && pollInterval) {
-            clearInterval(pollInterval);
+          if (newInterval !== interval) {
             interval = newInterval;
-            pollInterval = setInterval(arguments.callee, interval);
-            console.log(`[性能优化] 调整轮询间隔：${interval}ms -> ${newInterval}ms (进度：${parsedStatus.progress}%)`);
+            console.log(`[性能优化] 调整轮询间隔：${interval}ms (进度：${parsedStatus.progress}%)`);
           }
 
           if (onProgress) {
@@ -257,6 +256,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
             } else if (parsedStatus.stage === 'failed' && onError) {
               onError(new Error(parsedStatus.error || '诊断失败'));
             }
+            return;
           }
         } else {
           console.warn('获取任务状态返回空数据，继续轮询');
@@ -288,7 +288,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
         } else {
           // 非认证错误，重置计数器
           consecutiveAuthErrors = 0;
-          
+
           // P1-2 修复：网络错误和超时错误给予更友好的提示
           if (errorInfo.isNetworkError) {
             console.warn('网络连接异常，请检查网络设置');
@@ -302,8 +302,29 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
           const userFriendlyError = createUserFriendlyError(errorInfo);
           onError(userFriendlyError);
         }
+      } finally {
+        // BUG-NEW-001 关键修复：使用 setTimeout 递归调用，确保前一个请求完成后再发起下一个
+        if (!isStopped) {
+          pollTimeout = setTimeout(poll, interval);
+        }
       }
-    }, interval);
+    };
+    
+    // 启动第一次轮询
+    poll();
+    
+    // 更新 stop 函数，同时清除 interval 和 timeout
+    stop = () => {
+      if (pollTimeout) {
+        clearTimeout(pollTimeout);
+        pollTimeout = null;
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      isStopped = true;
+    };
   };
 
   return { start, stop, isStopped: () => isStopped };
