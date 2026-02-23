@@ -1,0 +1,23 @@
+{
+  "total": 11,
+  "passed": 4,
+  "failed": 7,
+  "stages": {
+    "stage1": {
+      "total": 6,
+      "passed": 4
+    },
+    "stage2": {
+      "total": 4,
+      "passed": 0
+    },
+    "stage3": {
+      "total": 1,
+      "passed": 0
+    },
+    "stage4": {
+      "total": 7,
+      "passed": 0
+    }
+  }
+}

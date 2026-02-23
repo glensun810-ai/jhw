@@ -105,5 +105,6 @@ module.exports = {
   simulatePageLoad,
   simulateUserAction,
   verifySetDataCalled,
-  getFinalState
+  getFinalState,
+  createMockFn  // 修复 P1-2: 导出 createMockFn
 };

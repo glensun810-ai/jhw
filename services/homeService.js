@@ -1,7 +1,123 @@
 /**
  * 首页业务逻辑处理服务
- * 负责处理从API获取的数据并进行格式化、计算等业务逻辑
+ * 负责处理从 API 获取的数据并进行格式化、计算等业务逻辑
  */
+
+/**
+ * 数据清洗器 - 统一对后端返回和本地存储的数据进行类型强制转换
+ */
+const dataSanitizer = {
+  /**
+   * 字符串清洗：确保返回字符串类型
+   * @param {*} value - 原始值
+   * @param {string} defaultValue - 默认值
+   * @returns {string} 清洗后的字符串
+   */
+  toString: (value, defaultValue = '') => {
+    if (value === null || value === undefined) return defaultValue;
+    return String(value);
+  },
+
+  /**
+   * 数字清洗：确保返回数字类型
+   * @param {*} value - 原始值
+   * @param {number} defaultValue - 默认值
+   * @returns {number} 清洗后的数字
+   */
+  toNumber: (value, defaultValue = 0) => {
+    if (value === null || value === undefined) return defaultValue;
+    const num = Number(value);
+    return isNaN(num) ? defaultValue : num;
+  },
+
+  /**
+   * 数组清洗：确保返回数组类型
+   * @param {*} value - 原始值
+   * @param {Array} defaultValue - 默认值
+   * @returns {Array} 清洗后的数组
+   */
+  toArray: (value, defaultValue = []) => {
+    return Array.isArray(value) ? value : defaultValue;
+  },
+
+  /**
+   * 对象清洗：确保返回对象类型
+   * @param {*} value - 原始值
+   * @param {Object} defaultValue - 默认值
+   * @returns {Object} 清洗后的对象
+   */
+  toObject: (value, defaultValue = {}) => {
+    return (value && typeof value === 'object' && !Array.isArray(value)) ? value : defaultValue;
+  },
+
+  /**
+   * 布尔值清洗：确保返回布尔类型
+   * @param {*} value - 原始值
+   * @param {boolean} defaultValue - 默认值
+   * @returns {boolean} 清洗后的布尔值
+   */
+  toBoolean: (value, defaultValue = false) => {
+    if (value === null || value === undefined) return defaultValue;
+    return Boolean(value);
+  },
+
+  /**
+   * 清洗诊断结果数据
+   * @param {Object} rawData - 原始数据
+   * @returns {Object} 清洗后的数据
+   */
+  sanitizeDiagnosticResult: (rawData) => {
+    if (!rawData || typeof rawData !== 'object') {
+      return {
+        status: 'unknown',
+        progress: 0,
+        stage: 'init',
+        results: [],
+        detailed_results: {},
+        error: null,
+        message: ''
+      };
+    }
+
+    return {
+      status: dataSanitizer.toString(rawData.status, 'unknown'),
+      progress: dataSanitizer.toNumber(rawData.progress, 0),
+      stage: dataSanitizer.toString(rawData.stage, 'init'),
+      results: dataSanitizer.toArray(rawData.results, []),
+      detailed_results: dataSanitizer.toObject(rawData.detailed_results, {}),
+      error: rawData.error || null,
+      message: dataSanitizer.toString(rawData.message, '')
+    };
+  },
+
+  /**
+   * 清洗草稿数据
+   * @param {Object} rawDraft - 原始草稿
+   * @returns {Object|null} 清洗后的草稿
+   */
+  sanitizeDraft: (rawDraft) => {
+    if (!rawDraft || typeof rawDraft !== 'object') {
+      return null;
+    }
+
+    const brandName = dataSanitizer.toString(rawDraft.brandName, '');
+    if (!brandName) {
+      return null;
+    }
+
+    return {
+      brandName: brandName,
+      currentCompetitor: dataSanitizer.toString(rawDraft.currentCompetitor, ''),
+      competitorBrands: dataSanitizer.toArray(rawDraft.competitorBrands, []),
+      customQuestions: dataSanitizer.toArray(rawDraft.customQuestions, []),
+      selectedModels: {
+        domestic: dataSanitizer.toArray(rawDraft.selectedModels?.domestic, []),
+        overseas: dataSanitizer.toArray(rawDraft.selectedModels?.overseas, [])
+      },
+      updatedAt: dataSanitizer.toNumber(rawDraft.updatedAt, 0)
+    };
+  }
+};
 
 /**
  * 处理测试进度数据
@@ -31,10 +147,10 @@ const processTestProgress = (progressData, currentProgress) => {
  */
 const getProgressTextByValue = (progress) => {
   const progressSteps = [
-    '正在连接AI认知引擎...',
+    '正在连接 AI 认知引擎...',
     '正在生成诊断任务...',
-    '正在向AI平台发起请求...',
-    '正在分析AI回复...',
+    '正在向 AI 平台发起请求...',
+    '正在分析 AI 回复...',
     '正在进行语义一致性检测...',
     '正在评估品牌纯净度...',
     '正在聚合竞品数据...',
@@ -155,10 +271,12 @@ const parseTaskStatus = (statusData) => {
 };
 
 module.exports = {
+  dataSanitizer,
   processTestProgress,
   getProgressTextByValue,
   formatTestResults,
   formatCompetitiveAnalysis,
   isTestCompleted,
-  isTestFailed
+  isTestFailed,
+  parseTaskStatus
 };

@@ -4,7 +4,8 @@
 .env.*.local
 *.env
 .env.secure
-.env.backup
+# 允许备份目录中的.env 文件
+!backup/.env.backup
 
 # 包含敏感信息的文档
 *_API_KEY*.md
