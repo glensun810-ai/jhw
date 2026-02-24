@@ -57,7 +57,13 @@ const aggregateReport = (rawResults, brandName, competitors, additionalData = {}
   const patterns = analyzeInterceptionPatterns(additionalData.interception_data || {});
   const attribution = generateAttributionReport(threats, patterns);
 
-  // 8. 整合报告
+  // 8. 计算首次提及率【P1 修复】
+  const firstMentionByPlatform = calculateFirstMentionByPlatform(filledResults);
+
+  // 9. 计算拦截风险【P1 修复】
+  const interceptionRisks = calculateInterceptionRisks(filledResults, brandName);
+
+  // 10. 整合报告
   return {
     brandName,
     competitors,
@@ -69,6 +75,10 @@ const aggregateReport = (rawResults, brandName, competitors, additionalData = {}
     attribution,
     semanticDriftData: additionalData.semantic_drift_data || null,
     recommendationData: additionalData.recommendation_data || null,
+    negativeSources: additionalData.negative_sources || null,
+    competitiveAnalysis: additionalData.competitive_analysis || null,
+    firstMentionByPlatform,  // 【P1 修复】添加首次提及率
+    interceptionRisks,  // 【P1 修复】添加拦截风险
     overallScore: brandScores[brandName]?.overallScore || 50,
     timestamp: new Date().toISOString()
   };
@@ -149,6 +159,86 @@ const calculateBrandRisk = (results, brandName) => {
     negativeInterceptions: negativeCount,
     totalMentions: totalCount
   });
+};
+
+/**
+ * 【P1 修复】计算首次提及率
+ * @param {Array} results - 结果数组
+ * @returns {Array} 各平台的首次提及率
+ */
+const calculateFirstMentionByPlatform = (results) => {
+  const platformStats = {};
+
+  results.forEach(result => {
+    const platform = result.model || 'unknown';
+    if (!platformStats[platform]) {
+      platformStats[platform] = {
+        platform,
+        total: 0,
+        firstMention: 0
+      };
+    }
+    platformStats[platform].total++;
+    if (result.geo_data?.brand_mentioned) {
+      platformStats[platform].firstMention++;
+    }
+  });
+
+  return Object.values(platformStats).map(stats => ({
+    platform,
+    rate: stats.total > 0 ? Math.round((stats.firstMention / stats.total) * 100) : 0,
+    firstMention: stats.firstMention,
+    total: stats.total
+  }));
+};
+
+/**
+ * 【P1 修复】计算拦截风险
+ * @param {Array} results - 结果数组
+ * @param {string} brandName - 主品牌名称
+ * @returns {Array} 拦截风险列表
+ */
+const calculateInterceptionRisks = (results, brandName) => {
+  const interceptionCounts = {};
+  let totalIntercepted = 0;
+
+  results.forEach(result => {
+    const interception = result.geo_data?.interception || '';
+    if (interception && interception.trim() !== '') {
+      totalIntercepted++;
+      // 分割竞品名称（可能包含多个）
+      const competitors = interception.split(/[,,]/).map(c => c.trim()).filter(c => c);
+      competitors.forEach(competitor => {
+        if (!interceptionCounts[competitor]) {
+          interceptionCounts[competitor] = 0;
+        }
+        interceptionCounts[competitor]++;
+      });
+    }
+  });
+
+  const totalResults = results.length;
+  const interceptionRate = totalResults > 0 ? (totalIntercepted / totalResults) * 100 : 0;
+
+  // 确定风险等级
+  let riskLevel = 'low';
+  if (interceptionRate > 50) riskLevel = 'high';
+  else if (interceptionRate > 30) riskLevel = 'medium';
+
+  // 构建拦截风险列表
+  const risks = Object.entries(interceptionCounts).map(([competitor, count]) => ({
+    type: 'brand_interception',
+    competitor,
+    count,
+    rate: Math.round((count / totalResults) * 100),
+    level: riskLevel,
+    description: `${competitor} 在 ${count}/${totalResults} 次诊断中拦截了您的品牌`
+  }));
+
+  // 按拦截次数排序
+  risks.sort((a, b) => b.count - a.count);
+
+  return risks;
 };
 
 /**

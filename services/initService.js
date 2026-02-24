@@ -66,7 +66,18 @@ const checkServerConnection = async (pageContext) => {
     if (pageContext && pageContext.setData) {
       pageContext.setData({ serverStatus: '连接失败' });
     }
-    wx.showToast({ title: '后端服务未启动', icon: 'error' });
+    
+    // 根据错误类型显示不同的提示
+    let errorMessage = '后端服务未启动';
+    if (err.statusCode === 403) {
+      errorMessage = '权限验证失败，请重新登录';
+    } else if (err.statusCode === 401) {
+      errorMessage = '认证失效，请重新登录';
+    } else if (err.errMsg && err.errMsg.includes('request:fail')) {
+      errorMessage = '网络连接失败，请检查服务器';
+    }
+    
+    wx.showToast({ title: errorMessage, icon: 'error', duration: 2000 });
     return false;
   }
 };

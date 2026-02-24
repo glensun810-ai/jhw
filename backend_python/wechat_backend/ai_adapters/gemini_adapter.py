@@ -30,6 +30,9 @@ class GeminiAdapter(AIClient):
 
         api_logger.info(f"GeminiAdapter initialized for model: {model_name} using REST API with unified request wrapper")
 
+    def generate_response(self, prompt: str, **kwargs) -> AIResponse:
+        """生成响应（兼容 NXM 执行引擎）"""
+        return self.send_prompt(prompt, **kwargs)
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
         """
         向 Gemini API 发送请求 - 使用 REST API

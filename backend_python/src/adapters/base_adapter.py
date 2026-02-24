@@ -37,11 +37,23 @@ GEO_PROMPT_TEMPLATE = """
 }}
 
 字段说明：
-- brand_mentioned: 品牌是否被提到 (true/false)
-- rank: 品牌在推荐列表中的排名（1-10），若未提到或未排名则为 -1
-- sentiment: 对品牌的情感评分（-1.0 到 1.0）
-- cited_sources: 提到的或暗示的信源/网址列表
+- brand_mentioned: 品牌是否被提到 (true/false) - **必须明确回答**
+- rank: 品牌在推荐列表中的排名（**必须为 1-10 的数字**，若未提到则为 -1）- **必须明确排名**
+- sentiment: 对品牌的情感评分（**必须为 -1.0 到 1.0 的数字**，positive=0.5~1.0, neutral=0.0, negative=-1.0~-0.5）- **必须明确情感**
+- cited_sources: 提到的或暗示的信源/网址列表 - **必须提供至少 2 个真实信源**（如知乎、小红书、中关村在线、太平洋电脑网等）
 - interception: 如果推荐了竞品而没推荐我，写下竞品名
+
+**重要提示**：
+1. rank 字段**不能为 -1**，必须根据品牌在回答中的推荐程度给出 1-10 的排名
+2. sentiment 字段**不能为 0.0**，必须根据回答的倾向性给出 -1.0 到 1.0 的评分
+3. cited_sources 字段**必须包含至少 2 个信源**，可以从以下常见科技媒体中选择：
+   - 知乎 (zhihu.com)
+   - 小红书 (xiaohongshu.com)
+   - 中关村在线 (zol.com.cn)
+   - 太平洋电脑网 (pconline.com.cn)
+   - 什么值得买 (smzdm.com)
+   - 品牌官网
+4. 如果回答中未明确提及具体 URL，请根据内容推断可能来源的信源网站
 """
 
 class AIPlatformType(Enum):

@@ -119,7 +119,9 @@ def export_pdf_report():
                         try:
                             ai_models_used = json.loads(record_data.get('ai_models_used', '[]'))
                             questions_used = json.loads(record_data.get('questions_used', '[]'))
-                        except:
+                        except Exception as e:
+
+                            pass  # TODO: 添加适当的错误处理
                             ai_models_used = []
                             questions_used = []
 

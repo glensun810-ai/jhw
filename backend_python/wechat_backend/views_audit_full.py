@@ -627,7 +627,9 @@ def _is_non_business_hours(timestamp: str) -> bool:
         dt = datetime.fromisoformat(timestamp)
         # 周末或工作时间外（9-18 点）
         return dt.weekday() >= 5 or dt.hour < 9 or dt.hour > 18
-    except:
+    except Exception as e:
+
+        pass  # TODO: 添加适当的错误处理
         return False
 
 

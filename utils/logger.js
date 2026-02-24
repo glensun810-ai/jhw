@@ -1,174 +1,129 @@
 /**
- * 前端日志工具模块
- *
- * 功能:
- * 1. 日志级别控制 (DEBUG/INFO/WARN/ERROR)
- * 2. 生产环境自动禁用 DEBUG 日志
- * 3. 统一的日志格式
- * 4. 可选的错误上报
- *
- * 使用示例:
- * const logger = require('../../utils/logger');
- *
- * logger.debug('调试信息', data);  // 生产环境自动禁用
- * logger.info('普通信息', data);
- * logger.warn('警告信息', data);
- * logger.error('错误信息', error); // 始终记录
+ * 日志级别配置
+ * 
+ * BUG-009 修复：添加日志级别控制，生产环境可关闭 DEBUG 日志
  */
 
-// 日志级别
-const LOG_LEVEL = {
+// 日志级别枚举
+const LogLevel = {
   DEBUG: 0,
   INFO: 1,
   WARN: 2,
-  ERROR: 3
+  ERROR: 3,
+  NONE: 4
 };
 
-// 环境判断：小程序原生环境不支持 __DEV__，使用 wx.getAccountInfoSync() 判断
-const isDev = (function() {
+// 当前日志级别（可通过环境变量或配置修改）
+// 生产环境建议设置为 WARN 或 ERROR
+let currentLogLevel = LogLevel.INFO;
+
+/**
+ * 设置日志级别
+ * @param {number} level - 日志级别
+ */
+function setLogLevel(level) {
+  currentLogLevel = level;
+  console.log(`[日志配置] 日志级别已设置为：${level}`);
+}
+
+/**
+ * 获取当前日志级别
+ * @returns {number} 日志级别
+ */
+function getLogLevel() {
+  return currentLogLevel;
+}
+
+/**
+ * DEBUG 级别日志
+ * 只在 DEBUG 级别下输出
+ */
+function debug(...args) {
+  if (currentLogLevel <= LogLevel.DEBUG) {
+    console.log('[DEBUG]', ...args);
+  }
+}
+
+/**
+ * INFO 级别日志
+ * 在 INFO 及以上级别输出
+ */
+function info(...args) {
+  if (currentLogLevel <= LogLevel.INFO) {
+    console.log('[INFO]', ...args);
+  }
+}
+
+/**
+ * WARN 级别日志
+ * 在 WARN 及以上级别输出
+ */
+function warn(...args) {
+  if (currentLogLevel <= LogLevel.WARN) {
+    console.warn('[WARN]', ...args);
+  }
+}
+
+/**
+ * ERROR 级别日志
+ * 在 ERROR 及以上级别输出
+ */
+function error(...args) {
+  if (currentLogLevel <= LogLevel.ERROR) {
+    console.error('[ERROR]', ...args);
+  }
+}
+
+/**
+ * 生产环境配置（关闭 DEBUG 日志）
+ */
+function setProductionMode() {
+  setLogLevel(LogLevel.WARN);
+  console.log('[日志配置] 已切换到生产环境模式');
+}
+
+/**
+ * 开发环境配置（开启所有日志）
+ */
+function setDevelopmentMode() {
+  setLogLevel(LogLevel.DEBUG);
+  console.log('[日志配置] 已切换到开发环境模式');
+}
+
+// 自动检测环境
+function initLogLevel() {
   try {
+    // 检查是否在微信开发者工具中
     const accountInfo = wx.getAccountInfoSync();
-    return accountInfo.miniProgram.envVersion === 'develop';
-  } catch (e) {
-    // 如果获取失败，默认为开发环境
-    return true;
-  }
-})();
-
-// 当前日志级别 (根据环境自动设置)
-// 生产环境：只记录 ERROR
-// 开发环境：记录所有级别
-const CURRENT_LOG_LEVEL = isDev ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR;
-
-/**
- * 格式化日志消息
- */
-function formatMessage(level, message, data) {
-  const timestamp = new Date().toISOString();
-  const levelStr = ['DEBUG', 'INFO', 'WARN', 'ERROR'][level];
-
-  let formatted = `[${timestamp}] [${levelStr}] ${message}`;
-
-  if (data !== undefined) {
-    if (typeof data === 'object') {
-      try {
-        formatted += ' ' + JSON.stringify(data);
-      } catch (e) {
-        formatted += ' [Object]';
-      }
+    const envVersion = accountInfo?.miniProgram?.envVersion || 'develop';
+    
+    if (envVersion === 'release') {
+      // 正式版：只输出 WARN 和 ERROR
+      setProductionMode();
+    } else if (envVersion === 'trial') {
+      // 体验版：输出 INFO 及以上
+      setLogLevel(LogLevel.INFO);
     } else {
-      formatted += ' ' + data;
+      // 开发版：输出所有日志
+      setDevelopmentMode();
     }
-  }
-
-  return formatted;
-}
-
-/**
- * 日志工具类
- */
-class Logger {
-  /**
-   * 设置日志级别
-   * @param {number} level - 日志级别
-   */
-  static setLevel(level) {
-    if (typeof level === 'number' && level >= LOG_LEVEL.DEBUG && level <= LOG_LEVEL.ERROR) {
-      CURRENT_LOG_LEVEL = level;
-    }
-  }
-
-  /**
-   * 获取当前日志级别
-   * @returns {number} 日志级别
-   */
-  static getLevel() {
-    return CURRENT_LOG_LEVEL;
-  }
-
-  /**
-   * 调试日志 (生产环境禁用)
-   * @param {string} message - 日志消息
-   * @param {any} data - 附加数据
-   */
-  static debug(message, data) {
-    if (CURRENT_LOG_LEVEL <= LOG_LEVEL.DEBUG) {
-      console.debug(formatMessage(LOG_LEVEL.DEBUG, message, data));
-    }
-  }
-
-  /**
-   * 信息日志
-   * @param {string} message - 日志消息
-   * @param {any} data - 附加数据
-   */
-  static info(message, data) {
-    if (CURRENT_LOG_LEVEL <= LOG_LEVEL.INFO) {
-      console.log(formatMessage(LOG_LEVEL.INFO, message, data));
-    }
-  }
-
-  /**
-   * 警告日志
-   * @param {string} message - 日志消息
-   * @param {any} data - 附加数据
-   */
-  static warn(message, data) {
-    if (CURRENT_LOG_LEVEL <= LOG_LEVEL.WARN) {
-      console.warn(formatMessage(LOG_LEVEL.WARN, message, data));
-    }
-  }
-
-  /**
-   * 错误日志 (始终记录)
-   * @param {string} message - 日志消息
-   * @param {Error|any} error - 错误对象或数据
-   */
-  static error(message, error) {
-    if (CURRENT_LOG_LEVEL <= LOG_LEVEL.ERROR) {
-      console.error(formatMessage(LOG_LEVEL.ERROR, message));
-      if (error) {
-        if (error instanceof Error) {
-          console.error('Error:', error.message);
-          console.error('Stack:', error.stack);
-        } else {
-          console.error('Data:', error);
-        }
-      }
-    }
-  }
-
-  /**
-   * 上报错误到服务器 (可选)
-   * @param {Error} error - 错误对象
-   * @param {Object} context - 上下文信息
-   */
-  static reportError(error, context = {}) {
-    // 生产环境才上报
-    if (!isDev) {
-      const app = getApp();
-      const apiBaseUrl = app.globalData.apiBaseUrl || '';
-
-      if (apiBaseUrl) {
-        wx.request({
-          url: `${apiBaseUrl}/api/log/error`,
-          method: 'POST',
-          data: {
-            error: error.message,
-            stack: error.stack,
-            context: context,
-            timestamp: Date.now(),
-            userAgent: wx.getSystemInfoSync().model
-          },
-          timeout: 5000,
-          fail: (reportError) => {
-            // 上报失败不重复上报，避免死循环
-            console.error('Error report failed:', reportError);
-          }
-        });
-      }
-    }
+  } catch (e) {
+    // 默认开发环境
+    setDevelopmentMode();
   }
 }
 
-module.exports = Logger;
+// 初始化
+initLogLevel();
+
+module.exports = {
+  LogLevel,
+  debug,
+  info,
+  warn,
+  error,
+  setLogLevel,
+  getLogLevel,
+  setProductionMode,
+  setDevelopmentMode
+};

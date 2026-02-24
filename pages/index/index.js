@@ -1,3 +1,5 @@
+const { debug, info, warn, error } = require('../../utils/logger');
+
 // ==================== 模块化重构后引入的服务 ====================
 // 工具函数
 const {
@@ -118,18 +120,17 @@ Page({
       { name: '豆包', id: 'doubao', checked: true, logo: 'DB', tags: ['综合', '创意'] },
       { name: '通义千问', id: 'qwen', checked: true, logo: 'QW', tags: ['综合', '长文本'] },
       { name: '元宝', id: 'yuanbao', checked: false, logo: 'YB', tags: ['综合']},
-      { name: 'Kimi', checked: false, logo: 'KM', tags: ['长文本'] },
-      { name: '文心一言', checked: false, logo: 'WX', tags: ['综合', '创意'] },
-      { name: '讯飞星火', checked: false, logo: 'XF', tags: ['综合', '语音'] },
+      { name: 'Kimi', id: 'kimi', checked: false, logo: 'KM', tags: ['长文本'] },
+      { name: '文心一言', id: 'wenxin', checked: false, logo: 'WX', tags: ['综合', '创意'] },
+      { name: '讯飞星火', id: 'xinghuo', checked: false, logo: 'XF', tags: ['综合', '语音'] },
       { name: '智谱AI', id: 'zhipu', checked: false, logo: 'ZP', tags: ['综合', 'GLM'] },      
     ],
     overseasAiModels: [
-      { name: 'ChatGPT', checked: true, logo: 'GPT', tags: ['综合', '代码'] },
-      { name: 'Gemini', checked: false, logo: 'GM', tags: ['综合', '多模态'] },
-      { name: 'Claude', checked: false, logo: 'CD', tags: ['长文本', '创意'] },
-      { name: 'Perplexity', checked: false, logo: 'PE', tags: ['综合', '长文本'] },
-      { name: 'Grok', checked: false, logo: 'GR', tags: ['推理', '多模态'] },
-      
+      { name: 'ChatGPT', id: 'chatgpt', checked: true, logo: 'GPT', tags: ['综合', '代码'] },
+      { name: 'Gemini', id: 'gemini', checked: false, logo: 'GM', tags: ['综合', '多模态'] },
+      { name: 'Claude', id: 'claude', checked: false, logo: 'CD', tags: ['长文本', '创意'] },
+      { name: 'Perplexity', id: 'perplexity', checked: false, logo: 'PE', tags: ['综合', '长文本'] },
+      { name: 'Grok', id: 'grok', checked: false, logo: 'GR', tags: ['推理', '多模态'] },
     ],
     selectedModelCount: 0,
 
@@ -916,8 +917,13 @@ Page({
       wx.showToast({ title: '请选择至少一个AI模型', icon: 'error' });
       return;
     }
+    // P1-007 新增：使用更专业的默认问题列表
     if (customQuestions.length === 0) {
-      customQuestions = ["介绍一下{brandName}", "{brandName}的主要产品是什么"];
+      customQuestions = [
+        "{brandName}的核心竞争优势是什么？",
+        "{brandName}在目标用户群体中的认知度如何？",
+        "{brandName}与竞品的主要差异化体现在哪里？"
+      ];
     }
 
     this.setData({
@@ -937,7 +943,7 @@ Page({
     try {
       // 从品牌列表中提取主品牌名称（第一个元素）
       const mainBrandName = Array.isArray(brandList) ? brandList[0] : brandList;
-      
+
       const inputData = {
         brandName: mainBrandName,
         competitorBrands: Array.isArray(brandList) ? brandList.slice(1) : [],
@@ -945,25 +951,10 @@ Page({
         customQuestions
       };
 
-      const executionId = await startDiagnosis(
-        inputData,
-        (parsedStatus) => {
-          this.setData({
-            testProgress: parsedStatus.progress,
-            progressText: parsedStatus.statusText,
-            currentStage: parsedStatus.stage
-          });
-        },
-        (parsedStatus) => {
-          wx.hideLoading();
-          this.handleDiagnosisComplete(parsedStatus, executionId);
-        },
-        (error) => {
-          wx.hideLoading();
-          this.handleDiagnosisError(error);
-        }
-      );
+      // P0-011 修复：只启动诊断，不轮询（统一使用 pollingController）
+      const executionId = await startDiagnosis(inputData);
 
+      // 统一使用 pollingController 轮询
       this.pollingController = createPollingController(
         executionId,
         (parsedStatus) => {
@@ -999,6 +990,18 @@ Page({
    */
   handleDiagnosisComplete(parsedStatus, executionId) {
     try {
+      // 【P1-2 新增】部分完成警告提示
+      if (parsedStatus.warning || parsedStatus.missing_count > 0) {
+        const resultsCount = (parsedStatus.results || []).length || (parsedStatus.detailed_results || []).length;
+        const totalCount = resultsCount + (parsedStatus.missing_count || 0);
+        wx.showModal({
+          title: '诊断提示',
+          content: `诊断部分完成：已获取 ${resultsCount}/${totalCount} 个结果\n${parsedStatus.warning || '部分 AI 调用失败，已展示可用结果'}`,
+          showCancel: false,
+          confirmText: '查看结果'
+        });
+      }
+
       // P2 优化：先跳转结果页，再异步处理数据，减少等待时间
       // 保存核心数据并跳转
       const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];

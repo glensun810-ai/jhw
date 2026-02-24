@@ -28,7 +28,7 @@ const RETRY_CONFIG = {
 };
 
 const ENV_CONFIG = {
-  develop: { baseURL: 'http://127.0.0.1:5000', timeout: 30000 },  // 开发环境默认端口
+  develop: { baseURL: 'http://127.0.0.1:5001', timeout: 30000 },  // 开发环境默认端口（使用 5001 避免与 macOS Control Center 冲突）
   trial: { baseURL: 'https://staging.api.yourdomain.com', timeout: 20000 },
   release: { baseURL: 'https://api.yourdomain.com', timeout: 15000 }
 };

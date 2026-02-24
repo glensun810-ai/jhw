@@ -64,6 +64,9 @@ class ErnieBotAdapter(AIClient):
             api_logger.error(f"Failed to get access token: {e}")
             raise
 
+    def generate_response(self, prompt: str, **kwargs) -> AIResponse:
+        """生成响应（兼容 NXM 执行引擎）"""
+        return self.send_prompt(prompt, **kwargs)
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
         """
         向 文心一言 API 发送请求

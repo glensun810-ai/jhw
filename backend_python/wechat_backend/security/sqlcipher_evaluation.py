@@ -117,7 +117,9 @@ class SQLCipherEvaluator:
                 })
                 
                 return {'status': 'FAIL'}
-            except:
+            except Exception as e:
+
+                pass  # TODO: 添加适当的错误处理
                 logger.info("✅ Encryption test passed: Cannot read with wrong password")
             
             # 用正确密码读取

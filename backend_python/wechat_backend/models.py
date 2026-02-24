@@ -20,6 +20,7 @@ class TaskStage(Enum):
     RANKING_ANALYSIS = "ranking_analysis"
     SOURCE_TRACING = "source_tracing"
     COMPLETED = "completed"
+    FAILED = "failed"  # 【修复 P0-007】添加失败阶段
 
 
 class TaskStatus:
@@ -395,6 +396,13 @@ def update_task_stage(task_id, stage, progress=None, status_text=None):
             current_status.progress = 100
         if status_text is None:
             current_status.status_text = "任务已完成"
+    # 【修复 P0-007】如果阶段是失败状态，也标记为完成（失败）
+    elif stage == TaskStage.FAILED:
+        current_status.is_completed = True
+        if progress is None:
+            current_status.progress = 0
+        if status_text is None:
+            current_status.status_text = "任务执行失败"
 
     # 保存更新后的状态
     save_task_status(current_status)

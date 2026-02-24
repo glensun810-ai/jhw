@@ -1,3 +1,5 @@
+const { debug, info, warn, error } = require('../../utils/logger');
+
 /**
  * 品牌诊断执行服务
  * 负责诊断任务的启动、轮询、状态管理
@@ -8,26 +10,40 @@ const { parseTaskStatus } = require('./taskStatusService');
 const { aggregateReport } = require('./reportAggregator');
 
 /**
- * P2 性能优化：计算动态轮询间隔
+ * P1-015 优化：智能动态轮询间隔
+ * 根据后端实际响应时间和进度阶段动态调整
  * @param {number} progress - 当前进度 (0-100)
  * @param {string} stage - 当前阶段
+ * @param {number} lastResponseTime - 上次响应时间（毫秒）
  * @returns {number} 轮询间隔（毫秒）
  */
-const getPollingInterval = (progress, stage) => {
-  // 初期阶段（0-30%）：2 秒，给后端足够时间启动
-  if (progress < 30) {
-    return 2000;
+const getPollingInterval = (progress, stage, lastResponseTime = 100) => {
+  // 基础间隔：根据进度阶段
+  let baseInterval;
+  if (progress < 10) {
+    // 初期：刚启动，给后端更多时间
+    baseInterval = 1500;
+  } else if (progress < 30) {
+    // 早期：AI 调用中
+    baseInterval = 1000;
+  } else if (progress < 70) {
+    // 中期：分析中
+    baseInterval = 800;
+  } else if (progress < 90) {
+    // 后期：即将完成
+    baseInterval = 600;
+  } else {
+    // 完成阶段：快速响应
+    baseInterval = 400;
   }
-  // 中期阶段（30-70%）：1.5 秒，平衡响应速度和服务器压力
-  if (progress < 70) {
-    return 1500;
-  }
-  // 后期阶段（70-90%）：1 秒，加快响应
-  if (progress < 90) {
-    return 1000;
-  }
-  // 完成阶段（90-100%）：500ms，快速响应完成
-  return 500;
+  
+  // P1-015 新增：根据后端响应时间动态调整
+  // 如果后端响应快，缩短间隔；响应慢，延长间隔
+  const responseFactor = lastResponseTime / 100;
+  const adjustedInterval = baseInterval * Math.max(0.5, Math.min(1.5, responseFactor));
+  
+  // 限制范围：200ms - 3000ms
+  return Math.max(200, Math.min(3000, adjustedInterval));
 };
 
 /**
@@ -158,16 +174,19 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
   // Step 1: 错误计数器，实现熔断机制
   let consecutiveAuthErrors = 0;
   const MAX_AUTH_ERRORS = 2;  // 连续 2 次 403/401 错误即熔断
-  
+
   // P0 修复：无进度超时计数器（如果长时间没有进度更新，也视为超时）
   let lastProgressTime = Date.now();
   const noProgressTimeout = 8 * 60 * 1000; // 8 分钟无进度更新则超时
 
-  const stop = () => {
-    if (pollInterval) {
-      clearInterval(pollInterval);
-      pollInterval = null;
-      isStopped = true;
+  // 使用对象持有 stop 函数，避免重新赋值导致的只读错误
+  const controller = {
+    stop: () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+        isStopped = true;
+      }
     }
   };
 
@@ -183,7 +202,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
 
             // 如果已完成，直接触发完成回调
             if (parsedStatus.stage === 'completed' && onComplete) {
-              stop();
+              controller.stop();
               onComplete(parsedStatus);
               return;
             }
@@ -192,7 +211,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
           console.error('立即轮询失败:', err);
           // Step 1: 检查是否为认证错误
           if (err.statusCode === 403 || err.statusCode === 401 || err.isAuthError) {
-            stop();
+            controller.stop();
             if (onError) onError(new Error('权限验证失败，请重新登录'));
             return;
           }
@@ -202,11 +221,16 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
 
     // 启动定时轮询 - BUG-NEW-001 修复：改用递归 setTimeout 避免并发请求
     let pollTimeout = null;
-    
+    // BUG-004 修复：跟踪上次响应时间，用于动态调整轮询间隔
+    let lastResponseTime = Date.now();
+
     const poll = async () => {
+      // 记录本次请求开始时间
+      const requestStartTime = Date.now();
+      
       // 超时检查
       if (Date.now() - startTime > maxDuration) {
-        stop();
+        controller.stop();
         console.error('轮询超时 (总超时 10 分钟)');
         if (onError) onError(new Error('诊断超时，请重试或联系管理员'));
         return;
@@ -214,7 +238,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
 
       // P0 修复：无进度超时检查
       if (Date.now() - lastProgressTime > noProgressTimeout) {
-        stop();
+        controller.stop();
         console.error('轮询超时 (8 分钟无进度更新)');
         if (onError) onError(new Error('诊断超时，长时间无响应，请重试'));
         return;
@@ -228,33 +252,72 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
       try {
         const res = await getTaskStatusApi(executionId);
 
+        // BUG-004 修复：计算响应时间
+        const responseTime = Date.now() - requestStartTime;
+        lastResponseTime = Date.now();
+
+        // 【DEBUG】输出后端响应
+        console.log('[brandTestService] 后端响应:', JSON.stringify(res, null, 2));
+
         if (res && (res.progress !== undefined || res.stage)) {
           const parsedStatus = parseTaskStatus(res);
+
+          // 【DEBUG】输出解析后的状态
+          console.log('[brandTestService] 解析后的状态:', {
+            stage: parsedStatus.stage,
+            progress: parsedStatus.progress,
+            is_completed: parsedStatus.is_completed,
+            error: parsedStatus.error
+          });
 
           // P0 修复：更新最后进度时间
           if (parsedStatus.progress > 0 || parsedStatus.stage !== 'init') {
             lastProgressTime = Date.now();
           }
 
-          // OPT-003 性能优化：动态调整轮询间隔
-          const newInterval = getPollingInterval(parsedStatus.progress, parsedStatus.stage);
+          // BUG-004 修复：使用动态调整的轮询间隔
+          const newInterval = getPollingInterval(parsedStatus.progress, parsedStatus.stage, responseTime);
           if (newInterval !== interval) {
             interval = newInterval;
-            console.log(`[性能优化] 调整轮询间隔：${interval}ms (进度：${parsedStatus.progress}%)`);
+            console.log(`[性能优化] 调整轮询间隔：${interval}ms (响应时间：${responseTime}ms, 进度：${parsedStatus.progress}%)`);
           }
 
           if (onProgress) {
             onProgress(parsedStatus);
           }
 
-          // 终止条件
-          if (parsedStatus.stage === 'completed' || parsedStatus.stage === 'failed') {
-            stop();
+          // 终止条件 - 修复：同时检查 stage 和 is_completed
+          if (parsedStatus.stage === 'completed' || parsedStatus.stage === 'failed' || parsedStatus.is_completed === true) {
+            controller.stop();
 
-            if (parsedStatus.stage === 'completed' && onComplete) {
+            // 【关键修复】区分"完全失败"和"部分完成"
+            const isCompleted = parsedStatus.is_completed === true || parsedStatus.stage === 'completed';
+            const hasResults = parsedStatus.results && parsedStatus.results.length > 0;
+            const hasDetailedResults = parsedStatus.detailed_results && parsedStatus.detailed_results.length > 0;
+            const hasAnyResults = hasResults || hasDetailedResults;
+
+            // 部分完成的情况：有结果但状态是 failed
+            if (!isCompleted && parsedStatus.stage === 'failed' && hasAnyResults) {
+              console.warn('[品牌诊断] 部分完成：检测到结果但状态为 failed，可能是部分 AI 调用失败');
+              // 仍然调用 onComplete，让前端展示可用结果
+              if (onComplete) {
+                onComplete(parsedStatus);
+              }
+              return;
+            }
+
+            // 正常完成
+            if (isCompleted && onComplete) {
               onComplete(parsedStatus);
-            } else if (parsedStatus.stage === 'failed' && onError) {
+            } 
+            // 完全失败（无结果）
+            else if (!isCompleted && !hasAnyResults && onError) {
               onError(new Error(parsedStatus.error || '诊断失败'));
+            }
+            // 部分失败但有结果
+            else if (!isCompleted && hasAnyResults && onComplete) {
+              console.warn('[品牌诊断] 部分失败但有结果，继续展示可用数据');
+              onComplete(parsedStatus);
             }
             return;
           }
@@ -280,7 +343,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
           console.error(`认证错误计数：${consecutiveAuthErrors}/${MAX_AUTH_ERRORS}`);
 
           if (consecutiveAuthErrors >= MAX_AUTH_ERRORS) {
-            stop();
+            controller.stop();
             console.error('认证错误熔断，停止轮询');
             if (onError) onError(new Error('权限验证失败，请重新登录'));
             return;
@@ -312,9 +375,9 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
     
     // 启动第一次轮询
     poll();
-    
+
     // 更新 stop 函数，同时清除 interval 和 timeout
-    stop = () => {
+    controller.stop = () => {
       if (pollTimeout) {
         clearTimeout(pollTimeout);
         pollTimeout = null;
@@ -327,52 +390,94 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
     };
   };
 
-  return { start, stop, isStopped: () => isStopped };
+  return { start, stop: controller.stop, isStopped: () => isStopped };
 };
 
 /**
- * P1-2 修复：生成用户友好的错误消息
+ * P1-006 修复：生成用户友好的错误消息
  * @param {Object} errorInfo - 错误信息对象
  * @returns {Error} 用户友好的错误对象
  */
 const createUserFriendlyError = (errorInfo) => {
+  // P1-006 新增：详细错误文案映射
   const errorMessages = {
     // 认证错误
     auth: '登录已过期，请重新登录',
+    auth_suggestion: '\n\n建议：\n1. 重新登录\n2. 清除缓存后重试',
+    
     // 网络错误
-    network: '网络连接异常，请检查网络设置',
+    network: '网络连接失败，请检查网络设置',
+    network_suggestion: '\n\n建议：\n1. 检查设备网络连接\n2. 确认后端服务已启动\n3. 检查防火墙设置',
+    
     // 超时错误
     timeout: '请求超时，服务器响应缓慢',
-    // AI 调用错误
-    ai_error: 'AI 服务暂时不可用，请稍后重试',
+    timeout_suggestion: '\n\n建议：\n1. 稍后重试\n2. 检查网络速度',
+    
+    // AI 平台错误
+    AI_PLATFORM_ERROR: 'AI 平台暂时不可用，请稍后重试',
+    AI_PLATFORM_ERROR_suggestion: '\n\n建议：\n1. 稍后重试\n2. 更换其他 AI 模型\n3. 检查 API Key 配置',
+    
+    // 验证错误
+    VALIDATION_ERROR: '输入数据格式错误，请检查后重试',
+    VALIDATION_ERROR_suggestion: '\n\n建议：\n1. 检查品牌名称是否正确\n2. 确认已选择 AI 模型',
+    
+    // 配置错误
+    AI_CONFIG_ERROR: 'AI 平台配置错误，请联系管理员',
+    AI_CONFIG_ERROR_suggestion: '\n\n建议：\n1. 联系技术支持\n2. 检查后端配置',
+    
+    // 任务执行错误
+    TASK_EXECUTION_ERROR: '诊断执行失败，已保存的进度不会丢失',
+    TASK_EXECUTION_ERROR_suggestion: '\n\n建议：\n1. 查看历史记录\n2. 重新发起诊断',
+    
+    // 超时错误
+    TASK_TIMEOUT_ERROR: '诊断超时，请重试或联系管理员',
+    TASK_TIMEOUT_ERROR_suggestion: '\n\n建议：\n1. 减少 AI 模型数量\n2. 减少问题数量\n3. 稍后重试',
+    
+    // 频率限制
+    RATE_LIMIT_ERROR: '请求过于频繁，请稍后再试',
+    RATE_LIMIT_ERROR_suggestion: '\n\n建议：\n1. 等待 1 分钟后重试',
+    
+    // 数据库错误
+    DATABASE_ERROR: '数据库错误，请联系技术支持',
+    DATABASE_ERROR_suggestion: '\n\n建议：\n1. 联系技术支持\n2. 提供错误发生时间',
+    
     // 默认错误
-    default: '诊断过程出现异常，请重试'
+    default: '诊断过程中断，已保存的进度不会丢失',
+    default_suggestion: '\n\n建议：\n1. 查看历史记录是否有保存\n2. 重新发起诊断'
   };
 
-  // 确定错误类型
-  let errorType = 'default';
-  let httpStatusCode = null;
-
+  // 提取错误代码
+  let errorCode = 'default';
   if (errorInfo.isAuthError) {
-    errorType = 'auth';
-    httpStatusCode = errorInfo.statusCode;
+    errorCode = 'auth';
   } else if (errorInfo.isNetworkError) {
-    errorType = 'network';
+    errorCode = 'network';
   } else if (errorInfo.isTimeout) {
-    errorType = 'timeout';
+    errorCode = 'timeout';
+  } else if (errorInfo.statusCode === 400) {
+    errorCode = 'VALIDATION_ERROR';
+  } else if (errorInfo.statusCode === 401) {
+    errorCode = 'auth';
+  } else if (errorInfo.statusCode === 403) {
+    errorCode = 'PERMISSION_ERROR';
+  } else if (errorInfo.statusCode === 408) {
+    errorCode = 'TASK_TIMEOUT_ERROR';
+  } else if (errorInfo.statusCode === 429) {
+    errorCode = 'RATE_LIMIT_ERROR';
+  } else if (errorInfo.statusCode === 503) {
+    errorCode = 'AI_PLATFORM_ERROR';
   } else if (errorInfo.statusCode === 500) {
-    errorType = 'ai_error';
-    httpStatusCode = errorInfo.statusCode;
+    errorCode = 'TASK_EXECUTION_ERROR';
   }
 
-  // 创建错误对象
-  const error = new Error(errorMessages[errorType]);
-  error.errorType = errorType;
-  error.httpStatusCode = httpStatusCode;
-  error.originalError = errorInfo.originalError;
-  error.timestamp = errorInfo.timestamp;
+  // 构建友好消息
+  const message = errorMessages[errorCode] || errorMessages.default;
+  const suggestion = errorMessages[`${errorCode}_suggestion`] || errorMessages.default_suggestion;
+  const fullMessage = message + suggestion;
 
-  return error;
+  console.error(`[错误详情] 代码：${errorCode}, 原始错误：${errorInfo.originalError?.message || '未知'}`);
+
+  return new Error(fullMessage);
 };
 
 /**
@@ -387,9 +492,45 @@ const generateDashboardData = (processedReportData, pageContext) => {
       ? processedReportData
       : (processedReportData.detailed_results || processedReportData.results || []);
 
+    // 【关键修复】处理空结果数据的情况
     if (!rawResults || rawResults.length === 0) {
-      console.warn('没有可用的原始结果数据');
-      return null;
+      console.warn('⚠️ 没有可用的原始结果数据，尝试从其他字段提取');
+      
+      // 尝试从 processedReportData 的其他字段提取数据
+      const fallbackResults = [];
+      
+      // 检查是否有 semantic_drift_data 等其他数据
+      if (processedReportData.semantic_drift_data) {
+        console.log('📊 尝试从 semantic_drift_data 提取数据');
+      }
+      if (processedReportData.recommendation_data) {
+        console.log('📊 尝试从 recommendation_data 提取数据');
+      }
+      
+      // 如果完全没有数据，返回一个包含错误信息的对象
+      if (fallbackResults.length === 0) {
+        console.error('❌ 确实没有任何可用的结果数据');
+        // 返回一个包含错误标记的对象，而不是 null
+        return {
+          _error: 'NO_DATA',
+          errorMessage: '没有可用的诊断结果数据',
+          brandName: pageContext?.brandName || '',
+          competitors: pageContext?.competitorBrands || [],
+          brandScores: {},
+          sov: {},
+          risk: {},
+          health: {},
+          insights: {},
+          attribution: {},
+          semanticDriftData: null,
+          recommendationData: null,
+          overallScore: 0,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      // 使用 fallback 数据继续处理
+      return generateDashboardData(fallbackResults, pageContext);
     }
 
     const brandName = pageContext.brandName;
@@ -420,7 +561,23 @@ const generateDashboardData = (processedReportData, pageContext) => {
     return dashboardData;
   } catch (error) {
     console.error('生成战略看板数据失败:', error);
-    return null;
+    // 【关键修复】返回包含错误信息的对象，而不是 null
+    return {
+      _error: 'GENERATION_ERROR',
+      errorMessage: error.message || '生成看板数据失败',
+      brandName: pageContext?.brandName || '',
+      competitors: pageContext?.competitorBrands || [],
+      brandScores: {},
+      sov: {},
+      risk: {},
+      health: {},
+      insights: {},
+      attribution: {},
+      semanticDriftData: null,
+      recommendationData: null,
+      overallScore: 0,
+      timestamp: new Date().toISOString()
+    };
   }
 };
 

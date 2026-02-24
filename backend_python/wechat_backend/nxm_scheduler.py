@@ -104,16 +104,23 @@ class NxMScheduler:
                 store['status'] = 'completed'
                 store['progress'] = 100
                 store['stage'] = 'completed'
+                store['is_completed'] = True  # 【P0 修复】添加 is_completed 字段
+                store['detailed_results'] = store.get('results', [])  # 【P0 修复】确保 detailed_results 存在
                 store['end_time'] = datetime.now().isoformat()
 
         api_logger.info(f"[Scheduler] 执行完成：{self.execution_id}")
 
     def fail_execution(self, error: str):
         """失败执行"""
+        # 【P0 修复】确保 error 总是有值
+        if not error or not error.strip():
+            error = "执行失败，原因未知"
+        
         with self._lock:
             if self.execution_id in self.execution_store:
                 store = self.execution_store[self.execution_id]
                 store['status'] = 'failed'
+                store['stage'] = 'failed'  # 【修复】同步 stage 与 status
                 store['error'] = error
                 store['end_time'] = datetime.now().isoformat()
 

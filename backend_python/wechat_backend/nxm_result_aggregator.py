@@ -61,6 +61,22 @@ def parse_geo_with_validation(
     - error: 错误信息（如果有）
     """
     try:
+        # 【P0 修复】处理 AIResponse 对象
+        from wechat_backend.ai_adapters.base_adapter import AIResponse
+        if isinstance(response_text, AIResponse):
+            # 从 AIResponse 对象中提取实际响应文本
+            if response_text.success and response_text.content:
+                response_text = response_text.content
+            else:
+                return {
+                    'brand_mentioned': False,
+                    'rank': -1,
+                    'sentiment': 0.0,
+                    'cited_sources': [],
+                    'interception': '',
+                    '_error': f'AI 调用失败：{response_text.error_message}'
+                }, response_text.error_message or 'AI 调用失败'
+        
         # 修复 1: 传递 execution_id, q_idx, model_name 参数
         geo_data = parse_geo_json_enhanced(response_text, execution_id, q_idx, model_name)
 

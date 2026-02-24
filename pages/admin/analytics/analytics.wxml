@@ -91,7 +91,7 @@
         <text class="section-title">AI 平台详细统计</text>
       </view>
       <view class="platform-list">
-        <view class="platform-item" wx:for="{{platformStats}}" wx:key="name" wx:for-item="platform">
+        <view class="platform-item" wx:for="{{platformStats}}" wx:key="index" wx:for-item="platform">
           <view class="platform-header">
             <text class="platform-name">{{platform.name}}</text>
             <text class="platform-count">{{platform.count}} 次</text>

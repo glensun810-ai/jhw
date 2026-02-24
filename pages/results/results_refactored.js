@@ -1,3 +1,5 @@
+const { debug, info, warn, error } = require('../../utils/logger');
+
 /**
  * 结果页 - 重构版本
  * 

@@ -156,6 +156,20 @@ class DoubaoAdapter(AIClient):
                 latency=0.0
             )
 
+    def generate_response(self, prompt: str, **kwargs) -> AIResponse:
+        """
+        生成响应（兼容 NXM 执行引擎的调用接口）
+        
+        Args:
+            prompt: 提示词
+            **kwargs: 其他参数
+            
+        Returns:
+            AIResponse: AI 响应
+        """
+        # 直接调用 send_prompt 方法
+        return self.send_prompt(prompt, **kwargs)
+
     def _make_request_internal(self, prompt: str, **kwargs) -> AIResponse:
         """
         实际的API请求逻辑

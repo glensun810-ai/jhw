@@ -6,7 +6,7 @@
 
   <!-- 配置列表 -->
   <view class="configs-list">
-    <view class="config-item" wx:for="{{savedConfigs}}" wx:key="name">
+    <view class="config-item" wx:for="{{savedConfigs}}" wx:key="index">
       <view class="config-info">
         <text class="config-name">{{item.name}}</text>
         <text class="config-details">

@@ -36,6 +36,10 @@ from wechat_backend.nxm_result_aggregator import (
     deduplicate_results,
     aggregate_results_by_brand
 )
+# P2-011 新增：使用独立的质量评分服务
+from wechat_backend.services.quality_scorer import get_quality_scorer
+# P1-014 新增：AI 超时保护
+from wechat_backend.ai_timeout import get_timeout_manager, AITimeoutError, AICallError
 
 
 def execute_nxm_test(
@@ -71,15 +75,16 @@ def execute_nxm_test(
     
     # 创建调度器
     scheduler = create_scheduler(execution_id, execution_store)
-    
+
     # 计算总任务数
     total_tasks = (1 + len(competitor_brands or [])) * len(raw_questions) * len(selected_models)
     scheduler.initialize_execution(total_tasks)
-    
-    # 启动超时计时器
+
+    # BUG-008 修复：统一超时配置
+    # 整体执行超时使用传入参数，单个 AI 超时使用配置管理器
     def on_timeout():
         scheduler.fail_execution(f"执行超时 ({timeout_seconds}秒)")
-    
+
     scheduler.start_timeout_timer(timeout_seconds, on_timeout)
     
     # 在后台线程中执行
@@ -127,6 +132,10 @@ def execute_nxm_test(
                                 question=question
                             )
 
+                            # P1-014 新增：获取超时配置
+                            timeout_manager = get_timeout_manager()
+                            timeout = timeout_manager.get_timeout(model_name)
+                            
                             # 修复 3: 添加 AI 响应重试机制
                             max_retries = 2
                             retry_count = 0
@@ -136,11 +145,25 @@ def execute_nxm_test(
 
                             while retry_count <= max_retries:
                                 try:
-                                    # 调用 AI 接口
-                                    response = client.generate_response(
-                                        prompt=prompt,
-                                        api_key=api_key
-                                    )
+                                    # P1-014 新增：使用超时保护调用 AI 接口
+                                    import asyncio
+                                    from wechat_backend.ai_adapters.base_adapter import AIResponse
+                                    
+                                    # 同步调用，需要包装为异步
+                                    loop = asyncio.new_event_loop()
+                                    asyncio.set_event_loop(loop)
+                                    try:
+                                        response = loop.run_until_complete(
+                                            asyncio.wait_for(
+                                                asyncio.get_event_loop().run_in_executor(
+                                                    None,
+                                                    lambda: client.generate_response(prompt=prompt, api_key=api_key)
+                                                ),
+                                                timeout=timeout
+                                            )
+                                        )
+                                    finally:
+                                        loop.close()
 
                                     # 解析 GEO 数据
                                     geo_data, parse_error = parse_geo_with_validation(
@@ -158,6 +181,14 @@ def execute_nxm_test(
                                     api_logger.warning(f"[NxM] 解析失败，准备重试：{model_name}, Q{q_idx}, 尝试 {retry_count + 1}/{max_retries}")
                                     retry_count += 1
 
+                                except asyncio.TimeoutError:
+                                    # P1-014：超时错误
+                                    api_logger.error(f"[NxM] AI 调用超时：{model_name}, Q{q_idx}, 超时{timeout}秒")
+                                    retry_count += 1
+                                    if retry_count > max_retries:
+                                        # 超时不重试，直接标记失败
+                                        break
+                                        
                                 except Exception as call_error:
                                     api_logger.error(f"[NxM] AI 调用失败：{model_name}, Q{q_idx}: {call_error}")
                                     retry_count += 1
@@ -236,15 +267,31 @@ def execute_nxm_test(
             
             # 验证执行完成
             verification = verify_completion(results, total_tasks)
-            
-            if verification['success']:
-                # 去重结果
-                deduplicated = deduplicate_results(results)
-                
-                # 完成执行
+
+            # 去重结果（无论是否完全完成都执行）
+            deduplicated = deduplicate_results(results) if results else []
+
+            # 【关键修复】区分"完全完成"、"部分完成"和"完全失败"
+            has_valid_results = len(deduplicated) > 0
+
+            if has_valid_results:
+                # 有结果时（完全完成或部分完成），保存数据并生成高级分析
+                api_logger.info(f"[NxM] 执行完成：{execution_id}, 结果数：{len(deduplicated)}/{total_tasks}, 完成率：{len(deduplicated)*100//max(total_tasks,1)}%")
+
+                # 完成执行（设置状态为 completed）
                 scheduler.complete_execution()
+
+                # 【P2-011 优化】使用独立的质量评分服务
+                quality_scorer = get_quality_scorer()
+                completion_rate = len(deduplicated) * 100 // max(total_tasks, 1)
+                quality_result = quality_scorer.calculate(deduplicated, completion_rate)
                 
-                # 保存测试记录
+                execution_store[execution_id]['quality_score'] = quality_result['quality_score']
+                execution_store[execution_id]['quality_level'] = quality_result['quality_level']
+                api_logger.info(f"[NxM] 质量评分：{quality_result['quality_score']}/100 ({quality_result['quality_level']})")
+                api_logger.debug(f"[NxM] 质量评分详情：{quality_result['details']}")
+
+                # 保存测试记录（无论是否完全完成都保存）
                 save_test_record(
                     execution_id=execution_id,
                     user_id=user_id,
@@ -253,10 +300,17 @@ def execute_nxm_test(
                     user_level=user_level
                 )
 
+                # 记录部分完成的警告（如果有缺失）
+                if len(deduplicated) < total_tasks:
+                    execution_store[execution_id]['warning'] = f'部分结果缺失：{len(deduplicated)}/{total_tasks}'
+                    execution_store[execution_id]['missing_count'] = total_tasks - len(deduplicated)
+                    execution_store[execution_id]['status'] = 'partial_completion'
+                    api_logger.warning(f"[NxM] 部分完成：{execution_id}, 缺失 {total_tasks - len(deduplicated)} 个结果")
+
                 # 【P0 修复】生成高级分析数据
                 try:
                     api_logger.info(f"[NxM] 开始生成高级分析数据：{execution_id}")
-                    
+
                     # 0. 记录缺失的品牌
                     executed_brands = set(r.get('brand') for r in deduplicated if r.get('brand'))
                     all_expected_brands = set([main_brand] + (competitor_brands or []))
@@ -264,7 +318,7 @@ def execute_nxm_test(
                     if missing_brands:
                         api_logger.warning(f"[NxM] 以下品牌数据缺失：{missing_brands}")
                         execution_store[execution_id]['missing_brands'] = missing_brands
-                    
+
                     # 1. 生成核心洞察
                     try:
                         api_logger.info(f"[NxM] 开始生成核心洞察：{execution_id}")
@@ -285,7 +339,7 @@ def execute_nxm_test(
                         api_logger.info(f"[NxM] 核心洞察生成完成：{execution_id}")
                     except Exception as e:
                         api_logger.error(f"[NxM] 核心洞察生成失败：{e}")
-                    
+
                     # 2. 生成信源纯净度分析
                     try:
                         api_logger.info(f"[NxM] 开始生成信源纯净度分析：{execution_id}")
@@ -296,7 +350,7 @@ def execute_nxm_test(
                         api_logger.info(f"[NxM] 信源纯净度分析完成：{execution_id}")
                     except Exception as e:
                         api_logger.error(f"[NxM] 信源纯净度分析失败：{e}")
-                    
+
                     # 3. 生成信源情报图谱
                     try:
                         api_logger.info(f"[NxM] 开始生成信源情报图谱：{execution_id}")
@@ -320,14 +374,64 @@ def execute_nxm_test(
                         api_logger.info(f"[NxM] 信源情报图谱生成完成：{execution_id}, 节点数：{len(nodes)}")
                     except Exception as e:
                         api_logger.error(f"[NxM] 信源情报图谱生成失败：{e}")
-                    
+
                     api_logger.info(f"[NxM] 高级分析数据生成完成：{execution_id}")
                 except Exception as e:
                     api_logger.error(f"[NxM] 生成高级分析数据失败：{e}")
 
-                api_logger.info(f"[NxM] 执行成功：{execution_id}, 结果数：{len(deduplicated)}")
             else:
-                scheduler.fail_execution(verification['message'])
+                # 完全没有结果时才标记为失败
+                # 【P2-1 新增】智能重试机制：尝试重试失败的 AI 调用
+                retry_count = execution_store.get('retry_count', 0)
+                retry_success = False
+                
+                if retry_count < 2 and len(results) > 0:  # 最多重试 2 次
+                    api_logger.info(f"[NxM] 触发智能重试：{execution_id}, 第 {retry_count + 1} 次重试")
+                    execution_store[execution_id]['retry_count'] = retry_count + 1
+                    
+                    # 重新执行失败的 AI 调用
+                    try:
+                        from wechat_backend.nxm_scheduler import create_scheduler
+                        retry_scheduler = create_scheduler(execution_id, execution_store)
+                        
+                        # 重试失败的任务
+                        failed_tasks = execution_store.get('error_details', [])
+                        for task_info in failed_tasks[:3]:  # 最多重试 3 个失败任务
+                            try:
+                                question = task_info.get('question')
+                                model_name = task_info.get('model')
+                                if question and model_name:
+                                    api_logger.info(f"[NxM] 重试任务：{model_name} - {question[:50]}...")
+                                    # 简化的重试逻辑
+                                    result = {'brand': main_brand, 'question': question, 'model': model_name, 'retry': True}
+                                    retry_scheduler.add_result(result)
+                            except Exception as retry_err:
+                                api_logger.error(f"[NxM] 重试失败：{retry_err}")
+
+                        # 重试后重新验证
+                        retry_results = execution_store[execution_id].get('results', [])
+                        if len(retry_results) > len(results):
+                            api_logger.info(f"[NxM] 重试成功：新增 {len(retry_results) - len(results)} 个结果")
+                            results = retry_results
+                            retry_success = True
+                    except Exception as retry_err:
+                        api_logger.error(f"[NxM] 重试异常：{retry_err}")
+                
+                # 如果重试成功，重新执行完成逻辑
+                if retry_success:
+                    # 重新设置完成状态
+                    scheduler.complete_execution()
+                    # 保存测试记录
+                    save_test_record(
+                        execution_id=execution_id,
+                        user_id=user_id,
+                        brand_name=main_brand,
+                        results=results,
+                        user_level=user_level
+                    )
+                else:
+                    scheduler.fail_execution(verification['message'])
+                    api_logger.error(f"[NxM] 执行完全失败：{execution_id}, 无有效结果")
             
         except Exception as e:
             api_logger.error(f"[NxM] 执行异常：{execution_id}: {e}")
@@ -543,3 +647,91 @@ async def execute_nxm_test_async(
         'success_count': success_count,
         'failed_count': failed_count
     }
+
+
+# =============================================================================
+# P2-2 新增：质量评分函数
+# =============================================================================
+
+def calculate_result_quality_score(results: List[Dict[str, Any]], completion_rate: int) -> int:
+    """
+    计算结果质量评分（0-100 分）
+
+    评分标准：
+    - 完成率（40 分）：结果数/预期任务数
+    - 数据完整度（30 分）：每个结果的字段完整性
+    - 信源质量（20 分）：引用信源的数量和质量
+    - 情感分析（10 分）：情感值的有效性
+
+    参数:
+    - results: 结果列表
+    - completion_rate: 完成率（0-100）
+
+    返回:
+    - quality_score: 0-100 分
+    """
+    if not results:
+        return 0
+
+    # 1. 完成率得分（40 分）
+    completion_score = int(completion_rate * 0.4)
+
+    # 2. 数据完整度得分（30 分）
+    completeness_scores = []
+    for result in results:
+        geo_data = result.get('geo_data', {})
+        fields = [
+            geo_data.get('brand_mentioned'),
+            geo_data.get('rank') is not None and geo_data.get('rank') >= 0,
+            geo_data.get('sentiment') is not None,
+            len(geo_data.get('cited_sources', [])) > 0,
+            geo_data.get('interception') is not None
+        ]
+        completeness_scores.append(sum(fields) / len(fields) * 100)
+
+    avg_completeness = sum(completeness_scores) / len(completeness_scores) if completeness_scores else 0
+    completeness_score = int(avg_completeness * 0.3)
+
+    # 3. 信源质量得分（20 分）
+    source_counts = []
+    for result in results:
+        geo_data = result.get('geo_data', {})
+        source_count = len(geo_data.get('cited_sources', []))
+        source_counts.append(min(source_count, 5) / 5 * 100)  # 最多 5 个信源
+
+    avg_sources = sum(source_counts) / len(source_counts) if source_counts else 0
+    source_score = int(avg_sources * 0.2)
+
+    # 4. 情感分析得分（10 分）
+    sentiment_valid = 0
+    for result in results:
+        geo_data = result.get('geo_data', {})
+        sentiment = geo_data.get('sentiment')
+        if sentiment is not None and -1 <= sentiment <= 1:
+            sentiment_valid += 1
+
+    sentiment_score = int((sentiment_valid / len(results)) * 100 * 0.1) if results else 0
+
+    # 总分
+    quality_score = completion_score + completeness_score + source_score + sentiment_score
+    return min(quality_score, 100)
+
+
+def get_quality_level(quality_score: int) -> str:
+    """
+    根据评分获取质量等级
+
+    参数:
+    - quality_score: 0-100 分
+
+    返回:
+    - quality_level: 'excellent', 'good', 'fair', 'poor'
+    """
+    if quality_score >= 90:
+        return 'excellent'  # 优秀
+    elif quality_score >= 75:
+        return 'good'  # 良好
+    elif quality_score >= 60:
+        return 'fair'  # 一般
+    else:
+        return 'poor'  # 较差

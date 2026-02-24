@@ -77,7 +77,7 @@ class PDFService {
    */
   static async fetchReportData(executionId) {
     return new Promise((resolve, reject) => {
-      const apiUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5000';
+      const apiUrl = app.globalData.apiBaseUrl || 'http://127.0.0.1:5001';
       
       wx.request({
         url: `${apiUrl}/api/dashboard/aggregate`,

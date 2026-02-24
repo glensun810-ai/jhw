@@ -31,7 +31,9 @@ def get_execution_context():
             context['user_id'] = user_id
             
         return context
-    except:
+    except Exception as e:
+
+        pass  # TODO: 添加适当的错误处理
         # 如果无法获取上下文，返回空字典
         return {}
 

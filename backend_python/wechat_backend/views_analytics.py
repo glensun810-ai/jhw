@@ -227,7 +227,9 @@ def get_feature_usage():
                 models = json.loads(row[0])
                 for model in models:
                     model_usage[model] += 1
-            except:
+            except Exception as e:
+
+                pass  # TODO: 添加适当的错误处理
                 pass
         
         top_features = sorted(
@@ -295,7 +297,9 @@ def get_ai_platform_stats():
                     platform_stats[model]['count'] += 1
                     # 简化：假设都成功（实际应从详细结果中统计）
                     platform_stats[model]['success'] += 1
-            except:
+            except Exception as e:
+
+                pass  # TODO: 添加适当的错误处理
                 pass
         
         # 转换为列表并排序
@@ -325,7 +329,9 @@ def get_ai_platform_stats():
                 models = json.loads(row[1])
                 for model in models:
                     daily_trend[date][model] += 1
-            except:
+            except Exception as e:
+
+                pass  # TODO: 添加适当的错误处理
                 pass
         
         trend_data = [
@@ -527,7 +533,9 @@ def get_analytics_dashboard():
                 models = json.loads(row[0])
                 for model in models:
                     platform_usage[model] += 1
-            except:
+            except Exception as e:
+
+                pass  # TODO: 添加适当的错误处理
                 pass
         
         top_platform = max(platform_usage.items(), key=lambda x: x[1])[0] if platform_usage else 'N/A'

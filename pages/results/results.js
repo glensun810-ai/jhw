@@ -1,8 +1,11 @@
+const { debug, info, warn, error } = require('../../utils/logger');
+
 const { saveResult } = require('../../utils/saved-results-sync');
+const { loadDiagnosisResult, loadLastDiagnosis } = require('../../utils/storage-manager');
 const { generateFullReport } = require('../../utils/pdf-export');
 
-// P1-1 修复：统一 Storage 管理器
-const { loadDiagnosisResult, loadLastDiagnosis } = require('../../utils/storage-manager');
+// P1-008 新增：统一数据加载服务
+const { loadDiagnosisData } = require('../../services/dataLoaderService');
 
 Page({
   data: {
@@ -76,9 +79,113 @@ Page({
   },
 
   /**
-   * P1-1 修复：使用统一 Storage 管理器加载数据
-   * 【关键优化】优先从统一 Storage 加载，支持版本控制和过期检查
+   * P1-008 简化：统一数据加载逻辑
+   * 
+   * 简化策略：
+   * 1. 优先从 Storage 加载（快速）
+   * 2. Storage 无数据时从 API 加载（可靠）
    */
+  onLoad: async function(options) {
+    console.log('[结果页] 页面加载，开始加载数据...');
+    
+    const executionId = decodeURIComponent(options.executionId || '');
+    const brandName = decodeURIComponent(options.brandName || '');
+
+    if (!executionId) {
+      console.error('[结果页] 缺少 executionId');
+      this.showNoDataModal();
+      return;
+    }
+
+    // 显示加载提示
+    wx.showLoading({ title: '加载数据中...', mask: true });
+
+    try {
+      // 使用统一数据加载服务
+      const result = await loadDiagnosisData(executionId, {
+        forceRefresh: false,  // 优先使用缓存
+        useCacheOnly: false   // 缓存失败时从 API 加载
+      });
+
+      wx.hideLoading();
+
+      if (result.success && result.data) {
+        console.log(`✅ 数据加载成功：${result.data.results?.length || 0} 条结果，来自${result.fromCache ? '缓存' : 'API'}`);
+        
+        // 初始化页面
+        this.initializePageWithData(
+          result.data.results,
+          brandName,
+          [],
+          result.data.competitive_analysis || {},
+          result.data.negative_sources || [],
+          result.data.semantic_drift_data || null,
+          result.data.recommendation_data || null
+        );
+
+        // 保存额外数据到 data
+        this.setData({
+          sourcePurityData: result.data.source_purity_data,
+          sourceIntelligenceMap: result.data.source_intelligence_map,
+          warning: result.data.warning,
+          missingCount: result.data.missing_count,
+          qualityScore: result.data.quality_score,
+          qualityLevel: result.data.quality_level,
+          qualityLevelText: this.getQualityLevelText(result.data.quality_level)
+        });
+
+        // BUG-005 修复：合并所有警告，避免重复弹窗
+        const warnings = [];
+        
+        // 收集部分完成警告
+        if (result.data.warning) {
+          const resultsCount = (result.data.results || []).length;
+          const totalCount = resultsCount + (result.data.missing_count || 0);
+          warnings.push(`诊断部分完成：${result.data.warning}\n\n已获取 ${resultsCount}/${totalCount} 条有效结果`);
+        }
+        
+        // 收集质量评分警告
+        if (result.data.quality_warning) {
+          const suggestion = result.data.quality_suggestion === 'retry' 
+            ? '建议：重新运行诊断以获得更准确的结果' 
+            : '建议：结果仅供参考，建议结合其他数据源综合判断';
+          warnings.push(`${result.data.quality_warning}\n\n${suggestion}`);
+        }
+        
+        // 合并显示所有警告
+        if (warnings.length > 0) {
+          wx.showModal({
+            title: '诊断提示',
+            content: warnings.join('\n\n---\n\n'),
+            showCancel: false,
+            confirmText: '知道了'
+          });
+        }
+      } else {
+        console.error('[结果页] 数据加载失败:', result.error);
+        wx.showModal({
+          title: '加载失败',
+          content: result.error || '数据加载失败，请稍后重试',
+          showCancel: false,
+          confirmText: '重试',
+          success: (res) => {
+            if (res.confirm) {
+              this.onLoad(options);  // 重试
+            }
+          }
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('[结果页] 数据加载异常:', error);
+      wx.showModal({
+        title: '加载异常',
+        content: '数据加载过程中出现异常，请稍后重试',
+        showCancel: false
+      });
+    }
+  },
+
   /**
    * 从 results 计算品牌评分（备用方案）
    */
@@ -266,307 +373,12 @@ Page({
         competitiveAnalysis,
         null, null, null
       );
-    } else if (executionId) {
-      // 【专家调优】从后端 API 拉取最新数据
-      console.log('🔄 Storage 无有效数据，从后端 API 拉取...');
-      this.fetchResultsFromServer(executionId, targetBrand);
-    } else {
-      console.error('❌ 无有效数据，显示友好提示');
-      this.showNoDataModal();
     }
   },
 
-  /**
-   * 【新增】从后端 API 拉取结果数据
-   * 【P0 修复】添加 Token 认证头和 403 自动重试机制
-   * 【修复 2】添加空数据和默认值验证
-   */
-  fetchResultsFromServer: function(executionId, brandName, isRetry) {
-    const app = getApp();
-    const baseUrl = app.globalData?.apiUrl || 'http://127.0.0.1:5001';
+  // P1-011 已删除：fetchResultsFromServer 函数（已迁移到 dataLoaderService）
 
-    // 【修复】使用 /test/status/{id} 端点，不需要严格认证
-    console.log('📡 请求后端 API，executionId:', executionId);
-
-    wx.request({
-      url: `${baseUrl}/test/status/${executionId}`,
-      method: 'GET',
-      header: {
-        'Content-Type': 'application/json'
-      },
-      success: (res) => {
-        console.log('📡 后端 API 响应:', res.data);
-
-        // 【修复】处理 404 错误（任务不存在）
-        if (res.statusCode === 404) {
-          console.warn('⚠️ 任务不存在 (404)');
-          wx.showModal({
-            title: '提示',
-            content: '诊断任务不存在或已过期',
-            showCancel: false,
-            success: (modalRes) => {
-              if (modalRes.confirm) {
-                wx.navigateBack();
-              }
-            }
-          });
-          return;
-        }
-
-        if (res.statusCode === 200 && res.data && (res.data.detailed_results || res.data.results)) {
-          const resultsToUse = res.data.detailed_results || res.data.results || [];
-          const competitiveAnalysisToUse = res.data.competitive_analysis || {};
-          const brandScoresToUse = res.data.brand_scores || {};
-          const semanticDriftDataToUse = res.data.semantic_drift_data || null;
-          const recommendationDataToUse = res.data.recommendation_data || null;
-          const negativeSourcesToUse = res.data.negative_sources || [];
-          const insightsToUse = res.data.insights || null;  // ← 新增：核心洞察
-          const sourcePurityDataToUse = res.data.source_purity_data || null;  // ← P0-3: 信源纯净度
-          const sourceIntelligenceMapToUse = res.data.source_intelligence_map || null;  // ← P0-4: 信源情报图谱
-
-          console.log('📊 后端返回的高级分析数据:', {
-            hasBrandScores: !!brandScoresToUse && Object.keys(brandScoresToUse).length > 0,
-            hasCompetitiveAnalysis: !!competitiveAnalysisToUse && Object.keys(competitiveAnalysisToUse).length > 0,
-            hasSemanticDrift: !!semanticDriftDataToUse,
-            hasRecommendation: !!recommendationDataToUse,
-            hasNegativeSources: !!negativeSourcesToUse && negativeSourcesToUse.length > 0,
-            hasSourcePurity: !!sourcePurityDataToUse,
-            hasSourceIntelligence: !!sourceIntelligenceMapToUse
-          });
-
-          // 验证高级分析数据
-          console.log('📊 验证后端返回的高级分析数据:', {
-            hasResults: resultsToUse && resultsToUse.length > 0,
-            hasBrandScores: brandScoresToUse && Object.keys(brandScoresToUse).length > 0,
-            hasCompetitiveAnalysis: competitiveAnalysisToUse && Object.keys(competitiveAnalysisToUse).length > 0,
-            hasSemanticDrift: !!semanticDriftDataToUse,
-            hasRecommendation: !!recommendationDataToUse,
-            hasNegativeSources: negativeSourcesToUse && negativeSourcesToUse.length > 0
-          });
-          
-          // 如果 brand_scores 为空，从 results 中计算
-          if (!brandScoresToUse || Object.keys(brandScoresToUse).length === 0) {
-            console.warn('⚠️ 品牌评分数据为空，从 results 计算');
-            brandScoresToUse = this.calculateBrandScoresFromResults(resultsToUse, brandName);
-          }
-          
-          // 验证竞品数据
-          const hasCompetitorData = resultsToUse.some(r => 
-            r.brand && r.brand !== brandName
-          );
-          if (!hasCompetitorData) {
-            console.warn('⚠️ 没有竞品数据，无法进行对比分析');
-          }
-          
-          // 修复 2: 验证结果是否为空
-          if (!resultsToUse || resultsToUse.length === 0) {
-            console.error('❌ 后端 API 返回结果为空');
-            // P1 修复：显示友好的空状态提示
-            wx.showModal({
-              title: '暂无数据',
-              content: '诊断结果暂无数据，可能原因：\n1. AI 调用失败\n2. 网络异常\n3. 数据解析错误\n\n建议：重新运行诊断或联系客服',
-              showCancel: false,
-              confirmText: '重新诊断',
-              success: (modalRes) => {
-                if (modalRes.confirm) {
-                  wx.navigateBack();  // 返回上一页
-                }
-              }
-            });
-            return;
-          }
-
-          // 修复 2: 验证结果是否包含真实数据（非默认值）
-          // 【关键修复】放宽验证标准，兼容不同后端返回格式
-          const hasRealData = resultsToUse.some(r => {
-            // 检查是否有错误标记
-            if (r._error || r.geo_data?._error) {
-              console.warn('⚠️ 结果包含解析错误:', r._error || r.geo_data._error);
-              return false;
-            }
-            
-            // 兼容多种数据格式
-            const geoData = r.geo_data || {};
-            
-            // 检查是否有 AI 响应内容（这是最基本的数据）
-            if (r.response && r.response.trim() !== '') {
-              console.log('✅ 检测到 AI 响应内容');
-              return true;
-            }
-            
-            // 检查是否有 geo_data 中的有效字段
-            const hasBrandMentioned = geoData.brand_mentioned !== undefined;
-            const hasValidRank = geoData.rank !== -1 && geoData.rank !== undefined;
-            const hasValidSentiment = geoData.sentiment !== undefined && geoData.sentiment !== 0.0;
-            const hasSources = geoData.cited_sources && geoData.cited_sources.length > 0;
-            
-            // 检查是否有评分字段
-            const hasScore = r.score !== undefined || r.overall_score !== undefined;
-            const hasAccuracy = r.accuracy !== undefined;
-            
-            // 放宽标准：有任何一个有效字段即可
-            const hasAnyValidData = hasBrandMentioned || hasValidRank || hasValidSentiment || 
-                                    hasSources || hasScore || hasAccuracy || (r.response && r.response !== '');
-            
-            if (hasAnyValidData) {
-              console.log('✅ 检测到有效数据字段');
-            }
-            
-            return hasAnyValidData;
-          });
-
-          if (!hasRealData) {
-            console.error('❌ 后端 API 返回数据均为默认值或无有效字段');
-            console.log('📊 结果示例:', JSON.stringify(resultsToUse[0], null, 2));
-            
-            // 【关键修复】即使没有完整数据，也尝试展示已有的 AI 响应
-            const hasAnyResponse = resultsToUse.some(r => r.response && r.response.trim() !== '');
-            
-            if (hasAnyResponse) {
-              console.log('✅ 至少有 AI 响应内容，继续展示');
-              // 继续处理，不显示错误
-            } else {
-              // P1 修复：显示友好的错误提示
-              wx.showModal({
-                title: '数据异常',
-                content: '诊断结果数据异常（可能为默认值或空数据），可能原因：\n1. AI 模型配置错误\n2. API Key 无效\n3. 网络异常\n\n建议：检查配置后重试',
-                showCancel: false,
-                confirmText: '知道了'
-              });
-              return;
-            }
-          }
-          
-          // P1 修复：检查是否有部分失败的结果
-          const failedCount = resultsToUse.filter(r => r._failed === true).length;
-          if (failedCount > 0) {
-            console.warn(`⚠️ 有 ${failedCount}/${resultsToUse.length} 个结果失败`);
-            // 过滤掉失败的结果
-            const validResults = resultsToUse.filter(r => !r._failed);
-            if (validResults.length === 0) {
-              // 全部失败
-              wx.showModal({
-                title: '诊断失败',
-                content: '所有 AI 调用均失败，请检查配置或重试',
-                showCancel: false,
-                confirmText: '重新诊断',
-                success: (modalRes) => {
-                  if (modalRes.confirm) {
-                    wx.navigateBack();
-                  }
-                }
-              });
-              return;
-            }
-            // 使用有效结果继续
-            console.log(`✅ 使用 ${validResults.length} 个有效结果继续处理`);
-            // 更新 resultsToUse 为有效结果
-            resultsToUse = validResults;
-          }
-
-          // 保存到 Storage
-          wx.setStorageSync('last_diagnostic_results', {
-            results: resultsToUse,
-            competitiveAnalysis: competitiveAnalysisToUse,
-            brandScores: brandScoresToUse,
-            semanticDriftData: semanticDriftDataToUse,
-            recommendationData: recommendationDataToUse,
-            negativeSources: negativeSourcesToUse,
-            insights: insightsToUse,  // ← 新增：核心洞察
-            sourcePurityData: sourcePurityDataToUse,  // ← P0-3: 信源纯净度
-            sourceIntelligenceMap: sourceIntelligenceMapToUse,  // ← P0-4: 信源情报图谱
-            targetBrand: brandName,
-            executionId: executionId,
-            timestamp: Date.now()
-          });
-
-          console.log('✅ 数据已保存到 Storage，包含高级分析数据');
-
-          // P1-4: 语义偏移数据降级处理
-          const semanticDriftDataToUse = semanticDriftDataToUse || {
-            driftScore: 50,
-            driftSeverity: 'medium',
-            driftSeverityText: '数据不足，无法评估偏移程度',
-            similarityScore: 0,
-            _fallback: true
-          };
-
-          // P2-1: 品牌数据缺失提示
-          const missingBrands = res.data.missing_brands || [];
-          if (missingBrands.length > 0) {
-            console.warn('⚠️ 以下品牌数据缺失:', missingBrands);
-            wx.showModal({
-              title: '数据提示',
-              content: `以下品牌数据缺失：${missingBrands.join(', ')}\n可能影响对比分析准确性`,
-              showCancel: false,
-              confirmText: '知道了'
-            });
-          }
-
-          // P1-3: 数据完整性验证
-          const validation = this.validateDataIntegrity(
-            resultsToUse,
-            brandScoresToUse,
-            insightsToUse,
-            semanticDriftDataToUse,
-            recommendationDataToUse,
-            sourcePurityDataToUse,
-            sourceIntelligenceMapToUse,
-            brandName
-          );
-
-          // P1-1: 计算首次提及率
-          const firstMentionByPlatform = this.calculateFirstMentionByPlatform(resultsToUse);
-          if (competitiveAnalysisToUse) {
-            competitiveAnalysisToUse.firstMentionByPlatform = firstMentionByPlatform;
-          }
-
-          // P1-2: 计算拦截风险
-          const interceptionRisks = this.calculateInterceptionRisks(resultsToUse, brandName);
-          if (competitiveAnalysisToUse) {
-            competitiveAnalysisToUse.interceptionRisks = interceptionRisks;
-          }
-
-          // 初始化页面
-          this.initializePageWithData(
-            resultsToUse,
-            brandName,
-            [],
-            competitiveAnalysisToUse,
-            negativeSourcesToUse,
-            semanticDriftDataToUse,
-            recommendationDataToUse,
-            insightsToUse  // ← 新增：核心洞察参数
-          );
-
-          wx.showToast({ title: '数据加载成功', icon: 'success' });
-        } else if (res.statusCode === 404) {
-          console.error('❌ 后端 API 返回 404，结果不存在');
-          this.showNoDataModal();
-        } else {
-          console.error('❌ 后端 API 返回数据为空或状态码异常:', res.statusCode);
-          this.showNoDataModal();
-        }
-      },
-      fail: (err) => {
-        console.error('❌ 后端 API 请求失败:', err);
-        // 网络错误或其他错误
-        wx.showModal({
-          title: '加载失败',
-          content: '网络连接失败，请检查网络后重试',
-          confirmText: '重试',
-          cancelText: '取消',
-          success: (modalRes) => {
-            if (modalRes.confirm) {
-              this.fetchResultsFromServer(executionId, brandName, false);
-            }
-          }
-        });
-      }
-    });
-  },
-
-  /**
+    /**
    * 【新增】显示认证失败提示
    */
   showAuthFailedModal: function() {
@@ -1990,6 +1802,17 @@ Page({
     if (score >= 70) return '良好';
     if (score >= 50) return '一般';
     return '待优化';
+  },
+
+  // P0-012 新增：获取质量等级文本
+  getQualityLevelText: function(level) {
+    const levelMap = {
+      'excellent': '优秀',
+      'good': '良好',
+      'fair': '一般',
+      'poor': '较差'
+    };
+    return levelMap[level] || '未知';
   },
 
   // 切换平台

@@ -29,6 +29,16 @@ from wechat_backend.incremental_aggregator import get_aggregator
 from wechat_backend.logging_config import api_logger, wechat_logger, db_logger
 from wechat_backend.ai_adapters.base_adapter import AIPlatformType, AIClient, AIResponse, GEO_PROMPT_TEMPLATE, parse_geo_json
 
+# P0-004 新增：异常处理
+from wechat_backend.exceptions import (
+    ValidationError,
+    AIConfigError,
+    AIPlatformError,
+    TaskExecutionError,
+    TaskTimeoutError
+)
+from wechat_backend.error_handler import handle_api_exceptions
+
 # 差距 1 修复：导入认证装饰器
 from wechat_backend.security.auth_enhanced import require_strict_auth, log_audit_access
 from wechat_backend.ai_adapters.factory import AIAdapterFactory
@@ -44,6 +54,8 @@ from wechat_backend.analytics.source_intelligence_processor import SourceIntelli
 from wechat_backend.recommendation_generator import RecommendationGenerator, RecommendationPriority, RecommendationType
 from wechat_backend.cruise_controller import CruiseController
 from wechat_backend.market_intelligence_service import MarketIntelligenceService
+
+# P0-010 新增：在 perform_brand_test 函数上添加 @handle_api_exceptions 装饰器
 
 # SSE Service imports
 from wechat_backend.services.sse_service import (
@@ -72,6 +84,7 @@ execution_store = {}
 
 # 诊断相关辅助函数
 @wechat_bp.route('/api/perform-brand-test', methods=['POST', 'OPTIONS'])
+@handle_api_exceptions  # P0-010 新增：统一异常处理
 @require_auth_optional  # 恢复认证装饰器
 @rate_limit(limit=5, window=60, per='endpoint')  # 限制每个端点每分钟最多5个请求
 @monitored_endpoint('/api/perform-brand-test', require_auth=False, validate_inputs=True)
@@ -101,7 +114,6 @@ def perform_brand_test():
     data = request.get_json(force=True)
 
     # 添加调试日志：在获取 data 后，立即添加打印
-    print(f"DEBUG: Received JSON Data: {data}")
     if data is None:
         return jsonify({"status": "error", "error": "Empty or invalid JSON", "code": 400}), 400
 

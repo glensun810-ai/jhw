@@ -66,8 +66,8 @@ if __name__ == '__main__':
         print(f"⚠️  日志优化配置加载失败：{e}")
         print("   使用默认日志配置")
     
-    # 直接运行时的配置 - 使用 5000 端口以与前端保持一致
-    port = int(os.environ.get('PORT', 5000))
+    # 直接运行时的配置 - 使用 5001 端口（5000 可能被 macOS Control Center 占用）
+    port = int(os.environ.get('PORT', 5001))
     debug = os.environ.get('FLASK_DEBUG', '1').lower() in ('1', 'true', 'yes')
 
     print(f"🚀 Starting WeChat Backend API server on port {port}")
