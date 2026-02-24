@@ -1,4 +1,17 @@
 <view class="page-container container">
+  <!-- 高优先级修复 3: 刷新提示条 -->
+  <view class="refresh-bar" wx:if="{{isCached || refreshing}}">
+    <view class="cache-hint" wx:if="{{isCached && !refreshing}}">
+      <text class="hint-icon">💾</text>
+      <text class="hint-text">当前显示缓存数据</text>
+      <button class="refresh-btn" size="mini" bindtap="refreshData" disabled="{{refreshing}}">刷新</button>
+    </view>
+    <view class="refreshing" wx:if="{{refreshing}}">
+      <text class="refresh-icon">🔄</text>
+      <text class="refresh-text">刷新中...</text>
+    </view>
+  </view>
+
   <!-- 页面头部 -->
   <view class="page-header">
     <text class="page-title">品牌洞察报告</text>
@@ -240,7 +253,7 @@
       <view class="keyword-group">
         <text class="keyword-group-title">🏢 官方关键词</text>
         <view class="keyword-cloud">
-          <view class="keyword-tag official" wx:for="{{semanticContrastData.official_words}}" wx:key="name">
+          <view class="keyword-tag official" wx:for="{{semanticContrastData.official_words}}" wx:key="index">
             <text class="keyword-name">{{item.name}}</text>
             <text class="keyword-value">{{item.value}}</text>
           </view>
@@ -251,7 +264,7 @@
       <view class="keyword-group">
         <text class="keyword-group-title">🤖 AI 生成关键词</text>
         <view class="keyword-cloud">
-          <view class="keyword-tag {{item.category}}" wx:for="{{semanticContrastData.ai_generated_words}}" wx:key="name">
+          <view class="keyword-tag {{item.category}}" wx:for="{{semanticContrastData.ai_generated_words}}" wx:key="index">
             <text class="keyword-name">{{item.name}}</text>
             <text class="keyword-value">{{item.value}}</text>
           </view>
@@ -410,65 +423,100 @@
   </view>
 
 <!-- P1-2 信源纯净度展示 -->
-  <view class="source-purity-section" wx:if="{{sourcePurityData}}">
+  <view class="source-purity-section">
     <text class="section-title">📊 信源纯净度分析</text>
-    
-    <!-- 信源纯净度概览 -->
-    <view class="purity-overview-section" wx:if="{{sourcePurityData}}">
-      <view class="purity-score-card">
-        <view class="purity-circle {{sourcePurityData.purityLevel}}">
-          <text class="purity-number">{{sourcePurityData.purityScore}}</text>
-          <text class="purity-label">纯净度</text>
-        </view>
-        <view class="purity-info">
-          <text class="purity-level {{sourcePurityData.purityLevel}}">{{sourcePurityData.purityLevelText}}</text>
-          <text class="purity-high-weight">高权重信源占比：{{sourcePurityData.highWeightRatio}}%</text>
-          <text class="purity-pollution">污染源数量：{{sourcePurityData.pollutionCount}}</text>
-        </view>
-      </view>
-    </view>
 
-    <!-- 信源类别分布 -->
-    <view class="source-category-section" wx:if="{{sourcePurityData && sourcePurityData.categoryDistribution}}">
-      <text class="subsection-title">🗂️ 信源类别分布</text>
-      <view class="category-chart">
-        <view class="category-item" wx:for="{{sourcePurityData.categoryDistribution}}" wx:key="category">
-          <view class="category-bar {{item.category}}">
-            <view class="bar-fill" style="width: {{item.percentage}}%;"></view>
+    <!-- 有数据时展示 -->
+    <block wx:if="{{sourcePurityData}}">
+      <!-- 信源纯净度概览 -->
+      <view class="purity-overview-section" wx:if="{{sourcePurityData}}">
+        <view class="purity-score-card">
+          <view class="purity-circle {{sourcePurityData.purityLevel}}">
+            <text class="purity-number">{{sourcePurityData.purityScore}}</text>
+            <text class="purity-label">纯净度</text>
           </view>
-          <text class="category-name">{{item.categoryName}}</text>
-          <text class="category-count">{{item.count}} ({{item.percentage}}%)</text>
+          <view class="purity-info">
+            <text class="purity-level {{sourcePurityData.purityLevel}}">{{sourcePurityData.purityLevelText}}</text>
+            <text class="purity-high-weight">高权重信源占比：{{sourcePurityData.highWeightRatio}}%</text>
+            <text class="purity-pollution">污染源数量：{{sourcePurityData.pollutionCount}}</text>
+          </view>
         </view>
       </view>
-    </view>
 
-    <!-- 信源权重排名 -->
-    <view class="source-weight-section" wx:if="{{sourcePurityData && sourcePurityData.topSources && sourcePurityData.topSources.length > 0}}">
-      <text class="subsection-title">🏆 信源权重排名</text>
-      <view class="weight-list">
-        <view class="weight-item" wx:for="{{sourcePurityData.topSources}}" wx:key="name">
-          <text class="weight-rank">{{index + 1}}</text>
-          <text class="weight-name {{item.isHighWeight ? 'high-weight' : ''}}">{{item.name}}</text>
-          <text class="weight-value">{{item.weight}}</text>
+      <!-- 信源类别分布 -->
+      <view class="source-category-section" wx:if="{{sourcePurityData && sourcePurityData.categoryDistribution}}">
+        <text class="subsection-title">🗂️ 信源类别分布</text>
+        <view class="category-chart">
+          <view class="category-item" wx:for="{{sourcePurityData.categoryDistribution}}" wx:key="category">
+            <view class="category-bar {{item.category}}">
+              <view class="bar-fill" style="width: {{item.percentage}}%;"></view>
+            </view>
+            <text class="category-name">{{item.categoryName}}</text>
+            <text class="category-count">{{item.count}} ({{item.percentage}}%)</text>
+          </view>
         </view>
       </view>
-    </view>
 
-    <!-- 污染源警示 -->
-    <view class="pollution-warning-section" wx:if="{{sourcePurityData && sourcePurityData.pollutionSources && sourcePurityData.pollutionSources.length > 0}}">
-      <text class="subsection-title">⚠️ 污染源警示</text>
-      <view class="pollution-list">
-        <view class="pollution-item" wx:for="{{sourcePurityData.pollutionSources}}" wx:key="name">
-          <text class="pollution-name">{{item.name}}</text>
-          <text class="pollution-reason">{{item.reason}}</text>
+      <!-- 信源权重排名 -->
+      <view class="source-weight-section" wx:if="{{sourcePurityData && sourcePurityData.topSources && sourcePurityData.topSources.length > 0}}">
+        <text class="subsection-title">🏆 信源权重排名</text>
+        <view class="weight-list">
+          <view class="weight-item" wx:for="{{sourcePurityData.topSources}}" wx:key="index">
+            <text class="weight-rank">{{index + 1}}</text>
+            <text class="weight-name {{item.isHighWeight ? 'high-weight' : ''}}">{{item.name}}</text>
+            <text class="weight-value">{{item.weight}}</text>
+          </view>
         </view>
       </view>
+
+      <!-- 污染源警示 -->
+      <view class="pollution-warning-section" wx:if="{{sourcePurityData && sourcePurityData.pollutionSources && sourcePurityData.pollutionSources.length > 0}}">
+        <text class="subsection-title">⚠️ 污染源警示</text>
+        <view class="pollution-list">
+          <view class="pollution-item" wx:for="{{sourcePurityData.pollutionSources}}" wx:key="index">
+            <text class="pollution-name">{{item.name}}</text>
+            <text class="pollution-reason">{{item.reason}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 无数据时展示空状态 -->
+    <view wx:else class="empty-state">
+      <text class="empty-icon">📊</text>
+      <text class="empty-text">信源纯净度分析数据生成中</text>
+      <text class="empty-hint">后端正在分析信源数据，请稍后查看</text>
     </view>
   </view>
 
 
   <!-- 信源情报展示 -->
-  <view class="source-intelligence-section" wx:if="{{showSourceIntelligence}}">
+  <view class="source-intelligence-section">
+    <text class="section-title">🔍 信源情报分析</text>
+    
+    <!-- 有数据时展示 -->
+    <block wx:if="{{sourceIntelligenceMap && sourceIntelligenceMap.nodes && sourceIntelligenceMap.nodes.length > 0}}">
+      <view class="intelligence-graph">
+        <view class="graph-node" wx:for="{{sourceIntelligenceMap.nodes}}" wx:key="id" bindtap="viewSourceDetails" data-id="{{item.id}}">
+          <view class="node-content {{item.category}}">
+            <text class="node-name">{{item.name}}</text>
+            <text class="node-weight" wx:if="{{item.value}}">权重：{{item.value}}</text>
+            <text class="node-sentiment" wx:if="{{item.sentiment}}">情感：{{item.sentiment}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 无数据时展示空状态 -->
+    <view wx:else class="empty-state">
+      <text class="empty-icon">🔍</text>
+      <text class="empty-text">信源情报图谱数据生成中</text>
+      <text class="empty-hint">后端正在构建信源关系图谱，请稍后查看</text>
+    </view>
+  </view>
+
+  <!-- 删除线 -->
+  <!--
     <text class="section-title">🔍 信源情报分析</text>
     <view class="intelligence-graph">
       <view class="graph-node" wx:for="{{sourceIntelligenceMap.nodes}}" wx:key="id" bindtap="viewSourceDetails" data-id="{{item.id}}">
