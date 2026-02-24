@@ -90,13 +90,20 @@ function setDevelopmentMode() {
   console.log('[日志配置] 已切换到开发环境模式');
 }
 
-// 自动检测环境
+// 自动检测环境（延迟初始化，确保 wx 对象已就绪）
 function initLogLevel() {
   try {
+    // 检查 wx 对象是否存在
+    if (typeof wx === 'undefined' || !wx.getAccountInfoSync) {
+      // 在非微信环境或 wx 未初始化时，默认开发环境
+      setDevelopmentMode();
+      return;
+    }
+
     // 检查是否在微信开发者工具中
     const accountInfo = wx.getAccountInfoSync();
     const envVersion = accountInfo?.miniProgram?.envVersion || 'develop';
-    
+
     if (envVersion === 'release') {
       // 正式版：只输出 WARN 和 ERROR
       setProductionMode();
@@ -113,8 +120,10 @@ function initLogLevel() {
   }
 }
 
-// 初始化
-initLogLevel();
+// 延迟初始化：在下一个事件循环中执行，确保 wx 对象已就绪
+setTimeout(function() {
+  initLogLevel();
+}, 0);
 
 module.exports = {
   LogLevel,

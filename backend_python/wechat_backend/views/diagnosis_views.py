@@ -2482,157 +2482,119 @@ def submit_brand_test():
 @rate_limit(limit=20, window=60, per='endpoint')
 @monitored_endpoint('/test/status', require_auth=False, validate_inputs=False)
 def get_task_status_api(task_id):
-    """轮询任务进度与分阶段状态"""
+    """
+    轮询任务进度与分阶段状态
+    
+    【P0 修复 - 2026-02-28】数据源优化：
+    1. 优先从新存储层读取（数据库）
+    2. execution_store 作为缓存（降级方案）
+    3. 支持增量轮询（减少数据传输）
+    """
     if not task_id:
         return jsonify({'error': 'Task ID is required'}), 400
-
-    # 尝试从全局存储获取任务状态
+    
+    # 获取增量轮询参数
+    since = request.args.get('since')  # 客户端传入的上次更新时间
+    
+    # ==================== 主数据源：新存储层（数据库） ====================
+    try:
+        service = get_report_service()
+        report = service.get_full_report(task_id)
+        
+        if report and report.get('report'):
+            report_data = report['report']
+            results = report.get('results', [])
+            analysis = report.get('analysis', {})
+            
+            # 增量轮询优化
+            if since:
+                last_updated = report_data.get('updated_at', '')
+                if last_updated <= since:
+                    # 无新数据，返回空响应
+                    return jsonify({
+                        'task_id': task_id,
+                        'has_updates': False,
+                        'last_updated': last_updated,
+                        'source': 'database'
+                    }), 200
+            
+            # 构建响应
+            response_data = {
+                'task_id': task_id,
+                'progress': report_data.get('progress', 0),
+                'stage': report_data.get('stage', 'init'),
+                'detailed_results': results,
+                'status': report_data.get('status', 'processing'),
+                'results': results,
+                'is_completed': report_data.get('is_completed', False),
+                'created_at': report_data.get('created_at', ''),
+                'updated_at': report_data.get('updated_at', ''),
+                'has_updates': True,
+                'source': 'database'  # 标识数据来源
+            }
+            
+            # 添加高级分析数据（如果已完成）
+            if report_data.get('status') == 'completed':
+                response_data.update(analysis)
+            
+            api_logger.debug(f"[TaskStatus] 从数据库返回：{task_id}, 结果数：{len(results)}")
+            return jsonify(response_data), 200
+            
+    except Exception as db_err:
+        api_logger.error(f'[TaskStatus] 数据库查询失败：{task_id}, 错误：{db_err}')
+        # 继续尝试从缓存读取
+    
+    # ==================== 降级：execution_store 缓存 ====================
+    # 【降级方案】数据库不可用时，从内存缓存读取
     if task_id in execution_store:
         task_status = execution_store[task_id]
-
+        
         # 【关键修复】确保 results 字段存在且为列表
         results_list = task_status.get('results', [])
         if not isinstance(results_list, list):
             results_list = []
             api_logger.warning(f'[TaskStatus] Task {task_id} results is not a list, resetting to empty list')
-
+        
+        # 增量轮询优化
+        if since:
+            last_updated = task_status.get('updated_at', '')
+            if last_updated <= since:
+                return jsonify({
+                    'task_id': task_id,
+                    'has_updates': False,
+                    'last_updated': last_updated,
+                    'source': 'cache'
+                }), 200
+        
         # 按照 API 契约返回任务状态信息
         response_data = {
             'task_id': task_id,
             'progress': task_status.get('progress', 0),
             'stage': task_status.get('stage', 'init'),
-            'detailed_results': results_list,  # 【任务 C：前端同步】确保返回当前的 stage 描述
+            'detailed_results': results_list,
             'status': task_status.get('status', 'init'),
             'results': results_list,
             'is_completed': task_status.get('status') == 'completed',
-            'created_at': task_status.get('start_time', None)
+            'created_at': task_status.get('start_time', None),
+            'updated_at': task_status.get('updated_at', ''),
+            'has_updates': True,
+            'source': 'cache'  # 标识数据来源
         }
-
+        
         # 【P0 修复】如果任务已完成，返回高级分析数据
         if task_status.get('status') == 'completed':
-            # 从 execution_store 中获取高级分析数据
-            if 'semantic_drift_data' in task_status:
-                response_data['semantic_drift_data'] = task_status['semantic_drift_data']
-            if 'recommendation_data' in task_status:
-                response_data['recommendation_data'] = task_status['recommendation_data']
-            if 'negative_sources' in task_status:
-                response_data['negative_sources'] = task_status['negative_sources']
-            if 'competitive_analysis' in task_status:
-                response_data['competitive_analysis'] = task_status['competitive_analysis']
-            if 'brand_scores' in task_status:
-                response_data['brand_scores'] = task_status['brand_scores']
-            if 'insights' in task_status:
-                response_data['insights'] = task_status['insights']  # ← 新增：核心洞察
-            if 'source_purity_data' in task_status:
-                response_data['source_purity_data'] = task_status['source_purity_data']  # ← P0-3: 信源纯净度
-            if 'source_intelligence_map' in task_status:
-                response_data['source_intelligence_map'] = task_status['source_intelligence_map']  # ← P0-4: 信源情报图谱
-            if 'missing_brands' in task_status:
-                response_data['missing_brands'] = task_status['missing_brands']  # ← 缺失品牌提示
-            
-            # 如果 execution_store 中没有，尝试从数据库补充
-            if len(results_list) == 0 or not response_data.get('semantic_drift_data'):
-                api_logger.warning(f"[TaskStatus] Task {task_id} completed but data incomplete, trying database fallback")
-                try:
-                    from wechat_backend.models import get_deep_intelligence_result
-
-                    db_deep_result = get_deep_intelligence_result(task_id)
-                    if db_deep_result and hasattr(db_deep_result, 'to_dict'):
-                        deep_dict = db_deep_result.to_dict()
-                        if 'detailed_results' in deep_dict and deep_dict['detailed_results']:
-                            response_data['detailed_results'] = deep_dict['detailed_results']
-                            response_data['results'] = deep_dict['detailed_results']
-                            api_logger.info(f'[TaskStatus] Loaded {len(deep_dict["detailed_results"])} results from database')
-                        if 'semantic_drift_data' in deep_dict and not response_data.get('semantic_drift_data'):
-                            response_data['semantic_drift_data'] = deep_dict.get('semantic_drift_data')
-                        if 'recommendation_data' in deep_dict and not response_data.get('recommendation_data'):
-                            response_data['recommendation_data'] = deep_dict.get('recommendation_data')
-                        if 'negative_sources' in deep_dict and not response_data.get('negative_sources'):
-                            response_data['negative_sources'] = deep_dict.get('negative_sources')
-                        if 'competitive_analysis' in deep_dict and not response_data.get('competitive_analysis'):
-                            response_data['competitive_analysis'] = deep_dict.get('competitive_analysis')
-                except Exception as db_err:
-                    api_logger.error(f'[TaskStatus] Database fallback failed: {db_err}')
-
-        # 返回任务状态信息
+            for key in ['semantic_drift_data', 'recommendation_data', 'negative_sources',
+                        'competitive_analysis', 'brand_scores', 'insights',
+                        'source_purity_data', 'source_intelligence_map', 'missing_brands']:
+                if key in task_status:
+                    response_data[key] = task_status[key]
+        
+        api_logger.debug(f"[TaskStatus] 从缓存返回：{task_id}, 结果数：{len(results_list)}")
         return jsonify(response_data), 200
-    else:
-        # 【新增 P0 修复】从数据库查询（降级逻辑）
-        # 当 execution_store 中找不到时（如服务器重启后），从数据库查询
-        try:
-            from wechat_backend.models import get_task_status as get_db_task_status, get_deep_intelligence_result
-            
-            db_task_status = get_db_task_status(task_id)
-            if db_task_status:
-                # 从数据库构建响应
-                response_data = {
-                    'task_id': db_task_status.task_id,
-                    'progress': db_task_status.progress,
-                    'stage': db_task_status.stage.value if hasattr(db_task_status.stage, 'value') else str(db_task_status.stage),
-                    'status': 'completed' if db_task_status.is_completed else 'processing',
-                    'results': [],
-                    'detailed_results': [],
-                    'is_completed': db_task_status.is_completed,
-                    'created_at': db_task_status.created_at
-                }
-                
-                # 【修复】确保 stage 与 status 同步
-                if response_data['status'] == 'completed' and response_data['stage'] != 'completed':
-                    response_data['stage'] = 'completed'
-                # 【P0 修复】从数据库获取完整的 results_summary
-                conn = get_connection()
-                cursor = conn.cursor()
-                cursor.execute("""
-                               SELECT results_summary, is_summary_compressed
-                               FROM test_records
-                               WHERE id = (SELECT MAX(id)
-                                           FROM test_records
-                                           WHERE json_extract(results_summary, '$.execution_id') = ?)
-                               """, (task_id,))
-                db_row = cursor.fetchone()
-                conn.close()
-
-                # 解析 results_summary
-                if db_row:
-                    summary_raw, summary_comp = db_row
-                    try:
-                        if summary_comp and summary_raw:
-                            summary = json.loads(gzip.decompress(summary_raw).decode('utf-8'))
-                        elif summary_raw:
-                            summary = json.loads(summary_raw)
-                        else:
-                            summary = {}
-
-                        # 提取关键字段
-                        response_data['detailed_results'] = summary.get('detailed_results', [])
-                        response_data['brand_scores'] = summary.get('brand_scores', {})
-                        response_data['competitive_analysis'] = summary.get('competitive_analysis', {})
-                        response_data['negative_sources'] = summary.get('negative_sources', [])
-                        response_data['semantic_drift_data'] = summary.get('semantic_drift_data', {})
-                        response_data['recommendation_data'] = summary.get('recommendation_data', {})
-                        response_data['source_purity_data'] = summary.get('source_purity_data', {})  # ← P0-3
-                        response_data['source_intelligence_map'] = summary.get('source_intelligence_map', {})  # ← P0-4
-                        response_data['overall_score'] = summary.get('overall_score', 0)
-
-                        api_logger.info(f'✅ 从数据库加载 results_summary: {len(summary)} 字段')
-                    except Exception as e:
-                        api_logger.error(f'❌ 解析 results_summary 失败：{e}')
-                        response_data['detailed_results'] = []
-                        response_data['brand_scores'] = {}
-                        response_data['competitive_analysis'] = {}
-
-                
-                api_logger.info(f"[TaskStatus] Found task {task_id} in database")
-                return jsonify(response_data), 200
-            else:
-                # 数据库中也找不到，返回 404
-                api_logger.warning(f"[TaskStatus] Task {task_id} not found in execution_store or database")
-                return jsonify({'error': 'Task not found', 'suggestion': 'Please check execution ID or start a new diagnosis'}), 404
-        except Exception as e:
-            api_logger.error(f"[TaskStatus] Error querying database for task {task_id}: {e}")
-            return jsonify({'error': 'Task not found'}), 404
-
-
+    
+    # ==================== 错误：任务不存在 ====================
+    api_logger.warning(f'[TaskStatus] 任务不存在：{task_id}')
+    return jsonify({'error': 'Task not found', 'task_id': task_id}), 404
 
 
 @wechat_bp.route('/test/result/<task_id>', methods=['GET'])
@@ -2657,4 +2619,47 @@ def get_task_result(task_id):
     # 返回完整的深度情报分析结果
     return jsonify(deep_intelligence_result.to_dict()), 200
 
-# ... (Other endpoints remain the same)
+# ==================== 存储架构优化集成 ====================
+# 导入新的存储层服务
+from wechat_backend.diagnosis_report_service import get_report_service
+
+# ==================== 更新 perform_brand_test - 集成新存储层 ====================
+# 在 run_async_test 函数中，找到执行完成后添加以下代码：
+# 
+# # 使用新存储层保存报告
+# try:
+#     service = get_report_service()
+#     
+#     # 1. 创建报告
+#     config = {
+#         'brand_name': main_brand,
+#         'competitor_brands': competitor_brands,
+#         'selected_models': selected_models,
+#         'custom_questions': raw_questions
+#     }
+#     report_id = service.create_report(execution_id, user_id or 'anonymous', config)
+#     
+#     # 2. 添加结果
+#     results = execution_store[execution_id].get('results', [])
+#     service.add_results_batch(report_id, execution_id, results)
+#     
+#     # 3. 添加分析数据
+#     analysis_data = {}
+#     if 'competitive_analysis' in execution_store[execution_id]:
+#         analysis_data['competitive_analysis'] = execution_store[execution_id]['competitive_analysis']
+#     if 'brand_scores' in execution_store[execution_id]:
+#         analysis_data['brand_scores'] = execution_store[execution_id]['brand_scores']
+#     service.add_analyses_batch(report_id, execution_id, analysis_data)
+#     
+#     # 4. 完成报告
+#     full_report = {
+#         'report': execution_store[execution_id],
+#         'results': results,
+#         'analysis': analysis_data
+#     }
+#     service.complete_report(execution_id, full_report)
+#     
+#     api_logger.info(f"✅ 使用新存储层保存报告：{execution_id}")
+# except Exception as storage_err:
+#     api_logger.error(f"❌ 存储层保存失败：{storage_err}")
+#     # 不影响原有逻辑，继续执行

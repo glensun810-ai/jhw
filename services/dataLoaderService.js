@@ -1,4 +1,4 @@
-const { debug, info, warn, error } = require('../../utils/logger');
+const { debug, info, warn, error } = require('../utils/logger');
 
 /**
  * 统一数据加载服务

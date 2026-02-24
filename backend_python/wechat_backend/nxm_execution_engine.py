@@ -5,15 +5,23 @@ NxM 执行引擎 - 主入口
 - 熔断器 → nxm_circuit_breaker.py
 - 任务调度 → nxm_scheduler.py
 - 结果聚合 → nxm_result_aggregator.py
+- 容错机制 → fault_tolerant_executor.py
 
 输入：NxM 执行参数
 输出：执行结果
+
+核心原则：
+1. 结果产出绝对优先 - 任何错误都不能阻止返回结果
+2. 优雅降级 - 部分失败时返回可用结果
+3. 错误透明化 - 明确标注失败原因和解决建议
+4. 用户第一 - 用户体验优先于技术完美性
 """
 
 import time
 import threading
 import os
 import asyncio
+import json
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -23,6 +31,9 @@ from wechat_backend.ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE
 # from wechat_backend.config_manager import config_manager
 from wechat_backend.logging_config import api_logger
 from wechat_backend.database import save_test_record
+
+# 容错执行器（新增）
+from wechat_backend.fault_tolerant_executor import FaultTolerantExecutor, safe_json_serialize
 
 # BUG-NEW-002 修复：异步执行引擎
 from wechat_backend.performance.async_execution_engine import execute_async
@@ -89,6 +100,9 @@ def execute_nxm_test(
     
     # 在后台线程中执行
     def run_execution():
+        # 【容错机制】初始化容错执行器
+        ft_executor = FaultTolerantExecutor(execution_id)
+        
         try:
             results = []
             completed = 0
@@ -197,33 +211,61 @@ def execute_nxm_test(
                             if not response or not geo_data or geo_data.get('_error'):
                                 api_logger.error(f"[NxM] 重试耗尽，标记为失败：{model_name}, Q{q_idx}")
                                 scheduler.record_model_failure(model_name)
-                                # 仍然添加结果，但标记为失败
-                                result = {
-                                    'brand': brand,
-                                    'question': question,
-                                    'model': model_name,
-                                    'response': response,
-                                    'geo_data': geo_data or {'_error': 'AI 调用或解析失败'},
-                                    'timestamp': datetime.now().isoformat(),
-                                    '_failed': True
-                                }
-                                scheduler.add_result(result)
+                                
+                                # 【容错机制】即使失败也要收集结果，确保报告完整
+                                error_msg = f"AI 调用失败：{model_name}, 问题{q_idx+1}"
+                                if geo_data and geo_data.get('_error'):
+                                    error_msg += f" - {geo_data.get('_error')}"
+                                
+                                # 使用容错执行器收集结果（保证可序列化）
+                                result = ft_executor.collect_result(
+                                    brand=brand,
+                                    question=question,
+                                    model=model_name,
+                                    response=response,
+                                    geo_data=geo_data,
+                                    error=error_msg
+                                )
                                 results.append(result)
+                                
+                                # 【数字资产保护】立即持久化到数据库
+                                try:
+                                    from wechat_backend.digital_asset_protection import save_diagnosis_result_to_db
+                                    save_diagnosis_result_to_db(
+                                        execution_id=execution_id,
+                                        user_id=user_id,
+                                        brand_name=main_brand,
+                                        results=[result],
+                                        metadata={'model': model_name, 'question': question, 'status': 'failed'}
+                                    )
+                                except Exception as persist_err:
+                                    api_logger.error(f"⚠️ 结果持久化失败：{persist_err}")
                             else:
                                 scheduler.record_model_success(model_name)
 
-                                # 构建结果
-                                result = {
-                                    'brand': brand,
-                                    'question': question,
-                                    'model': model_name,
-                                    'response': response,
-                                    'geo_data': geo_data,
-                                    'timestamp': datetime.now().isoformat()
-                                }
-
-                                scheduler.add_result(result)
+                                # 【容错机制】使用容错执行器收集结果（保证可序列化）
+                                result = ft_executor.collect_result(
+                                    brand=brand,
+                                    question=question,
+                                    model=model_name,
+                                    response=response,
+                                    geo_data=geo_data,
+                                    error=None
+                                )
                                 results.append(result)
+                                
+                                # 【数字资产保护】立即持久化到数据库
+                                try:
+                                    from wechat_backend.digital_asset_protection import save_diagnosis_result_to_db
+                                    save_diagnosis_result_to_db(
+                                        execution_id=execution_id,
+                                        user_id=user_id,
+                                        brand_name=main_brand,
+                                        results=[result],
+                                        metadata={'model': model_name, 'question': question, 'status': 'success'}
+                                    )
+                                except Exception as persist_err:
+                                    api_logger.error(f"⚠️ 结果持久化失败：{persist_err}")
 
                             # 更新进度
                             completed += 1
@@ -430,12 +472,24 @@ def execute_nxm_test(
                         user_level=user_level
                     )
                 else:
-                    scheduler.fail_execution(verification['message'])
-                    api_logger.error(f"[NxM] 执行完全失败：{execution_id}, 无有效结果")
-            
+                    # 【容错机制】即使重试失败，也要生成报告
+                    api_logger.warning(f"[NxM] 重试失败，使用容错报告：{execution_id}")
+                    final_report = ft_executor.get_final_report()
+                    execution_store[execution_id].update(final_report)
+                    scheduler.complete_execution()
+                    
         except Exception as e:
-            api_logger.error(f"[NxM] 执行异常：{execution_id}: {e}")
-            scheduler.fail_execution(str(e))
+            # 【容错机制】即使执行异常，也要生成报告
+            api_logger.error(f"[NxM] 执行异常，使用容错报告：{execution_id}: {e}")
+            final_report = ft_executor.get_final_report()
+            final_report['errors'].append({
+                'context': '执行异常',
+                'error': str(e),
+                'traceback': traceback.format_exc(),
+                'timestamp': datetime.now().isoformat()
+            })
+            execution_store[execution_id].update(final_report)
+            scheduler.complete_execution()
         finally:
             scheduler.cancel_timeout_timer()
     

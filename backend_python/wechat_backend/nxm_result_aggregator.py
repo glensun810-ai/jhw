@@ -221,6 +221,7 @@ def calculate_result_quality(geo_data: Dict[str, Any]) -> Dict[str, Any]:
         details['interception'] = False
 
     # 确定质量等级
+    # 【修复】使用 'very_low' 而不是 'failed'，避免与任务状态混淆
     if score >= 80:
         quality_level = 'high'
     elif score >= 60:
@@ -228,7 +229,7 @@ def calculate_result_quality(geo_data: Dict[str, Any]) -> Dict[str, Any]:
     elif score >= 30:
         quality_level = 'low'
     else:
-        quality_level = 'failed'
+        quality_level = 'very_low'  # 【修复】质量低不等于任务失败
 
     return {
         'quality_score': score,

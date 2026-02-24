@@ -7,6 +7,12 @@ const { generateFullReport } = require('../../utils/pdf-export');
 // P1-008 新增：统一数据加载服务
 const { loadDiagnosisData } = require('../../services/dataLoaderService');
 
+// P1-011 新增：结果数据服务
+const { fetchResultsFromServer: fetchResultsService } = require('../../services/resultDataService');
+
+// 【存储架构优化】新增诊断报告 API
+const { getFullReport, validateReport } = require('../../services/diagnosisApi');
+
 Page({
   data: {
     targetBrand: '',
@@ -26,6 +32,12 @@ Page({
     dimensionComparisonData: [], // 维度对比数据
     expandedBrands: {}, // 展开的品牌详情
 
+    // 【容错机制】新增字段
+    hasPartialResults: false, // 是否有部分结果
+    platformErrors: [], // 平台错误列表
+    quotaWarnings: [], // 配额警告
+    executionWarnings: [], // 执行警告
+    
     // P0-3 竞争分析相关数据
     brandRankingList: [], // 品牌排名列表
     firstMentionByPlatform: [], // 首次提及率
@@ -318,7 +330,9 @@ Page({
     let competitiveAnalysis = null;
     let targetBrand = brandName;
     let useStorageData = false;
-
+    let hasErrors = false;
+    let errorMessages = [];
+    
     // 1. 优先从统一 Storage 加载
     if (storageData && storageData.data &&
         storageData.data.results &&
@@ -329,6 +343,24 @@ Page({
       competitiveAnalysis = storageData.data.competitiveAnalysis || {};
       targetBrand = storageData.brandName || brandName;
       useStorageData = true;
+      
+      // 【容错机制】检查是否有错误/警告
+      if (storageData.data.errors && storageData.data.errors.length > 0) {
+        hasErrors = true;
+        errorMessages = storageData.data.errors.map(e => e.error || e.message || '未知错误');
+        console.warn('⚠️  检测到执行错误:', errorMessages);
+      }
+      
+      // 【容错机制】检查配额警告
+      if (storageData.data.warnings && storageData.data.warnings.length > 0) {
+        const quotaWarnings = storageData.data.warnings.filter(w => 
+          w.includes('配额') || w.includes('429') || w.includes('AI 平台')
+        );
+        if (quotaWarnings.length > 0) {
+          this.setData({ quotaWarnings });
+          console.warn('⚠️  配额警告:', quotaWarnings);
+        }
+      }
     }
     // 2. 从 executionId 缓存加载（兼容旧逻辑）
     else if (executionId) {
@@ -376,6 +408,38 @@ Page({
     }
   },
 
+  /**
+   * P1-011 修复：从服务器获取结果数据
+   * @param {string} executionId - 执行 ID
+   * @param {string} brandName - 品牌名称
+   * @returns {Promise}
+   */
+  fetchResultsFromServer: function(executionId, brandName) {
+    const that = this;
+    return new Promise((resolve, reject) => {
+      fetchResultsService(
+        executionId,
+        brandName,
+        // onSuccess
+        (responseData) => {
+          console.log('[fetchResultsFromServer] 获取成功，结果数量:', responseData.results.length);
+          that.setData({
+            latestTestResults: responseData.results,
+            latestCompetitiveAnalysis: responseData.competitiveAnalysis,
+            targetBrand: responseData.targetBrand || brandName,
+            isCached: false
+          });
+          resolve(responseData);
+        },
+        // onError
+        (error) => {
+          console.error('[fetchResultsFromServer] 获取失败:', error);
+          reject(error);
+        }
+      );
+    });
+  },
+
   // P1-011 已删除：fetchResultsFromServer 函数（已迁移到 dataLoaderService）
 
     /**
@@ -412,6 +476,48 @@ Page({
     });
   },
 
+  /**
+   * 【容错机制】显示部分结果警告
+   */
+  showPartialResultsWarning: function() {
+    const { hasPartialResults, platformErrors, quotaWarnings } = this.data;
+    
+    if (!hasPartialResults && !quotaWarnings.length) {
+      return;
+    }
+    
+    let content = '诊断过程中遇到以下问题：\n\n';
+    
+    if (quotaWarnings.length > 0) {
+      content += '⚠️ 配额警告:\n';
+      content += quotaWarnings.join('\n');
+      content += '\n\n';
+    }
+    
+    if (platformErrors.length > 0) {
+      content += '❌ 平台错误:\n';
+      content += platformErrors.join('\n');
+      content += '\n\n';
+    }
+    
+    content += '💡 建议:\n';
+    content += '1. 查看可用结果\n';
+    content += '2. 充值 AI 平台配额后重试\n';
+    content += '3. 切换其他 AI 平台';
+    
+    wx.showModal({
+      title: '⚠️ 部分结果不可用',
+      content: content,
+      confirmText: '查看结果',
+      cancelText: '重试',
+      success: (res) => {
+        if (res.cancel) {
+          // 用户选择重试
+          this.refreshData();
+        }
+      }
+    });
+  },
 
   /**
    * 从 URL 参数加载数据
@@ -566,6 +672,11 @@ Page({
         targetBrand: targetBrand,
         competitiveAnalysis: competitiveAnalysis,
         latestTestResults: results,
+        
+        // 【容错机制】设置错误和警告
+        hasPartialResults: hasErrors || (results && results.some(r => r.status === 'failed' || r.status === 'error')),
+        platformErrors: errorMessages,
+        
         pkDataByPlatform,
         platforms,
         platformDisplayNames,
@@ -611,6 +722,9 @@ Page({
       });
 
       console.log('✅ 页面数据初始化完成');
+
+      // 【容错机制】显示部分结果警告
+      this.showPartialResultsWarning();
 
       wx.showToast({
         title: '数据加载成功',
@@ -2403,6 +2517,60 @@ Page({
       return { status: 'success', message: '', canRetry: false, errorType: 'success' };
     }
   },
+
+  /**
+   * 【存储架构优化】从新 API 初始化页面数据
+   * @param {Object} report - 完整报告数据
+   */
+  initializePageDataFromNewAPI: function(report) {
+    try {
+      console.log('📊 从新 API 初始化页面数据');
+      
+      const reportData = report.report;
+      const results = report.results || [];
+      const analysis = report.analysis || {};
+      
+      // 构建页面数据
+      const pageData = {
+        targetBrand: reportData.brand_name,
+        latestTestResults: results,
+        latestCompetitiveAnalysis: analysis.competitive_analysis || {},
+        
+        // 高级分析数据
+        semanticDriftData: analysis.semantic_drift_data || null,
+        recommendationData: analysis.recommendation_data || null,
+        sourcePurityData: analysis.source_purity_data || null,
+        
+        // 元数据
+        dataLoadedFrom: 'database',
+        dataLoadedAt: new Date().toISOString(),
+        checksumVerified: report.checksum_verified || false
+      };
+      
+      this.setData(pageData);
+      
+      // 渲染图表
+      this.renderCharts(results);
+      
+      console.log('✅ 页面数据初始化完成');
+      
+    } catch (error) {
+      console.error('❌ 页面数据初始化失败:', error);
+      
+      // 降级到本地加载
+      this.loadFromLocalStorage();
+    }
+  },
+
+  /**
+   * 【存储架构优化】从本地 Storage 加载（降级方案）
+   */
+  loadFromLocalStorage: function() {
+    console.log('📦 降级到本地 Storage 加载');
+    // 原有的本地加载逻辑
+    this.onLoad(this.options || {});
+  }
+})
 
   /**
    * 高优先级修复 3: 数据刷新功能

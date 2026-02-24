@@ -1053,11 +1053,24 @@ Page({
       // 使用 setTimeout 将计算任务放到下一个事件循环
       setTimeout(() => {
         try {
-          const reportData = parsedStatus.detailed_results || parsedStatus.results;
-          const processedReportData = processReportData(reportData);
-          const dashboardData = generateDashboardData(processedReportData, {
+          // 【关键修复】直接使用 detailed_results 数组
+          const rawResults = parsedStatus.detailed_results || parsedStatus.results || [];
+          
+          console.log('[异步数据处理] 原始结果数量:', rawResults.length);
+          
+          // 生成看板数据（直接传入数组）
+          const dashboardData = generateDashboardData(rawResults, {
             brandName: this.data.brandName,
             competitorBrands: this.data.competitorBrands
+          });
+
+          // 处理报告数据（用于其他图表）
+          const processedReportData = processReportData({
+            results: rawResults,
+            detailed_results: rawResults,
+            semantic_drift_data: parsedStatus.semantic_drift_data,
+            recommendation_data: parsedStatus.recommendation_data,
+            competitive_analysis: parsedStatus.competitive_analysis
           });
 
           this.setData({

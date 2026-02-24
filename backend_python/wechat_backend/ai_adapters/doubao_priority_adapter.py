@@ -200,33 +200,42 @@ class DoubaoPriorityAdapter(AIClient):
             # 如果成功，返回响应
             if response.success:
                 return response
-            
-            # 如果失败且错误类型是服务不可用，尝试切换模型
-            if response.error_type in [AIErrorType.SERVICE_UNAVAILABLE, AIErrorType.SERVER_ERROR]:
-                api_logger.warning(f"[DoubaoPriority] 模型 {self.selected_model} 调用失败，尝试切换模型")
-                
+
+            # 如果失败且错误类型是服务不可用、服务器错误或配额用尽（429），尝试切换模型
+            if response.error_type in [AIErrorType.SERVICE_UNAVAILABLE, AIErrorType.SERVER_ERROR, AIErrorType.RATE_LIMIT_EXCEEDED]:
+                api_logger.warning(f"[DoubaoPriority] 模型 {self.selected_model} 调用失败 ({response.error_type})，尝试切换模型")
+
                 if self._retry_with_next_model(self.selected_model):
                     # 切换成功，使用新模型重试
                     api_logger.info(f"[DoubaoPriority] 使用新模型 {self.selected_model} 重试")
                     return self.selected_adapter.send_prompt(prompt, **kwargs)
-            
+                else:
+                    api_logger.error(f"[DoubaoPriority] 所有模型都已尝试，无法切换")
+
             # 返回失败响应
             return response
             
         except Exception as e:
             api_logger.error(f"[DoubaoPriority] 发送请求异常：{str(e)}")
+
+            # 检查是否是 429 错误（配额用尽）
+            error_str = str(e)
+            is_quota_exceeded = '429' in error_str or 'SetLimitExceeded' in error_str or 'Too Many Requests' in error_str
             
-            # 尝试切换模型
-            if self._retry_with_next_model(self.selected_model):
-                # 切换成功，使用新模型重试
-                api_logger.info(f"[DoubaoPriority] 使用新模型 {self.selected_model} 重试")
-                return self.selected_adapter.send_prompt(prompt, **kwargs)
-            
+            # 尝试切换模型（如果是 429 错误或其他可恢复错误）
+            if is_quota_exceeded or self._retry_with_next_model(self.selected_model):
+                if is_quota_exceeded:
+                    api_logger.warning(f"[DoubaoPriority] 检测到配额用尽（429），尝试切换模型")
+                if self._retry_with_next_model(self.selected_model):
+                    # 切换成功，使用新模型重试
+                    api_logger.info(f"[DoubaoPriority] 使用新模型 {self.selected_model} 重试")
+                    return self.selected_adapter.send_prompt(prompt, **kwargs)
+
             # 返回错误响应
             return AIResponse(
                 success=False,
                 error_message=str(e),
-                error_type=AIErrorType.UNKNOWN_ERROR,
+                error_type=AIErrorType.RATE_LIMIT_EXCEEDED if is_quota_exceeded else AIErrorType.UNKNOWN_ERROR,
                 model=self.selected_model,
                 platform='doubao'
             )
