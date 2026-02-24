@@ -70,7 +70,9 @@ class RateLimitMonitor:
                                 hour_dt = datetime.fromisoformat(hour_str)
                                 if hour_dt >= cutoff:
                                     self.stats['hourly_stats'][hour_str] = hour_data
-                            except:
+                            except Exception as e:
+
+                                pass  # TODO: 添加适当的错误处理
                                 pass
         except Exception as e:
             api_logger.error(f"[RateLimit] 加载统计数据失败：{e}")

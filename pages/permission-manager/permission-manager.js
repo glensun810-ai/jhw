@@ -57,21 +57,30 @@ Page({
   async loadPermissions(userId) {
     try {
       this.setData({ loading: true, error: null });
-      
-      // 并行加载三个 API
+
+      // 并行加载三个 API，使用 Promise.allSettled 避免单个失败影响全部
       const [permissionsRes, allPermsRes, allRolesRes] = await Promise.all([
-        this.fetchUserPermissions(userId),
-        this.fetchAllPermissions(),
-        this.fetchAllRoles()
+        this.fetchUserPermissions(userId).catch(err => {
+          logger.warn('获取用户权限失败，继续加载其他数据', err);
+          return null;
+        }),
+        this.fetchAllPermissions().catch(err => {
+          logger.warn('获取权限列表失败，继续加载其他数据', err);
+          return null;
+        }),
+        this.fetchAllRoles().catch(err => {
+          logger.warn('获取角色列表失败，继续加载其他数据', err);
+          return null;
+        })
       ]);
-      
+
       this.setData({
         loading: false,
         permissionsData: permissionsRes,
         allPermissions: allPermsRes,
         allRoles: allRolesRes
       });
-      
+
       logger.info('Permissions loaded successfully', { userId });
     } catch (error) {
       logger.error('Failed to load permissions', error);

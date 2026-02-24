@@ -104,7 +104,7 @@
               <button class="select-all-btn" bindtap="selectAllModels" data-type="domestic">全选</button>
             </view>
             <view class="model-grid">
-              <view class="model-chip-pro {{item.checked ? 'checked' : ''}} {{item.disabled ? 'disabled' : ''}}" wx:for="{{domesticAiModels}}" wx:key="name" bindtap="toggleModelSelection" data-type="domestic" data-index="{{index}}">
+              <view class="model-chip-pro {{item.checked ? 'checked' : ''}} {{item.disabled ? 'disabled' : ''}}" wx:for="{{domesticAiModels}}" wx:key="id" bindtap="toggleModelSelection" data-type="domestic" data-index="{{index}}">
                 <view class="logo-placeholder">{{item.logo || item.name.substring(0,2)}}</view>
                 <text class="model-name">{{item.name}}</text>
                 <view class="tag-list">
@@ -121,7 +121,7 @@
               <button class="select-all-btn" bindtap="selectAllModels" data-type="overseas">全选</button>
             </view>
             <view class="model-grid">
-              <view class="model-chip-pro {{item.checked ? 'checked' : ''}}" wx:for="{{overseasAiModels}}" wx:key="name" bindtap="toggleModelSelection" data-type="overseas" data-index="{{index}}">
+              <view class="model-chip-pro {{item.checked ? 'checked' : ''}}" wx:for="{{overseasAiModels}}" wx:key="id" bindtap="toggleModelSelection" data-type="overseas" data-index="{{index}}">
                 <view class="logo-placeholder">{{item.logo || item.name.substring(0,2)}}</view>
                 <text class="model-name">{{item.name}}</text>
                 <view class="tag-list">

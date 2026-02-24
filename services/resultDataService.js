@@ -1,3 +1,5 @@
+const { debug, info, warn, error } = require('../../utils/logger');
+
 /**
  * 结果数据服务
  * 负责诊断结果数据的加载、处理、格式化
@@ -80,7 +82,7 @@ const loadResultFromStorage = (executionId, brandName) => {
  */
 const fetchResultsFromServer = (executionId, brandName, onSuccess, onError) => {
   const app = getApp();
-  const baseUrl = app.globalData?.apiUrl || 'http://localhost:5000';
+  const baseUrl = app.globalData?.apiUrl || 'http://127.0.0.1:5001';
   const accessToken = wx.getStorageSync('access_token') || '';
 
   console.log('📡 从后端 API 拉取结果，executionId:', executionId);

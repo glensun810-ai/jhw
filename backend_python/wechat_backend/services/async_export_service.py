@@ -221,7 +221,9 @@ class AsyncExportService:
                     task_time = datetime.fromisoformat(completed_at).timestamp()
                     if task_time < cutoff_time:
                         tasks_to_remove.append(task_id)
-                except:
+                except Exception as e:
+
+                    pass  # TODO: 添加适当的错误处理
                     pass
         
         for task_id in tasks_to_remove:

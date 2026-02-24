@@ -59,7 +59,9 @@ class ModelCircuitBreaker:
                 for model_name, timestamp_str in data.get('model_last_failure', {}).items():
                     try:
                         self.model_last_failure[model_name] = datetime.fromisoformat(timestamp_str)
-                    except:
+                    except Exception as e:
+
+                        pass  # TODO: 添加适当的错误处理
                         pass
 
                 self._check_recovery()

@@ -125,7 +125,9 @@ class AnalyticsService:
                         dt = datetime.fromisoformat(timestamp)
                         hour = dt.hour
                         hour_counts[hour] = hour_counts.get(hour, 0) + 1
-                    except:
+                    except Exception as e:
+
+                        pass  # TODO: 添加适当的错误处理
                         pass
             
             most_active_hour = max(hour_counts, key=hour_counts.get) if hour_counts else 0

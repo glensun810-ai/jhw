@@ -384,7 +384,9 @@ def _calculate_session_duration(events: List[Dict[str, Any]]) -> int:
         first_time = datetime.fromisoformat(events[-1].get('timestamp', ''))
         last_time = datetime.fromisoformat(events[0].get('timestamp', ''))
         return int((last_time - first_time).total_seconds())
-    except:
+    except Exception as e:
+
+        pass  # TODO: 添加适当的错误处理
         return 0
 
 
@@ -449,7 +451,9 @@ def _update_daily_stats(user_id: str, event: Dict[str, Any]):
     try:
         hour = datetime.fromisoformat(event.get('timestamp', '')).hour
         stats['hourly_distribution'][hour] += 1
-    except:
+    except Exception as e:
+
+        pass  # TODO: 添加适当的错误处理
         pass
 
 

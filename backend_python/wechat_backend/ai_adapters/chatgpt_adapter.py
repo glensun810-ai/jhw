@@ -30,6 +30,9 @@ class ChatGPTAdapter(AIClient):
         
         api_logger.info(f"ChatGPTAdapter initialized for model: {model_name} with unified request wrapper")
 
+    def generate_response(self, prompt: str, **kwargs) -> AIResponse:
+        """生成响应（兼容 NXM 执行引擎）"""
+        return self.send_prompt(prompt, **kwargs)
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
         """
         向 ChatGPT API 发送请求

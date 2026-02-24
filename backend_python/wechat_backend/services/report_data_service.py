@@ -311,7 +311,9 @@ class ReportDataService:
                     try:
                         if competitor.get(field):
                             competitor[field] = json.loads(competitor[field])
-                    except:
+                    except Exception as e:
+
+                        pass  # TODO: 添加适当的错误处理
                         competitor[field] = []
                 competitors.append(competitor)
             

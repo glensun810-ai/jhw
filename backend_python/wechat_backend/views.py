@@ -48,6 +48,7 @@ from wechat_backend.services.sse_service import (
 
 # Security imports
 from wechat_backend.security.auth import require_auth, require_auth_optional, get_current_user_id
+from wechat_backend.security.auth_enhanced import require_strict_auth, require_user_data_access
 from wechat_backend.security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer, validate_safe_text
 from wechat_backend.security.sql_protection import sql_protector
 from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimiter
@@ -173,286 +174,12 @@ def test_api():
         return response, 200
     return jsonify({'message': 'Backend is working correctly!', 'status': 'success'})
 
-@wechat_bp.route('/api/perform-brand-test', methods=['POST', 'OPTIONS'])
-@require_auth_optional  # 恢复认证装饰器
-@rate_limit(limit=5, window=60, per='endpoint')  # 限制每个端点每分钟最多5个请求
-@monitored_endpoint('/api/perform-brand-test', require_auth=False, validate_inputs=True)
-def perform_brand_test():
-    """Perform brand cognition test across multiple AI platforms (Async) with Multi-Brand Support"""
-    # 【调试】记录请求信息
-    api_logger.info(f"[DEBUG] perform_brand_test called with method: {request.method}")
-    api_logger.info(f"[DEBUG] Headers: {dict(request.headers)}")
-    api_logger.info(f"[DEBUG] Headers: {dict(request.headers)}")
-    
-    # 【修复】处理CORS预检请求(OPTIONS)
-    if request.method == 'OPTIONS':
-        api_logger.info("[DEBUG] Handling OPTIONS preflight request")
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-WX-OpenID,X-OpenID,X-Wechat-OpenID')
-        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
-        return response, 200
-    
-    # 获取当前用户ID（如果没有装饰器，手动设置默认值）
-    try:
-        user_id = get_current_user_id()
-    except:
-        user_id = 'anonymous'
 
-    # 要求：使用 request.get_json(force=True)
-    data = request.get_json(force=True)
 
-    # 添加调试日志：在获取 data 后，立即添加打印
-    print(f"DEBUG: Received JSON Data: {data}")
-    if data is None:
-        return jsonify({"status": "error", "error": "Empty or invalid JSON", "code": 400}), 400
-
-    # 输入验证和净化
-    try:
-        # 重构校验逻辑 (InputValidator)：确保它不再寻找 customQuestions
-        # 验证品牌列表是否存在且为 list 类型
-        if 'brand_list' not in data:
-            return jsonify({"status": "error", "error": 'Missing brand_list in request data', "code": 400, 'received_fields': list(data.keys())}), 400
-        if not isinstance(data['brand_list'], list):
-            return jsonify({"status": "error", "error": 'brand_list must be a list', "code": 400, 'received': type(data['brand_list']).__name__, 'received_value': data['brand_list']}), 400
-        brand_list = data['brand_list']
-        if not brand_list:
-            return jsonify({"status": "error", "error": 'brand_list cannot be empty', "code": 400, 'received': brand_list}), 400
-
-        # 验证品牌名称的安全性
-        for brand in brand_list:
-            if not isinstance(brand, str):
-                return jsonify({"status": "error", "error": f'Each brand in brand_list must be a string, got {type(brand)}', "code": 400, 'problematic_value': brand}), 400
-            if not validate_safe_text(brand, max_length=100):
-                return jsonify({"status": "error", "error": f'Invalid brand name: {brand}', "code": 400}), 400
-
-        # 审计要求：在后端打印关键调试日志
-        api_logger.info(f"[Sprint 1] 接收到品牌列表: {brand_list}")
-
-        main_brand = brand_list[0]
-
-        # 验证其他参数 - 确保 selectedModels 只要是 list 类型即通过
-        if 'selectedModels' not in data:
-            return jsonify({"status": "error", "error": 'Missing selectedModels in request data', "code": 400, 'received_fields': list(data.keys())}), 400
-        if not isinstance(data['selectedModels'], list):
-            return jsonify({"status": "error", "error": 'selectedModels must be a list', "code": 400, 'received': type(data['selectedModels']).__name__, 'received_value': data['selectedModels']}), 400
-        selected_models = data['selectedModels']
-        if not selected_models:
-            return jsonify({"status": "error", "error": 'At least one AI model must be selected', "code": 400, 'received': selected_models}), 400
-
-        # 要求：如果 selectedModels 传入的是字典列表，代码需具备自动提取 id 字段的健壮性
-        # 解析器加固：从 selectedModels 对象数组中提取 id 或 value，转化为纯字符串列表
-        parsed_selected_models = []
-        for model in selected_models:
-            if isinstance(model, dict):
-                # 如果是对象，提取其核心标识符
-                model_name = model.get('name') or model.get('id') or model.get('value') or model.get('label')
-                if model_name:
-                    parsed_selected_models.append({'name': model_name, 'checked': model.get('checked', True)})
-                else:
-                    # 如果对象中没有合适的标识符，尝试使用第一个可用的键值
-                    for key, value in model.items():
-                        if key in ['name', 'id', 'value', 'label'] and isinstance(value, str):
-                            parsed_selected_models.append({'name': value, 'checked': model.get('checked', True)})
-                            break
-            elif isinstance(model, str):
-                # 如果是字符串，直接使用
-                parsed_selected_models.append({'name': model, 'checked': True})
-            else:
-                # 其他类型，跳过或报错
-                api_logger.warning(f"Unsupported model format: {model}, type: {type(model)}")
-
-        # 更新 selected_models 为解析后的格式
-        selected_models = parsed_selected_models
-
-        # 审计要求：在后端打印关键调试日志
-        original_model_names = [model.get('name', model) if isinstance(model, dict) else model for model in data['selectedModels']]
-        converted_model_names = [model['name'] for model in selected_models]
-        api_logger.info(f"[Sprint 1] 转换后的模型列表: {converted_model_names} (原始: {original_model_names})")
-
-        if not selected_models:
-            return jsonify({"status": "error", "error": 'No valid AI models found after parsing', "code": 400}), 400
-
-        # 重构校验逻辑：custom_question 只要是 string 类型即通过
-        custom_questions = []
-        if 'custom_question' in data:
-            # 优先处理新的 custom_question 字段（字符串）
-            if not isinstance(data['custom_question'], str):
-                return jsonify({"status": "error", "error": 'custom_question must be a string', "code": 400, 'received': type(data['custom_question']).__name__, 'received_value': data['custom_question']}), 400
-            
-            # 智能分割多个问题（按问号、句号、换行或空格分割）
-            question_text = data['custom_question'].strip()
-            if question_text:
-                # 使用正则表达式分割多个问题
-                import re
-                # 按中文问号、英文问号、句号、换行或空格分割
-                raw_questions = re.split(r'[？?.\n\s]+', question_text)
-                # 过滤空字符串并添加问号
-                custom_questions = [q.strip() + ('?' if not q.strip().endswith('?') else '') for q in raw_questions if q.strip()]
-                
-                # 记录分割后的问题
-                api_logger.info(f"[QuestionSplit] 原始问题：{question_text}")
-                api_logger.info(f"[QuestionSplit] 分割后问题数：{len(custom_questions)}")
-                for i, q in enumerate(custom_questions):
-                    api_logger.info(f"[QuestionSplit] 问题{i+1}: {q}")
-            else:
-                custom_questions = []
-        elif 'customQuestions' in data:
-            # 保持对旧格式的兼容（数组格式）
-            if not isinstance(data['customQuestions'], list):
-                return jsonify({"status": "error", "error": 'customQuestions must be a list', "code": 400, 'received': type(data['customQuestions']).__name__, 'received_value': data['customQuestions']}), 400
-            custom_questions = data['customQuestions']
-        else:
-            # 如果两个字段都没有提供，使用空数组
-            custom_questions = []
-
-        # 使用认证的用户ID，如果未认证则使用anonymous
-        user_openid = data.get('userOpenid') or (user_id if user_id != 'anonymous' else 'anonymous')
-        api_key = data.get('apiKey', '')  # 在实际应用中，不应通过前端传递API密钥
-
-        user_level = UserLevel(data.get('userLevel', 'Free'))
-
-        # 提取AI评判参数
-        judge_platform = data.get('judgePlatform')  # 前端传入的评判平台
-        judge_model = data.get('judgeModel')  # 前端传入的评判模型
-        judge_api_key = data.get('judgeApiKey')  # 前端传入的评判API密钥
-
-        # Provider可用性检查：验证所选模型是否已配置API Key并在AIAdapterFactory中注册
-        from wechat_backend.ai_adapters.factory import AIAdapterFactory
-        from wechat_backend.ai_adapters.base_adapter import AIPlatformType
-
-        # 添加运行时调试信息
-        api_logger.info(f"=== Runtime Adapter Status Check ===")
-        api_logger.info(f"Selected models: {selected_models}")
-        api_logger.info(f"All registered adapters: {[pt.value for pt in AIAdapterFactory._adapters.keys()]}")
-        api_logger.info(f"MODEL_NAME_MAP: {AIAdapterFactory.MODEL_NAME_MAP}")
-        api_logger.info(f"=== End Runtime Adapter Status Check ===")
-        
-        for model in selected_models:
-            model_name = model['name'] if isinstance(model, dict) else model
-            # 使用AIAdapterFactory的标准化方法
-            normalized_model_name = AIAdapterFactory.get_normalized_model_name(model_name)
-
-            # 检查平台是否可用（已注册且API密钥已配置）
-            if not AIAdapterFactory.is_platform_available(normalized_model_name):
-                # 打印出当前所有已注册的 Keys 并在报错中返回给前端
-                registered_keys = [pt.value for pt in AIAdapterFactory._adapters.keys()]
-                api_logger.error(f"Model {model_name} (normalized to {normalized_model_name}) not registered or not configured. Available models: {registered_keys}")
-                return jsonify({
-                    "status": "error",
-                    "error": f'Model {model_name} not registered or not configured in AIAdapterFactory',
-                    "code": 400,
-                    "available_models": registered_keys,
-                    "received_model": model_name,
-                    "normalized_to": normalized_model_name
-                }), 400
-
-            # 检查API Key是否已配置
-            from wechat_backend.config_manager import config_manager
-            api_key = config_manager.get_api_key(normalized_model_name)
-            if not api_key:
-                return jsonify({"status": "error", "error": f'Model {model_name} not configured - missing API key', "code": 400, 'message': 'API Key 缺失'}), 400
-
-        # 验证自定义问题的安全性
-        for question in custom_questions:
-            if not isinstance(question, str):
-                return jsonify({'error': f'Each question in customQuestions must be a string, got {type(question)}'}), 400
-            if not validate_safe_text(question, max_length=500):
-                return jsonify({'error': f'Unsafe question content: {question}'}), 400
-
-    except Exception as e:
-        api_logger.error(f"Input validation failed: {str(e)}")
-        return jsonify({'error': f'Invalid input data: {str(e)}'}), 400
-
-    # 立即生成执行ID和基础存储，不等待测试用例生成
-    execution_id = str(uuid.uuid4())
-    # 先设置一个初始状态，稍后再更新总数
-    execution_store[execution_id] = {
-        'progress': 0,
-        'completed': 0,
-        'total': 0,  # 会在异步线程中更新
-        'status': 'initializing',
-        'stage': 'init',  # 设置初始阶段为 'init' 以匹配前端期望
-        'results': [],
-        'start_time': datetime.now().isoformat()
-    }
-
-    def run_async_test():
-        """
-        重构后的 NxM 执行逻辑
-        外层循环遍历问题，内层循环遍历模型
-        
-        请求次数 = 问题数 × 模型数（只针对用户自己的品牌）
-        竞品品牌仅用于对比分析，不参与 API 请求
-        """
-        try:
-            # 在异步线程中进行所有耗时的操作
-            api_logger.info(f"[AsyncTest] Initializing QuestionManager for execution_id: {execution_id}")
-            question_manager = QuestionManager()
-            api_logger.info(f"[AsyncTest] Successfully initialized managers for execution_id: {execution_id}")
-
-            cleaned_custom_questions_for_validation = [q.strip() for q in custom_questions if q.strip()]
-
-            if cleaned_custom_questions_for_validation:
-                api_logger.info(f"[AsyncTest] Validating custom questions for execution_id: {execution_id}, questions: {cleaned_custom_questions_for_validation}")
-                validation_result = question_manager.validate_custom_questions(cleaned_custom_questions_for_validation)
-                api_logger.info(f"[AsyncTest] Question validation result for execution_id: {execution_id}, result: {validation_result}")
-
-                if not validation_result['valid']:
-                    api_logger.error(f"[AsyncTest] Question validation failed for execution_id: {execution_id}, errors: {validation_result['errors']}")
-                    if execution_id in execution_store:
-                        execution_store[execution_id].update({'status': 'failed', 'error': f"Invalid questions: {'; '.join(validation_result['errors'])}"})
-                    return
-                raw_questions = validation_result['cleaned_questions']
-                api_logger.info(f"[AsyncTest] Successfully validated questions for execution_id: {execution_id}, raw_questions: {raw_questions}")
-            else:
-                raw_questions = [
-                    "介绍一下{brandName}",
-                    "{brandName}的主要产品是什么",
-                    "{brandName}和竞品有什么区别"
-                ]
-                api_logger.info(f"[AsyncTest] Using default questions for execution_id: {execution_id}")
-
-            # 分离主品牌和竞品品牌
-            # brand_list[0] 是用户自己的品牌，其余是竞品品牌
-            main_brand = brand_list[0] if brand_list else ""
-            competitor_brands = brand_list[1:] if len(brand_list) > 1 else []
-            
-            api_logger.info(f"Main brand: {main_brand}, Competitor brands: {competitor_brands}")
-
-            # 使用 NxM 执行引擎执行测试
-            api_logger.info(f"Starting NxM execution engine for '{execution_id}'")
-
-            # 调用 NxM 执行函数
-            result = execute_nxm_test(
-                execution_id=execution_id,
-                main_brand=main_brand,                # 用户自己的品牌
-                competitor_brands=competitor_brands,   # 竞品品牌列表（仅用于对比分析）
-                selected_models=selected_models,
-                raw_questions=raw_questions,
-                user_id=user_id or "anonymous",
-                user_level=user_level.value,
-                execution_store=execution_store
-            )
-
-            if result.get('success'):
-                api_logger.info(f"NxM execution completed successfully for '{execution_id}', formula: {result.get('formula')}")
-            else:
-                api_logger.error(f"NxM execution failed for '{execution_id}': {result.get('error')}")
-
-        except Exception as e:
-            import traceback
-            error_traceback = traceback.format_exc()
-            api_logger.error(f"Async test execution failed for execution_id {execution_id}: {e}\nTraceback: {error_traceback}")
-            if execution_id in execution_store:
-                execution_store[execution_id].update({
-                    'status': 'failed',
-                    'error': f"{str(e)}\nTraceback: {error_traceback}"
-                })
-    thread = Thread(target=run_async_test)
-    thread.start()
-
-    return jsonify({'status': 'success', 'execution_id': execution_id, 'message': 'Test started successfully'})
+# =============================================================================
+# 注意：诊断相关路由已移至 diagnosis_views.py
+# 请在 diagnosis_views.py 中查找诊断相关路由
+# =============================================================================
 
 import signal
 
@@ -493,7 +220,7 @@ def mvp_deepseek_test():
             'completed': 0,
             'total': len(questions),
             'status': 'processing',
-            'stage': 'ai_testing',
+            'stage': 'ai_fetching',
             'results': [],
             'start_time': datetime.now().isoformat(),
             'platform': 'deepseek'
@@ -688,7 +415,7 @@ def mvp_qwen_test():
             'completed': 0,
             'total': len(questions),
             'status': 'processing',
-            'stage': 'ai_testing',
+            'stage': 'ai_fetching',
             'results': [],
             'start_time': datetime.now().isoformat(),
             'platform': 'qwen'
@@ -883,7 +610,7 @@ def mvp_zhipu_test():
             'completed': 0,
             'total': len(questions),
             'status': 'processing',
-            'stage': 'ai_testing',
+            'stage': 'ai_fetching',
             'results': [],
             'start_time': datetime.now().isoformat(),
             'platform': 'zhipu'
@@ -1078,7 +805,7 @@ def mvp_brand_test():
             'completed': 0,
             'total': len(questions),
             'status': 'processing',
-            'stage': 'ai_testing',
+            'stage': 'ai_fetching',
             'results': [],
             'start_time': datetime.now().isoformat()
         }
@@ -2195,7 +1922,8 @@ def get_platform_status():
 
 
 @wechat_bp.route('/api/test-progress', methods=['GET'])
-@monitored_endpoint('/api/test-progress', require_auth=False, validate_inputs=False)  # P2 修复：明确不需要认证
+@require_strict_auth
+@monitored_endpoint('/api/test-progress', require_auth=True, validate_inputs=False)
 def get_test_progress():
     """
     获取测试进度 - 【任务 3 优化】
@@ -2559,6 +2287,10 @@ def get_task_status_api(task_id):
             'created_at': task_status.get('start_time', None)
         }
 
+        # 【修复】确保 stage 与 status 同步：当 status == 'completed' 但 stage != 'completed' 时，同步 stage
+        if response_data['status'] == 'completed' and response_data['stage'] != 'completed':
+            response_data['stage'] = 'completed'
+
         # 返回任务状态信息
         return jsonify(response_data), 200
     else:
@@ -2642,6 +2374,11 @@ def get_task_status_api(task_id):
                         conn.close()
 
                 api_logger.info(f"[TaskStatus] Found task {task_id} in database, progress: {response_data['progress']}, stage: {response_data['stage']}")
+                
+                # 【修复】确保 stage 与 status 同步：当 status == 'completed' 但 stage != 'completed' 时，同步 stage
+                if response_data['status'] == 'completed' and response_data['stage'] != 'completed':
+                    response_data['stage'] = 'completed'
+                
                 return jsonify(response_data), 200
             else:
                 # 数据库中也找不到，返回 404
@@ -2681,8 +2418,15 @@ def get_task_result(task_id):
 
 # ... (Other endpoints remain the same)
 @wechat_bp.route('/api/test-history', methods=['GET'])
+@require_strict_auth
+@monitored_endpoint('/api/test-history', require_auth=True, validate_inputs=True)
 def get_test_history():
     user_openid = request.args.get('userOpenid', 'anonymous')
+    # 用户数据访问控制：确保用户只能查看自己的历史记录
+    if hasattr(g, 'user_id') and g.user_id and g.user_id != 'anonymous':
+        # 如果已认证，强制使用认证用户的 ID
+        user_openid = g.user_id
+    
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
     try:

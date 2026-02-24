@@ -51,58 +51,58 @@ except ImportError:
 
 # ==================== Legacy 函数兼容层 ====================
 # 这些函数已迁移到 database_repositories.py，但为了向后兼容，保留导出
-# TODO: 后续需要更新所有引用这些函数的代码
+# 注意：这些函数已废弃，请使用 database_repositories.py 中的新函数
 
 def save_test_record(*args, **kwargs):
     """
-    Legacy function - 保存测试记录
+    Legacy function - 保存测试记录（已废弃）
     
-    TODO: 迁移到 database_repositories.py
-    临时实现：返回成功，实际逻辑需要补充
+    已迁移到 database_repositories.py
     """
     from wechat_backend.logging_config import db_logger
+    from wechat_backend.database_repositories import save_test_record as new_save_test_record
+    
     db_logger.warning('save_test_record is deprecated, use database_repositories instead')
-    # TODO: 实现实际逻辑
-    return None
+    return new_save_test_record(*args, **kwargs)
 
 
 def get_user_test_history(*args, **kwargs):
     """
-    Legacy function - 获取用户测试历史
+    Legacy function - 获取用户测试历史（已废弃）
     
-    TODO: 迁移到 database_repositories.py
-    临时实现：返回空列表
+    已迁移到 database_repositories.py
     """
     from wechat_backend.logging_config import db_logger
+    from wechat_backend.database_repositories import get_user_test_history as new_get_user_test_history
+    
     db_logger.warning('get_user_test_history is deprecated, use database_repositories instead')
-    # TODO: 实现实际逻辑
-    return []
+    return new_get_user_test_history(*args, **kwargs)
 
 
 def get_test_record_by_id(*args, **kwargs):
     """
-    Legacy function - 根据 ID 获取测试记录
+    Legacy function - 根据 ID 获取测试记录（已废弃）
     
-    TODO: 迁移到 database_repositories.py
-    临时实现：返回 None
+    已迁移到 database_repositories.py
     """
     from wechat_backend.logging_config import db_logger
+    from wechat_backend.database_repositories import get_test_record_by_id as new_get_test_record_by_id
+    
     db_logger.warning('get_test_record_by_id is deprecated, use database_repositories instead')
-    # TODO: 实现实际逻辑
-    return None
+    return new_get_test_record_by_id(*args, **kwargs)
 
 
 def get_or_create_user_by_unionid(*args, **kwargs):
     """
-    Legacy function - 获取或创建用户
+    Legacy function - 获取或创建用户（已废弃）
     
-    TODO: 迁移到 database_repositories.py
-    临时实现：返回 None
+    已迁移到 database_repositories.py
     """
     from wechat_backend.logging_config import db_logger
+    from wechat_backend.database_repositories import get_or_create_user_by_unionid as new_get_or_create_user
+    
     db_logger.warning('get_or_create_user_by_unionid is deprecated, use database_repositories instead')
-    # TODO: 实现实际逻辑
-    return None
+    return new_get_or_create_user_by_unionid(*args, **kwargs)
 
 # Export all
 __all__ = [

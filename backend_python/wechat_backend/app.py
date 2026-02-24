@@ -33,6 +33,7 @@ init_task_status_db()
 # Security imports
 from wechat_backend.security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer
 from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimiter
+from wechat_backend.security.auth_enhanced import enforce_auth_middleware
 
 # Conditionally import auth module to handle JWT dependency
 try:
@@ -184,6 +185,17 @@ start_cache_maintenance()
 # Initialize database query optimization (数据库查询优化)
 from wechat_backend.database.query_optimizer import init_recommended_indexes
 init_recommended_indexes()
+
+# Register auth middleware (差距 1 修复：API 认证授权增强)
+app.before_request(enforce_auth_middleware())
+
+# 豁免 API 端点的 CSRF 验证（用于小程序 API 请求）
+# 注意：CSRF 主要用于保护 Web 表单，API 使用 Token 认证，无需 CSRF 保护
+# 通过设置 request.csrf_exempt = True 来豁免 CSRF 检查
+@app.before_request
+def csrf_exempt_api():
+    if request.path.startswith('/api/') or request.path.startswith('/test/'):
+        request.csrf_exempt = True
 
 # Add security headers
 @app.after_request

@@ -1,3 +1,5 @@
+const { debug, info, warn, error } = require('../../utils/logger');
+
 /**
  * 导航服务
  * 负责页面跳转和 Storage 数据保存

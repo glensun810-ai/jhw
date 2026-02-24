@@ -16,7 +16,13 @@
   <view class="page-header">
     <text class="page-title">品牌洞察报告</text>
     <text class="page-subtitle">“{{targetBrand}}”：AI认知与市场格局分析</text>
-  </view>
+
+    <!-- P0-012 新增：质量评分徽章 -->
+    <view class="quality-badge" wx:if="{{qualityScore}}">
+      <text class="quality-icon">📊</text>
+      <text class="quality-score">报告质量：{{qualityScore}}分</text>
+      <text class="quality-level {{qualityLevel}}">{{qualityLevelText}}</text>
+    </view>  </view>
 
   <!-- 品牌概览区 -->
   <view class="brand-overview-section">

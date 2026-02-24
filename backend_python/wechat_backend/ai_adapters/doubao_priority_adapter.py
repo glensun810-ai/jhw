@@ -39,6 +39,9 @@ class DoubaoPriorityAdapter(AIClient):
         self.selected_model: Optional[str] = None
         self.selected_adapter: Optional[DoubaoAdapter] = None
         
+        # 【P0 修复】记录 429 错误的模型（配额耗尽）
+        self.exhausted_models: set = set()
+        
         # 尝试初始化适配器（选择第一个可用的模型）
         self._init_adapter()
         
@@ -227,7 +230,21 @@ class DoubaoPriorityAdapter(AIClient):
                 model=self.selected_model,
                 platform='doubao'
             )
-    
+
+    def generate_response(self, prompt: str, **kwargs) -> AIResponse:
+        """
+        生成响应（兼容 NXM 执行引擎的调用接口）
+        
+        Args:
+            prompt: 提示词
+            **kwargs: 其他参数
+            
+        Returns:
+            AIResponse: AI 响应
+        """
+        # 直接调用 send_prompt 方法
+        return self.send_prompt(prompt, **kwargs)
+
     def get_selected_model(self) -> Optional[str]:
         """
         获取当前选中的模型 ID

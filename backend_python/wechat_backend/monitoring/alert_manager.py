@@ -57,7 +57,9 @@ class AlertManager:
             try:
                 with open(ALERT_HISTORY_FILE, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except:
+            except Exception as e:
+
+                pass  # TODO: 添加适当的错误处理
                 return []
         return []
     

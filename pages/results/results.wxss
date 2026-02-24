@@ -1,5 +1,8 @@
 /* pages/results/results.wxss */
 
+/* P0-012 导入质量评分样式 */
+@import "results-quality.wxss";
+
 .page-container {
   background-color: #121826;
   color: #e8e8e8;

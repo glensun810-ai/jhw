@@ -60,7 +60,9 @@ def log_admin_action(resource_type=None, resource_id_field=None):
                         for sensitive_field in ['password', 'token', 'secret', 'key']:
                             if sensitive_field in request_data:
                                 request_data[sensitive_field] = '***'
-            except:
+            except Exception as e:
+
+                pass  # TODO: 添加适当的错误处理
                 pass
             
             # 执行原函数
@@ -140,7 +142,9 @@ def log_batch_action(resource_type=None):
                         for sensitive_field in ['password', 'token', 'secret', 'key']:
                             if sensitive_field in request_data:
                                 request_data[sensitive_field] = '***'
-            except:
+            except Exception as e:
+
+                pass  # TODO: 添加适当的错误处理
                 pass
             
             # 执行原函数
@@ -185,7 +189,9 @@ def log_batch_action(resource_type=None):
                         resource_id = max(processed_count, failed_count, deleted_count, target_count)
                     else:
                         resource_id = None
-                except:
+                except Exception as e:
+
+                    pass  # TODO: 添加适当的错误处理
                     resource_id = None
                     processed_count = 0
                     failed_count = 0

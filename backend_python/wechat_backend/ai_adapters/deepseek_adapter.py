@@ -61,6 +61,9 @@ class DeepSeekAdapter(AIClient):
         
         api_logger.info(f"DeepSeekAdapter initialized for model: {model_name} with unified request wrapper and circuit breaker")
 
+    def generate_response(self, prompt: str, **kwargs) -> AIResponse:
+        """生成响应（兼容 NXM 执行引擎）"""
+        return self.send_prompt(prompt, **kwargs)
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
         """
         发送提示到 DeepSeek 并返回标准化响应
