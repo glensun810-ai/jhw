@@ -2569,8 +2569,7 @@ Page({
     console.log('📦 降级到本地 Storage 加载');
     // 原有的本地加载逻辑
     this.onLoad(this.options || {});
-  }
-})
+  },
 
   /**
    * 高优先级修复 3: 数据刷新功能
@@ -2578,7 +2577,7 @@ Page({
    */
   refreshData: function() {
     const that = this;
-    
+
     // 防止重复刷新
     if (this.data.refreshing) {
       console.log('[刷新] 正在刷新中，请等待...');
@@ -2594,10 +2593,10 @@ Page({
       .then(() => {
         console.log('[刷新] 刷新成功');
         // 清除缓存标记
-        that.setData({ 
-          isCached: false, 
+        that.setData({
+          isCached: false,
           cacheTime: null,
-          refreshing: false 
+          refreshing: false
         });
         wx.showToast({ title: '刷新成功', icon: 'success', duration: 2000 });
       })
