@@ -109,6 +109,7 @@ Page({
     brandName: '',
     competitorBrands: [],
     currentCompetitor: '',
+    competitorInputFocus: false,  // 【用户体验优化】竞品输入框焦点控制
 
     // 问题设置
     customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}],
@@ -661,9 +662,20 @@ Page({
       return;
     }
 
+    // 添加竞品
     competitorBrands.push(currentCompetitor);
-    this.setData({ competitorBrands: competitorBrands, currentCompetitor: '' });
-    wx.showToast({ title: '添加成功', icon: 'success' });
+    
+    // 【用户体验优化】添加成功后清空输入框，但保持焦点方便连续输入
+    this.setData({ 
+      competitorBrands: competitorBrands,
+      currentCompetitor: '',  // 清空输入框
+      competitorInputFocus: true  // 保持焦点，方便继续输入下一个竞品
+    });
+    
+    wx.showToast({ title: '添加成功', icon: 'success', duration: 1500 });
+    
+    // 保存输入状态
+    this.saveCurrentInput();
   },
 
   removeCompetitor: function(e) {

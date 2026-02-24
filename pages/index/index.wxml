@@ -34,7 +34,7 @@
       <view class="camp-section competitor-camp">
         <view class="camp-title">竞争品牌</view>
         <view class="brand-input-wrapper">
-          <input class="brand-input" placeholder="添加竞品" value="{{currentCompetitor}}" bindinput="onCompetitorInput" bindconfirm="addCompetitor"/>
+          <input class="brand-input" placeholder="添加竞品" value="{{currentCompetitor}}" bindinput="onCompetitorInput" bindconfirm="addCompetitor" focus="{{competitorInputFocus}}"/>
           <view class="add-icon-btn" bindtap="addCompetitor">+</view>
         </view>
         <view class="competitor-list">
