@@ -269,15 +269,47 @@ Page({
   onLoad: function(options) {
     console.log('📥 结果页加载 options:', options);
 
+    const executionId = decodeURIComponent(options.executionId || '');
+    const brandName = decodeURIComponent(options.brandName || '');
+
+    // 【P0 修复】添加空结果处理
+    const showEmptyState = (message) => {
+      this.setData({
+        isEmpty: true,
+        emptyMessage: message || '暂无数据'
+      });
+      
+      wx.showModal({
+        title: '暂无数据',
+        content: message || '当前诊断没有可用结果',
+        confirmText: '重新诊断',
+        cancelText: '返回首页',
+        success: (res) => {
+          if (res.confirm) {
+            wx.reLaunch({ url: '/pages/index/index' });
+          } else {
+            wx.navigateBack();
+          }
+        }
+      });
+    };
+
     // 高优先级修复 2: 缓存数据离线查看
     // 优先尝试从统一缓存加载（离线查看）
     const cachedResults = wx.getStorageSync('last_diagnostic_results');
     if (cachedResults && cachedResults.timestamp) {
       const cacheAge = Date.now() - cachedResults.timestamp;
       const isExpired = cacheAge > 3600000; // 1 小时过期
-      
+
       if (!isExpired) {
         console.log('[结果页] 使用缓存数据，缓存时间:', new Date(cachedResults.timestamp));
+        
+        // 【P0 修复】检查缓存是否有结果
+        if (!cachedResults.results || cachedResults.results.length === 0) {
+          showEmptyState('缓存数据无结果，请重新诊断');
+          return;
+        }
+        
         this.setData({
           ...cachedResults,
           isCached: true,
@@ -285,7 +317,7 @@ Page({
         });
         wx.showModal({
           title: '使用缓存数据',
-          content: '后端服务暂不可用，正在使用缓存数据（1 小时内有效）',
+          content: '正在使用缓存数据（1 小时内有效）',
           showCancel: false,
           confirmText: '知道了'
         });
@@ -294,9 +326,6 @@ Page({
         console.log('[结果页] 缓存已过期，缓存时间:', new Date(cachedResults.timestamp));
       }
     }
-
-    const executionId = decodeURIComponent(options.executionId || '');
-    const brandName = decodeURIComponent(options.brandName || '');
 
     // P1-1 修复：优先从统一 Storage 加载
     let storageData = null;
@@ -307,6 +336,12 @@ Page({
         version: storageData?.version,
         hasResults: !!(storageData?.data?.results && storageData.data.results.length > 0)
       });
+      
+      // 【P0 修复】检查 Storage 是否有结果
+      if (!storageData || !storageData.data || !storageData.data.results || storageData.data.results.length === 0) {
+        showEmptyState('本地无缓存结果，请重新诊断');
+        return;
+      }
     }
 
     // 降级：从旧 Storage 加载（兼容旧数据）
