@@ -22,6 +22,7 @@ import threading
 import os
 import asyncio
 import json
+import traceback  # 【修复】添加 traceback 导入
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -103,6 +104,9 @@ def execute_nxm_test(
         # 【容错机制】初始化容错执行器
         ft_executor = FaultTolerantExecutor(execution_id)
         
+        # 【修复】导入 execution_store
+        from wechat_backend.views.diagnosis_views import execution_store
+
         try:
             results = []
             completed = 0
