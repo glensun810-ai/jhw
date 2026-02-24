@@ -104,8 +104,12 @@ def execute_nxm_test(
         # 【容错机制】初始化容错执行器
         ft_executor = FaultTolerantExecutor(execution_id)
         
-        # 【修复】导入 execution_store
-        from wechat_backend.views.diagnosis_views import execution_store
+        # 【修复 P0】在 try 块外先导入 execution_store，避免作用域问题
+        try:
+            from wechat_backend.views.diagnosis_views import execution_store
+        except ImportError:
+            execution_store = {}
+            api_logger.error(f"[NxM] 无法导入 execution_store，使用空字典")
 
         try:
             results = []
