@@ -73,7 +73,7 @@ def execute_nxm_test(
     scheduler = create_scheduler(execution_id, execution_store)
     
     # 计算总任务数
-    total_tasks = len(raw_questions) * len(selected_models)
+    total_tasks = (1 + len(competitor_brands or [])) * len(raw_questions) * len(selected_models)
     scheduler.initialize_execution(total_tasks)
     
     # 启动超时计时器
@@ -87,145 +87,152 @@ def execute_nxm_test(
         try:
             results = []
             completed = 0
-            
-            # 外层循环：遍历问题
-            for q_idx, question in enumerate(raw_questions):
-                # 内层循环：遍历模型
-                for model_info in selected_models:
-                    model_name = model_info.get('name', '')
-                    
-                    # 检查模型是否可用（熔断器）
-                    if not scheduler.is_model_available(model_name):
-                        api_logger.warning(f"[NxM] 模型 {model_name} 已熔断，跳过")
-                        completed += 1
-                        scheduler.update_progress(completed, total_tasks, 'ai_fetching')
-                        continue
-                    
-                    try:
-                        # P0 修复：直接使用 Config 类获取 API Key，避免循环依赖
-                        from config import Config
 
-                        # 创建 AI 客户端
-                        client = AIAdapterFactory.create(model_name)
-                        api_key = Config.get_api_key(model_name)
+            # P0-2 修复：遍历所有品牌（主品牌 + 竞品）
+            all_brands = [main_brand] + (competitor_brands or [])
+            api_logger.info(f"[NxM] 执行品牌数：{len(all_brands)}, 品牌列表：{all_brands}")
 
-                        if not api_key:
-                            raise ValueError(f"模型 {model_name} API Key 未配置")
+            # 外层循环：遍历品牌
+            for brand in all_brands:
+                # 中层循环：遍历问题
+                for q_idx, question in enumerate(raw_questions):
+                    # 内层循环：遍历模型
+                    for model_info in selected_models:
+                        model_name = model_info.get('name', '')
 
-                        # 构建提示词
-                        # P0 修复：模板需要 brand_name, competitors, question 三个参数
-                        prompt = GEO_PROMPT_TEMPLATE.format(
-                            brand_name=main_brand,
-                            competitors=', '.join(competitor_brands) if competitor_brands else '无',
-                            question=question
-                        )
+                        # 检查模型是否可用（熔断器）
+                        if not scheduler.is_model_available(model_name):
+                            api_logger.warning(f"[NxM] 模型 {model_name} 已熔断，跳过")
+                            completed += 1
+                            scheduler.update_progress(completed, total_tasks, 'ai_fetching')
+                            continue
 
-                        # 修复 3: 添加 AI 响应重试机制
-                        max_retries = 2
-                        retry_count = 0
-                        response = None
-                        geo_data = None
-                        parse_error = None
-
-                        while retry_count <= max_retries:
-                            try:
-                                # 调用 AI 接口
-                                response = client.generate_response(
-                                    prompt=prompt,
-                                    api_key=api_key
-                                )
-
-                                # 解析 GEO 数据
-                                geo_data, parse_error = parse_geo_with_validation(
-                                    response,
-                                    execution_id,
-                                    q_idx,
-                                    model_name
-                                )
-
-                                # 如果解析成功，跳出重试循环
-                                if not parse_error and not geo_data.get('_error'):
-                                    break
-
-                                # 解析失败，记录日志并准备重试
-                                api_logger.warning(f"[NxM] 解析失败，准备重试：{model_name}, Q{q_idx}, 尝试 {retry_count + 1}/{max_retries}")
-                                retry_count += 1
-
-                            except Exception as call_error:
-                                api_logger.error(f"[NxM] AI 调用失败：{model_name}, Q{q_idx}: {call_error}")
-                                retry_count += 1
-
-                        # 检查最终结果
-                        if not response or not geo_data or geo_data.get('_error'):
-                            api_logger.error(f"[NxM] 重试耗尽，标记为失败：{model_name}, Q{q_idx}")
-                            scheduler.record_model_failure(model_name)
-                            # 仍然添加结果，但标记为失败
-                            result = {
-                                'brand': main_brand,
-                                'question': question,
-                                'model': model_name,
-                                'response': response,
-                                'geo_data': geo_data or {'_error': 'AI 调用或解析失败'},
-                                'timestamp': datetime.now().isoformat(),
-                                '_failed': True
-                            }
-                            scheduler.add_result(result)
-                            results.append(result)
-                        else:
-                            scheduler.record_model_success(model_name)
-
-                            # 构建结果
-                            result = {
-                                'brand': main_brand,
-                                'question': question,
-                                'model': model_name,
-                                'response': response,
-                                'geo_data': geo_data,
-                                'timestamp': datetime.now().isoformat()
-                            }
-
-                            scheduler.add_result(result)
-                            results.append(result)
-
-                        # 更新进度
-                        completed += 1
-                        scheduler.update_progress(completed, total_tasks, 'ai_fetching')
-
-                    except Exception as e:
-                        # P1-2 修复：完善错误处理，记录详细错误信息
-                        error_message = f"AI 调用失败：{model_name}, 问题{q_idx+1}: {str(e)}"
-                        api_logger.error(f"[NxM] {error_message}")
-                        
-                        # 记录模型失败
-                        scheduler.record_model_failure(model_name)
-                        
-                        # 更新进度，包含错误信息
-                        completed += 1
-                        scheduler.update_progress(completed, total_tasks, 'ai_fetching')
-                        
-                        # P1-2 修复：在 execution_store 中记录错误详情
                         try:
-                            from wechat_backend.views import execution_store
-                            if execution_id in execution_store:
-                                # 累积错误信息
-                                if 'error_details' not in execution_store[execution_id]:
-                                    execution_store[execution_id]['error_details'] = []
-                                
-                                execution_store[execution_id]['error_details'].append({
+                            # P0 修复：直接使用 Config 类获取 API Key，避免循环依赖
+                            from config import Config
+
+                            # 创建 AI 客户端
+                            client = AIAdapterFactory.create(model_name)
+                            api_key = Config.get_api_key(model_name)
+
+                            if not api_key:
+                                raise ValueError(f"模型 {model_name} API Key 未配置")
+
+                            # 构建提示词
+                            # P0-2 修复：使用当前品牌和其竞争对手
+                            current_competitors = [b for b in all_brands if b != brand]
+                            prompt = GEO_PROMPT_TEMPLATE.format(
+                                brand_name=brand,
+                                competitors=', '.join(current_competitors) if current_competitors else '无',
+                                question=question
+                            )
+
+                            # 修复 3: 添加 AI 响应重试机制
+                            max_retries = 2
+                            retry_count = 0
+                            response = None
+                            geo_data = None
+                            parse_error = None
+
+                            while retry_count <= max_retries:
+                                try:
+                                    # 调用 AI 接口
+                                    response = client.generate_response(
+                                        prompt=prompt,
+                                        api_key=api_key
+                                    )
+
+                                    # 解析 GEO 数据
+                                    geo_data, parse_error = parse_geo_with_validation(
+                                        response,
+                                        execution_id,
+                                        q_idx,
+                                        model_name
+                                    )
+
+                                    # 如果解析成功，跳出重试循环
+                                    if not parse_error and not geo_data.get('_error'):
+                                        break
+
+                                    # 解析失败，记录日志并准备重试
+                                    api_logger.warning(f"[NxM] 解析失败，准备重试：{model_name}, Q{q_idx}, 尝试 {retry_count + 1}/{max_retries}")
+                                    retry_count += 1
+
+                                except Exception as call_error:
+                                    api_logger.error(f"[NxM] AI 调用失败：{model_name}, Q{q_idx}: {call_error}")
+                                    retry_count += 1
+
+                            # 检查最终结果
+                            if not response or not geo_data or geo_data.get('_error'):
+                                api_logger.error(f"[NxM] 重试耗尽，标记为失败：{model_name}, Q{q_idx}")
+                                scheduler.record_model_failure(model_name)
+                                # 仍然添加结果，但标记为失败
+                                result = {
+                                    'brand': brand,
+                                    'question': question,
                                     'model': model_name,
-                                    'question_index': q_idx,
-                                    'error_type': type(e).__name__,
-                                    'error_message': str(e),
+                                    'response': response,
+                                    'geo_data': geo_data or {'_error': 'AI 调用或解析失败'},
+                                    'timestamp': datetime.now().isoformat(),
+                                    '_failed': True
+                                }
+                                scheduler.add_result(result)
+                                results.append(result)
+                            else:
+                                scheduler.record_model_success(model_name)
+
+                                # 构建结果
+                                result = {
+                                    'brand': brand,
+                                    'question': question,
+                                    'model': model_name,
+                                    'response': response,
+                                    'geo_data': geo_data,
                                     'timestamp': datetime.now().isoformat()
-                                })
-                                
-                                # 更新状态为部分失败
-                                execution_store[execution_id].update({
-                                    'status': 'partial_failure' if completed < total_tasks else 'completed_with_errors',
-                                    'error': f'{len(execution_store[execution_id]["error_details"])} 个 AI 调用失败'
-                                })
-                        except Exception as store_error:
-                            api_logger.error(f"[NxM] 更新 execution_store 失败：{store_error}")
+                                }
+
+                                scheduler.add_result(result)
+                                results.append(result)
+
+                            # 更新进度
+                            completed += 1
+                            scheduler.update_progress(completed, total_tasks, 'ai_fetching')
+
+                        except Exception as e:
+                            # P1-2 修复：完善错误处理，记录详细错误信息
+                            error_message = f"AI 调用失败：{model_name}, 问题{q_idx+1}: {str(e)}"
+                            api_logger.error(f"[NxM] {error_message}")
+
+                            # 记录模型失败
+                            scheduler.record_model_failure(model_name)
+
+                            # 更新进度，包含错误信息
+                            completed += 1
+                            scheduler.update_progress(completed, total_tasks, 'ai_fetching')
+
+                            # P1-2 修复：在 execution_store 中记录错误详情
+                            try:
+                                from wechat_backend.views import execution_store
+                                if execution_id in execution_store:
+                                    # 累积错误信息
+                                    if 'error_details' not in execution_store[execution_id]:
+                                        execution_store[execution_id]['error_details'] = []
+
+                                    execution_store[execution_id]['error_details'].append({
+                                        'model': model_name,
+                                        'question_index': q_idx,
+                                        'error_type': type(e).__name__,
+                                        'error_message': str(e),
+                                        'timestamp': datetime.now().isoformat()
+                                    })
+
+                                    # 更新状态为部分失败
+                                    execution_store[execution_id].update({
+                                        'status': 'partial_failure' if completed < total_tasks else 'completed_with_errors',
+                                        'error': f'{len(execution_store[execution_id]["error_details"])} 个 AI 调用失败'
+                                    })
+                            except Exception as store_error:
+                                api_logger.error(f"[NxM] 更新 execution_store 失败：{store_error}")
             
             # 验证执行完成
             verification = verify_completion(results, total_tasks)
@@ -245,7 +252,79 @@ def execute_nxm_test(
                     results=deduplicated,
                     user_level=user_level
                 )
-                
+
+                # 【P0 修复】生成高级分析数据
+                try:
+                    api_logger.info(f"[NxM] 开始生成高级分析数据：{execution_id}")
+                    
+                    # 0. 记录缺失的品牌
+                    executed_brands = set(r.get('brand') for r in deduplicated if r.get('brand'))
+                    all_expected_brands = set([main_brand] + (competitor_brands or []))
+                    missing_brands = list(all_expected_brands - executed_brands)
+                    if missing_brands:
+                        api_logger.warning(f"[NxM] 以下品牌数据缺失：{missing_brands}")
+                        execution_store[execution_id]['missing_brands'] = missing_brands
+                    
+                    # 1. 生成核心洞察
+                    try:
+                        api_logger.info(f"[NxM] 开始生成核心洞察：{execution_id}")
+                        target_brand_scores = brand_scores.get(main_brand, {})
+                        authority = target_brand_scores.get('overallAuthority', 50)
+                        visibility = target_brand_scores.get('overallVisibility', 50)
+                        purity = target_brand_scores.get('overallPurity', 50)
+                        consistency = target_brand_scores.get('overallConsistency', 50)
+                        dimensions = {'权威度': authority, '可见度': visibility, '纯净度': purity, '一致性': consistency}
+                        advantage_dim = max(dimensions, key=dimensions.get)
+                        risk_dim = min(dimensions, key=dimensions.get)
+                        insights = {
+                            'advantage': f"{advantage_dim}表现突出，得分{dimensions[advantage_dim]}分",
+                            'risk': f"{risk_dim}相对薄弱，得分{dimensions[risk_dim]}分，需重点关注",
+                            'opportunity': f"{risk_dim}有较大提升空间，建议优先优化"
+                        }
+                        execution_store[execution_id]['insights'] = insights
+                        api_logger.info(f"[NxM] 核心洞察生成完成：{execution_id}")
+                    except Exception as e:
+                        api_logger.error(f"[NxM] 核心洞察生成失败：{e}")
+                    
+                    # 2. 生成信源纯净度分析
+                    try:
+                        api_logger.info(f"[NxM] 开始生成信源纯净度分析：{execution_id}")
+                        from wechat_backend.analytics.source_intelligence_processor import SourceIntelligenceProcessor
+                        processor = SourceIntelligenceProcessor()
+                        source_purity_data = processor.process(main_brand, deduplicated)
+                        execution_store[execution_id]['source_purity_data'] = source_purity_data
+                        api_logger.info(f"[NxM] 信源纯净度分析完成：{execution_id}")
+                    except Exception as e:
+                        api_logger.error(f"[NxM] 信源纯净度分析失败：{e}")
+                    
+                    # 3. 生成信源情报图谱
+                    try:
+                        api_logger.info(f"[NxM] 开始生成信源情报图谱：{execution_id}")
+                        nodes = []
+                        node_id = 0
+                        for result in deduplicated:
+                            geo_data = result.get('geo_data', {})
+                            cited_sources = geo_data.get('cited_sources', [])
+                            for source in cited_sources:
+                                nodes.append({
+                                    'id': f'source_{node_id}',
+                                    'name': source.get('site_name', '未知信源'),
+                                    'value': source.get('weight', 50),
+                                    'sentiment': source.get('attitude', 'neutral'),
+                                    'category': source.get('category', 'general'),
+                                    'url': source.get('url', '')
+                                })
+                                node_id += 1
+                        source_intelligence_map = {'nodes': nodes, 'links': []}
+                        execution_store[execution_id]['source_intelligence_map'] = source_intelligence_map
+                        api_logger.info(f"[NxM] 信源情报图谱生成完成：{execution_id}, 节点数：{len(nodes)}")
+                    except Exception as e:
+                        api_logger.error(f"[NxM] 信源情报图谱生成失败：{e}")
+                    
+                    api_logger.info(f"[NxM] 高级分析数据生成完成：{execution_id}")
+                except Exception as e:
+                    api_logger.error(f"[NxM] 生成高级分析数据失败：{e}")
+
                 api_logger.info(f"[NxM] 执行成功：{execution_id}, 结果数：{len(deduplicated)}")
             else:
                 scheduler.fail_execution(verification['message'])
@@ -374,7 +453,7 @@ def call_ai_api_wrapper(
         
         # 返回结果
         return {
-            'brand': main_brand,
+            'brand': brand,
             'question': question,
             'model': model_name,
             'response': response,
@@ -386,7 +465,7 @@ def call_ai_api_wrapper(
     except Exception as e:
         api_logger.error(f"AI 调用异常：{model_name}: {e}")
         return {
-            'brand': main_brand,
+            'brand': brand,
             'question': question,
             'model': model_name,
             'response': None,

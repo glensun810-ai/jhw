@@ -155,7 +155,18 @@ def init_db():
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
+
+        # P2-2: 添加缺失的 cache_entries 表（缓存条目）
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cache_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cache_key TEXT UNIQUE,
+                cache_value TEXT,
+                expires_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         conn.commit()
         db_logger.info("数据库表结构初始化完成")
         

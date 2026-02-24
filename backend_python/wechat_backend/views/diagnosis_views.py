@@ -28,6 +28,9 @@ from wechat_backend.realtime_analyzer import get_analyzer
 from wechat_backend.incremental_aggregator import get_aggregator
 from wechat_backend.logging_config import api_logger, wechat_logger, db_logger
 from wechat_backend.ai_adapters.base_adapter import AIPlatformType, AIClient, AIResponse, GEO_PROMPT_TEMPLATE, parse_geo_json
+
+# 差距 1 修复：导入认证装饰器
+from wechat_backend.security.auth_enhanced import require_strict_auth, log_audit_access
 from wechat_backend.ai_adapters.factory import AIAdapterFactory
 from wechat_backend.nxm_execution_engine import execute_nxm_test, verify_nxm_execution
 from wechat_backend.question_system import QuestionManager, TestCaseGenerator
@@ -296,7 +299,11 @@ def perform_brand_test():
                 if not validation_result['valid']:
                     api_logger.error(f"[AsyncTest] Question validation failed for execution_id: {execution_id}, errors: {validation_result['errors']}")
                     if execution_id in execution_store:
-                        execution_store[execution_id].update({'status': 'failed', 'error': f"Invalid questions: {'; '.join(validation_result['errors'])}"})
+                        execution_store[execution_id].update({
+                            'status': 'failed',
+                            'stage': 'failed',  # 【修复 P0-002】同步 stage 与 status
+                            'error': f"Invalid questions: {'; '.join(validation_result['errors'])}"
+                        })
                     return
                 raw_questions = validation_result['cleaned_questions']
                 api_logger.info(f"[AsyncTest] Successfully validated questions for execution_id: {execution_id}, raw_questions: {raw_questions}")
@@ -386,7 +393,7 @@ def mvp_deepseek_test():
             'completed': 0,
             'total': len(questions),
             'status': 'processing',
-            'stage': 'ai_testing',
+            'stage': 'ai_fetching',
             'results': [],
             'start_time': datetime.now().isoformat(),
             'platform': 'deepseek'
@@ -583,7 +590,7 @@ def mvp_qwen_test():
             'completed': 0,
             'total': len(questions),
             'status': 'processing',
-            'stage': 'ai_testing',
+            'stage': 'ai_fetching',
             'results': [],
             'start_time': datetime.now().isoformat(),
             'platform': 'qwen'
@@ -780,7 +787,7 @@ def mvp_zhipu_test():
             'completed': 0,
             'total': len(questions),
             'status': 'processing',
-            'stage': 'ai_testing',
+            'stage': 'ai_fetching',
             'results': [],
             'start_time': datetime.now().isoformat(),
             'platform': 'zhipu'
@@ -977,7 +984,7 @@ def mvp_brand_test():
             'completed': 0,
             'total': len(questions),
             'status': 'processing',
-            'stage': 'ai_testing',
+            'stage': 'ai_fetching',
             'results': [],
             'start_time': datetime.now().isoformat()
         }
@@ -2108,6 +2115,7 @@ def get_platform_status():
 
 
 @wechat_bp.route('/api/test-progress', methods=['GET'])
+@require_strict_auth  # 差距 1 修复：添加严格认证
 def get_test_progress():
     """
     获取测试进度 - 【任务 3 优化】
@@ -2115,6 +2123,10 @@ def get_test_progress():
     新增 is_synced 字段：
     - 当 status == 'completed' 且 len(results) == expected 时，is_synced 为 true
     - 告知前端，数据不仅运行完了，而且已经完全同步到了报告引擎中
+    
+    安全增强（差距 1 修复）:
+    - 需要 JWT Token 或微信 OpenID 认证
+    - 记录审计日志
     """
     execution_id = request.args.get('executionId')
     if execution_id and execution_id in execution_store:
@@ -2466,16 +2478,69 @@ def get_task_status_api(task_id):
     if task_id in execution_store:
         task_status = execution_store[task_id]
 
-        # 按照API契约返回任务状态信息
+        # 【关键修复】确保 results 字段存在且为列表
+        results_list = task_status.get('results', [])
+        if not isinstance(results_list, list):
+            results_list = []
+            api_logger.warning(f'[TaskStatus] Task {task_id} results is not a list, resetting to empty list')
+
+        # 按照 API 契约返回任务状态信息
         response_data = {
             'task_id': task_id,
             'progress': task_status.get('progress', 0),
-            'stage': task_status.get('stage', 'init'),  # 【任务 C：前端同步】确保返回当前的 stage 描述
+            'stage': task_status.get('stage', 'init'),
+            'detailed_results': results_list,  # 【任务 C：前端同步】确保返回当前的 stage 描述
             'status': task_status.get('status', 'init'),
-            'results': task_status.get('results', []),
+            'results': results_list,
             'is_completed': task_status.get('status') == 'completed',
             'created_at': task_status.get('start_time', None)
         }
+
+        # 【P0 修复】如果任务已完成，返回高级分析数据
+        if task_status.get('status') == 'completed':
+            # 从 execution_store 中获取高级分析数据
+            if 'semantic_drift_data' in task_status:
+                response_data['semantic_drift_data'] = task_status['semantic_drift_data']
+            if 'recommendation_data' in task_status:
+                response_data['recommendation_data'] = task_status['recommendation_data']
+            if 'negative_sources' in task_status:
+                response_data['negative_sources'] = task_status['negative_sources']
+            if 'competitive_analysis' in task_status:
+                response_data['competitive_analysis'] = task_status['competitive_analysis']
+            if 'brand_scores' in task_status:
+                response_data['brand_scores'] = task_status['brand_scores']
+            if 'insights' in task_status:
+                response_data['insights'] = task_status['insights']  # ← 新增：核心洞察
+            if 'source_purity_data' in task_status:
+                response_data['source_purity_data'] = task_status['source_purity_data']  # ← P0-3: 信源纯净度
+            if 'source_intelligence_map' in task_status:
+                response_data['source_intelligence_map'] = task_status['source_intelligence_map']  # ← P0-4: 信源情报图谱
+            if 'missing_brands' in task_status:
+                response_data['missing_brands'] = task_status['missing_brands']  # ← 缺失品牌提示
+            
+            # 如果 execution_store 中没有，尝试从数据库补充
+            if len(results_list) == 0 or not response_data.get('semantic_drift_data'):
+                api_logger.warning(f"[TaskStatus] Task {task_id} completed but data incomplete, trying database fallback")
+                try:
+                    from wechat_backend.models import get_deep_intelligence_result
+
+                    db_deep_result = get_deep_intelligence_result(task_id)
+                    if db_deep_result and hasattr(db_deep_result, 'to_dict'):
+                        deep_dict = db_deep_result.to_dict()
+                        if 'detailed_results' in deep_dict and deep_dict['detailed_results']:
+                            response_data['detailed_results'] = deep_dict['detailed_results']
+                            response_data['results'] = deep_dict['detailed_results']
+                            api_logger.info(f'[TaskStatus] Loaded {len(deep_dict["detailed_results"])} results from database')
+                        if 'semantic_drift_data' in deep_dict and not response_data.get('semantic_drift_data'):
+                            response_data['semantic_drift_data'] = deep_dict.get('semantic_drift_data')
+                        if 'recommendation_data' in deep_dict and not response_data.get('recommendation_data'):
+                            response_data['recommendation_data'] = deep_dict.get('recommendation_data')
+                        if 'negative_sources' in deep_dict and not response_data.get('negative_sources'):
+                            response_data['negative_sources'] = deep_dict.get('negative_sources')
+                        if 'competitive_analysis' in deep_dict and not response_data.get('competitive_analysis'):
+                            response_data['competitive_analysis'] = deep_dict.get('competitive_analysis')
+                except Exception as db_err:
+                    api_logger.error(f'[TaskStatus] Database fallback failed: {db_err}')
 
         # 返回任务状态信息
         return jsonify(response_data), 200
@@ -2489,15 +2554,19 @@ def get_task_status_api(task_id):
             if db_task_status:
                 # 从数据库构建响应
                 response_data = {
-                    'task_id': task_id,
-                    'progress': task_status.get('progress', 0),
-                    'stage': task_status.get('stage', 'init'),
-                    'status': task_status.get('status', 'init'),
-                    'results': task_status.get('results', []),
-                    'detailed_results': task_status.get('results', []),  # 添加这一行
-                    'is_completed': task_status.get('status') == 'completed',
-                    'created_at': task_status.get('start_time', None)
+                    'task_id': db_task_status.task_id,
+                    'progress': db_task_status.progress,
+                    'stage': db_task_status.stage.value if hasattr(db_task_status.stage, 'value') else str(db_task_status.stage),
+                    'status': 'completed' if db_task_status.is_completed else 'processing',
+                    'results': [],
+                    'detailed_results': [],
+                    'is_completed': db_task_status.is_completed,
+                    'created_at': db_task_status.created_at
                 }
+                
+                # 【修复】确保 stage 与 status 同步
+                if response_data['status'] == 'completed' and response_data['stage'] != 'completed':
+                    response_data['stage'] = 'completed'
                 # 【P0 修复】从数据库获取完整的 results_summary
                 conn = get_connection()
                 cursor = conn.cursor()
@@ -2529,6 +2598,8 @@ def get_task_status_api(task_id):
                         response_data['negative_sources'] = summary.get('negative_sources', [])
                         response_data['semantic_drift_data'] = summary.get('semantic_drift_data', {})
                         response_data['recommendation_data'] = summary.get('recommendation_data', {})
+                        response_data['source_purity_data'] = summary.get('source_purity_data', {})  # ← P0-3
+                        response_data['source_intelligence_map'] = summary.get('source_intelligence_map', {})  # ← P0-4
                         response_data['overall_score'] = summary.get('overall_score', 0)
 
                         api_logger.info(f'✅ 从数据库加载 results_summary: {len(summary)} 字段')
