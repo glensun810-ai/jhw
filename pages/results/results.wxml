@@ -435,7 +435,7 @@
     <!-- 有数据时展示 -->
     <block wx:if="{{sourcePurityData}}">
       <!-- 信源纯净度概览 -->
-      <view class="purity-overview-section" wx:if="{{sourcePurityData}}">
+      <view class="purity-overview-section">
         <view class="purity-score-card">
           <view class="purity-circle {{sourcePurityData.purityLevel}}">
             <text class="purity-number">{{sourcePurityData.purityScore}}</text>
@@ -450,7 +450,7 @@
       </view>
 
       <!-- 信源类别分布 -->
-      <view class="source-category-section" wx:if="{{sourcePurityData && sourcePurityData.categoryDistribution}}">
+      <view class="source-category-section" wx:if="{{sourcePurityData.categoryDistribution}}">
         <text class="subsection-title">🗂️ 信源类别分布</text>
         <view class="category-chart">
           <view class="category-item" wx:for="{{sourcePurityData.categoryDistribution}}" wx:key="category">
@@ -464,7 +464,7 @@
       </view>
 
       <!-- 信源权重排名 -->
-      <view class="source-weight-section" wx:if="{{sourcePurityData && sourcePurityData.topSources && sourcePurityData.topSources.length > 0}}">
+      <view class="source-weight-section" wx:if="{{sourcePurityData.topSources && sourcePurityData.topSources.length > 0}}">
         <text class="subsection-title">🏆 信源权重排名</text>
         <view class="weight-list">
           <view class="weight-item" wx:for="{{sourcePurityData.topSources}}" wx:key="index">
@@ -476,7 +476,7 @@
       </view>
 
       <!-- 污染源警示 -->
-      <view class="pollution-warning-section" wx:if="{{sourcePurityData && sourcePurityData.pollutionSources && sourcePurityData.pollutionSources.length > 0}}">
+      <view class="pollution-warning-section" wx:if="{{sourcePurityData.pollutionSources && sourcePurityData.pollutionSources.length > 0}}">
         <text class="subsection-title">⚠️ 污染源警示</text>
         <view class="pollution-list">
           <view class="pollution-item" wx:for="{{sourcePurityData.pollutionSources}}" wx:key="index">
