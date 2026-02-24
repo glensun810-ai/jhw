@@ -1,4 +1,4 @@
-const { debug, info, warn, error } = require('../../utils/logger');
+const { debug, info, warn, error } = require('../utils/logger');
 
 /**
  * 品牌诊断执行服务
@@ -288,6 +288,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
 
           // 终止条件 - 修复：同时检查 stage 和 is_completed
           if (parsedStatus.stage === 'completed' || parsedStatus.stage === 'failed' || parsedStatus.is_completed === true) {
+            // 【关键修复】先停止轮询，再处理回调
             controller.stop();
 
             // 【关键修复】区分"完全失败"和"部分完成"
@@ -296,29 +297,33 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
             const hasDetailedResults = parsedStatus.detailed_results && parsedStatus.detailed_results.length > 0;
             const hasAnyResults = hasResults || hasDetailedResults;
 
+            console.log('[轮询终止] 任务结束，stage:', parsedStatus.stage, 'is_completed:', parsedStatus.is_completed, 'hasResults:', hasAnyResults);
+
             // 部分完成的情况：有结果但状态是 failed
-            if (!isCompleted && parsedStatus.stage === 'failed' && hasAnyResults) {
+            if (parsedStatus.stage === 'failed' && hasAnyResults) {
               console.warn('[品牌诊断] 部分完成：检测到结果但状态为 failed，可能是部分 AI 调用失败');
               // 仍然调用 onComplete，让前端展示可用结果
               if (onComplete) {
                 onComplete(parsedStatus);
               }
+              // 【关键修复】必须 return，防止继续轮询
               return;
             }
 
             // 正常完成
             if (isCompleted && onComplete) {
               onComplete(parsedStatus);
-            } 
+            }
             // 完全失败（无结果）
-            else if (!isCompleted && !hasAnyResults && onError) {
+            else if (!hasAnyResults && onError) {
               onError(new Error(parsedStatus.error || '诊断失败'));
             }
             // 部分失败但有结果
-            else if (!isCompleted && hasAnyResults && onComplete) {
+            else if (hasAnyResults && onComplete) {
               console.warn('[品牌诊断] 部分失败但有结果，继续展示可用数据');
               onComplete(parsedStatus);
             }
+            // 【关键修复】必须 return，防止继续轮询
             return;
           }
         } else {
@@ -488,28 +493,45 @@ const createUserFriendlyError = (errorInfo) => {
  */
 const generateDashboardData = (processedReportData, pageContext) => {
   try {
-    const rawResults = Array.isArray(processedReportData)
-      ? processedReportData
-      : (processedReportData.detailed_results || processedReportData.results || []);
+    // 【关键修复】多重数据结构兼容
+    let rawResults = null;
+
+    if (Array.isArray(processedReportData)) {
+      // 情况 1: 直接是数组
+      rawResults = processedReportData;
+      console.log('[generateDashboardData] 数据格式：数组，长度:', rawResults.length);
+    } else if (processedReportData && typeof processedReportData === 'object') {
+      // 情况 2: 对象，尝试多个字段
+      rawResults = processedReportData.detailed_results 
+        || processedReportData.results 
+        || processedReportData.data?.detailed_results
+        || processedReportData.data?.results
+        || [];
+      console.log('[generateDashboardData] 数据格式：对象，提取字段:', 
+        processedReportData.detailed_results ? 'detailed_results' : 
+        processedReportData.results ? 'results' : '空');
+    }
 
     // 【关键修复】处理空结果数据的情况
     if (!rawResults || rawResults.length === 0) {
-      console.warn('⚠️ 没有可用的原始结果数据，尝试从其他字段提取');
+      console.warn('[generateDashboardData] ⚠️ 没有可用的原始结果数据');
       
       // 尝试从 processedReportData 的其他字段提取数据
       const fallbackResults = [];
-      
+
       // 检查是否有 semantic_drift_data 等其他数据
-      if (processedReportData.semantic_drift_data) {
+      if (processedReportData?.semantic_drift_data) {
         console.log('📊 尝试从 semantic_drift_data 提取数据');
       }
-      if (processedReportData.recommendation_data) {
+      if (processedReportData?.recommendation_data) {
         console.log('📊 尝试从 recommendation_data 提取数据');
       }
-      
+
       // 如果完全没有数据，返回一个包含错误信息的对象
       if (fallbackResults.length === 0) {
-        console.error('❌ 确实没有任何可用的结果数据');
+        console.error('[generateDashboardData] ❌ 确实没有任何可用的结果数据');
+        console.log('[generateDashboardData] processedReportData keys:', Object.keys(processedReportData || {}));
+        
         // 返回一个包含错误标记的对象，而不是 null
         return {
           _error: 'NO_DATA',
@@ -528,25 +550,29 @@ const generateDashboardData = (processedReportData, pageContext) => {
           timestamp: new Date().toISOString()
         };
       }
-      
+
       // 使用 fallback 数据继续处理
       return generateDashboardData(fallbackResults, pageContext);
     }
 
-    const brandName = pageContext.brandName;
-    const competitors = pageContext.competitorBrands || [];
+    console.log('[generateDashboardData] ✅ 使用原始结果，数量:', rawResults.length);
+
+    const brandName = pageContext?.brandName || '';
+    const competitors = pageContext?.competitorBrands || [];
 
     const additionalData = {
-      semantic_drift_data: processedReportData.semantic_drift_data || null,
-      semantic_contrast_data: processedReportData.semantic_contrast_data || null,
-      recommendation_data: processedReportData.recommendation_data || null,
-      negative_sources: processedReportData.negative_sources || null,
-      brand_scores: processedReportData.brand_scores || null,
-      competitive_analysis: processedReportData.competitive_analysis || null,
-      overall_score: processedReportData.overall_score || null
+      semantic_drift_data: processedReportData?.semantic_drift_data || null,
+      semantic_contrast_data: processedReportData?.semantic_contrast_data || null,
+      recommendation_data: processedReportData?.recommendation_data || null,
+      negative_sources: processedReportData?.negative_sources || null,
+      brand_scores: processedReportData?.brand_scores || null,
+      competitive_analysis: processedReportData?.competitive_analysis || null,
+      overall_score: processedReportData?.overall_score || null
     };
 
     const dashboardData = aggregateReport(rawResults, brandName, competitors, additionalData);
+
+    console.log('[generateDashboardData] ✅ 看板数据生成成功');
 
     // 保存到全局存储
     const app = getApp();
@@ -560,7 +586,7 @@ const generateDashboardData = (processedReportData, pageContext) => {
 
     return dashboardData;
   } catch (error) {
-    console.error('生成战略看板数据失败:', error);
+    console.error('[generateDashboardData] 生成战略看板数据失败:', error);
     // 【关键修复】返回包含错误信息的对象，而不是 null
     return {
       _error: 'GENERATION_ERROR',

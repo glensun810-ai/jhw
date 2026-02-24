@@ -108,11 +108,23 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
         parsed.is_completed = true;
         break;
       case TASK_STAGES.FAILED:
-        parsed.progress = 0;
-        parsed.statusText = '诊断中断';
-        parsed.detailText = parsed.error || '诊断过程中遇到错误，已保存的进度不会丢失';
-        parsed.stage = TASK_STAGES.FAILED;
-        parsed.is_completed = false;
+        // 【修复】区分"真失败"和"质量低但有结果"
+        // 如果 progress=100 且有结果，说明是质量低但任务已完成
+        if (parsed.progress === 100 && parsed.resultsCount > 0) {
+          console.warn('[任务状态] 检测到质量低但有结果，视为部分完成');
+          parsed.statusText = '诊断完成（结果质量较低）';
+          parsed.detailText = `已生成 ${parsed.resultsCount} 条诊断结果，但部分结果质量较低`;
+          parsed.stage = TASK_STAGES.COMPLETED;  // 改为 completed
+          parsed.is_completed = true;
+          parsed.has_low_quality_results = true;  // 标记质量低
+        } else {
+          // 真正的失败
+          parsed.progress = 0;
+          parsed.statusText = '诊断中断';
+          parsed.detailText = parsed.error || '诊断过程中遇到错误，已保存的进度不会丢失';
+          parsed.stage = TASK_STAGES.FAILED;
+          parsed.is_completed = false;
+        }
         break;
       default:
         parsed.statusText = `处理中...`;
