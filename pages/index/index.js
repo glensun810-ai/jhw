@@ -1049,7 +1049,14 @@ Page({
         });
       }
 
-      // P2 优化：先跳转结果页，再异步处理数据，减少等待时间
+      // P3 修复：立即更新按钮状态，不等待异步处理
+      this.setData({
+        isTesting: false,
+        testCompleted: true,
+        completedTime: this.getCompletedTimeText()
+      });
+
+      // P2 优化：先跳转结果页，再异步处理数据
       // 保存核心数据并跳转
       const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];
       const competitiveAnalysisToSave = parsedStatus.competitive_analysis || {};
@@ -1102,9 +1109,9 @@ Page({
         try {
           // 【关键修复】直接使用 detailed_results 数组
           const rawResults = parsedStatus.detailed_results || parsedStatus.results || [];
-          
+
           console.log('[异步数据处理] 原始结果数量:', rawResults.length);
-          
+
           // 生成看板数据（直接传入数组）
           const dashboardData = generateDashboardData(rawResults, {
             brandName: this.data.brandName,
@@ -1122,9 +1129,6 @@ Page({
 
           this.setData({
             reportData: processedReportData,
-            isTesting: false,
-            testCompleted: true,
-            completedTime: this.getCompletedTimeText(),
             trendChartData: generateTrendChartData(processedReportData),
             predictionData: extractPredictionData(processedReportData),
             scoreData: extractScoreData(processedReportData),
@@ -1142,6 +1146,12 @@ Page({
     } catch (error) {
       console.error('处理诊断完成失败:', error);
       wx.showToast({ title: '处理结果失败', icon: 'none' });
+      // P3 修复：即使处理失败也要更新按钮状态
+      this.setData({
+        isTesting: false,
+        testCompleted: true,
+        completedTime: this.getCompletedTimeText()
+      });
     }
   },
 
@@ -1233,12 +1243,15 @@ Page({
   handleDiagnosisError(error) {
     // Step 1: 确保隐藏加载框
     wx.hideLoading();
-    
+
     // 使用统一异常拦截器处理
     const friendlyError = this.handleException(error, '诊断启动');
 
-    // 重置测试状态
-    this.setData({ isTesting: false });
+    // P3 修复：确保按钮状态正确重置
+    this.setData({ 
+      isTesting: false,
+      testCompleted: false  // 明确设置为 false
+    });
   },
 
 
