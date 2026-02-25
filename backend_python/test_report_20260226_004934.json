@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-02-26T00:49:34.240959",
+  "base_url": "http://127.0.0.1:5001",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "warnings": 1,
+    "pass_rate": 100.0
+  },
+  "tests": [
+    {
+      "name": "健康检查端点",
+      "status": "passed",
+      "details": "healthy"
+    },
+    {
+      "name": "SSE 统计端点",
+      "status": "passed",
+      "details": "Connections: 0"
+    },
+    {
+      "name": "配置统计端点",
+      "status": "passed",
+      "details": "Reload count: 1"
+    }
+  ]
+}

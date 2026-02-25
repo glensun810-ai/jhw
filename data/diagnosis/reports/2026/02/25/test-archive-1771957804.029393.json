@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "execution_id": "test-archive-1771957804.029393",
+    "created_at": "2026-02-25T02:30:04.029397"
+  },
+  "report": {
+    "brand_name": "测试品牌"
+  },
+  "results": [
+    {
+      "brand": "测试品牌",
+      "question": "测试问题",
+      "model": "doubao"
+    }
+  ]
+}

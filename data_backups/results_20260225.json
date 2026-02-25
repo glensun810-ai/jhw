@@ -1,0 +1,60 @@
+[
+  {
+    "id": 5,
+    "execution_id": "test-exec-001",
+    "user_id": "user-test-001",
+    "brand_name": "测试品牌",
+    "results": [
+      {
+        "brand": "测试品牌",
+        "question": "测试问题 1",
+        "model": "doubao",
+        "response": {
+          "content": "这是 AI 回答"
+        },
+        "geo_data": {
+          "brand_mentioned": true,
+          "rank": 1,
+          "sentiment": 0.8
+        },
+        "status": "success"
+      }
+    ],
+    "metadata": {
+      "test": true
+    },
+    "checksum": "8ba46f9465f2b891",
+    "created_at": "2026-02-25T01:29:29.081316",
+    "updated_at": "2026-02-25T01:29:29.081321"
+  },
+  {
+    "id": 4,
+    "execution_id": "test-exec-004",
+    "user_id": "user-test-004",
+    "brand_name": "多平台测试品牌",
+    "results": [
+      {
+        "brand": "多平台测试品牌",
+        "question": "多平台测试问题",
+        "model": "zhipu",
+        "response": {
+          "error": "429 配额用尽",
+          "rank": -1
+        },
+        "geo_data": {
+          "brand_mentioned": false,
+          "rank": -1,
+          "sentiment": 0
+        },
+        "status": "failed"
+      }
+    ],
+    "metadata": {
+      "model": "zhipu",
+      "platform_test": true
+    },
+    "checksum": "6312f46151365429",
+    "created_at": "2026-02-25T01:12:14.320959",
+    "updated_at": "2026-02-25T01:12:14.320969"
+  }
+]

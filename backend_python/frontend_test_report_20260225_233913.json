@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-02-25T23:39:13.216198",
+  "project_root": "/Users/sgl/PycharmProjects/PythonProject",
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "warnings": 0,
+    "pass_rate": 100.0
+  },
+  "tests": [
+    {
+      "name": "SSE 客户端语法",
+      "status": "passed",
+      "file": "services/sseClient.js"
+    },
+    {
+      "name": "流式聚合器语法",
+      "status": "passed",
+      "file": "services/streamingReportAggregator.js"
+    },
+    {
+      "name": "草稿服务语法",
+      "status": "passed",
+      "file": "services/draftService.js"
+    },
+    {
+      "name": "缓存服务语法",
+      "status": "passed",
+      "file": "services/cacheService.js"
+    },
+    {
+      "name": "请求工具语法",
+      "status": "passed",
+      "file": "utils/request.js"
+    },
+    {
+      "name": "输入页语法",
+      "status": "passed",
+      "file": "pages/index/index.js"
+    },
+    {
+      "name": "结果页语法",
+      "status": "passed",
+      "file": "pages/results/results.js"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "execution_id": "test-exec-002",
+  "timestamp": "2026-02-25T01:12:14.313588",
+  "results": [
+    {
+      "brand": "测试品牌 2",
+      "question": "测试问题 2",
+      "model": "qwen",
+      "response": {
+        "content": "通义千问回答"
+      },
+      "status": "success"
+    }
+  ],
+  "metadata": {
+    "test": true,
+    "fallback": true
+  },
+  "checksum": "b4527150e37b979f"
+}
