@@ -97,43 +97,36 @@ const loadUserPlatformPreferences = (pageContext) => {
     if (userPrefs && typeof userPrefs === 'object') {
       selectedDomestic = userPrefs.domestic || [];
       selectedOverseas = userPrefs.overseas || [];
-      console.log('加载用户 AI 平台偏好', userPrefs);
+      console.log('📊 加载用户 AI 平台偏好', userPrefs);
     } else {
       // P3 修复：使用完整的默认 AI 平台列表
       selectedDomestic = ['DeepSeek', '豆包', '通义千问', '智谱 AI'];
       selectedOverseas = ['ChatGPT'];
-      console.log('使用默认 AI 平台配置', selectedDomestic, selectedOverseas);
+      console.log('📊 使用默认 AI 平台配置', selectedDomestic, selectedOverseas);
     }
 
-    // P3 修复：确保 domesticAiModels 和 overseasAiModels 是数组
-    let domesticAiModels = pageContext.data?.domesticAiModels;
-    let overseasAiModels = pageContext.data?.overseasAiModels;
-    
-    // 如果不是数组，使用默认配置
-    if (!Array.isArray(domesticAiModels) || domesticAiModels.length === 0) {
-      domesticAiModels = [
-        { name: 'DeepSeek', id: 'deepseek', checked: selectedDomestic.includes('DeepSeek'), logo: 'DS', tags: ['综合', '代码'] },
-        { name: '豆包', id: 'doubao', checked: selectedDomestic.includes('豆包'), logo: 'DB', tags: ['综合', '创意'] },
-        { name: '通义千问', id: 'qwen', checked: selectedDomestic.includes('通义千问'), logo: 'QW', tags: ['综合', '长文本'] },
-        { name: '元宝', id: 'yuanbao', checked: selectedDomestic.includes('元宝'), logo: 'YB', tags: ['综合']},
-        { name: 'Kimi', id: 'kimi', checked: selectedDomestic.includes('Kimi'), logo: 'KM', tags: ['长文本'] },
-        { name: '文心一言', id: 'wenxin', checked: selectedDomestic.includes('文心一言'), logo: 'WX', tags: ['综合', '创意'] },
-        { name: '讯飞星火', id: 'xinghuo', checked: selectedDomestic.includes('讯飞星火'), logo: 'XF', tags: ['综合', '语音'] },
-        { name: '智谱 AI', id: 'zhipu', checked: selectedDomestic.includes('智谱 AI'), logo: 'ZP', tags: ['综合', 'GLM'] }
-      ];
-      console.log('使用默认国内 AI 平台列表');
-    }
-    
-    if (!Array.isArray(overseasAiModels) || overseasAiModels.length === 0) {
-      overseasAiModels = [
-        { name: 'ChatGPT', id: 'chatgpt', checked: selectedOverseas.includes('ChatGPT'), logo: 'GPT', tags: ['综合', '代码'] },
-        { name: 'Gemini', id: 'gemini', checked: selectedOverseas.includes('Gemini'), logo: 'GM', tags: ['综合', '多模态'] },
-        { name: 'Claude', id: 'claude', checked: selectedOverseas.includes('Claude'), logo: 'CD', tags: ['长文本', '创意'] },
-        { name: 'Perplexity', id: 'perplexity', checked: selectedOverseas.includes('Perplexity'), logo: 'PE', tags: ['综合', '长文本'] },
-        { name: 'Grok', id: 'grok', checked: selectedOverseas.includes('Grok'), logo: 'GR', tags: ['推理', '多模态'] }
-      ];
-      console.log('使用默认海外 AI 平台列表');
-    }
+    // P3 修复：始终使用完整的默认模型列表，然后更新选中状态
+    // 不依赖 pageContext.data 中的值，避免数据丢失
+    let domesticAiModels = [
+      { name: 'DeepSeek', id: 'deepseek', checked: selectedDomestic.includes('DeepSeek'), logo: 'DS', tags: ['综合', '代码'] },
+      { name: '豆包', id: 'doubao', checked: selectedDomestic.includes('豆包'), logo: 'DB', tags: ['综合', '创意'] },
+      { name: '通义千问', id: 'qwen', checked: selectedDomestic.includes('通义千问'), logo: 'QW', tags: ['综合', '长文本'] },
+      { name: '元宝', id: 'yuanbao', checked: selectedDomestic.includes('元宝'), logo: 'YB', tags: ['综合']},
+      { name: 'Kimi', id: 'kimi', checked: selectedDomestic.includes('Kimi'), logo: 'KM', tags: ['长文本'] },
+      { name: '文心一言', id: 'wenxin', checked: selectedDomestic.includes('文心一言'), logo: 'WX', tags: ['综合', '创意'] },
+      { name: '讯飞星火', id: 'xinghuo', checked: selectedDomestic.includes('讯飞星火'), logo: 'XF', tags: ['综合', '语音'] },
+      { name: '智谱 AI', id: 'zhipu', checked: selectedDomestic.includes('智谱 AI'), logo: 'ZP', tags: ['综合', 'GLM'] }
+    ];
+    console.log('📊 初始化国内 AI 平台列表，数量:', domesticAiModels.length);
+
+    let overseasAiModels = [
+      { name: 'ChatGPT', id: 'chatgpt', checked: selectedOverseas.includes('ChatGPT'), logo: 'GPT', tags: ['综合', '代码'] },
+      { name: 'Gemini', id: 'gemini', checked: selectedOverseas.includes('Gemini'), logo: 'GM', tags: ['综合', '多模态'] },
+      { name: 'Claude', id: 'claude', checked: selectedOverseas.includes('Claude'), logo: 'CD', tags: ['长文本', '创意'] },
+      { name: 'Perplexity', id: 'perplexity', checked: selectedOverseas.includes('Perplexity'), logo: 'PE', tags: ['综合', '长文本'] },
+      { name: 'Grok', id: 'grok', checked: selectedOverseas.includes('Grok'), logo: 'GR', tags: ['推理', '多模态'] }
+    ];
+    console.log('📊 初始化海外 AI 平台列表，数量:', overseasAiModels.length);
 
     const updatedDomestic = domesticAiModels.map(model => ({
       ...model,
@@ -150,11 +143,12 @@ const loadUserPlatformPreferences = (pageContext) => {
         domesticAiModels: updatedDomestic,
         overseasAiModels: updatedOverseas
       });
+      console.log('✅ AI 平台矩阵已设置');
     }
 
     return { domestic: selectedDomestic, overseas: selectedOverseas };
   } catch (error) {
-    console.error('加载用户平台偏好失败', error);
+    console.error('❌ 加载用户平台偏好失败', error);
     return null;
   }
 };
