@@ -329,10 +329,10 @@ def execute_nxm_test(
                     from wechat_backend.database_repositories import save_test_record
                     import json
                     import gzip
-                    
+
                     # 计算综合分数
                     overall_score = quality_score.get('overall_score', 0) if quality_score else 0
-                    
+
                     # 构建结果摘要
                     results_summary = {
                         'total_tasks': total_tasks,
@@ -342,7 +342,7 @@ def execute_nxm_test(
                         'brands': list(set(r.get('brand', '') for r in deduplicated if r.get('brand'))),
                         'models': list(set(r.get('model', '') for r in deduplicated if r.get('model'))),
                     }
-                    
+
                     # 保存测试记录
                     save_test_record(
                         user_openid=user_id or 'anonymous',
@@ -355,9 +355,9 @@ def execute_nxm_test(
                         detailed_results=gzip.compress(json.dumps(deduplicated, ensure_ascii=False).encode()).decode('latin-1'),
                         execution_id=execution_id
                     )
-                    
+
                     api_logger.info(f"[NxM] ✅ 测试汇总记录保存成功：{execution_id}")
-                    
+
                 except Exception as save_err:
                     api_logger.error(f"[NxM] ⚠️ 测试汇总记录保存失败：{execution_id}, 错误：{save_err}")
 
@@ -377,6 +377,7 @@ def execute_nxm_test(
                 api_logger.error(f"[NxM] 执行完全失败：{execution_id}, 无有效结果")
                 scheduler.fail_execution("未获取任何有效结果")
 
+                # 返回失败结果
                 return {
                     'success': False,
                     'execution_id': execution_id,
@@ -394,18 +395,29 @@ def execute_nxm_test(
             api_logger.error(f"[NxM] 执行器崩溃：{execution_id}, 错误：{e}\n{traceback.format_exc()}")
             scheduler.fail_execution(f"执行器崩溃：{str(e)}")
 
+            # 返回错误结果
             return {
                 'success': False,
                 'execution_id': execution_id,
                 'error': f'执行器崩溃：{str(e)}',
                 'traceback': traceback.format_exc()
             }
+        
+        # P3 修复：确保 run_execution 总是返回结果
+        # 如果上面的代码都没有返回（理论上不应该），返回一个空结果
+        return {
+            'success': False,
+            'execution_id': execution_id,
+            'error': '执行流程异常，未返回结果',
+            'results': []
+        }
 
     # 启动执行（同步方式，由上层调度器管理超时）
-    run_execution()
+    # P3 修复：捕获 run_execution 的返回值，确保实际结果被返回
+    execution_result = run_execution()
 
-    # 返回初始结果（实际结果由 scheduler 管理）
-    return {
+    # 返回执行结果（不是初始结果）
+    return execution_result if execution_result else {
         'success': True,
         'execution_id': execution_id,
         'formula': f"{len(raw_questions)} 问题 × {len(selected_models)} 模型 = {total_tasks} 次请求",
