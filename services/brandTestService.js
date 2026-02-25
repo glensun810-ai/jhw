@@ -5,6 +5,7 @@ const { debug, info, warn, error } = require('../utils/logger');
  * 负责诊断任务的启动、轮询、状态管理
  * 
  * P2 优化：使用统一状态枚举
+ * P3 优化：集成 SSE 实时推送
  */
 
 const { startBrandTestApi, getTaskStatusApi } = require('../api/home');
@@ -21,6 +22,9 @@ const {
   isFailedStatus,
   getDisplayText,
 } = require('./taskStatusEnums');
+
+// P3 优化：导入 SSE 客户端
+const { createPollingController: createSSEController } = require('./sseClient');
 
 /**
  * P1-1 优化：智能动态轮询间隔
