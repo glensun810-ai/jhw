@@ -183,23 +183,25 @@ def execute_nxm_test(
                                     # 解析失败，记录错误
                                     api_logger.warning(f"[NxM] 解析失败：{model_name}, Q{q_idx}: {parse_error or geo_data.get('_error')}")
                                     # P0-4 修复：直接使用字典收集结果
+                                    # P3 修复：确保所有字段都是可序列化的
                                     result = {
                                         'brand': brand,
                                         'question': question,
                                         'model': model_name,
-                                        'response': ai_result.data,
+                                        'response': str(ai_result.data) if hasattr(ai_result, 'data') else str(ai_result),  # 修复：确保可序列化
                                         'geo_data': geo_data,
-                                        'error': parse_error or geo_data.get('_error', '解析失败'),
-                                        'error_type': ai_result.error_type.value if hasattr(ai_result, 'error_type') and ai_result.error_type else 'parse_error'
+                                        'error': str(parse_error or geo_data.get('_error', '解析失败')),
+                                        'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'parse_error'
                                     }
                                     results.append(result)
                                 else:
                                     # 解析成功，收集结果
+                                    # P3 修复：确保所有字段都是可序列化的
                                     result = {
                                         'brand': brand,
                                         'question': question,
                                         'model': model_name,
-                                        'response': ai_result.data,
+                                        'response': str(ai_result.data) if hasattr(ai_result, 'data') else str(ai_result),  # 修复：确保可序列化
                                         'geo_data': geo_data,
                                         'error': None,
                                         'error_type': None
@@ -211,14 +213,15 @@ def execute_nxm_test(
                                 api_logger.error(f"[NxM] AI 调用失败：{model_name}, Q{q_idx}: {ai_result.error_message}")
 
                                 # P0-4 修复：收集失败结果（保证报告完整）
+                                # P3 修复：确保所有字段都是可序列化的
                                 result = {
                                     'brand': brand,
                                     'question': question,
                                     'model': model_name,
                                     'response': None,
                                     'geo_data': None,
-                                    'error': ai_result.error_message,
-                                    'error_type': ai_result.error_type.value if hasattr(ai_result, 'error_type') and ai_result.error_type else 'unknown'
+                                    'error': str(ai_result.error_message),
+                                    'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'unknown'
                                 }
                                 results.append(result)
                             

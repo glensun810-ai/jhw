@@ -4,35 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/PythonProject.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PythonProject.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/config/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/config/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/data/circuit_breaker_store.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/data/circuit_breaker_store.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_priority_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/doubao_priority_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_timeout.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_timeout.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_repository.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_repository.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/monitoring/monitoring_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/monitoring/monitoring_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_result_aggregator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_result_aggregator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_scheduler.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history/history.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/results/results.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/brandTestService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/brandTestService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/cacheService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/cacheService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/draftService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/draftService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/initService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/initService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/request.js" afterDir="false" />
-    </list>
+    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -143,7 +115,7 @@
       <workItem from="1771997493740" duration="1755000" />
       <workItem from="1771999644502" duration="6163000" />
       <workItem from="1772014192698" duration="12275000" />
-      <workItem from="1772026886755" duration="16105000" />
+      <workItem from="1772026886755" duration="17218000" />
     </task>
     <servers />
   </component>

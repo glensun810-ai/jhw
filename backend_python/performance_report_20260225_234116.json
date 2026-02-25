@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-02-25T23:41:16.410931",
+  "base_url": "http://127.0.0.1:5001",
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "pass_rate": 100.0
+  },
+  "metrics": [
+    {
+      "name": "健康检查延迟",
+      "avg_ms": 1.4993667602539062,
+      "p95_ms": 1.91497802734375,
+      "min_ms": 1.2869834899902344,
+      "max_ms": 1.91497802734375,
+      "iterations": 10,
+      "passed": true
+    },
+    {
+      "name": "SSE 连接性能",
+      "latency_ms": 1.3031959533691406,
+      "connections": 0,
+      "messages_sent": 0,
+      "passed": true
+    },
+    {
+      "name": "并发连接测试",
+      "concurrent_users": 10,
+      "successful": 10,
+      "total": 10,
+      "avg_latency_ms": 5.5197954177856445,
+      "passed": true
+    },
+    {
+      "name": "API 响应时间：/health",
+      "latency_ms": 1.6970634460449219,
+      "status_code": 200,
+      "passed": true
+    },
+    {
+      "name": "API 响应时间：/sse/stats",
+      "latency_ms": 1.2149810791015625,
+      "status_code": 200,
+      "passed": true
+    },
+    {
+      "name": "API 响应时间：/api/config",
+      "latency_ms": 1.4908313751220703,
+      "status_code": 200,
+      "passed": true
+    }
+  ]
+}

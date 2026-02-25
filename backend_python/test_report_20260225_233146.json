@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-02-25T23:31:46.910215",
+  "base_url": "http://127.0.0.1:5001",
+  "summary": {
+    "total": 6,
+    "passed": 4,
+    "failed": 2,
+    "warnings": 0,
+    "pass_rate": 66.66666666666666
+  },
+  "tests": [
+    {
+      "name": "健康检查端点",
+      "status": "passed",
+      "details": "healthy"
+    },
+    {
+      "name": "SSE 统计端点",
+      "status": "passed",
+      "details": "Connections: 0"
+    },
+    {
+      "name": "配置统计端点",
+      "status": "failed",
+      "details": "HTTP 404"
+    },
+    {
+      "name": "AI 适配器检查",
+      "status": "failed",
+      "details": "type object 'Config' has no attribute 'CHATGPT_API_KEY'"
+    }
+  ]
+}
