@@ -325,8 +325,14 @@ def execute_nxm_test(
                 # P3 修复：使用正确的方法名 calculate 而不是 evaluate
                 quality_score = scorer.calculate(deduplicated, completion_rate)
 
-                # 聚合结果
-                aggregated = aggregate_results_by_brand(deduplicated)
+                # 聚合结果 - 遍历所有品牌
+                # P3 修复：aggregate_results_by_brand 需要 brand_name 参数
+                all_brands = list(set(r.get('brand', '') for r in deduplicated if r.get('brand')))
+                aggregated = []
+                for brand in all_brands:
+                    brand_data = aggregate_results_by_brand(deduplicated, brand)
+                    aggregated.append(brand_data)
+                api_logger.info(f"[NxM] 聚合结果：{len(aggregated)} 个品牌")
 
                 # P3 修复：保存测试汇总记录到 test_records 表
                 # 这是历史记录功能的数据源
