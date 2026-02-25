@@ -20,11 +20,16 @@ if env_file.exists():
 
 class Config:
     """配置类"""
-    
+
     # 基础配置
     DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
-    
+
+    # 微信小程序配置
+    WECHAT_APP_ID = os.environ.get('WECHAT_APP_ID', '')
+    WECHAT_APP_SECRET = os.environ.get('WECHAT_APP_SECRET', '')
+    WECHAT_TOKEN = os.environ.get('WECHAT_TOKEN', '')
+
     # 数据库配置
     DATABASE_PATH = os.environ.get('DATABASE_PATH', 'database.db')
     DATABASE_DIR = os.environ.get('DATABASE_DIR', '')
@@ -32,6 +37,8 @@ class Config:
     # 日志配置
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     LOG_FILE = os.environ.get('LOG_FILE', 'logs/app.log')
+    LOG_MAX_BYTES = int(os.environ.get('LOG_MAX_BYTES', '10485760'))  # 10MB default
+    LOG_BACKUP_COUNT = int(os.environ.get('LOG_BACKUP_COUNT', '5'))
     
     # AI 平台配置
     ARK_API_KEY = os.environ.get('ARK_API_KEY', '')

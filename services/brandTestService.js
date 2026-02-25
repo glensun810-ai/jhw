@@ -3,14 +3,27 @@ const { debug, info, warn, error } = require('../utils/logger');
 /**
  * 品牌诊断执行服务
  * 负责诊断任务的启动、轮询、状态管理
+ * 
+ * P2 优化：使用统一状态枚举
  */
 
 const { startBrandTestApi, getTaskStatusApi } = require('../api/home');
 const { parseTaskStatus } = require('./taskStatusService');
 const { aggregateReport } = require('./reportAggregator');
 
+// P2 优化：导入状态枚举
+const {
+  TaskStatus,
+  TaskStage,
+  TERMINAL_STATUSES,
+  FAILED_STATUSES,
+  isTerminalStatus,
+  isFailedStatus,
+  getDisplayText,
+} = require('./taskStatusEnums');
+
 /**
- * P1-015 优化：智能动态轮询间隔
+ * P1-1 优化：智能动态轮询间隔
  * 根据后端实际响应时间和进度阶段动态调整
  * @param {number} progress - 当前进度 (0-100)
  * @param {string} stage - 当前阶段
@@ -18,32 +31,32 @@ const { aggregateReport } = require('./reportAggregator');
  * @returns {number} 轮询间隔（毫秒）
  */
 const getPollingInterval = (progress, stage, lastResponseTime = 100) => {
-  // 基础间隔：根据进度阶段
+  // P1-1 优化：缩短基础间隔，提升响应速度
   let baseInterval;
   if (progress < 10) {
-    // 初期：刚启动，给后端更多时间
-    baseInterval = 1500;
-  } else if (progress < 30) {
-    // 早期：AI 调用中
-    baseInterval = 1000;
-  } else if (progress < 70) {
-    // 中期：分析中
+    // 初期：刚启动，给后端一点时间（从 1500ms 降至 800ms）
     baseInterval = 800;
-  } else if (progress < 90) {
-    // 后期：即将完成
-    baseInterval = 600;
-  } else {
-    // 完成阶段：快速响应
+  } else if (progress < 30) {
+    // 早期：AI 调用中（从 1000ms 降至 500ms）
+    baseInterval = 500;
+  } else if (progress < 70) {
+    // 中期：分析中（从 800ms 降至 400ms）
     baseInterval = 400;
+  } else if (progress < 90) {
+    // 后期：即将完成（从 600ms 降至 300ms）
+    baseInterval = 300;
+  } else {
+    // 完成阶段：快速响应（从 400ms 降至 200ms）
+    baseInterval = 200;
   }
-  
-  // P1-015 新增：根据后端响应时间动态调整
+
+  // P1-1 优化：根据后端响应时间动态调整
   // 如果后端响应快，缩短间隔；响应慢，延长间隔
   const responseFactor = lastResponseTime / 100;
-  const adjustedInterval = baseInterval * Math.max(0.5, Math.min(1.5, responseFactor));
-  
-  // 限制范围：200ms - 3000ms
-  return Math.max(200, Math.min(3000, adjustedInterval));
+  const adjustedInterval = baseInterval * Math.max(0.3, Math.min(1.2, responseFactor));
+
+  // 限制范围：150ms - 2000ms（从 200-3000ms 收紧）
+  return Math.max(150, Math.min(2000, adjustedInterval));
 };
 
 /**
@@ -93,19 +106,16 @@ const buildPayload = (inputData) => {
       } else {
         return null;
       }
-      
+
       // 验证模型名称
       if (!modelName || modelName.trim() === '') {
         return null;
       }
-      
+
       return modelName;
     })
     .filter(name => {
-      // 过滤掉 null 和空字符串
-      if (!name) return false;
-      
-      // 检查是否在后端支持的模型列表中
+      // 过滤掉后端不支持的模型
       const isSupported = SUPPORTED_MODELS.includes(name);
       if (!isSupported) {
         console.warn(`⚠️  过滤掉后端不支持的模型：${name}`);
@@ -158,7 +168,7 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
 };
 
 /**
- * 创建轮询控制器
+ * 创建轮询控制器（P3 优化：优先使用 SSE）
  * @param {string} executionId - 执行 ID
  * @param {Function} onProgress - 进度回调
  * @param {Function} onComplete - 完成回调
@@ -166,20 +176,73 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
  * @returns {Object} 轮询控制器
  */
 const createPollingController = (executionId, onProgress, onComplete, onError) => {
+  // P3 优化：优先使用 SSE，自动降级为轮询
+  console.log('[brandTestService] 创建轮询控制器，优先使用 SSE');
+  
+  const sseController = createSSEController(executionId);
+  
+  sseController
+    .on('progress', (data) => {
+      console.log('[SSE] 进度更新:', data);
+      if (onProgress) {
+        onProgress({
+          ...data,
+          source: 'sse'  // 标记数据来源
+        });
+      }
+    })
+    .on('complete', (data) => {
+      console.log('[SSE] 任务完成:', data);
+      if (onComplete) {
+        onComplete({
+          ...data,
+          source: 'sse'
+        });
+      }
+    })
+    .on('error', (error) => {
+      console.warn('[SSE] 错误，降级为轮询模式:', error);
+      // SSE 失败时降级为传统轮询
+      startLegacyPolling(executionId, onProgress, onComplete, onError);
+    })
+    .start();
+  
+  return {
+    start: () => {
+      // SSE 已自动启动
+      console.log('[brandTestService] SSE 已启动');
+    },
+    stop: () => {
+      sseController.stop();
+      console.log('[brandTestService] SSE 已停止');
+    },
+    isStopped: () => !sseController.isUsingSSE && sseController.pollingTimer === null
+  };
+};
+
+/**
+ * 传统轮询控制器（降级方案）
+ * @param {string} executionId - 执行 ID
+ * @param {Function} onProgress - 进度回调
+ * @param {Function} onComplete - 完成回调
+ * @param {Function} onError - 错误回调
+ */
+const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
+  console.log('[brandTestService] 启动传统轮询模式');
+  
   let pollInterval = null;
   let isStopped = false;
-  const maxDuration = 10 * 60 * 1000; // 10 分钟超时 (P0 修复：增加超时时间，防止复杂诊断任务超时)
+  const maxDuration = 10 * 60 * 1000; // 10 分钟超时
   const startTime = Date.now();
 
   // Step 1: 错误计数器，实现熔断机制
   let consecutiveAuthErrors = 0;
   const MAX_AUTH_ERRORS = 2;  // 连续 2 次 403/401 错误即熔断
 
-  // P0 修复：无进度超时计数器（如果长时间没有进度更新，也视为超时）
+  // P0 修复：无进度超时计数器
   let lastProgressTime = Date.now();
   const noProgressTimeout = 8 * 60 * 1000; // 8 分钟无进度更新则超时
 
-  // 使用对象持有 stop 函数，避免重新赋值导致的只读错误
   const controller = {
     stop: () => {
       if (pollInterval) {
@@ -191,7 +254,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
   };
 
   const start = (interval = 800, immediate = true) => {
-    // P2 优化：立即触发第一次轮询，减少等待延迟
+    // P2 优化：立即触发第一次轮询
     if (immediate) {
       (async () => {
         try {
@@ -200,7 +263,6 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
             const parsedStatus = parseTaskStatus(res);
             if (onProgress) onProgress(parsedStatus);
 
-            // 如果已完成，直接触发完成回调
             if (parsedStatus.stage === 'completed' && onComplete) {
               controller.stop();
               onComplete(parsedStatus);
@@ -209,7 +271,6 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
           }
         } catch (err) {
           console.error('立即轮询失败:', err);
-          // Step 1: 检查是否为认证错误
           if (err.statusCode === 403 || err.statusCode === 401 || err.isAuthError) {
             controller.stop();
             if (onError) onError(new Error('权限验证失败，请重新登录'));
@@ -219,15 +280,13 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
       })();
     }
 
-    // 启动定时轮询 - BUG-NEW-001 修复：改用递归 setTimeout 避免并发请求
+    // 启动定时轮询
     let pollTimeout = null;
-    // BUG-004 修复：跟踪上次响应时间，用于动态调整轮询间隔
     let lastResponseTime = Date.now();
 
     const poll = async () => {
-      // 记录本次请求开始时间
       const requestStartTime = Date.now();
-      
+
       // 超时检查
       if (Date.now() - startTime > maxDuration) {
         controller.stop();
@@ -244,31 +303,17 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
         return;
       }
 
-      // 已停止检查
       if (isStopped) {
         return;
       }
 
       try {
         const res = await getTaskStatusApi(executionId);
-
-        // BUG-004 修复：计算响应时间
         const responseTime = Date.now() - requestStartTime;
         lastResponseTime = Date.now();
 
-        // 【DEBUG】输出后端响应
-        console.log('[brandTestService] 后端响应:', JSON.stringify(res, null, 2));
-
         if (res && (res.progress !== undefined || res.stage)) {
           const parsedStatus = parseTaskStatus(res);
-
-          // 【DEBUG】输出解析后的状态
-          console.log('[brandTestService] 解析后的状态:', {
-            stage: parsedStatus.stage,
-            progress: parsedStatus.progress,
-            is_completed: parsedStatus.is_completed,
-            error: parsedStatus.error
-          });
 
           // P0 修复：更新最后进度时间
           if (parsedStatus.progress > 0 || parsedStatus.stage !== 'init') {
@@ -286,53 +331,44 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
             onProgress(parsedStatus);
           }
 
-          // 终止条件 - 修复：同时检查 stage 和 is_completed
-          if (parsedStatus.stage === 'completed' || parsedStatus.stage === 'failed' || parsedStatus.is_completed === true) {
-            // 【关键修复】先停止轮询，再处理回调
+          // P2 优化：使用统一的状态判断函数
+          const status = parsedStatus.status || parsedStatus.stage;
+          
+          if (isTerminalStatus(status)) {
+            // 任务完成（包括部分完成）
             controller.stop();
+            console.log('[轮询终止] 任务完成，status:', status);
+            if (onComplete) {
+              onComplete(parsedStatus);
+            }
+            return;
+          }
 
-            // 【关键修复】区分"完全失败"和"部分完成"
-            const isCompleted = parsedStatus.is_completed === true || parsedStatus.stage === 'completed';
+          if (isFailedStatus(status)) {
+            // 任务失败
+            controller.stop();
+            console.log('[轮询终止] 任务失败，status:', status);
+            
             const hasResults = parsedStatus.results && parsedStatus.results.length > 0;
             const hasDetailedResults = parsedStatus.detailed_results && parsedStatus.detailed_results.length > 0;
             const hasAnyResults = hasResults || hasDetailedResults;
 
-            console.log('[轮询终止] 任务结束，stage:', parsedStatus.stage, 'is_completed:', parsedStatus.is_completed, 'hasResults:', hasAnyResults);
-
-            // 部分完成的情况：有结果但状态是 failed
-            if (parsedStatus.stage === 'failed' && hasAnyResults) {
-              console.warn('[品牌诊断] 部分完成：检测到结果但状态为 failed，可能是部分 AI 调用失败');
-              // 仍然调用 onComplete，让前端展示可用结果
+            if (hasAnyResults) {
+              // 有结果的部分失败，视为部分完成
+              console.warn('[品牌诊断] 部分失败但有结果，继续展示可用数据');
               if (onComplete) {
                 onComplete(parsedStatus);
               }
-              // 【关键修复】必须 return，防止继续轮询
-              return;
-            }
-
-            // 正常完成
-            if (isCompleted && onComplete) {
-              onComplete(parsedStatus);
-            }
-            // 完全失败（无结果）
-            else if (!hasAnyResults && onError) {
+            } else if (onError) {
+              // 完全失败
               onError(new Error(parsedStatus.error || '诊断失败'));
             }
-            // 部分失败但有结果
-            else if (hasAnyResults && onComplete) {
-              console.warn('[品牌诊断] 部分失败但有结果，继续展示可用数据');
-              onComplete(parsedStatus);
-            }
-            // 【关键修复】必须 return，防止继续轮询
             return;
           }
-        } else {
-          console.warn('获取任务状态返回空数据，继续轮询');
         }
       } catch (err) {
         console.error('轮询异常:', err);
 
-        // P1-2 修复：完善错误分类和处理
         const errorInfo = {
           originalError: err,
           statusCode: err.statusCode,
@@ -342,11 +378,8 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
           timestamp: Date.now()
         };
 
-        // Step 1: 403/401 错误熔断机制
         if (errorInfo.isAuthError) {
           consecutiveAuthErrors++;
-          console.error(`认证错误计数：${consecutiveAuthErrors}/${MAX_AUTH_ERRORS}`);
-
           if (consecutiveAuthErrors >= MAX_AUTH_ERRORS) {
             controller.stop();
             console.error('认证错误熔断，停止轮询');
@@ -354,10 +387,7 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
             return;
           }
         } else {
-          // 非认证错误，重置计数器
           consecutiveAuthErrors = 0;
-
-          // P1-2 修复：网络错误和超时错误给予更友好的提示
           if (errorInfo.isNetworkError) {
             console.warn('网络连接异常，请检查网络设置');
           } else if (errorInfo.isTimeout) {
@@ -365,23 +395,19 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
           }
         }
 
-        // P1-2 修复：传递详细的错误信息给前端
         if (onError) {
           const userFriendlyError = createUserFriendlyError(errorInfo);
           onError(userFriendlyError);
         }
       } finally {
-        // BUG-NEW-001 关键修复：使用 setTimeout 递归调用，确保前一个请求完成后再发起下一个
         if (!isStopped) {
           pollTimeout = setTimeout(poll, interval);
         }
       }
     };
-    
-    // 启动第一次轮询
+
     poll();
 
-    // 更新 stop 函数，同时清除 interval 和 timeout
     controller.stop = () => {
       if (pollTimeout) {
         clearTimeout(pollTimeout);
@@ -400,181 +426,105 @@ const createPollingController = (executionId, onProgress, onComplete, onError) =
 
 /**
  * P1-006 修复：生成用户友好的错误消息
- * @param {Object} errorInfo - 错误信息对象
- * @returns {Error} 用户友好的错误对象
  */
 const createUserFriendlyError = (errorInfo) => {
-  // P1-006 新增：详细错误文案映射
   const errorMessages = {
-    // 认证错误
     auth: '登录已过期，请重新登录',
-    auth_suggestion: '\n\n建议：\n1. 重新登录\n2. 清除缓存后重试',
-    
-    // 网络错误
     network: '网络连接失败，请检查网络设置',
-    network_suggestion: '\n\n建议：\n1. 检查设备网络连接\n2. 确认后端服务已启动\n3. 检查防火墙设置',
-    
-    // 超时错误
     timeout: '请求超时，服务器响应缓慢',
-    timeout_suggestion: '\n\n建议：\n1. 稍后重试\n2. 检查网络速度',
-    
-    // AI 平台错误
     AI_PLATFORM_ERROR: 'AI 平台暂时不可用，请稍后重试',
-    AI_PLATFORM_ERROR_suggestion: '\n\n建议：\n1. 稍后重试\n2. 更换其他 AI 模型\n3. 检查 API Key 配置',
-    
-    // 验证错误
     VALIDATION_ERROR: '输入数据格式错误，请检查后重试',
-    VALIDATION_ERROR_suggestion: '\n\n建议：\n1. 检查品牌名称是否正确\n2. 确认已选择 AI 模型',
-    
-    // 配置错误
     AI_CONFIG_ERROR: 'AI 平台配置错误，请联系管理员',
-    AI_CONFIG_ERROR_suggestion: '\n\n建议：\n1. 联系技术支持\n2. 检查后端配置',
-    
-    // 任务执行错误
     TASK_EXECUTION_ERROR: '诊断执行失败，已保存的进度不会丢失',
-    TASK_EXECUTION_ERROR_suggestion: '\n\n建议：\n1. 查看历史记录\n2. 重新发起诊断',
-    
-    // 超时错误
     TASK_TIMEOUT_ERROR: '诊断超时，请重试或联系管理员',
-    TASK_TIMEOUT_ERROR_suggestion: '\n\n建议：\n1. 减少 AI 模型数量\n2. 减少问题数量\n3. 稍后重试',
-    
-    // 频率限制
     RATE_LIMIT_ERROR: '请求过于频繁，请稍后再试',
-    RATE_LIMIT_ERROR_suggestion: '\n\n建议：\n1. 等待 1 分钟后重试',
-    
-    // 数据库错误
     DATABASE_ERROR: '数据库错误，请联系技术支持',
-    DATABASE_ERROR_suggestion: '\n\n建议：\n1. 联系技术支持\n2. 提供错误发生时间',
-    
-    // 默认错误
-    default: '诊断过程中断，已保存的进度不会丢失',
-    default_suggestion: '\n\n建议：\n1. 查看历史记录是否有保存\n2. 重新发起诊断'
+    default: '诊断过程中断，已保存的进度不会丢失'
   };
 
-  // 提取错误代码
+  const suggestions = {
+    auth: '\n\n建议：\n1. 重新登录\n2. 清除缓存后重试',
+    network: '\n\n建议：\n1. 检查设备网络连接\n2. 确认后端服务已启动',
+    timeout: '\n\n建议：\n1. 稍后重试\n2. 检查网络速度',
+    AI_PLATFORM_ERROR: '\n\n建议：\n1. 稍后重试\n2. 更换其他 AI 模型',
+    VALIDATION_ERROR: '\n\n建议：\n1. 检查品牌名称是否正确\n2. 确认已选择 AI 模型',
+    AI_CONFIG_ERROR: '\n\n建议：\n1. 联系技术支持\n2. 检查后端配置',
+    TASK_EXECUTION_ERROR: '\n\n建议：\n1. 查看历史记录\n2. 重新发起诊断',
+    TASK_TIMEOUT_ERROR: '\n\n建议：\n1. 减少 AI 模型数量\n2. 减少问题数量',
+    RATE_LIMIT_ERROR: '\n\n建议：\n1. 等待 1 分钟后重试',
+    DATABASE_ERROR: '\n\n建议：\n1. 联系技术支持\n2. 提供错误发生时间',
+    default: '\n\n建议：\n1. 查看历史记录\n2. 重新发起诊断'
+  };
+
   let errorCode = 'default';
-  if (errorInfo.isAuthError) {
-    errorCode = 'auth';
-  } else if (errorInfo.isNetworkError) {
-    errorCode = 'network';
-  } else if (errorInfo.isTimeout) {
-    errorCode = 'timeout';
-  } else if (errorInfo.statusCode === 400) {
-    errorCode = 'VALIDATION_ERROR';
-  } else if (errorInfo.statusCode === 401) {
-    errorCode = 'auth';
-  } else if (errorInfo.statusCode === 403) {
-    errorCode = 'PERMISSION_ERROR';
-  } else if (errorInfo.statusCode === 408) {
-    errorCode = 'TASK_TIMEOUT_ERROR';
-  } else if (errorInfo.statusCode === 429) {
-    errorCode = 'RATE_LIMIT_ERROR';
-  } else if (errorInfo.statusCode === 503) {
-    errorCode = 'AI_PLATFORM_ERROR';
-  } else if (errorInfo.statusCode === 500) {
-    errorCode = 'TASK_EXECUTION_ERROR';
-  }
+  if (errorInfo.isAuthError) errorCode = 'auth';
+  else if (errorInfo.isNetworkError) errorCode = 'network';
+  else if (errorInfo.isTimeout) errorCode = 'timeout';
+  else if (errorInfo.statusCode === 400) errorCode = 'VALIDATION_ERROR';
+  else if (errorInfo.statusCode === 401) errorCode = 'auth';
+  else if (errorInfo.statusCode === 403) errorCode = 'auth';
+  else if (errorInfo.statusCode === 408) errorCode = 'TASK_TIMEOUT_ERROR';
+  else if (errorInfo.statusCode === 429) errorCode = 'RATE_LIMIT_ERROR';
+  else if (errorInfo.statusCode === 503) errorCode = 'AI_PLATFORM_ERROR';
+  else if (errorInfo.statusCode === 500) errorCode = 'TASK_EXECUTION_ERROR';
 
-  // 构建友好消息
   const message = errorMessages[errorCode] || errorMessages.default;
-  const suggestion = errorMessages[`${errorCode}_suggestion`] || errorMessages.default_suggestion;
-  const fullMessage = message + suggestion;
+  const suggestion = suggestions[errorCode] || suggestions.default;
 
-  console.error(`[错误详情] 代码：${errorCode}, 原始错误：${errorInfo.originalError?.message || '未知'}`);
-
-  return new Error(fullMessage);
+  return new Error(message + suggestion);
 };
 
 /**
  * 生成战略看板数据
- * @param {Object} processedReportData - 处理后的报告数据
- * @param {Object} pageContext - 页面上下文（用于获取 brandName 等）
- * @returns {Object} 看板数据
  */
 const generateDashboardData = (processedReportData, pageContext) => {
   try {
-    // 【关键修复】多重数据结构兼容
     let rawResults = null;
 
     if (Array.isArray(processedReportData)) {
-      // 情况 1: 直接是数组
       rawResults = processedReportData;
-      console.log('[generateDashboardData] 数据格式：数组，长度:', rawResults.length);
     } else if (processedReportData && typeof processedReportData === 'object') {
-      // 情况 2: 对象，尝试多个字段
-      rawResults = processedReportData.detailed_results 
-        || processedReportData.results 
+      rawResults = processedReportData.detailed_results
+        || processedReportData.results
         || processedReportData.data?.detailed_results
         || processedReportData.data?.results
         || [];
-      console.log('[generateDashboardData] 数据格式：对象，提取字段:', 
-        processedReportData.detailed_results ? 'detailed_results' : 
-        processedReportData.results ? 'results' : '空');
     }
 
-    // 【关键修复】处理空结果数据的情况
     if (!rawResults || rawResults.length === 0) {
       console.warn('[generateDashboardData] ⚠️ 没有可用的原始结果数据');
-      
-      // 尝试从 processedReportData 的其他字段提取数据
-      const fallbackResults = [];
-
-      // 检查是否有 semantic_drift_data 等其他数据
-      if (processedReportData?.semantic_drift_data) {
-        console.log('📊 尝试从 semantic_drift_data 提取数据');
-      }
-      if (processedReportData?.recommendation_data) {
-        console.log('📊 尝试从 recommendation_data 提取数据');
-      }
-
-      // 如果完全没有数据，返回一个包含错误信息的对象
-      if (fallbackResults.length === 0) {
-        console.error('[generateDashboardData] ❌ 确实没有任何可用的结果数据');
-        console.log('[generateDashboardData] processedReportData keys:', Object.keys(processedReportData || {}));
-        
-        // 返回一个包含错误标记的对象，而不是 null
-        return {
-          _error: 'NO_DATA',
-          errorMessage: '没有可用的诊断结果数据',
-          brandName: pageContext?.brandName || '',
-          competitors: pageContext?.competitorBrands || [],
-          brandScores: {},
-          sov: {},
-          risk: {},
-          health: {},
-          insights: {},
-          attribution: {},
-          semanticDriftData: null,
-          recommendationData: null,
-          overallScore: 0,
-          timestamp: new Date().toISOString()
-        };
-      }
-
-      // 使用 fallback 数据继续处理
-      return generateDashboardData(fallbackResults, pageContext);
+      return {
+        _error: 'NO_DATA',
+        errorMessage: '没有可用的诊断结果数据',
+        brandName: pageContext?.brandName || '',
+        competitors: pageContext?.competitorBrands || [],
+        brandScores: {},
+        sov: {},
+        risk: {},
+        health: {},
+        insights: {},
+        attribution: {},
+        semanticDriftData: null,
+        recommendationData: null,
+        overallScore: 0,
+        timestamp: new Date().toISOString()
+      };
     }
-
-    console.log('[generateDashboardData] ✅ 使用原始结果，数量:', rawResults.length);
 
     const brandName = pageContext?.brandName || '';
     const competitors = pageContext?.competitorBrands || [];
 
     const additionalData = {
       semantic_drift_data: processedReportData?.semantic_drift_data || null,
-      semantic_contrast_data: processedReportData?.semantic_contrast_data || null,
       recommendation_data: processedReportData?.recommendation_data || null,
       negative_sources: processedReportData?.negative_sources || null,
-      brand_scores: processedReportData?.brand_scores || null,
-      competitive_analysis: processedReportData?.competitive_analysis || null,
-      overall_score: processedReportData?.overall_score || null
+      competitive_analysis: processedReportData?.competitive_analysis || null
     };
 
     const dashboardData = aggregateReport(rawResults, brandName, competitors, additionalData);
 
     console.log('[generateDashboardData] ✅ 看板数据生成成功');
 
-    // 保存到全局存储
     const app = getApp();
     if (app && app.globalData) {
       app.globalData.lastReport = {
@@ -587,7 +537,6 @@ const generateDashboardData = (processedReportData, pageContext) => {
     return dashboardData;
   } catch (error) {
     console.error('[generateDashboardData] 生成战略看板数据失败:', error);
-    // 【关键修复】返回包含错误信息的对象，而不是 null
     return {
       _error: 'GENERATION_ERROR',
       errorMessage: error.message || '生成看板数据失败',
@@ -612,5 +561,9 @@ module.exports = {
   buildPayload,
   startDiagnosis,
   createPollingController,
-  generateDashboardData
+  generateDashboardData,
+  // 导出传统轮询（向后兼容）
+  startLegacyPolling,
+  getPollingInterval,
+  createUserFriendlyError
 };

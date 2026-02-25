@@ -1,10 +1,72 @@
 /**
  * 草稿管理服务
  * 负责用户输入的保存、恢复、清理
+ * 
+ * P1-1 优化：增强自动保存功能
  */
 
 const STORAGE_KEY = 'draft_diagnostic_input';
 const DRAFT_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 天
+
+/**
+ * 自动保存调度器
+ */
+class AutoSaveScheduler {
+  constructor() {
+    this.saveTimer = null;
+    this.saveInterval = 1000; // 1 秒防抖
+    this.pendingChanges = false;
+  }
+
+  /**
+   * 调度保存
+   */
+  schedule(callback) {
+    // 清除之前的定时器
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+    }
+
+    this.pendingChanges = true;
+
+    // 1 秒后保存
+    this.saveTimer = setTimeout(() => {
+      if (this.pendingChanges && callback) {
+        callback();
+        this.pendingChanges = false;
+      }
+    }, this.saveInterval);
+  }
+
+  /**
+   * 立即保存
+   */
+  flush(callback) {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+
+    if (callback) {
+      callback();
+    }
+    this.pendingChanges = false;
+  }
+
+  /**
+   * 取消保存
+   */
+  cancel() {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    this.pendingChanges = false;
+  }
+}
+
+// 全局自动保存调度器
+const autoSaveScheduler = new AutoSaveScheduler();
 
 /**
  * 保存草稿
@@ -199,5 +261,10 @@ module.exports = {
   formatDraftQuestions,
   formatDraftModels,
   STORAGE_KEY,
-  DRAFT_EXPIRY
+  DRAFT_EXPIRY,
+  // P1-1 新增：自动保存调度器
+  autoSaveScheduler,
+  scheduleAutoSave: (callback) => autoSaveScheduler.schedule(callback),
+  flushAutoSave: (callback) => autoSaveScheduler.flush(callback),
+  cancelAutoSave: () => autoSaveScheduler.cancel()
 };

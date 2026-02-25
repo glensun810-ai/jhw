@@ -330,8 +330,11 @@ Page({
       app.globalData.tempConfig = null;
     }
 
-    // P2 修复：恢复草稿
+    // P1-1 修复：恢复草稿
     this.restoreDraft();
+
+    // P1-1 优化：注册页面卸载时保存草稿
+    this.registerAutoSave();
 
     // 【关键修复】检查是否有最新的诊断结果
     this.checkLatestDiagnosis();
@@ -557,7 +560,11 @@ Page({
    * P2 修复：保存当前输入到本地存储（使用服务）
    */
   saveCurrentInput: function() {
-    const { brandName, currentCompetitor, competitorBrands, customQuestions, domesticAiModels, overseasAiModels } = this.data;
+    // P3 修复：确保数据是数组
+    const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
+    const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
+    
+    const { brandName, currentCompetitor, competitorBrands, customQuestions } = this.data;
 
     const selectedDomestic = domesticAiModels
       .filter(model => model.checked)
@@ -590,9 +597,13 @@ Page({
       // 恢复自定义问题（确保格式正确）
       const formattedQuestions = formatDraftQuestions(draft.customQuestions);
 
+      // P3 修复：确保 domesticAiModels 和 overseasAiModels 是数组
+      const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
+      const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
+      
       // 恢复 AI 平台选择状态
       const formattedModels = formatDraftModels(
-        this.data.domesticAiModels.concat(this.data.overseasAiModels),
+        domesticAiModels.concat(overseasAiModels),
         draft.selectedModels
       );
 
@@ -602,8 +613,8 @@ Page({
         currentCompetitor: draft.currentCompetitor || '',
         competitorBrands: Array.isArray(draft.competitorBrands) ? draft.competitorBrands : [],
         customQuestions: formattedQuestions.length > 0 ? formattedQuestions : this.data.customQuestions,
-        domesticAiModels: formattedModels.domestic || this.data.domesticAiModels,
-        overseasAiModels: formattedModels.overseas || this.data.overseasAiModels
+        domesticAiModels: formattedModels.domestic && Array.isArray(formattedModels.domestic) ? formattedModels.domestic : domesticAiModels,
+        overseasAiModels: formattedModels.overseas && Array.isArray(formattedModels.overseas) ? formattedModels.overseas : overseasAiModels
       };
 
       this.setData(updateData);
@@ -634,11 +645,15 @@ Page({
    * P2 新增：保存用户 AI 平台偏好（使用服务）
    */
   saveUserPlatformPreferences: function() {
-    const selectedDomestic = this.data.domesticAiModels
+    // P3 修复：确保数据是数组
+    const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
+    const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
+    
+    const selectedDomestic = domesticAiModels
       .filter(model => model.checked)
       .map(model => model.name);
 
-    const selectedOverseas = this.data.overseasAiModels
+    const selectedOverseas = overseasAiModels
       .filter(model => model.checked)
       .map(model => model.name);
 
@@ -736,7 +751,14 @@ Page({
   toggleModelSelection: function(e) {
     const { type, index } = e.currentTarget.dataset;
     const key = type === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
-    const models = this.data[key];
+    
+    // P3 修复：确保数据是数组
+    const models = Array.isArray(this.data[key]) ? this.data[key] : [];
+    
+    if (!models[index]) {
+      wx.showToast({ title: '模型数据异常', icon: 'none' });
+      return;
+    }
 
     if (models[index].disabled) {
       wx.showToast({ title: '该模型暂未配置', icon: 'none' });
@@ -752,18 +774,27 @@ Page({
   selectAllModels: function(e) {
     const { type } = e.currentTarget.dataset;
     const key = type === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
-    const models = this.data[key].map(model => ({
+    
+    // P3 修复：确保数据是数组
+    const models = Array.isArray(this.data[key]) ? this.data[key] : [];
+    
+    const updatedModels = models.map(model => ({
       ...model,
       checked: !model.disabled
     }));
-    this.setData({ [key]: models });
+    
+    this.setData({ [key]: updatedModels });
     this.updateSelectedModelCount();
     this.saveCurrentInput();
   },
 
   updateSelectedModelCount: function() {
-    const selectedDomesticCount = this.data.domesticAiModels.filter(model => model.checked).length;
-    const selectedOverseasCount = this.data.overseasAiModels.filter(model => model.checked).length;
+    // P3 修复：确保数据是数组
+    const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
+    const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
+    
+    const selectedDomesticCount = domesticAiModels.filter(model => model.checked).length;
+    const selectedOverseasCount = overseasAiModels.filter(model => model.checked).length;
     const totalCount = selectedDomesticCount + selectedOverseasCount;
     this.setData({ selectedModelCount: totalCount });
   },
@@ -782,19 +813,23 @@ Page({
     // 重置自定义问题为 3 个空的初始问题结构
     this.setData({ customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}] });
 
+    // P3 修复：确保 domesticAiModels 和 overseasAiModels 是数组
+    const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
+    const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
+    
     // 重置 AI 平台偏好为默认配置（国内已验证平台默认选中）
-    this.setData({ 
-      selectedModels: DEFAULT_AI_PLATFORMS.domestic 
+    this.setData({
+      selectedModels: DEFAULT_AI_PLATFORMS.domestic
     });
 
     // 更新国内平台选中状态
-    const updatedDomestic = this.data.domesticAiModels.map(model => ({
+    const updatedDomestic = domesticAiModels.map(model => ({
       ...model,
       checked: DEFAULT_AI_PLATFORMS.domestic.includes(model.name) && !model.disabled
     }));
 
     // 更新海外平台选中状态（默认不选中）
-    const updatedOverseas = this.data.overseasAiModels.map(model => ({
+    const updatedOverseas = overseasAiModels.map(model => ({
       ...model,
       checked: DEFAULT_AI_PLATFORMS.overseas.includes(model.name)
     }));
@@ -1846,4 +1881,122 @@ Page({
     return `完成于 ${hours}:${minutes}`;
   },
 
+  // ==================== P1-1 草稿自动保存相关方法 ====================
+
+  /**
+   * P1-1 新增：注册自动保存
+   */
+  registerAutoSave: function() {
+    const { scheduleAutoSave } = require('../../services/draftService');
+
+    // 监听输入变化，自动保存
+    this.data.autoSaveListener = (data) => {
+      scheduleAutoSave(() => {
+        this.saveDraftInternal();
+      });
+    };
+  },
+
+  /**
+   * P1-1 新增：保存草稿（内部方法）
+   */
+  saveDraftInternal: function() {
+    const { saveDraft } = require('../../services/draftService');
+
+    const draftData = {
+      brandName: this.data.brandName,
+      competitorBrands: this.data.competitorBrands,
+      customQuestions: this.data.customQuestions,
+      selectedModels: {
+        domestic: this.data.domesticAiModels.filter(m => m.checked).map(m => m.name),
+        overseas: this.data.overseasAiModels.filter(m => m.checked).map(m => m.name)
+      },
+      updatedAt: Date.now()
+    };
+
+    saveDraft(draftData);
+
+    // 显示保存提示（不频繁显示）
+    const now = Date.now();
+    if (!this.lastSaveTime || now - this.lastSaveTime > 5000) {
+      wx.showToast({
+        title: '已自动保存',
+        icon: 'success',
+        duration: 1000
+      });
+      this.lastSaveTime = now;
+    }
+  },
+
+  /**
+   * P1-1 新增：恢复草稿
+   */
+  restoreDraft: function() {
+    const { restoreDraft, formatDraftQuestions, formatDraftModels } = require('../../services/draftService');
+
+    const draft = restoreDraft();
+    if (draft) {
+      console.log('📝 恢复草稿:', draft);
+
+      // 恢复品牌名称
+      if (draft.brandName) {
+        this.setData({ brandName: draft.brandName });
+      }
+
+      // 恢复竞品列表
+      if (draft.competitorBrands && draft.competitorBrands.length > 0) {
+        this.setData({
+          competitorBrands: draft.competitorBrands
+        });
+      }
+
+      // 恢复自定义问题
+      if (draft.customQuestions && draft.customQuestions.length > 0) {
+        const formattedQuestions = formatDraftQuestions(draft.customQuestions);
+        this.setData({
+          customQuestions: formattedQuestions,
+          selectedQuestionCount: formattedQuestions.filter(q => q.text && q.text.trim() !== '').length
+        });
+      }
+
+      // 恢复模型选择
+      if (draft.selectedModels) {
+        const domesticModels = this.data.domesticAiModels;
+        const overseasModels = this.data.overseasAiModels;
+
+        const formattedDomestic = formatDraftModels(domesticModels, { domestic: draft.selectedModels.domestic || [] });
+        const formattedOverseas = formatDraftModels(overseasModels, { overseas: draft.selectedModels.overseas || [] });
+
+        this.setData({
+          domesticAiModels: formattedDomestic,
+          overseasAiModels: formattedOverseas,
+          selectedModelCount: (draft.selectedModels.domestic || []).length + (draft.selectedModels.overseas || []).length
+        });
+      }
+
+      // 显示恢复提示
+      wx.showToast({
+        title: '已恢复上次输入',
+        icon: 'success',
+        duration: 1500
+      });
+    }
+  },
+
+  /**
+   * P1-1 新增：页面卸载时保存草稿
+   */
+  onUnload: function() {
+    const { flushAutoSave } = require('../../services/draftService');
+
+    // 立即保存，确保数据不丢失
+    flushAutoSave(() => {
+      this.saveDraftInternal();
+    });
+
+    // 取消自动保存监听
+    if (this.data.autoSaveListener) {
+      this.data.autoSaveListener = null;
+    }
+  }
 });

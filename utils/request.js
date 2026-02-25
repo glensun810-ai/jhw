@@ -5,6 +5,7 @@
  * 增强功能：
  * - 自动 Token 刷新机制
  * - 401 错误自动重试
+ * - P1-5 优化：智能重试机制（指数退避 + 错误分类）
  * - P2 优化：请求重试机制（指数退避）
  * - P2 优化：加载进度显示
  */
@@ -12,7 +13,7 @@
 const { debugLog, debugLogAiIo, debugLogStatusFlow, debugLogResults, debugLogException, ENABLE_DEBUG_AI_CODE } = require('./debug');
 const { API_ENDPOINTS } = require('./config');
 
-// P2 优化：重试配置
+// P1-5 优化：重试配置增强
 const RETRY_CONFIG = {
   MAX_RETRIES: 3,           // 最大重试次数
   BASE_DELAY: 1000,         // 基础延迟 (ms)
@@ -24,7 +25,13 @@ const RETRY_CONFIG = {
     'ETIMEDOUT',
     'ENOTFOUND',
     'Connection refused'
-  ]
+  ],
+  // P1-5 新增：HTTP 状态码重试策略
+  RETRYABLE_STATUS_CODES: [408, 429, 500, 502, 503, 504],
+  // P1-5 新增：不重试的状态码
+  NON_RETRYABLE_STATUS_CODES: [400, 401, 403, 404, 422],
+  // P1-5 新增：超时配置
+  TIMEOUT: 30000            // 请求超时 (ms)
 };
 
 const ENV_CONFIG = {
@@ -57,7 +64,7 @@ const getBaseUrl = () => {
 };
 
 // =============================================================================
-// P2 优化：重试机制辅助函数
+// P1-5 优化：重试机制辅助函数增强
 // =============================================================================
 
 /**
@@ -68,26 +75,101 @@ const getBaseUrl = () => {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * 判断错误是否可重试
+ * P1-5 增强：判断错误是否可重试
  * @param {Error} error - 错误对象
+ * @param {number} statusCode - HTTP 状态码
  * @returns {boolean}
  */
-const isRetryableError = (error) => {
+const isRetryableError = (error, statusCode) => {
   if (!error) return false;
+  
+  // P1-5 新增：根据 HTTP 状态码判断
+  if (statusCode) {
+    // 明确不重试的状态码
+    if (RETRY_CONFIG.NON_RETRYABLE_STATUS_CODES.includes(statusCode)) {
+      return false;
+    }
+    // 可重试的状态码
+    if (RETRY_CONFIG.RETRYABLE_STATUS_CODES.includes(statusCode)) {
+      return true;
+    }
+  }
+  
+  // 根据错误消息判断
   const errorMsg = String(error.errMsg || error.message || '');
-  return RETRY_CONFIG.RETRYABLE_ERRORS.some(retryable => 
+  return RETRY_CONFIG.RETRYABLE_ERRORS.some(retryable =>
     errorMsg.toLowerCase().includes(retryable.toLowerCase())
   );
 };
 
 /**
- * 计算重试延迟（指数退避）
+ * P1-5 新增：错误分类
+ * @param {Error} error - 错误对象
+ * @param {number} statusCode - HTTP 状态码
+ * @returns {string} 错误类型
+ */
+const classifyError = (error, statusCode) => {
+  if (!error) return 'unknown';
+  
+  // HTTP 状态码分类
+  if (statusCode) {
+    if (statusCode >= 200 && statusCode < 300) return 'success';
+    if (statusCode === 400) return 'bad_request';
+    if (statusCode === 401) return 'unauthorized';
+    if (statusCode === 403) return 'forbidden';
+    if (statusCode === 404) return 'not_found';
+    if (statusCode === 408) return 'timeout';
+    if (statusCode === 429) return 'rate_limit';
+    if (statusCode >= 500 && statusCode < 600) return 'server_error';
+  }
+  
+  // 错误消息分类
+  const errorMsg = String(error.errMsg || error.message || '').toLowerCase();
+  if (errorMsg.includes('timeout')) return 'timeout';
+  if (errorMsg.includes('network') || errorMsg.includes('fail')) return 'network';
+  if (errorMsg.includes('auth')) return 'unauthorized';
+  
+  return 'unknown';
+};
+
+/**
+ * 计算重试延迟（指数退避 + 随机抖动）
  * @param {number} retryCount - 当前重试次数
  * @returns {number} 延迟毫秒数
  */
 const getRetryDelay = (retryCount) => {
   const delay = RETRY_CONFIG.BASE_DELAY * Math.pow(2, retryCount);
-  return Math.min(delay, RETRY_CONFIG.MAX_DELAY);
+  // P1-5 新增：添加随机抖动，避免多个请求同时重试
+  const jitter = Math.random() * 0.3 * delay; // 0-30% jitter
+  return Math.min(delay + jitter, RETRY_CONFIG.MAX_DELAY);
+};
+
+/**
+ * P1-5 新增：生成错误提示文本
+ * @param {string} errorType - 错误类型
+ * @param {number} retryCount - 重试次数
+ * @returns {string} 用户友好的错误提示
+ */
+const getErrorUserMessage = (errorType, retryCount = 0) => {
+  const messages = {
+    timeout: '请求超时，服务器响应缓慢',
+    network: '网络连接失败，请检查网络设置',
+    unauthorized: '登录已过期，请重新登录',
+    forbidden: '无权访问此资源',
+    not_found: '请求的资源不存在',
+    rate_limit: '请求过于频繁，请稍后重试',
+    server_error: '服务器暂时不可用，请稍后重试',
+    bad_request: '请求格式错误',
+    unknown: '网络开小差了，请稍后重试'
+  };
+  
+  const baseMessage = messages[errorType] || messages.unknown;
+  
+  if (retryCount > 0) {
+    return `${baseMessage}（已重试${retryCount}次）`;
+  }
+  
+  return baseMessage;
 };
 
 // =============================================================================
@@ -203,36 +285,57 @@ const refreshToken = () => {
 };
 
 /**
- * 带重试的请求函数（P2 优化）
+ * 带重试的请求函数（P1-5 优化）
  * @param {Object} options - 请求选项
  * @param {number} retryCount - 当前重试次数
  * @returns {Promise}
  */
 const requestWithRetry = async (options, retryCount = 0) => {
+  const startTime = Date.now();
+  
   try {
-    return await executeRequest(options);
+    const result = await executeRequest(options);
+    
+    // 记录成功请求的耗时
+    const duration = Date.now() - startTime;
+    if (duration > 1000) {
+      console.log(`⚠️ 慢请求警告：${options.url} 耗时 ${duration}ms`);
+    }
+    
+    return result;
   } catch (error) {
+    const errorType = classifyError(error, error.statusCode);
+    const duration = Date.now() - startTime;
+    
     // Step 1: 403 错误不重试，立即返回
     if (error.statusCode === 403 || error.isAuthError) {
       console.error(`请求失败 (${error.statusCode})，不重试：${options.url}`);
       throw error;
     }
-    
-    // 判断是否可重试
-    if (retryCount < RETRY_CONFIG.MAX_RETRIES && isRetryableError(error)) {
+
+    // P1-5 增强：判断是否可重试
+    if (retryCount < RETRY_CONFIG.MAX_RETRIES && isRetryableError(error, error.statusCode)) {
       const delay = getRetryDelay(retryCount);
-      console.log(`请求失败，${delay}ms 后重试 (${retryCount + 1}/${RETRY_CONFIG.MAX_RETRIES}): ${options.url}`);
+      console.log(`请求失败 (${errorType})，${Math.round(delay)}ms 后重试 (${retryCount + 1}/${RETRY_CONFIG.MAX_RETRIES}): ${options.url}`);
 
       // 显示重试提示
       if (options.loading) {
-        showLoadingProgress('网络不稳定，重试中', (retryCount + 1) * 20);
+        const retryMessage = getErrorUserMessage(errorType, retryCount + 1);
+        wx.showLoading({ title: retryMessage, mask: true });
       }
 
       await sleep(delay);
       return requestWithRetry(options, retryCount + 1);
     }
 
-    // 不可重试或已达最大重试次数，抛出错误
+    // 不可重试或已达最大重试次数，记录错误日志
+    console.error(`请求最终失败 (${errorType}): ${options.url}, 耗时 ${duration}ms`);
+    
+    // P1-5 新增：添加用户友好的错误消息
+    if (!error.userMessage) {
+      error.userMessage = getErrorUserMessage(errorType, retryCount);
+    }
+    
     throw error;
   }
 };
@@ -432,5 +535,11 @@ module.exports = {
   clearStorageRecursive,
   // P2 优化：导出进度显示函数
   showLoadingProgress,
-  updateLoadingProgress
+  updateLoadingProgress,
+  // P1-5 新增：导出错误处理函数
+  classifyError,
+  isRetryableError,
+  getRetryDelay,
+  getErrorUserMessage,
+  RETRY_CONFIG
 };

@@ -10,6 +10,7 @@
 - analytics_views: 分析相关路由 (AI 平台、巡航任务、市场基准)
 - audit_views: 审计相关路由 (测试 API)
 - sync_views: 同步相关路由 (数据同步、下载)
+- diagnosis_retry_api: 重试 API (维度重试、报告重新生成) [M006 新增]
 """
 
 from flask import Blueprint
@@ -26,6 +27,7 @@ from . import admin_views
 from . import analytics_views
 from . import audit_views
 from . import sync_views
+from . import diagnosis_retry_api  # M006 新增：重试 API
 
 # 导出主蓝图供 app.py 使用
 __all__ = ['wechat_bp']

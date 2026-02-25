@@ -1,6 +1,8 @@
 /**
  * 诊断结果缓存服务
  * P2 优化：避免重复诊断，提升用户体验
+ * 
+ * P1-3 增强：添加缓存统计和命中检测
  */
 
 // 缓存配置
@@ -8,7 +10,16 @@ const CACHE_CONFIG = {
   STORAGE_KEY: 'diagnosis_cache_',
   EXPIRY_TIME: 24 * 60 * 60 * 1000,  // 24 小时缓存
   MAX_CACHE_SIZE: 50,  // 最多缓存 50 个结果
-  CLEANUP_THRESHOLD: 10  // 超过此数量时清理最旧的缓存
+  CLEANUP_THRESHOLD: 10,  // 超过此数量时清理最旧的缓存
+  STATS_KEY: 'diagnosis_cache_stats'  // 缓存统计
+};
+
+// 缓存命中统计
+let cacheStats = {
+  hits: 0,
+  misses: 0,
+  size: 0,
+  lastCleanup: Date.now()
 };
 
 /**
@@ -224,5 +235,9 @@ module.exports = {
   clearAllCache,
   getCacheStats,
   isCacheHit,
-  generateCacheKey
+  generateCacheKey,
+  // P1-3 新增：缓存统计
+  getStats: () => cacheStats,
+  recordHit: () => { cacheStats.hits++; },
+  recordMiss: () => { cacheStats.misses++; }
 };

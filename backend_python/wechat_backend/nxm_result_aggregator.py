@@ -276,7 +276,8 @@ def aggregate_results_by_brand(
             'avg_rank': -1,
             'avg_sentiment': 0.0,
             'positive_count': 0,
-            'negative_count': 0
+            'negative_count': 0,
+            'errors': []  # P1-2 新增：错误信息列表
         }
 
     mention_count = len(brand_results)
@@ -289,11 +290,23 @@ def aggregate_results_by_brand(
     positive_count = sum(1 for s in sentiments if s > 0.5)
     negative_count = sum(1 for s in sentiments if s < -0.5)
 
+    # P1-2 修复：收集所有错误信息
+    errors = []
+    for r in brand_results:
+        if r.get('error'):
+            errors.append({
+                'question': r.get('question', 'unknown'),
+                'model': r.get('model', 'unknown'),
+                'error': r.get('error'),
+                'error_type': r.get('error_type', 'unknown')
+            })
+
     return {
         'brand': brand_name,
         'mention_count': mention_count,
         'avg_rank': round(avg_rank, 2) if avg_rank > 0 else -1,
         'avg_sentiment': round(sum(sentiments) / len(sentiments), 2),
         'positive_count': positive_count,
-        'negative_count': negative_count
+        'negative_count': negative_count,
+        'errors': errors  # P1-2 新增：错误信息列表
     }

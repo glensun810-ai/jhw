@@ -3,20 +3,17 @@
     "DeepSeek": 0,
     "deepseek": 0,
     "qwen": 1,
-    "doubao": 3,
+    "doubao": 0,
     "zhipu": 1,
     "chatgpt": 1,
     "gemini": 1
   },
-  "model_suspended": {
-    "deepseek": false,
-    "doubao": true
-  },
+  "model_suspended": {},
   "model_last_failure": {
     "DeepSeek": "2026-02-23T08:32:53.915529",
     "deepseek": "2026-02-23T09:44:05.011345",
-    "qwen": "2026-02-23T08:33:24.074853",
-    "doubao": "2026-02-23T11:34:39.125177",
+    "qwen": "2026-02-26T00:47:12.846726",
+    "doubao": "2026-02-25T20:17:49.128287",
     "zhipu": "2026-02-23T08:34:24.352161",
     "chatgpt": "2026-02-23T09:44:05.011958",
     "gemini": "2026-02-23T09:44:05.012189"

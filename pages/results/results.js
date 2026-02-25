@@ -13,6 +13,9 @@ const { fetchResultsFromServer: fetchResultsService } = require('../../services/
 // 【存储架构优化】新增诊断报告 API
 const { getFullReport, validateReport } = require('../../services/diagnosisApi');
 
+// P3-1 优化：导入流式报告聚合器
+const { createStreamingAggregator } = require('../../services/streamingReportAggregator');
+
 Page({
   data: {
     targetBrand: '',
@@ -87,7 +90,15 @@ Page({
     // 高优先级修复 2&3: 缓存和刷新相关
     isCached: false, // 是否使用缓存数据
     cacheTime: null, // 缓存时间戳
-    refreshing: false // 是否正在刷新
+    refreshing: false, // 是否正在刷新
+    
+    // P3-1 优化：流式渲染相关
+    useStreamingRender: true,  // 是否启用流式渲染
+    isStreaming: false,  // 是否正在流式渲染
+    streamStage: 'loading',  // 当前渲染阶段
+    streamProgress: 0,  // 渲染进度 (0-100)
+    streamStageText: '准备渲染...',  // 阶段提示文本
+    streamingData: {}  // 流式渲染的中间数据
   },
 
   /**
@@ -661,11 +672,168 @@ Page({
 
   /**
    * P0-1 修复：使用加载的数据初始化页面
+   * P3-1 优化：支持流式渲染（分阶段展示）
    */
   initializePageWithData: function(results, targetBrand, competitorBrands, competitiveAnalysis, negativeSources, semanticDriftData, recommendationData, insightsData) {
     try {
       console.log('📊 初始化页面数据，结果数量:', results.length);
 
+      // P3-1 优化：检查是否使用流式渲染
+      const useStreaming = this.data.useStreamingRender !== false;  // 默认启用
+      
+      if (useStreaming && results && results.length > 10) {
+        // 大数据量时使用流式渲染
+        console.log('🚀 使用流式渲染');
+        this.initializePageWithStreaming(results, targetBrand, competitorBrands, competitiveAnalysis, negativeSources, semanticDriftData, recommendationData, insightsData);
+        return;
+      }
+
+      // 传统全量渲染
+      console.log('📊 使用传统全量渲染');
+      this._initializePageWithDataInternal(results, targetBrand, competitorBrands, competitiveAnalysis, negativeSources, semanticDriftData, recommendationData, insightsData);
+      
+    } catch (error) {
+      console.error('❌ 初始化页面数据失败:', error);
+      wx.hideLoading();
+      wx.showModal({
+        title: '初始化失败',
+        content: '页面初始化失败，请稍后重试',
+        showCancel: false
+      });
+    }
+  },
+
+  /**
+   * P3-1 新增：流式渲染初始化
+   */
+  initializePageWithStreaming: function(results, targetBrand, competitorBrands, competitiveAnalysis, negativeSources, semanticDriftData, recommendationData, insightsData) {
+    // 显示加载进度
+    this.setData({
+      isStreaming: true,
+      streamStage: 'loading',
+      streamProgress: 0
+    });
+
+    // 创建流式聚合器
+    const streamer = createStreamingAggregator(results, targetBrand, competitorBrands, {
+      negative_sources: negativeSources,
+      semantic_drift_data: semanticDriftData,
+      recommendation_data: recommendationData
+    });
+
+    // 设置进度回调
+    streamer.onProgress((progress) => {
+      console.log('[流式渲染] 进度:', progress);
+      this.setData({
+        streamProgress: progress.progress,
+        streamStage: progress.stage
+      });
+    });
+
+    // 设置阶段回调
+    streamer.onStage((stageName, data) => {
+      console.log('[流式渲染] 阶段:', stageName);
+      
+      switch (stageName) {
+        case 'cleaned':
+          // 阶段 1: 数据清洗完成
+          this.setData({
+            streamProgress: 12,
+            streamStageText: '数据清洗完成'
+          });
+          break;
+          
+        case 'filled':
+          // 阶段 2: 数据填充完成
+          this.setData({
+            streamProgress: 25,
+            streamStageText: '数据填充完成'
+          });
+          break;
+          
+        case 'scores':
+          // 阶段 3: 品牌分数计算完成（可先展示）
+          console.log('[流式渲染] 渲染分数卡片');
+          this._renderScoreCards(data, targetBrand);
+          this.setData({
+            streamProgress: 37,
+            streamStageText: '品牌分数已生成'
+          });
+          break;
+          
+        case 'sov':
+          // 阶段 4: SOV 计算完成
+          console.log('[流式渲染] 渲染 SOV 图表');
+          this._renderSOVChart(data);
+          this.setData({
+            streamProgress: 50,
+            streamStageText: '市场份额已计算'
+          });
+          break;
+          
+        case 'risk':
+          // 阶段 5: 风险评分完成
+          console.log('[流式渲染] 渲染风险评分');
+          this._renderRiskScore(data);
+          this.setData({
+            streamProgress: 62,
+            streamStageText: '风险评分已生成'
+          });
+          break;
+          
+        case 'health':
+          // 阶段 6: 品牌健康度完成
+          console.log('[流式渲染] 渲染品牌健康度');
+          this._renderBrandHealth(data);
+          this.setData({
+            streamProgress: 75,
+            streamStageText: '品牌健康度已评估'
+          });
+          break;
+          
+        case 'insights':
+          // 阶段 7: 洞察生成完成
+          console.log('[流式渲染] 生成洞察');
+          this._renderInsights(data);
+          this.setData({
+            streamProgress: 87,
+            streamStageText: '核心洞察已生成'
+          });
+          break;
+          
+        case 'complete':
+          // 阶段 8: 完整报告完成
+          console.log('[流式渲染] 完整报告完成');
+          this._finalizeStreaming(data);
+          this.setData({
+            isStreaming: false,
+            streamProgress: 100,
+            streamStageText: '渲染完成'
+          });
+          break;
+      }
+    });
+
+    // 开始流式执行
+    streamer.stream().then(() => {
+      console.log('[流式渲染] 完成');
+      wx.hideLoading();
+    }).catch((err) => {
+      console.error('[流式渲染] 失败:', err);
+      wx.hideLoading();
+      wx.showModal({
+        title: '渲染失败',
+        content: '流式渲染失败，请稍后重试',
+        showCancel: false
+      });
+    });
+  },
+
+  /**
+   * 内部方法：传统全量渲染
+   */
+  _initializePageWithDataInternal: function(results, targetBrand, competitorBrands, competitiveAnalysis, negativeSources, semanticDriftData, recommendationData, insightsData) {
+    try {
       // 如果没有传入 competitiveAnalysis，则构建它
       if (!competitiveAnalysis) {
         competitiveAnalysis = this.buildCompetitiveAnalysis(results, targetBrand, competitorBrands);
@@ -675,13 +843,13 @@ Page({
       const { pkDataByPlatform, platforms, platformDisplayNames } = this.generatePKDataByPlatform(competitiveAnalysis, targetBrand, results);
 
       const currentPlatform = platforms.length > 0 ? platforms[0] : '';
-      
+
       // 【P0 修复】使用后端返回的 insights，如果没有则前端生成
       const insights = insightsData || this.generateInsights(competitiveAnalysis, targetBrand);
       if (insightsData) {
         console.log('✅ 使用后端返回的核心洞察:', insightsData);
       }
-      
+
       const groupedResults = this.groupResultsByBrand(results, targetBrand);
       const dimensionComparison = this.generateDimensionComparison(results, targetBrand);
 
@@ -2648,5 +2816,118 @@ Page({
       .finally(() => {
         wx.hideLoading();
       });
+  },
+
+  // ==================== P3-1 流式渲染辅助方法 ====================
+
+  /**
+   * P3-1 新增：渲染品牌分数卡片
+   */
+  _renderScoreCards: function(data, targetBrand) {
+    const brandScores = data.brandScores || {};
+    const mainBrandScore = brandScores[targetBrand] || {};
+    
+    this.setData({
+      brandScores: brandScores,
+      targetBrandScore: mainBrandScore,
+      // 更新洞察文本
+      advantageInsight: mainBrandScore.overallSummary || '品牌表现良好',
+      streamStageText: '品牌分数已生成'
+    });
+    
+    console.log('[流式渲染] 品牌分数卡片已渲染');
+  },
+
+  /**
+   * P3-1 新增：渲染 SOV 图表
+   */
+  _renderSOVChart: function(data) {
+    const sovData = data.sov || {};
+    
+    // 生成平台对比数据
+    const { pkDataByPlatform, platforms, platformDisplayNames } = this.generatePKDataByPlatform({
+      brandScores: sovData
+    }, this.data.targetBrand, []);
+    
+    this.setData({
+      sovData: sovData,
+      pkDataByPlatform: pkDataByPlatform,
+      platforms: platforms,
+      platformDisplayNames: platformDisplayNames,
+      streamStageText: '市场份额已计算'
+    });
+    
+    console.log('[流式渲染] SOV 图表已渲染');
+  },
+
+  /**
+   * P3-1 新增：渲染风险评分
+   */
+  _renderRiskScore: function(data) {
+    const riskData = data.risk || {};
+    
+    this.setData({
+      riskData: riskData,
+      riskInsight: riskData.summary || '品牌风险较低',
+      streamStageText: '风险评分已生成'
+    });
+    
+    console.log('[流式渲染] 风险评分已渲染');
+  },
+
+  /**
+   * P3-1 新增：渲染品牌健康度
+   */
+  _renderBrandHealth: function(data) {
+    const healthData = data.health || {};
+    
+    this.setData({
+      healthData: healthData,
+      streamStageText: '品牌健康度已评估'
+    });
+    
+    console.log('[流式渲染] 品牌健康度已渲染');
+  },
+
+  /**
+   * P3-1 新增：渲染洞察
+   */
+  _renderInsights: function(data) {
+    const insights = data.insights || {};
+    
+    this.setData({
+      insightsData: insights,
+      advantageInsight: insights.advantage || this.data.advantageInsight,
+      riskInsight: insights.risk || this.data.riskInsight,
+      opportunityInsight: insights.opportunity || this.data.opportunityInsight,
+      streamStageText: '核心洞察已生成'
+    });
+    
+    console.log('[流式渲染] 洞察已渲染');
+  },
+
+  /**
+   * P3-1 新增：完成流式渲染
+   */
+  _finalizeStreaming: function(data) {
+    // 设置完整报告数据
+    this.setData({
+      competitiveAnalysis: data,
+      isStreaming: false,
+      streamProgress: 100,
+      streamStageText: '渲染完成'
+    });
+    
+    console.log('[流式渲染] 完成');
+    
+    // 隐藏加载提示
+    wx.hideLoading();
+    
+    // 显示完成提示
+    wx.showToast({
+      title: '渲染完成',
+      icon: 'success',
+      duration: 1500
+    });
   }
 })

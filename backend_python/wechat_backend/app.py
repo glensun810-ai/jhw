@@ -124,6 +124,10 @@ CORS(app,
 from wechat_backend.views import wechat_bp
 app.register_blueprint(wechat_bp)
 
+# Register Diagnosis API blueprints (诊断报告 API)
+from wechat_backend.views.diagnosis_api import register_diagnosis_api
+register_diagnosis_api(app)
+
 # Register GEO Analysis API blueprints (P0 级空缺修复)
 from wechat_backend.views_geo_analysis import init_geo_analysis_routes
 init_geo_analysis_routes(app)
@@ -230,13 +234,13 @@ def warm_up_adapters():
         try:
             # Try to create a minimal instance for health check
             # We'll use a dummy API key for the warm-up, as the actual key will be validated later
-            from config_manager import Config as PlatformConfigManager
-            config_manager = PlatformConfigManager()
-            platform_config = config_manager.get_platform_config(adapter_name)
+            from config import Config  # P0-1 修复
+            # P0-1 修复：直接使用 Config 类
+            api_key = Config.get_api_key(adapter_name)
 
-            if platform_config and platform_config.api_key:
+            if api_key:
                 # Create adapter with actual API key if available
-                adapter = AIAdapterFactory.create(adapter_name, platform_config.api_key, platform_config.default_model or f"test-{adapter_name}")
+                adapter = AIAdapterFactory.create(adapter_name, api_key)
 
                 # If the adapter has a health check method, call it
                 if hasattr(adapter, '_health_check'):
@@ -256,6 +260,45 @@ def warm_up_adapters():
 # Warm up adapters in a background thread after app initialization
 import threading
 threading.Thread(target=warm_up_adapters, daemon=True).start()
+
+# P2-1 优化：启动 SSE 清理线程并注册路由
+try:
+    from wechat_backend.services.sse_service_v2 import start_cleanup_thread as sse_start_cleanup, register_sse_routes
+    sse_start_cleanup(interval=60)  # 每 60 秒清理一次过期连接
+    register_sse_routes(app)  # 注册 SSE 路由
+    app_logger.info("✅ SSE 服务已启动")
+except Exception as e:
+    app_logger.warning(f"⚠️  SSE 服务启动失败：{e}")
+
+# P3-2 优化：启动配置热更新
+try:
+    # 修复导入路径：直接导入 backend_python.config 模块
+    import sys
+    from pathlib import Path
+    
+    # 添加 backend_python 到路径
+    backend_root = Path(__file__).parent.parent
+    if str(backend_root) not in sys.path:
+        sys.path.insert(0, str(backend_root))
+    
+    # 直接导入配置模块，避免与 wechat_backend.config 冲突
+    import importlib.util
+    hot_reload_path = backend_root / 'config' / 'hot_reload_config.py'
+    spec = importlib.util.spec_from_file_location("hot_reload_config", hot_reload_path)
+    hot_reload_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hot_reload_module)
+    
+    get_hot_reload_config = hot_reload_module.get_hot_reload_config
+    register_config_routes = hot_reload_module.register_config_routes
+    
+    hot_reload_config = get_hot_reload_config()
+    register_config_routes(app)  # 注册配置管理路由
+    app_logger.info("✅ 配置热更新已启动")
+    app_logger.info("[HotReloadConfig] 路由已注册")
+except Exception as e:
+    app_logger.warning(f"⚠️  配置热更新启动失败：{e}")
+    import traceback
+    app_logger.error(f"[HotReloadConfig] 错误详情：{traceback.format_exc()}")
 
 @app.route('/')
 @rate_limit(limit=100, window=60, per='ip')  # 限制每个IP每分钟最多100个请求
