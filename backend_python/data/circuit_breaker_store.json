@@ -2,7 +2,7 @@
   "model_failures": {
     "DeepSeek": 0,
     "deepseek": 0,
-    "qwen": 1,
+    "qwen": 0,
     "doubao": 0,
     "zhipu": 1,
     "chatgpt": 1,
