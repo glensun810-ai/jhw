@@ -347,7 +347,14 @@ class DoubaoAdapter(AIClient):
 
                             exception_log("UNKNOWN", "HTTP_404", f"Doubao 404 Error - This usually indicates an incorrect API key or endpoint: {e.response.text}")
                         elif status_code == 429:
-                            error_type = AIErrorType.RATE_LIMIT_EXCEEDED
+                            # P0-1 修复：区分配额用尽和频率限制
+                            response_text = e.response.text.lower() if e.response.text else ""
+                            if "quota" in response_text or "credit" in response_text or "insufficient" in response_text or "余额" in response_text.lower() or "耗尽" in response_text.lower():
+                                error_type = AIErrorType.INSUFFICIENT_QUOTA
+                                api_logger.warning(f"[DoubaoAdapter] 检测到配额用尽：{model_name}, 响应：{e.response.text[:200]}")
+                            else:
+                                error_type = AIErrorType.RATE_LIMIT_EXCEEDED
+                                api_logger.warning(f"[DoubaoAdapter] 检测到频率限制：{model_name}, 响应：{e.response.text[:200]}")
                         elif status_code >= 500:
                             error_type = AIErrorType.SERVER_ERROR
                         else:

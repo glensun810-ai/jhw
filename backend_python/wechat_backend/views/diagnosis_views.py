@@ -351,8 +351,101 @@ def perform_brand_test():
 
             if result.get('success'):
                 api_logger.info(f"NxM execution completed successfully for '{execution_id}', formula: {result.get('formula')}")
+                
+                # M004 改造：保存报告快照到数据库
+                # 原有问题：报告数据仅在内存中，服务重启后丢失
+                # 改造后：报告完整快照保存到数据库，支持历史查询和一致性验证
+                try:
+                    from wechat_backend.repositories import save_report_snapshot
+                    from wechat_backend.diagnosis_report_repository import save_diagnosis_report
+                    
+                    # 构建完整报告数据
+                    report_data = {
+                        "reportId": execution_id,
+                        "userId": user_id or "anonymous",
+                        "brandName": main_brand,
+                        "competitorBrands": competitor_brands,
+                        "generateTime": datetime.now().isoformat(),
+                        "reportVersion": "v2.0",
+                        "requestParams": {
+                            "selectedModels": selected_models,
+                            "customQuestions": raw_questions,
+                            "userLevel": user_level.value
+                        },
+                        "reportData": {
+                            "overallScore": result.get('quality_score', {}).get('overall_score') if result.get('quality_score') else None,
+                            "overallStatus": "completed",
+                            "dimensions": result.get('results', []),
+                            "aggregated": result.get('aggregated', []),
+                            "qualityScore": result.get('quality_score')
+                        },
+                        "executionInfo": {
+                            "formula": result.get('formula'),
+                            "totalTasks": result.get('total_tasks'),
+                            "completedTasks": result.get('completed_tasks')
+                        }
+                    }
+                    
+                    # 保存快照到 report_snapshots 表
+                    save_report_snapshot(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        report_data=report_data,
+                        report_version="v2.0"
+                    )
+                    
+                    # 同时更新 diagnosis_reports 表（兼容旧系统）
+                    save_diagnosis_report(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        brand_name=main_brand,
+                        competitor_brands=competitor_brands,
+                        selected_models=selected_models,
+                        custom_questions=raw_questions,
+                        status="completed",
+                        progress=100,
+                        stage="completed",
+                        is_completed=True
+                    )
+                    
+                    api_logger.info(f"[M004] ✅ 报告快照保存成功：{execution_id}")
+                    
+                except Exception as snapshot_err:
+                    # 快照保存失败不影响主流程，仅记录错误
+                    api_logger.error(f"[M004] ⚠️ 报告快照保存失败：{execution_id}, 错误：{snapshot_err}")
             else:
                 api_logger.error(f"NxM execution failed for '{execution_id}': {result.get('error')}")
+                
+                # M004 改造：即使失败也保存错误报告
+                try:
+                    from wechat_backend.repositories import save_report_snapshot
+                    
+                    error_report = {
+                        "reportId": execution_id,
+                        "userId": user_id or "anonymous",
+                        "brandName": main_brand,
+                        "generateTime": datetime.now().isoformat(),
+                        "reportVersion": "v2.0",
+                        "status": "failed",
+                        "error": result.get('error', '执行失败'),
+                        "reportData": {
+                            "overallStatus": "failed",
+                            "dimensions": result.get('results', [])
+                        }
+                    }
+                    
+                    # 保存错误报告快照
+                    save_report_snapshot(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        report_data=error_report,
+                        report_version="v2.0"
+                    )
+                    
+                    api_logger.info(f"[M004] ✅ 错误报告快照保存成功：{execution_id}")
+                    
+                except Exception as snapshot_err:
+                    api_logger.error(f"[M004] ⚠️ 错误报告快照保存失败：{execution_id}, 错误：{snapshot_err}")
 
         except Exception as e:
             import traceback
@@ -2484,28 +2577,33 @@ def submit_brand_test():
 def get_task_status_api(task_id):
     """
     轮询任务进度与分阶段状态
-    
+
     【P0 修复 - 2026-02-28】数据源优化：
     1. 优先从新存储层读取（数据库）
     2. execution_store 作为缓存（降级方案）
     3. 支持增量轮询（减少数据传输）
+    
+    【P1 优化 - 同步检查机制】
+    1. 检查 execution_store 和数据库数据是否同步
+    2. 如果不同步，优先使用数据库数据
+    3. 记录同步警告日志
     """
     if not task_id:
         return jsonify({'error': 'Task ID is required'}), 400
-    
+
     # 获取增量轮询参数
     since = request.args.get('since')  # 客户端传入的上次更新时间
-    
+
     # ==================== 主数据源：新存储层（数据库） ====================
     try:
         service = get_report_service()
         report = service.get_full_report(task_id)
-        
+
         if report and report.get('report'):
             report_data = report['report']
             results = report.get('results', [])
             analysis = report.get('analysis', {})
-            
+
             # 增量轮询优化
             if since:
                 last_updated = report_data.get('updated_at', '')
@@ -2517,7 +2615,24 @@ def get_task_status_api(task_id):
                         'last_updated': last_updated,
                         'source': 'database'
                     }), 200
-            
+
+            # P1 优化：同步检查机制
+            # 检查 execution_store 是否有数据
+            cache_sync_status = 'unknown'
+            if task_id in execution_store:
+                cache_data = execution_store[task_id]
+                cache_progress = cache_data.get('progress', 0)
+                db_progress = report_data.get('progress', 0)
+                
+                # 检查进度是否同步
+                if abs(cache_progress - db_progress) > 10:  # 允许 10% 的误差
+                    cache_sync_status = 'out_of_sync'
+                    api_logger.warning(f"[TaskStatus] 同步警告：{task_id}, 缓存进度={cache_progress}%, 数据库进度={db_progress}%")
+                else:
+                    cache_sync_status = 'synced'
+            else:
+                cache_sync_status = 'cache_miss'
+
             # 构建响应
             response_data = {
                 'task_id': task_id,
@@ -2530,31 +2645,32 @@ def get_task_status_api(task_id):
                 'created_at': report_data.get('created_at', ''),
                 'updated_at': report_data.get('updated_at', ''),
                 'has_updates': True,
-                'source': 'database'  # 标识数据来源
+                'source': 'database',
+                'cache_sync_status': cache_sync_status  # P1 优化：添加同步状态
             }
-            
+
             # 添加高级分析数据（如果已完成）
             if report_data.get('status') == 'completed':
                 response_data.update(analysis)
-            
-            api_logger.debug(f"[TaskStatus] 从数据库返回：{task_id}, 结果数：{len(results)}")
+
+            api_logger.debug(f"[TaskStatus] 从数据库返回：{task_id}, 结果数：{len(results)}, 同步状态：{cache_sync_status}")
             return jsonify(response_data), 200
-            
+
     except Exception as db_err:
         api_logger.error(f'[TaskStatus] 数据库查询失败：{task_id}, 错误：{db_err}')
         # 继续尝试从缓存读取
-    
+
     # ==================== 降级：execution_store 缓存 ====================
     # 【降级方案】数据库不可用时，从内存缓存读取
     if task_id in execution_store:
         task_status = execution_store[task_id]
-        
+
         # 【关键修复】确保 results 字段存在且为列表
         results_list = task_status.get('results', [])
         if not isinstance(results_list, list):
             results_list = []
             api_logger.warning(f'[TaskStatus] Task {task_id} results is not a list, resetting to empty list')
-        
+
         # 增量轮询优化
         if since:
             last_updated = task_status.get('updated_at', '')
@@ -2565,7 +2681,7 @@ def get_task_status_api(task_id):
                     'last_updated': last_updated,
                     'source': 'cache'
                 }), 200
-        
+
         # 按照 API 契约返回任务状态信息
         response_data = {
             'task_id': task_id,

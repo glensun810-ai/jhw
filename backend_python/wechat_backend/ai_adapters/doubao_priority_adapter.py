@@ -86,39 +86,44 @@ class DoubaoPriorityAdapter(AIClient):
     def _init_adapter(self) -> bool:
         """
         初始化适配器（选择第一个可用的模型）
-        
+
         Returns:
             bool: 是否成功初始化
         """
         api_logger.info(f"[DoubaoPriority] 尝试初始化适配器，优先级模型列表：{self.priority_models}")
-        
+
         for i, model_id in enumerate(self.priority_models):
+            # P1-1 修复：跳过已配额用尽的模型
+            if model_id in self.exhausted_models:
+                api_logger.info(f"[DoubaoPriority] 跳过配额用尽模型：{model_id}")
+                continue
+            
             try:
                 api_logger.info(f"[DoubaoPriority] 尝试模型 {i+1}/{len(self.priority_models)}: {model_id}")
-                
+
                 # 创建适配器实例
                 adapter = DoubaoAdapter(
                     api_key=self.api_key,
                     model_name=model_id,
                     base_url=self.base_url
                 )
-                
+
                 # 执行健康检查
                 if hasattr(adapter, '_health_check'):
                     adapter._health_check()
-                
+
                 # 成功，保存适配器和模型
                 self.selected_adapter = adapter
                 self.selected_model = model_id
-                
+
                 api_logger.info(f"[DoubaoPriority] ✅ 模型 {model_id} 可用，已选中")
                 return True
-                
+
             except Exception as e:
                 api_logger.warning(f"[DoubaoPriority] ❌ 模型 {model_id} 不可用：{str(e)}")
                 # 继续尝试下一个模型
                 continue
-        
+
         # 所有模型都不可用
         api_logger.error(f"[DoubaoPriority] ❌ 所有 {len(self.priority_models)} 个模型都不可用")
         return False
@@ -201,9 +206,20 @@ class DoubaoPriorityAdapter(AIClient):
             if response.success:
                 return response
 
-            # 如果失败且错误类型是服务不可用、服务器错误或配额用尽（429），尝试切换模型
-            if response.error_type in [AIErrorType.SERVICE_UNAVAILABLE, AIErrorType.SERVER_ERROR, AIErrorType.RATE_LIMIT_EXCEEDED]:
+            # 如果失败且错误类型是可恢复错误（服务不可用、服务器错误、频率限制、配额用尽），尝试切换模型
+            # P0-2 修复：添加 INSUFFICIENT_QUOTA 到故障转移触发列表
+            if response.error_type in [
+                AIErrorType.SERVICE_UNAVAILABLE, 
+                AIErrorType.SERVER_ERROR, 
+                AIErrorType.RATE_LIMIT_EXCEEDED,
+                AIErrorType.INSUFFICIENT_QUOTA  # 新增：配额用尽时切换
+            ]:
                 api_logger.warning(f"[DoubaoPriority] 模型 {self.selected_model} 调用失败 ({response.error_type})，尝试切换模型")
+                
+                # 记录配额用尽的模型
+                if response.error_type == AIErrorType.INSUFFICIENT_QUOTA:
+                    self.exhausted_models.add(self.selected_model)
+                    api_logger.info(f"[DoubaoPriority] 模型 {self.selected_model} 配额用尽，已加入黑名单")
 
                 if self._retry_with_next_model(self.selected_model):
                     # 切换成功，使用新模型重试

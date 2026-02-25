@@ -158,11 +158,20 @@ class DiagnosisReportRepository:
             db_logger.info(f"✅ 创建诊断报告：{execution_id}, report_id: {report_id}")
             return report_id
     
-    def update_status(self, execution_id: str, status: str, progress: int, 
+    def update_status(self, execution_id: str, status: str, progress: int,
                      stage: str, is_completed: bool = False) -> bool:
-        """更新报告状态"""
-        now = datetime.now().isoformat()
+        """
+        更新报告状态（P0 修复：确保 status 和 stage 同步）
         
+        Args:
+            execution_id: 执行 ID
+            status: 状态（initializing/ai_fetching/analyzing/completed/failed）
+            progress: 进度（0-100）
+            stage: 阶段（与 status 保持一致）
+            is_completed: 是否完成
+        """
+        now = datetime.now().isoformat()
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -175,8 +184,49 @@ class DiagnosisReportRepository:
                 1 if is_completed else 0, now,
                 execution_id
             ))
-            
+
+            db_logger.info(f"📊 更新诊断报告状态：{execution_id}, status={status}, stage={stage}, progress={progress}")
             return cursor.rowcount > 0
+    
+    def update_status_sync(self, execution_id: str, status: str, progress: int = None,
+                          is_completed: bool = False) -> bool:
+        """
+        P0 修复：统一状态更新函数（确保 status 和 stage 同步）
+        
+        自动根据 status 推导 stage，避免状态不一致
+        
+        Args:
+            execution_id: 执行 ID
+            status: 状态（initializing/ai_fetching/analyzing/completed/failed）
+            progress: 进度（可选，默认根据 status 推导）
+            is_completed: 是否完成
+        """
+        # 状态映射表
+        status_stage_map = {
+            'initializing': 'init',
+            'ai_fetching': 'ai_fetching',
+            'analyzing': 'analyzing',
+            'completed': 'completed',
+            'failed': 'failed',
+            'partial_completed': 'completed'  # 部分完成也视为完成
+        }
+        
+        # 自动推导 stage
+        stage = status_stage_map.get(status, status)
+        
+        # 自动推导 progress
+        if progress is None:
+            progress_map = {
+                'initializing': 0,
+                'ai_fetching': 50,
+                'analyzing': 80,
+                'completed': 100,
+                'failed': 0
+            }
+            progress = progress_map.get(status, 0)
+        
+        # 调用原有更新函数
+        return self.update_status(execution_id, status, progress, stage, is_completed)
     
     def get_by_execution_id(self, execution_id: str) -> Optional[Dict[str, Any]]:
         """根据执行 ID 获取报告"""
@@ -184,7 +234,7 @@ class DiagnosisReportRepository:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM diagnosis_reports WHERE execution_id = ?', (execution_id,))
-            
+
             row = cursor.fetchone()
             if row:
                 result = dict(row)
@@ -195,6 +245,25 @@ class DiagnosisReportRepository:
                 return result
             return None
     
+    def delete_by_execution_id(self, execution_id: str) -> bool:
+        """
+        P0 修复：根据执行 ID 删除报告（用于清理空报告）
+        
+        Args:
+            execution_id: 执行 ID
+        
+        Returns:
+            bool: 是否删除成功
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM diagnosis_reports WHERE execution_id = ?', (execution_id,))
+            
+            deleted_count = cursor.rowcount
+            if deleted_count > 0:
+                db_logger.info(f"🗑️ 删除诊断报告：{execution_id}")
+            return deleted_count > 0
+
     def get_user_history(self, user_id: str, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
         """获取用户历史报告"""
         with self.get_connection() as conn:
@@ -566,6 +635,22 @@ class FileArchiveManager:
         return stats
 
 
+# ==================== 便捷函数 ====================
+
+def delete_diagnosis_report_by_execution_id(execution_id: str) -> bool:
+    """
+    P0 修复：便捷函数 - 根据执行 ID 删除诊断报告
+    
+    Args:
+        execution_id: 执行 ID
+    
+    Returns:
+        bool: 是否删除成功
+    """
+    repo = DiagnosisReportRepository()
+    return repo.delete_by_execution_id(execution_id)
+
+
 # ==================== 初始化 ====================
 
 def init_database_tables():
@@ -599,3 +684,54 @@ try:
     init_database_tables()
 except Exception as e:
     db_logger.error(f"⚠️ 数据库表初始化失败：{e}")
+
+
+# ==================== 便捷函数 ====================
+
+# 全局仓库实例
+_report_repo = None
+
+
+def get_diagnosis_report_repository():
+    """获取全局诊断报告仓库实例"""
+    global _report_repo
+    if _report_repo is None:
+        _report_repo = DiagnosisReportRepository()
+    return _report_repo
+
+
+def save_diagnosis_report(
+    execution_id, user_id, brand_name, competitor_brands,
+    selected_models, custom_questions, status='processing',
+    progress=0, stage='init', is_completed=False
+):
+    """
+    便捷函数：保存诊断报告到数据库
+    """
+    repo = get_diagnosis_report_repository()
+    existing = repo.get_by_execution_id(execution_id)
+    
+    if existing:
+        repo.update_status(execution_id, status, progress, stage, is_completed)
+        db_logger.info(f"✅ 诊断报告已更新：{execution_id}")
+        return existing['id']
+    else:
+        config = {
+            'brand_name': brand_name,
+            'competitor_brands': competitor_brands,
+            'selected_models': selected_models,
+            'custom_questions': custom_questions
+        }
+        report_id = repo.create(execution_id, user_id, config)
+        if is_completed:
+            repo.update_status(execution_id, status, progress, stage, is_completed)
+        db_logger.info(f"✅ 诊断报告已保存：{execution_id}, report_id: {report_id}")
+        return report_id
+
+
+__all__ = [
+    'DiagnosisReportRepository',
+    'get_diagnosis_report_repository',
+    'save_diagnosis_report',
+    'calculate_checksum'
+]

@@ -2,15 +2,95 @@
 AI 调用超时处理模块
 
 P1-014 新增：为 AI 调用添加超时保护，防止单个 AI 失败阻塞整个流程
+P1-2 优化：缩短超时配置，实现快速故障转移
+
+性能目标:
+- 简单问题 (<20 字): 10 秒 (从 15 秒降低)
+- 正常问题 (20-50 字): 20 秒 (从 30 秒降低)
+- 复杂问题 (>50 字): 40 秒 (从 60 秒降低)
+
+优化理由:
+- 现代 AI 模型响应时间通常在 5-15 秒
+- 过长超时导致故障转移慢，用户体验差
+- 快速失败 + 快速切换 = 更好的用户体验
 """
 
 import asyncio
 import aiohttp
-from typing import Callable, Any, Optional
+from typing import Callable, Any, Optional, Dict
 from functools import wraps
 import time
+from enum import Enum
 
 from wechat_backend.logging_config import api_logger
+
+
+class QuestionComplexity(Enum):
+    """问题复杂度"""
+    SIMPLE = "simple"      # <20 字
+    NORMAL = "normal"      # 20-50 字
+    COMPLEX = "complex"    # >50 字
+
+
+# P1-2 优化：动态超时配置 (秒) - 缩短 30-40%
+TIMEOUT_CONFIG: Dict[str, Dict[QuestionComplexity, int]] = {
+    'doubao': {
+        QuestionComplexity.SIMPLE: 10,   # 从 15 秒降至 10 秒
+        QuestionComplexity.NORMAL: 20,   # 从 30 秒降至 20 秒
+        QuestionComplexity.COMPLEX: 40,  # 从 60 秒降至 40 秒
+    },
+    'qwen': {
+        QuestionComplexity.SIMPLE: 8,    # 从 10 秒降至 8 秒
+        QuestionComplexity.NORMAL: 15,   # 从 20 秒降至 15 秒
+        QuestionComplexity.COMPLEX: 35,  # 从 45 秒降至 35 秒
+    },
+    'deepseek': {
+        QuestionComplexity.SIMPLE: 10,   # 从 15 秒降至 10 秒
+        QuestionComplexity.NORMAL: 20,   # 从 30 秒降至 20 秒
+        QuestionComplexity.COMPLEX: 40,  # 从 60 秒降至 40 秒
+    },
+    'zhipu': {
+        QuestionComplexity.SIMPLE: 8,    # 从 10 秒降至 8 秒
+        QuestionComplexity.NORMAL: 15,   # 从 20 秒降至 15 秒
+        QuestionComplexity.COMPLEX: 35,  # 从 45 秒降至 35 秒
+    },
+    'default': {
+        QuestionComplexity.SIMPLE: 10,   # 从 15 秒降至 10 秒
+        QuestionComplexity.NORMAL: 20,   # 从 30 秒降至 20 秒
+        QuestionComplexity.COMPLEX: 40,  # 从 60 秒降至 40 秒
+    },
+}
+
+
+def get_timeout_config(model_name: str, question: str = "") -> int:
+    """
+    根据模型和问题获取超时配置
+    
+    参数:
+        model_name: AI 模型名称
+        question: 用户问题 (可选)
+    
+    返回:
+        超时时间 (秒)
+    """
+    # 判断问题复杂度
+    if question:
+        length = len(question)
+        if length < 20:
+            complexity = QuestionComplexity.SIMPLE
+        elif length < 50:
+            complexity = QuestionComplexity.NORMAL
+        else:
+            complexity = QuestionComplexity.COMPLEX
+    else:
+        complexity = QuestionComplexity.NORMAL
+    
+    # 获取超时配置
+    model_config = TIMEOUT_CONFIG.get(model_name, TIMEOUT_CONFIG['default'])
+    timeout = model_config.get(complexity, 30)
+    
+    api_logger.debug(f"[超时配置] {model_name}, {complexity.value}, {timeout}秒")
+    return timeout
 
 
 class AITimeoutError(Exception):
@@ -185,10 +265,20 @@ class AITimeoutManager:
         return cls._lock
     
     @classmethod
-    def get_timeout(cls, model_name: str) -> int:
+    def get_timeout(cls, model_name: str, question: str = "") -> int:
         """获取指定模型的超时配置（线程安全）"""
         # 读操作不需要锁，因为字典读取是原子操作
-        return cls.DEFAULT_TIMEOUTS.get(model_name, cls.DEFAULT_TIMEOUTS['default'])
+        base_timeout = cls.DEFAULT_TIMEOUTS.get(model_name, cls.DEFAULT_TIMEOUTS['default'])
+        
+        # 动态调整：根据问题长度
+        if question:
+            length = len(question)
+            if length < 20:
+                base_timeout = int(base_timeout * 0.7)  # 简单问题减少 30%
+            elif length > 50:
+                base_timeout = int(base_timeout * 1.5)  # 复杂问题增加 50%
+        
+        return base_timeout
     
     @classmethod
     def set_timeout(cls, model_name: str, timeout: int):

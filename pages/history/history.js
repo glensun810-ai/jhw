@@ -194,7 +194,7 @@ Page({
    */
   onDeleteReport: function(e) {
     const { executionId, index } = e.currentTarget.dataset;
-    
+
     wx.showModal({
       title: '确认删除',
       content: '确定要删除这条诊断记录吗？',
@@ -204,7 +204,7 @@ Page({
           const historyList = this.data.historyList;
           historyList.splice(index, 1);
           this.setData({ historyList });
-          
+
           wx.showToast({
             title: '删除成功',
             icon: 'success'
@@ -212,5 +212,112 @@ Page({
         }
       }
     });
+  },
+
+  /**
+   * 查看最新结果
+   */
+  viewLatestResult: function() {
+    if (this.data.historyList && this.data.historyList.length > 0) {
+      // 获取最新的记录（列表第一项）
+      const latestReport = this.data.historyList[0];
+      wx.navigateTo({
+        url: `/pages/results/results?executionId=${latestReport.execution_id}&brandName=${encodeURIComponent(latestReport.brand_name)}`
+      });
+    } else {
+      wx.showToast({
+        title: '暂无历史结果',
+        icon: 'none'
+      });
+    }
+  },
+
+  /**
+   * 查看已保存结果
+   */
+  viewSavedResults: function() {
+    // 尝试从本地存储加载已保存的结果
+    try {
+      const savedResults = wx.getStorageSync('savedDiagnosisResults') || [];
+      if (savedResults.length > 0) {
+        // 跳转到已保存结果页面或使用弹窗展示
+        wx.showActionSheet({
+          itemList: savedResults.map(r => r.brand_name || r.execution_id),
+          success: (res) => {
+            const selected = savedResults[res.tapIndex];
+            wx.navigateTo({
+              url: `/pages/results/results?executionId=${selected.execution_id}&brandName=${encodeURIComponent(selected.brand_name || 'Unknown')}`
+            });
+          }
+        });
+      } else {
+        wx.showToast({
+          title: '暂无已保存结果',
+          icon: 'none'
+        });
+      }
+    } catch (e) {
+      console.error('获取已保存结果失败:', e);
+      wx.showToast({
+        title: '加载失败',
+        icon: 'none'
+      });
+    }
+  },
+
+  /**
+   * 查看公共历史
+   */
+  viewPublicHistory: function() {
+    wx.showToast({
+      title: '公共历史功能开发中',
+      icon: 'none'
+    });
+    // TODO: 实现公共历史查看功能
+    // wx.navigateTo({
+    //   url: '/pages/history/public-history'
+    // });
+  },
+
+  /**
+   * 查看个人历史
+   */
+  viewPersonalHistory: function() {
+    // 当前页面就是个人历史，刷新即可
+    this.refreshHistory();
+    wx.showToast({
+      title: '已刷新个人历史',
+      icon: 'success'
+    });
+  },
+
+  /**
+   * 返回首页
+   */
+  goHome: function() {
+    wx.switchTab({
+      url: '/pages/index/index'
+    });
+  },
+
+  /**
+   * 查看详情（兼容 WXML 中的绑定）
+   */
+  viewDetail: function(e) {
+    const { id } = e.currentTarget.dataset;
+    
+    // 从列表中查找对应的报告
+    const report = this.data.historyList.find(r => r.id === id || r.execution_id === id);
+    
+    if (report) {
+      wx.navigateTo({
+        url: `/pages/results/results?executionId=${report.execution_id}&brandName=${encodeURIComponent(report.brand_name)}`
+      });
+    } else {
+      wx.showToast({
+        title: '报告未找到',
+        icon: 'none'
+      });
+    }
   }
 });

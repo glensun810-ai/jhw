@@ -37,6 +37,30 @@
     "navigationBarTitleText": "云程企航",
     "navigationBarTextStyle": "white"
   },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#4A7BFF",
+    "backgroundColor": "#121826",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "AI 搜索"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "text": "历史记录"
+      },
+      {
+        "pagePath": "pages/saved-results/saved-results",
+        "text": "收藏报告"
+      },
+      {
+        "pagePath": "pages/user-profile/user-profile",
+        "text": "我的"
+      }
+    ]
+  },
   "style": "v2",
   "sitemapLocation": "sitemap.json"
 }
