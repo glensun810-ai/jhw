@@ -318,7 +318,12 @@ def execute_nxm_test(
 
                 # 【P2-011 优化】使用独立的质量评分服务
                 scorer = get_quality_scorer()
-                quality_score = scorer.evaluate(deduplicated)
+                
+                # 计算完成率
+                completion_rate = int(len(deduplicated) * 100 / max(total_tasks, 1))
+                
+                # P3 修复：使用正确的方法名 calculate 而不是 evaluate
+                quality_score = scorer.calculate(deduplicated, completion_rate)
 
                 # 聚合结果
                 aggregated = aggregate_results_by_brand(deduplicated)
