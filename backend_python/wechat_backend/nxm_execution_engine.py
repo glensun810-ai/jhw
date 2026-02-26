@@ -28,6 +28,7 @@ import os
 import asyncio
 import json
 import traceback
+import pickle
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -58,6 +59,146 @@ from wechat_backend.ai_timeout import get_timeout_manager, AITimeoutError
 
 # 配置导入
 from config import Config
+
+
+# ==================== P0-001 修复：异步执行辅助函数 ====================
+
+def run_async_in_thread(coro):
+    """
+    在线程中安全运行异步代码
+
+    问题：asyncio.run() 在已有事件循环的线程中会抛出 RuntimeError
+    解决：创建新的事件循环并在线程中运行
+
+    参数:
+        coro: 异步协程对象
+
+    返回:
+        协程执行结果
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+# ==================== P0-004 修复：预写日志（WAL）机制 ====================
+
+WAL_DIR = '/tmp/nxm_wal'
+os.makedirs(WAL_DIR, exist_ok=True)
+
+
+def write_wal(execution_id: str, results: List[Dict], completed: int, total: int, brand: str = None, model: str = None):
+    """
+    预写日志 - 在内存持久化前写入磁盘
+    
+    问题：实时持久化是"最佳努力"模式，失败时只记录日志
+    解决：每次 AI 调用成功后立即写入 WAL，服务重启后可恢复
+    
+    参数:
+        execution_id: 执行 ID
+        results: 结果列表
+        completed: 已完成任务数
+        total: 总任务数
+        brand: 当前品牌（可选）
+        model: 当前模型（可选）
+    """
+    try:
+        wal_path = os.path.join(WAL_DIR, f'nxm_wal_{execution_id}.pkl')
+        wal_data = {
+            'execution_id': execution_id,
+            'results': results,
+            'completed': completed,
+            'total': total,
+            'brand': brand,
+            'model': model,
+            'timestamp': time.time(),
+            'last_updated': datetime.now().isoformat()
+        }
+        with open(wal_path, 'wb') as f:
+            pickle.dump(wal_data, f)
+        api_logger.info(f"[WAL] ✅ 已写入：{wal_path} (完成：{completed}/{total})")
+    except Exception as e:
+        api_logger.error(f"[WAL] ⚠️ 写入失败：{e}")
+
+
+def read_wal(execution_id: str) -> Optional[Dict]:
+    """
+    读取预写日志
+    
+    参数:
+        execution_id: 执行 ID
+    
+    返回:
+        WAL 数据，如果不存在则返回 None
+    """
+    try:
+        wal_path = os.path.join(WAL_DIR, f'nxm_wal_{execution_id}.pkl')
+        if os.path.exists(wal_path):
+            with open(wal_path, 'rb') as f:
+                data = pickle.load(f)
+            api_logger.info(f"[WAL] ✅ 已读取：{wal_path}")
+            return data
+    except Exception as e:
+        api_logger.error(f"[WAL] ⚠️ 读取失败：{e}")
+    return None
+
+
+def cleanup_expired_wal(max_age_hours: int = 24):
+    """
+    清理过期 WAL 文件
+    
+    参数:
+        max_age_hours: 最大保留小时数
+    """
+    try:
+        import glob
+        now = time.time()
+        wal_files = glob.glob(os.path.join(WAL_DIR, 'nxm_wal_*.pkl'))
+        cleaned_count = 0
+        for wal_file in wal_files:
+            try:
+                mtime = os.path.getmtime(wal_file)
+                if (now - mtime) > (max_age_hours * 3600):
+                    os.remove(wal_file)
+                    cleaned_count += 1
+                    api_logger.info(f"[WAL] 🗑️ 清理过期文件：{wal_file}")
+            except Exception:
+                pass
+        if cleaned_count > 0:
+            api_logger.info(f"[WAL] 清理完成，共清理 {cleaned_count} 个文件")
+    except Exception as e:
+        api_logger.error(f"[WAL] 清理失败：{e}")
+
+
+def recover_from_wal(execution_id: str) -> Optional[Dict]:
+    """
+    从 WAL 恢复未完成的执行
+    
+    参数:
+        execution_id: 执行 ID
+    
+    返回:
+        恢复的数据，如果不存在或已完成则返回 None
+    """
+    wal_data = read_wal(execution_id)
+    if wal_data:
+        # 检查是否过期（超过 24 小时）
+        wal_age_hours = (time.time() - wal_data.get('timestamp', 0)) / 3600
+        if wal_age_hours > 24:
+            api_logger.warning(f"[WAL] ⚠️ WAL 文件已过 {wal_age_hours:.1f} 小时，忽略")
+            return None
+        
+        # 检查是否已完成
+        if wal_data.get('completed', 0) >= wal_data.get('total', 0):
+            api_logger.info(f"[WAL] ✅ 执行已完成，无需恢复")
+            return None
+        
+        api_logger.info(f"[WAL] 🔄 恢复执行：{execution_id}, 进度：{wal_data.get('completed')}/{wal_data.get('total')}")
+        return wal_data
+    return None
 
 
 def execute_nxm_test(
@@ -151,14 +292,15 @@ def execute_nxm_test(
                             # 创建容错执行器实例（每个调用独立）
                             ai_executor = FaultTolerantExecutor(timeout_seconds=timeout)
 
-                            # P0-4 修复：在后台线程中使用 asyncio.run() 是安全的
-                            # 因为 run_execution() 在独立线程中运行，没有现成事件循环
-                            ai_result = asyncio.run(
+                            # 【P0-001 修复】使用线程安全的异步执行方式
+                            # 原代码问题：asyncio.run() 在已有事件循环的线程中会抛出 RuntimeError
+                            # 修复方案：使用 run_async_in_thread() 创建新的事件循环
+                            ai_result = run_async_in_thread(
                                 ai_executor.execute_with_fallback(
                                     task_func=client.send_prompt,
                                     task_name=f"{brand}-{model_name}",
                                     source=model_name,
-                                    prompt=prompt  # 直接传递参数
+                                    prompt=prompt
                                 )
                             )
                             
@@ -267,6 +409,34 @@ def execute_nxm_test(
                             except Exception as persist_err:
                                 # 持久化失败不影响主流程，仅记录错误
                                 api_logger.error(f"[NxM] ⚠️ 维度结果持久化失败：{brand}-{model_name}, 错误：{persist_err}")
+                                
+                                # P1-018 新增：数据库持久化告警机制
+                                try:
+                                    from wechat_backend.alert_system import record_persistence_error, check_persistence_alert
+                                    
+                                    # 记录持久化错误
+                                    alert_triggered = record_persistence_error(
+                                        execution_id=execution_id,
+                                        error_type='dimension_result',
+                                        error_message=str(persist_err)
+                                    )
+                                    
+                                    # 如果触发告警，记录详细日志
+                                    if alert_triggered:
+                                        api_logger.error(
+                                            f"[P1-018 告警] 数据库持久化失败达到阈值！"
+                                            f"execution_id={execution_id}, 错误：{persist_err}"
+                                        )
+                                        # 可以添加额外的告警通知逻辑（如发送邮件、短信等）
+                                except Exception as alert_err:
+                                    api_logger.error(f"[P1-018] 告警记录失败：{alert_err}")
+
+                            # 【P0-004 修复】写入 WAL（预写日志），确保服务重启后数据不丢失
+                            # WAL 写入在数据库持久化之后，作为双重保障
+                            try:
+                                write_wal(execution_id, results, completed, total_tasks, brand, model_name)
+                            except Exception as wal_err:
+                                api_logger.error(f"[WAL] ⚠️ 写入失败：{wal_err}")
 
                             # 更新进度
                             completed += 1
@@ -372,16 +542,91 @@ def execute_nxm_test(
                 except Exception as save_err:
                     api_logger.error(f"[NxM] ⚠️ 测试汇总记录保存失败：{execution_id}, 错误：{save_err}")
 
-                # 返回成功结果
+                # P2-020 新增：记录监控指标
+                try:
+                    from wechat_backend.services.diagnosis_monitor_service import record_diagnosis_metric
+                    import time
+                    
+                    # 计算执行时长（从 scheduler 获取或估算）
+                    execution_duration = scheduler.get_execution_duration() if hasattr(scheduler, 'get_execution_duration') else 0
+                    
+                    # 记录诊断指标
+                    record_diagnosis_metric(
+                        execution_id=execution_id,
+                        user_id=user_id or 'anonymous',
+                        total_tasks=total_tasks,
+                        completed_tasks=len(deduplicated),
+                        success=True,
+                        duration_seconds=execution_duration,
+                        quota_exhausted_models=quota_exhausted_models,
+                        error_type='partial_failure' if has_partial_results else None,
+                        error_message=partial_warning
+                    )
+                    
+                    api_logger.info(f"[P2-020 监控] 诊断指标已记录：{execution_id}")
+                except Exception as monitor_err:
+                    api_logger.error(f"[P2-020 监控] 记录失败：{monitor_err}")
+
+                # P0-007 新增：收集配额用尽的模型
+                quota_exhausted_models = []
+                for r in deduplicated:
+                    if r.get('error_type') == 'quota_exhausted' or r.get('error_type') == 'insufficient_quota':
+                        model_name = r.get('model', '')
+                        if model_name and model_name not in quota_exhausted_models:
+                            quota_exhausted_models.append(model_name)
+
+                # P0-007 新增：计算完成率
+                completion_rate = int(len(deduplicated) * 100 / max(total_tasks, 1))
+
+                # P0-007 新增：生成部分完成警告
+                partial_warning = None
+                if len(deduplicated) < total_tasks:
+                    partial_warning = f'诊断部分完成，{len(deduplicated)}/{total_tasks} 任务成功 ({completion_rate}%)'
+
+                # P1-016 新增：生成配额恢复建议
+                quota_recovery_suggestions = []
+                for model in quota_exhausted_models:
+                    suggestion = {
+                        'model': model,
+                        'suggestions': []
+                    }
+                    
+                    # 根据模型类型提供具体建议
+                    if 'doubao' in model.lower() or '豆包' in model:
+                        suggestion['suggestions'].append('访问火山引擎控制台充值：https://console.volcengine.com/')
+                        suggestion['suggestions'].append('联系客服申请临时配额')
+                        suggestion['suggestions'].append('切换其他 AI 平台（如 DeepSeek、通义千问）')
+                    elif 'qwen' in model.lower() or '通义' in model or 'ali' in model.lower():
+                        suggestion['suggestions'].append('访问阿里云控制台充值：https://usercenter2.aliyun.com/')
+                        suggestion['suggestions'].append('检查账户余额是否充足')
+                        suggestion['suggestions'].append('切换其他 AI 平台')
+                    elif 'deepseek' in model.lower():
+                        suggestion['suggestions'].append('访问 DeepSeek 控制台充值：https://platform.deepseek.com/')
+                        suggestion['suggestions'].append('切换其他 AI 平台')
+                    else:
+                        suggestion['suggestions'].append(f'访问 {model} 官方控制台充值')
+                        suggestion['suggestions'].append('切换其他可用 AI 平台')
+                    
+                    quota_recovery_suggestions.append(suggestion)
+
+                # 返回成功结果（P0-007/P1-016 增强：添加配额、完成率、恢复建议等字段）
                 return {
                     'success': True,
                     'execution_id': execution_id,
                     'formula': f"{len(raw_questions)} 问题 × {len(selected_models)} 模型 = {total_tasks} 次请求",
                     'total_tasks': total_tasks,
                     'completed_tasks': len(deduplicated),
+                    'completion_rate': completion_rate,
                     'results': deduplicated,
                     'aggregated': aggregated,
-                    'quality_score': quality_score
+                    'quality_score': quality_score,
+                    # P0-007 新增字段
+                    'quota_exhausted_models': quota_exhausted_models,
+                    'partial_warning': partial_warning,
+                    'has_partial_results': len(deduplicated) < total_tasks,
+                    'quota_warnings': [f'{model} AI 配额已用尽' for model in quota_exhausted_models],
+                    # P1-016 新增字段
+                    'quota_recovery_suggestions': quota_recovery_suggestions
                 }
             else:
                 # 完全失败（无任何结果）

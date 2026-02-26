@@ -241,7 +241,7 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
 
   // Step 1: 错误计数器，实现熔断机制
   let consecutiveAuthErrors = 0;
-  const MAX_AUTH_ERRORS = 2;  // 连续 2 次 403/401 错误即熔断
+  const MAX_AUTH_ERRORS = 5;  // 【P0-002 修复】连续 5 次 403/401 错误才熔断（原为 2 次）
 
   // P0 修复：无进度超时计数器
   let lastProgressTime = Date.now();
@@ -275,7 +275,27 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
           }
         } catch (err) {
           console.error('立即轮询失败:', err);
+          
+          // 【P0-002 修复】立即轮询时的认证错误处理
           if (err.statusCode === 403 || err.statusCode === 401 || err.isAuthError) {
+            consecutiveAuthErrors++;
+            
+            // 尝试从 Storage 恢复结果
+            try {
+              const { loadDiagnosisResult } = require('../utils/storage-manager');
+              const cachedResults = loadDiagnosisResult(executionId);
+              
+              if (cachedResults && (cachedResults.results || cachedResults.detailed_results)) {
+                console.log('[立即轮询] ✅ 认证失败但从 Storage 恢复结果成功');
+                if (onComplete) {
+                  onComplete(cachedResults);
+                }
+                return;
+              }
+            } catch (storageErr) {
+              console.warn('[立即轮询] 从 Storage 恢复结果失败:', storageErr);
+            }
+            
             controller.stop();
             if (onError) onError(new Error('权限验证失败，请重新登录'));
             return;
@@ -384,12 +404,71 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
 
         if (errorInfo.isAuthError) {
           consecutiveAuthErrors++;
+          
+          // 【P0-002 修复】计算指数退避延迟
+          const authErrorRetryDelay = Math.min(
+            1000 * Math.pow(2, consecutiveAuthErrors),
+            10000
+          );
+          
+          // 【P0-002 修复】在熔断前尝试刷新 token
+          if (consecutiveAuthErrors >= MAX_AUTH_ERRORS - 2) {
+            console.log('[认证错误] 尝试刷新 token...');
+            try {
+              // 尝试清除本地认证缓存
+              wx.removeStorageSync('user_token');
+              console.log('[认证错误] 已清除本地 token 缓存');
+            } catch (refreshErr) {
+              console.warn('[认证错误] 刷新 token 失败:', refreshErr);
+            }
+          }
+          
           if (consecutiveAuthErrors >= MAX_AUTH_ERRORS) {
+            // 【P0-002 修复】熔断前尝试从 Storage 恢复结果
+            console.log('[认证错误熔断] 尝试从 Storage 恢复结果...');
+            try {
+              const { loadDiagnosisResult } = require('../utils/storage-manager');
+              const cachedResults = loadDiagnosisResult(executionId);
+              
+              if (cachedResults && (cachedResults.results || cachedResults.detailed_results)) {
+                console.log('[认证错误熔断] ✅ 从 Storage 恢复结果成功，结果数:', 
+                  (cachedResults.results || []).length + (cachedResults.detailed_results || []).length);
+                
+                // 显示降级提示
+                wx.showModal({
+                  title: '网络提示',
+                  content: '认证信息已过期，但诊断结果已从本地缓存恢复。建议重新登录后再次诊断以获取完整数据。',
+                  showCancel: false,
+                  confirmText: '知道了'
+                });
+                
+                // 使用恢复的结果完成轮询
+                controller.stop();
+                if (onComplete) {
+                  onComplete(cachedResults);
+                }
+                return;
+              }
+            } catch (storageErr) {
+              console.warn('[认证错误熔断] 从 Storage 恢复结果失败:', storageErr);
+            }
+            
+            // 无法恢复结果，停止轮询
             controller.stop();
-            console.error('认证错误熔断，停止轮询');
-            if (onError) onError(new Error('权限验证失败，请重新登录'));
+            console.error('[认证错误熔断] 停止轮询');
+            if (onError) {
+              onError(new Error('权限验证失败，请重新登录'));
+            }
             return;
           }
+          
+          // 使用指数退避延迟重试
+          console.log(`[认证错误] 第 ${consecutiveAuthErrors}/${MAX_AUTH_ERRORS} 次，${authErrorRetryDelay}ms 后重试`);
+          if (pollTimeout) {
+            clearTimeout(pollTimeout);
+          }
+          pollTimeout = setTimeout(poll, authErrorRetryDelay);
+          return;
         } else {
           consecutiveAuthErrors = 0;
           if (errorInfo.isNetworkError) {

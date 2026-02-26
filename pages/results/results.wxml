@@ -12,6 +12,116 @@
     </view>
   </view>
 
+  <!-- P0-006 新增：错误提示条 -->
+  <view class="error-banner" wx:if="{{showErrorBanner}}">
+    <view class="error-banner-content">
+      <text class="error-icon">❌</text>
+      <text class="error-message">{{errorMessage || '加载失败，请重试'}}</text>
+    </view>
+    <button class="error-retry-btn" bindtap="retryLoad">重试</button>
+  </view>
+
+  <!-- P0-006 新增：降级提示条 -->
+  <view class="fallback-banner" wx:if="{{showFallbackBanner}}">
+    <view class="fallback-banner-content">
+      <text class="fallback-icon">⚠️</text>
+      <text class="fallback-message">{{fallbackMessage}}</text>
+    </view>
+  </view>
+
+  <!-- P1-016 新增：配额恢复建议卡片 -->
+  <view class="quota-recovery-section" wx:if="{{quotaRecoverySuggestions && quotaRecoverySuggestions.length > 0}}">
+    <text class="subsection-title">💰 配额恢复建议</text>
+    <view class="quota-recovery-cards">
+      <view class="quota-recovery-card" wx:for="{{quotaRecoverySuggestions}}" wx:key="model">
+        <view class="quota-recovery-header">
+          <text class="quota-model-icon">🤖</text>
+          <text class="quota-model-name">{{item.model}}</text>
+        </view>
+        <view class="quota-recovery-content">
+          <text class="quota-suggestion" wx:for="{{item.suggestions}}" wx:key="index" wx:for-item="suggestion">
+            <text class="suggestion-bullet">•</text>
+            <text class="suggestion-text">{{suggestion}}</text>
+          </text>
+        </view>
+        <view class="quota-recovery-footer">
+          <button class="retry-platform-btn" bindtap="retryWithOtherPlatform" data-model="{{item.model}}">切换其他平台</button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- P0-006 新增：部分结果警告条 -->
+  <view class="partial-banner" wx:if="{{hasPartialResults || (quotaWarnings && quotaWarnings.length > 0)}}">
+    <view class="partial-banner-content">
+      <text class="partial-icon">⚡</text>
+      <view class="partial-messages">
+        <text wx:if="{{hasPartialResults}}" class="partial-message">⚠️ 部分 AI 平台调用失败，当前显示可用结果</text>
+        <text wx:if="{{quotaWarnings && quotaWarnings.length > 0}}" class="partial-message">{{quotaWarnings[0]}}</text>
+      </view>
+    </view>
+    <button class="partial-detail-btn" bindtap="showPartialDetails">详情</button>
+    <!-- P2-022 新增：查看错误详情按钮 -->
+    <button class="error-log-btn" bindtap="showErrorLogDetails" wx:if="{{errorLogList && errorLogList.length > 0}}">错误日志</button>
+  </view>
+
+  <!-- P2-022 新增：错误详情模态框 -->
+  <view class="error-details-modal" wx:if="{{showErrorDetailsModal}}">
+    <view class="modal-mask" bindtap="closeErrorDetails"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">📋 错误详情</text>
+        <text class="modal-close" bindtap="closeErrorDetails">✕</text>
+      </view>
+      <view class="modal-body">
+        <view class="error-summary-section">
+          <text class="error-summary-title">错误摘要</text>
+          <view class="error-summary-grid">
+            <view class="summary-item">
+              <text class="summary-label">总错误数</text>
+              <text class="summary-value error">{{errorLogList.length}}</text>
+            </view>
+            <view class="summary-item">
+              <text class="summary-label">配额用尽</text>
+              <text class="summary-value warning">{{quotaExhaustedCount}}</text>
+            </view>
+            <view class="summary-item">
+              <text class="summary-label">其他错误</text>
+              <text class="summary-value info">{{otherErrorCount}}</text>
+            </view>
+          </view>
+        </view>
+        
+        <view class="error-list-section">
+          <text class="error-list-title">错误列表</text>
+          <view class="error-list">
+            <view class="error-item" wx:for="{{errorLogList}}" wx:key="index">
+              <view class="error-item-header">
+                <text class="error-type-badge {{item.errorType}}">{{item.errorTypeName}}</text>
+                <text class="error-model">{{item.model}}</text>
+              </view>
+              <view class="error-item-content">
+                <text class="error-message">{{item.message}}</text>
+                <text class="error-time">{{item.time}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="modal-confirm-btn" bindtap="closeErrorDetails">知道了</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- P0-009 新增：完成率提示条 -->
+  <view class="completion-banner" wx:if="{{completionRate !== undefined && completionRate < 100}}">
+    <view class="completion-banner-content">
+      <text class="completion-icon">📊</text>
+      <text class="completion-text">本次诊断完成率：{{completedTasks || 0}}/{{totalTasks || 0}} ({{completionRate}}%)</text>
+    </view>
+  </view>
+
   <!-- 页面头部 -->
   <view class="page-header">
     <text class="page-title">品牌洞察报告</text>
@@ -158,7 +268,12 @@
       <view class="platform-details">
         <view class="detail-item" wx:for="{{pkDataByPlatform[currentPlatform]}}" wx:key="index">
           <text class="detail-brand">{{item.myBrandData.brand}}</text>
-          <text class="detail-score">{{item.myBrandData.overallScore}}</text>
+          <view class="detail-score-wrapper">
+            <text class="detail-score {{item.myBrandData.hasError ? 'error-score' : ''}}">{{item.myBrandData.overallScore}}</text>
+            <!-- P0-008 新增：错误标记 -->
+            <text class="error-badge" wx:if="{{item.myBrandData.hasError}}" title="{{item.myBrandData.errorMessage}}">⚠️</text>
+            <text class="error-badge" wx:if="{{item.myBrandData.isQuotaExhausted}}" title="配额用尽">💰</text>
+          </view>
         </view>
       </view>
     </view>
