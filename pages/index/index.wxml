@@ -175,18 +175,18 @@
         </view>
       </view>
 
-      <!-- 状态 2: 诊断中 -->
-      <button class="scan-button {{isTesting || hasLastReport || testCompleted ? 'hidden' : ''}}"
+      <!-- 状态 2: 诊断按钮（始终显示，根据状态改变文字） -->
+      <button class="scan-button {{hasLastReport ? 'hidden' : ''}}"
               bindtap="startBrandTest"
               disabled="{{isTesting}}">
         <text class="button-content">
           <text class="button-icon" wx:if="{{!isTesting}}">🔍</text>
-          <text class="button-text">{{isTesting ? '诊断中...' : 'AI 品牌战略诊断'}}</text>
+          <text class="loading-spinner" wx:if="{{isTesting}}"></text>
+          <text class="button-text">{{isTesting ? '诊断中... ' + testProgress + '%' : 'AI 品牌战略诊断'}}</text>
         </text>
-        <text class="loading-spinner" wx:if="{{isTesting}}"></text>
       </button>
 
-      <!-- 状态 3: 诊断完成（当次） -->
+      <!-- 状态 3: 诊断完成（当次）- 始终显示查看按钮 -->
       <view class="completed-actions {{testCompleted && !hasLastReport ? '' : 'hidden'}}">
         <view class="completed-badge">
           <text class="badge-icon">✅</text>

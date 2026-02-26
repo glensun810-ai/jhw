@@ -109,7 +109,40 @@ Page({
     // P2-023 新增：自动刷新相关
     isAutoRefreshing: false,  // 是否正在自动刷新
     autoRefreshTimer: null,  // 自动刷新定时器
-    useFallbackData: false  // 是否使用降级数据
+    useFallbackData: false,  // 是否使用降级数据
+
+    // 【完整性修复】新增遗漏字段展示
+    // 诊断配置信息
+    selectedModels: [],  // 使用的 AI 模型列表
+    customQuestions: [],  // 诊断问题列表
+    completedAt: '',  // 完成时间
+    stage: '',  // 当前阶段
+    isCompleted: false,  // 是否完成
+    errorMessage: '',  // 错误信息
+
+    // AI 模型性能统计
+    modelPerformanceStats: [],  // 模型性能统计 {model, avgLatency, resultCount}
+
+    // 质量详情统计
+    qualityDetailsStats: {
+      avgAccuracy: 0,
+      avgCompleteness: 0,
+      avgRelevance: 0,
+      avgCoherence: 0
+    },
+
+    // 响应时间统计
+    responseTimeStats: {
+      minLatency: 0,
+      maxLatency: 0,
+      avgLatency: 0
+    },
+
+    // 展示控制
+    showConfigSection: true,  // 是否展示配置回顾区域
+    showModelPerformance: true,  // 是否展示模型性能
+    showQualityDetails: true,  // 是否展示质量详情
+    showResponseTime: true  // 是否展示响应时间
   },
 
   /**
@@ -291,6 +324,57 @@ Page({
       ? resultData.completion_rate
       : (resultData.total_tasks > 0 ? Math.round((resultData.completed_tasks || results.length) * 100 / resultData.total_tasks) : 100);
 
+    // 【完整性修复】处理遗漏字段
+    const selectedModels = resultData.selected_models || resultData.selectedModels || [];
+    const customQuestions = resultData.custom_questions || resultData.customQuestions || [];
+    const completedAt = resultData.completed_at || resultData.completedAt || '';
+    const stage = resultData.stage || '';
+    const isCompleted = resultData.is_completed !== undefined ? resultData.is_completed : false;
+    const reportErrorMessage = resultData.error_message || '';
+
+    // 计算 AI 模型性能统计
+    const modelStats = {};
+    const latencies = [];
+    results.forEach(r => {
+      const model = r.model || 'unknown';
+      const latency = r.response?.latency || r.response_latency || 0;
+      if (!modelStats[model]) {
+        modelStats[model] = { model, totalLatency: 0, count: 0 };
+      }
+      modelStats[model].totalLatency += latency;
+      modelStats[model].count++;
+      if (latency > 0) latencies.push(latency);
+    });
+    const modelPerformanceStats = Object.values(modelStats).map(stat => ({
+      model: stat.model,
+      avgLatency: stat.count > 0 ? (stat.totalLatency / stat.count).toFixed(2) : 0,
+      resultCount: stat.count
+    }));
+
+    // 计算质量详情统计
+    let totalAccuracy = 0, totalCompleteness = 0, totalRelevance = 0, totalCoherence = 0;
+    let qualityCount = 0;
+    results.forEach(r => {
+      const details = r.quality_details || {};
+      if (details.accuracy) { totalAccuracy += details.accuracy; qualityCount++; }
+      if (details.completeness) { totalCompleteness += details.completeness; qualityCount++; }
+      if (details.relevance) { totalRelevance += details.relevance; qualityCount++; }
+      if (details.coherence) { totalCoherence += details.coherence; qualityCount++; }
+    });
+    const qualityDetailsStats = {
+      avgAccuracy: qualityCount > 0 ? (totalAccuracy / qualityCount).toFixed(2) : 0,
+      avgCompleteness: qualityCount > 0 ? (totalCompleteness / qualityCount).toFixed(2) : 0,
+      avgRelevance: qualityCount > 0 ? (totalRelevance / qualityCount).toFixed(2) : 0,
+      avgCoherence: qualityCount > 0 ? (totalCoherence / qualityCount).toFixed(2) : 0
+    };
+
+    // 计算响应时间统计
+    const responseTimeStats = {
+      minLatency: latencies.length > 0 ? Math.min(...latencies).toFixed(2) : 0,
+      maxLatency: latencies.length > 0 ? Math.max(...latencies).toFixed(2) : 0,
+      avgLatency: latencies.length > 0 ? (latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(2) : 0
+    };
+
     this.setData({
       sourcePurityData: resultData.source_purity_data,
       sourceIntelligenceMap: resultData.source_intelligence_map,
@@ -312,7 +396,17 @@ Page({
       // P2-022 新增：错误日志列表（只计算一次）
       errorLogList: [],
       quotaExhaustedCount: 0,
-      otherErrorCount: 0
+      otherErrorCount: 0,
+      // 【完整性修复】新增遗漏字段
+      selectedModels: selectedModels,
+      customQuestions: customQuestions,
+      completedAt: completedAt ? this.formatDateTime(completedAt) : '',
+      stage: stage,
+      isCompleted: isCompleted,
+      reportErrorMessage: reportErrorMessage,
+      modelPerformanceStats: modelPerformanceStats,
+      qualityDetailsStats: qualityDetailsStats,
+      responseTimeStats: responseTimeStats
     });
 
     // P2-022 新增：计算错误日志和统计（只计算一次，避免重复）
@@ -2331,6 +2425,23 @@ Page({
       'poor': '较差'
     };
     return levelMap[level] || '未知';
+  },
+
+  // 【完整性修复】格式化日期时间
+  formatDateTime: function(dateTimeStr) {
+    if (!dateTimeStr) return '';
+    try {
+      const date = new Date(dateTimeStr);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch (e) {
+      return dateTimeStr;
+    }
   },
 
   // 切换平台

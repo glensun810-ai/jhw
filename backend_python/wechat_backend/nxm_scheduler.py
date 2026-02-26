@@ -130,6 +130,32 @@ class NxMScheduler:
                         )
                     except Exception as e:
                         api_logger.error(f"[Scheduler] SSE 推送失败：{e}")
+                    
+                    # 【P0 关键修复】同时写入数据库，确保服务重启后进度不丢失
+                    try:
+                        from wechat_backend.diagnosis_report_repository import DiagnosisReportRepository
+                        repo = DiagnosisReportRepository()
+                        repo.update_status(
+                            execution_id=self.execution_id,
+                            status=status,
+                            progress=progress,
+                            stage=stage
+                        )
+                        api_logger.debug(f"[Scheduler] 数据库进度已更新：{self.execution_id}, progress={progress}")
+                    except Exception as db_err:
+                        api_logger.error(f"[Scheduler] 数据库更新失败：{db_err}")
+                        # 数据库失败不影响内存更新，但记录告警
+                        from wechat_backend.alerting import alert_warning
+                        alert_warning(
+                            component='scheduler.update_progress',
+                            warning_message=f'数据库进度更新失败',
+                            context={
+                                'execution_id': self.execution_id,
+                                'progress': progress,
+                                'stage': stage,
+                                'error': str(db_err)
+                            }
+                        )
 
     def add_result(self, result: Dict[str, Any]):
         """添加结果"""
@@ -138,23 +164,49 @@ class NxMScheduler:
                 self.execution_store[self.execution_id]['results'].append(result)
 
     def complete_execution(self):
-        """完成执行"""
+        """完成执行（P0 修复：强制写入数据库）"""
+        # 【P0 修复 - 架构师决策】取消超时计时器，避免完成后被删除
+        self.cancel_timeout_timer()
+
+        # 【P0 修复】同步更新 execution_store，确保 fail_execution 能检查到完成状态
         with self._lock:
             if self.execution_id in self.execution_store:
                 store = self.execution_store[self.execution_id]
                 store['status'] = 'completed'
-                store['progress'] = 100
                 store['stage'] = 'completed'
-                store['is_completed'] = True  # 【P0 修复】添加 is_completed 字段
-                store['detailed_results'] = store.get('results', [])  # 【P0 修复】确保 detailed_results 存在
+                store['is_completed'] = True
+                store['progress'] = 100
                 store['end_time'] = datetime.now().isoformat()
 
-        api_logger.info(f"[Scheduler] 执行完成：{self.execution_id}")
+        # 【P0 关键修复】强制写入数据库，确保状态持久化
+        try:
+            from wechat_backend.diagnosis_report_repository import DiagnosisReportRepository
+            repo = DiagnosisReportRepository()
+            repo.update_status(
+                execution_id=self.execution_id,
+                status='completed',
+                progress=100,
+                stage='completed',
+                is_completed=True
+            )
+            api_logger.info(f"[Scheduler] ✅ 数据库完成状态已更新：{self.execution_id}")
+        except Exception as e:
+            api_logger.error(f"[Scheduler] 数据库完成状态更新失败：{e}")
+            # 【P0 关键修复】数据库失败时发送告警
+            from wechat_backend.alerting import alert_critical_failure
+            alert_critical_failure(
+                component='scheduler.complete_execution',
+                error_message=f'数据库完成状态更新失败：{e}',
+                execution_id=self.execution_id
+            )
+            # 数据库失败不影响内存状态
+
+        api_logger.info(f"[Scheduler] 执行完成（计时器已取消）：{self.execution_id}")
 
     def fail_execution(self, error: str):
         """
-        失败执行（P0 修复：失败时清理空报告）
-        
+        失败执行（P0 修复：失败时清理空报告 + 强制写入数据库）
+
         Args:
             error: 错误信息
         """
@@ -165,11 +217,20 @@ class NxMScheduler:
         with self._lock:
             if self.execution_id in self.execution_store:
                 store = self.execution_store[self.execution_id]
+
+                # 【P0 修复 - 架构师决策】检查是否已完成，已完成则不删除
+                if store.get('status') == 'completed' or store.get('stage') == 'completed' or store.get('is_completed') == True:
+                    api_logger.warning(f"[Scheduler] 任务已完成，跳过失败处理：{self.execution_id}")
+                    return
+
                 store['status'] = 'failed'
                 store['stage'] = 'failed'  # 【修复】同步 stage 与 status
                 store['error'] = error
                 store['end_time'] = datetime.now().isoformat()
-                
+
+                # 【P0 关键修复】强制停止轮询标志
+                store['should_stop_polling'] = True
+
                 # P0 修复：失败时清理空报告
                 # 如果没有任何结果，删除 diagnosis_reports 记录
                 if not store.get('results') or len(store.get('results', [])) == 0:
@@ -179,6 +240,29 @@ class NxMScheduler:
                         api_logger.info(f"[Scheduler] 清理空报告：{self.execution_id}")
                     except Exception as e:
                         api_logger.error(f"[Scheduler] 清理空报告失败：{e}")
+
+        # 【P0 关键修复】强制写入数据库，确保状态持久化
+        try:
+            from wechat_backend.diagnosis_report_repository import DiagnosisReportRepository
+            repo = DiagnosisReportRepository()
+            repo.update_status(
+                execution_id=self.execution_id,
+                status='failed',
+                progress=100,  # 失败也是完成执行，进度设为 100%
+                stage='failed',
+                is_completed=True  # 失败也是完成，让前端停止轮询
+            )
+            api_logger.info(f"[Scheduler] ✅ 数据库失败状态已更新：{self.execution_id}")
+        except Exception as e:
+            api_logger.error(f"[Scheduler] 数据库失败状态更新失败：{e}")
+            # 【P0 关键修复】数据库失败时发送告警
+            from wechat_backend.alerting import alert_critical_failure
+            alert_critical_failure(
+                component='scheduler.fail_execution',
+                error_message=f'数据库失败状态更新失败：{e}',
+                execution_id=self.execution_id
+            )
+            # 数据库失败不影响内存状态
 
         api_logger.error(f"[Scheduler] 执行失败：{self.execution_id}, 错误：{error}")
 

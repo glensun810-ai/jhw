@@ -276,7 +276,28 @@ def perform_brand_test():
 
     # 立即生成执行ID和基础存储，不等待测试用例生成
     execution_id = str(uuid.uuid4())
-    # 先设置一个初始状态，稍后再更新总数
+
+    # 【P0 关键修复】立即创建数据库初始记录，避免前端轮询时数据库无记录
+    report_id = None
+    try:
+        service = get_report_service()
+        config = {
+            'brand_name': main_brand,
+            'competitor_brands': competitor_brands if 'competitor_brands' in locals() else [],
+            'selected_models': selected_models,
+            'custom_questions': raw_questions if 'raw_questions' in locals() else []
+        }
+        report_id = service.create_report(execution_id, user_id or 'anonymous', config)
+        service._repo.update_status(
+            execution_id=execution_id,
+            status='initializing',
+            progress=0,
+            stage='init',
+            is_completed=False
+        )
+        api_logger.info(f"[P0 修复] ✅ 初始数据库记录已创建：{execution_id}, report_id={report_id}")
+    except Exception as db_init_err:
+        api_logger.error(f"[P0 修复] ⚠️ 创建初始记录失败：{db_init_err}")    # 先设置一个初始状态，稍后再更新总数
     execution_store[execution_id] = {
         'progress': 0,
         'completed': 0,
@@ -351,15 +372,80 @@ def perform_brand_test():
 
             if result.get('success'):
                 api_logger.info(f"NxM execution completed successfully for '{execution_id}', formula: {result.get('formula')}")
-                
-                # M004 改造：保存报告快照到数据库
-                # 原有问题：报告数据仅在内存中，服务重启后丢失
-                # 改造后：报告完整快照保存到数据库，支持历史查询和一致性验证
+
+                # 【P0 修复 - 架构师决策】使用统一状态管理器
+                # 原则：只有一个地方负责更新数据库状态
+                # 流程：1.获取结果 → 2.保存结果明细 → 3.统一更新状态 → 4.发送 SSE 通知
+
                 try:
                     from wechat_backend.repositories import save_report_snapshot
                     from wechat_backend.diagnosis_report_repository import save_diagnosis_report
-                    
-                    # 构建完整报告数据
+                    from wechat_backend.diagnosis_report_service import get_report_service
+                    from wechat_backend.state_manager import get_state_manager
+
+                    # ==================== 步骤 1: 获取结果明细 ====================
+                    results = result.get('results', [])
+                    api_logger.info(f"[状态同步 -1/4] execution_id={execution_id}, 结果数={len(results)}")
+
+                    # 如果 result 中没有结果，尝试从 execution_store 获取
+                    if not results and execution_id in execution_store:
+                        fallback_results = execution_store[execution_id].get('results', [])
+                        if fallback_results:
+                            results = fallback_results
+                            api_logger.info(f"[状态同步 -1/4] 从 execution_store 恢复 {len(results)} 个结果")
+
+                    # ==================== 步骤 2: 保存结果明细 ====================
+                    try:
+                        service = get_report_service()
+
+                        # 创建/获取报告
+                        config = {
+                            'brand_name': main_brand,
+                            'competitor_brands': competitor_brands if 'competitor_brands' in locals() else [],
+                            'selected_models': selected_models,
+                            'custom_questions': raw_questions if 'raw_questions' in locals() else []
+                        }
+                        report_id = service.create_report(execution_id, user_id or 'anonymous', config)
+
+                        # 添加结果明细
+                        if results:
+                            service.add_results_batch(report_id, execution_id, results)
+                            api_logger.info(f"[状态同步 -2/4] ✅ 结果明细已保存：{execution_id}, 数量：{len(results)}")
+                            
+                            # 【P0 关键修复】验证结果数量是否匹配
+                            from wechat_backend.diagnosis_report_repository import DiagnosisResultRepository
+                            result_repo = DiagnosisResultRepository()
+                            saved_results = result_repo.get_by_execution_id(execution_id)
+                            
+                            expected_count = len(results)
+                            actual_count = len(saved_results)
+                            
+                            if actual_count != expected_count:
+                                api_logger.error(
+                                    f"[状态同步 -2/4] ⚠️ 结果数量不匹配：{execution_id}, "
+                                    f"期望={expected_count}, 实际={actual_count}"
+                                )
+                        else:
+                            api_logger.error(f"[状态同步 -2/4] ❌ 无结果明细可保存：{execution_id}")
+
+                    except Exception as storage_err:
+                        api_logger.error(f"[状态同步 -2/4] ⚠️ 存储层保存失败：{storage_err}")
+
+                    # ==================== 步骤 3: 统一更新状态 ====================
+                    # 关键：使用状态管理器，确保内存和数据库原子性更新
+                    state_manager = get_state_manager(execution_store)
+                    state_manager.complete_execution(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        brand_name=main_brand,
+                        competitor_brands=competitor_brands,
+                        selected_models=selected_models,
+                        custom_questions=raw_questions
+                    )
+                    api_logger.info(f"[状态同步 -3/4] ✅ 状态已统一更新：{execution_id}")
+
+                    # ==================== 步骤 4: 保存快照并发送 SSE 通知 ====================
+                    # 构建完整报告数据并保存快照
                     report_data = {
                         "reportId": execution_id,
                         "userId": user_id or "anonymous",
@@ -375,7 +461,7 @@ def perform_brand_test():
                         "reportData": {
                             "overallScore": result.get('quality_score', {}).get('overall_score') if result.get('quality_score') else None,
                             "overallStatus": "completed",
-                            "dimensions": result.get('results', []),
+                            "dimensions": results,
                             "aggregated": result.get('aggregated', []),
                             "qualityScore": result.get('quality_score')
                         },
@@ -385,7 +471,7 @@ def perform_brand_test():
                             "completedTasks": result.get('completed_tasks')
                         }
                     }
-                    
+
                     # 保存快照到 report_snapshots 表
                     save_report_snapshot(
                         execution_id=execution_id,
@@ -393,33 +479,68 @@ def perform_brand_test():
                         report_data=report_data,
                         report_version="v2.0"
                     )
-                    
-                    # 同时更新 diagnosis_reports 表（兼容旧系统）
-                    save_diagnosis_report(
-                        execution_id=execution_id,
-                        user_id=user_id or "anonymous",
-                        brand_name=main_brand,
-                        competitor_brands=competitor_brands,
-                        selected_models=selected_models,
-                        custom_questions=raw_questions,
-                        status="completed",
-                        progress=100,
-                        stage="completed",
-                        is_completed=True
-                    )
-                    
-                    api_logger.info(f"[M004] ✅ 报告快照保存成功：{execution_id}")
-                    
+                    api_logger.info(f"[状态同步 -4/4] ✅ 报告快照已保存：{execution_id}")
+
+                    # 【关键修复】发送 SSE 完成通知，立即告知前端诊断已完成
+                    try:
+                        from wechat_backend.services.sse_service import send_completion_notification
+                        send_completion_notification(
+                            execution_id=execution_id,
+                            progress=100,
+                            stage='completed',
+                            status_text='诊断完成',
+                            results_count=len(results),
+                            total_tasks=result.get('total_tasks', 0)
+                        )
+                        api_logger.info(f"[SSE] ✅ 完成通知已发送：{execution_id}")
+                    except Exception as sse_err:
+                        api_logger.error(f"[SSE] ⚠️ 通知发送失败：{sse_err}")
+
                 except Exception as snapshot_err:
                     # 快照保存失败不影响主流程，仅记录错误
                     api_logger.error(f"[M004] ⚠️ 报告快照保存失败：{execution_id}, 错误：{snapshot_err}")
             else:
-                api_logger.error(f"NxM execution failed for '{execution_id}': {result.get('error')}")
-                
+                error_message = result.get('error', '执行失败')
+                api_logger.error(f"NxM execution failed for '{execution_id}': {error_message}")
+
+                # 【P0 关键修复】步骤 1: 立即更新内存状态，确保前端轮询能收到失败信号
+                if execution_id in execution_store:
+                    execution_store[execution_id].update({
+                        'status': 'failed',
+                        'stage': 'failed',
+                        'progress': 100,
+                        'is_completed': True,
+                        'should_stop_polling': True,  # 强制停止轮询
+                        'error': error_message
+                    })
+                    api_logger.info(f"[状态同步 - 失败处理 1/3] ✅ 内存状态已更新：{execution_id}")
+
+                # 步骤 2: 使用状态管理器统一更新数据库
+                try:
+                    state_manager = get_state_manager(execution_store)
+                    state_manager.update_state(
+                        execution_id=execution_id,
+                        status='failed',
+                        stage='failed',
+                        progress=100,
+                        is_completed=True,
+                        error_message=error_message,
+                        write_to_db=True,
+                        user_id=user_id or "anonymous",
+                        brand_name=main_brand,
+                        competitor_brands=competitor_brands,
+                        selected_models=selected_models,
+                        custom_questions=raw_questions
+                    )
+                    api_logger.info(f"[状态同步 - 失败处理 2/3] ✅ 数据库状态已更新：{execution_id}")
+                except Exception as state_err:
+                    api_logger.error(f"[状态同步 - 失败处理 2/3] ⚠️ 状态管理器更新失败：{state_err}")
+
                 # M004 改造：即使失败也保存错误报告
                 try:
                     from wechat_backend.repositories import save_report_snapshot
-                    
+                    from wechat_backend.diagnosis_report_repository import save_diagnosis_report
+
                     error_report = {
                         "reportId": execution_id,
                         "userId": user_id or "anonymous",
@@ -427,13 +548,13 @@ def perform_brand_test():
                         "generateTime": datetime.now().isoformat(),
                         "reportVersion": "v2.0",
                         "status": "failed",
-                        "error": result.get('error', '执行失败'),
+                        "error": error_message,
                         "reportData": {
                             "overallStatus": "failed",
                             "dimensions": result.get('results', [])
                         }
                     }
-                    
+
                     # 保存错误报告快照
                     save_report_snapshot(
                         execution_id=execution_id,
@@ -441,21 +562,65 @@ def perform_brand_test():
                         report_data=error_report,
                         report_version="v2.0"
                     )
-                    
-                    api_logger.info(f"[M004] ✅ 错误报告快照保存成功：{execution_id}")
-                    
+
+                    # 【关键修复】同时更新 diagnosis_reports 表，确保前端能够查询到
+                    save_diagnosis_report(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        brand_name=main_brand,
+                        competitor_brands=competitor_brands,
+                        selected_models=selected_models,
+                        custom_questions=raw_questions,
+                        status="failed",
+                        progress=100,  # 进度设为 100%，因为执行已完成（虽然是失败）
+                        stage="failed",
+                        is_completed=True,
+                        error_message=error_message
+                    )
+
+                    api_logger.info(f"[状态同步 - 失败处理 3/3] ✅ 错误报告已保存：{execution_id}")
+
                 except Exception as snapshot_err:
-                    api_logger.error(f"[M004] ⚠️ 错误报告快照保存失败：{execution_id}, 错误：{snapshot_err}")
+                    api_logger.error(f"[M004] ⚠️ 错误报告保存失败：{execution_id}, 错误：{snapshot_err}")
 
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
-            api_logger.error(f"Async test execution failed for execution_id {execution_id}: {e}\nTraceback: {error_traceback}")
+            error_message = f"{str(e)}"
+            api_logger.error(f"Async test execution failed for execution_id {execution_id}: {error_message}\nTraceback: {error_traceback}")
+            
+            # 【P0 关键修复】异常时也要更新内存状态和数据库状态
             if execution_id in execution_store:
                 execution_store[execution_id].update({
                     'status': 'failed',
-                    'error': f"{str(e)}\nTraceback: {error_traceback}"
+                    'stage': 'failed',
+                    'progress': 100,
+                    'is_completed': True,
+                    'should_stop_polling': True,  # 强制停止轮询
+                    'error': f"{error_message}\nTraceback: {error_traceback}"
                 })
+                api_logger.info(f"[异常处理] ✅ 内存状态已更新：{execution_id}")
+            
+            # 尝试更新数据库
+            try:
+                state_manager = get_state_manager(execution_store)
+                state_manager.update_state(
+                    execution_id=execution_id,
+                    status='failed',
+                    stage='failed',
+                    progress=100,
+                    is_completed=True,
+                    error_message=error_message,
+                    write_to_db=True,
+                    user_id=user_id or "anonymous",
+                    brand_name=main_brand,
+                    competitor_brands=competitor_brands,
+                    selected_models=selected_models,
+                    custom_questions=raw_questions
+                )
+                api_logger.info(f"[异常处理] ✅ 数据库状态已更新：{execution_id}")
+            except Exception as state_err:
+                api_logger.error(f"[异常处理] ⚠️ 数据库更新失败：{state_err}")
     thread = Thread(target=run_async_test)
     thread.start()
 
@@ -2223,20 +2388,26 @@ def get_platform_status():
 @require_strict_auth  # 差距 1 修复：添加严格认证
 def get_test_progress():
     """
-    获取测试进度 - 【任务 3 优化】
+    获取测试进度 - 【P0 紧急修复】
 
-    新增 is_synced 字段：
-    - 当 status == 'completed' 且 len(results) == expected 时，is_synced 为 true
-    - 告知前端，数据不仅运行完了，而且已经完全同步到了报告引擎中
-    
+    P0 修复核心原则：
+    1. 数据库是唯一事实源 - 内存找不到时查数据库
+    2. 完成状态必须可查 - 即使内存丢失也能从数据库恢复
+    3. 强制停止轮询 - 完成/失败时必须返回 should_stop_polling=true
+
     安全增强（差距 1 修复）:
     - 需要 JWT Token 或微信 OpenID 认证
     - 记录审计日志
     """
     execution_id = request.args.get('executionId')
-    if execution_id and execution_id in execution_store:
+    
+    if not execution_id:
+        return jsonify({'error': 'Missing executionId parameter'}), 400
+    
+    # 【P0 修复 - 步骤 1】优先从内存读取（快速路径）
+    if execution_id in execution_store:
         progress_data = execution_store[execution_id]
-
+        
         # 【任务 3】数据同步检查 - 增加 is_synced 字段
         status = progress_data.get('status', 'unknown')
         results = progress_data.get('results', [])
@@ -2262,13 +2433,76 @@ def get_test_progress():
             'completion_verified': completion_verified
         }
 
-        # 如果任务已完成，添加一个标志来通知前端停止轮询
+        # 【关键修复】如果任务已完成，添加一个标志来通知前端停止轮询
         if progress_data.get('status') in ['completed', 'failed']:
             progress_data['should_stop_polling'] = True
 
+        api_logger.info(f"[进度查询] 内存命中：{execution_id}, status={status}, progress={progress_data.get('progress')}")
         return jsonify(progress_data)
-    else:
-        return jsonify({'error': 'Execution ID not found'}), 404
+    
+    # 【P0 修复 - 步骤 2】内存未找到，从数据库恢复（降级路径）
+    api_logger.warning(f"[进度查询] 内存未找到，尝试从数据库恢复：{execution_id}")
+    
+    try:
+        from wechat_backend.diagnosis_report_repository import DiagnosisReportRepository
+        repo = DiagnosisReportRepository()
+        
+        # 从数据库查询报告状态
+        report = repo.get_by_execution_id(execution_id)
+        
+        if report:
+            api_logger.info(f"[进度查询] ✅ 数据库恢复成功：{execution_id}, status={report.get('status')}")
+            
+            # 构建符合前端期望的响应格式
+            db_data = {
+                'execution_id': execution_id,
+                'status': report.get('status', 'processing'),
+                'stage': report.get('stage', 'init'),
+                'progress': report.get('progress', 0),
+                'is_completed': report.get('is_completed', False) == 1,
+                'should_stop_polling': report.get('status') in ['completed', 'failed'],
+                'recovered_from_db': True,  # 标记是从数据库恢复的
+                'created_at': report.get('created_at'),
+                'updated_at': report.get('updated_at'),
+            }
+            
+            # 如果有错误信息，添加到响应
+            if report.get('error_message'):
+                db_data['error'] = report.get('error_message')
+            
+            # 【关键修复】如果数据库显示已完成，强制停止轮询
+            if report.get('is_completed') == 1 or report.get('status') in ['completed', 'failed']:
+                db_data['should_stop_polling'] = True
+                api_logger.info(f"[进度查询] ✅ 数据库显示已完成，强制停止轮询：{execution_id}")
+            
+            # 尝试从数据库加载结果（如果已完成）
+            if report.get('status') == 'completed':
+                try:
+                    from wechat_backend.diagnosis_report_repository import DiagnosisResultRepository
+                    result_repo = DiagnosisResultRepository()
+                    results = result_repo.get_by_execution_id(execution_id)
+                    db_data['results'] = results
+                    db_data['results_count'] = len(results)
+                    api_logger.info(f"[进度查询] ✅ 已加载 {len(results)} 条结果")
+                except Exception as result_err:
+                    api_logger.error(f"[进度查询] ⚠️ 加载结果失败：{result_err}")
+            
+            return jsonify(db_data)
+        else:
+            api_logger.error(f"[进度查询] ❌ 数据库也未找到：{execution_id}")
+            return jsonify({
+                'error': 'Execution ID not found',
+                'execution_id': execution_id,
+                'suggestion': '诊断任务不存在或已被清理，请重新开始诊断'
+            }), 404
+            
+    except Exception as e:
+        api_logger.error(f"[进度查询] ❌ 数据库查询失败：{e}")
+        return jsonify({
+            'error': 'Failed to query progress',
+            'message': str(e),
+            'execution_id': execution_id
+        }), 500
 
 
 # ====================
@@ -2623,7 +2857,7 @@ def get_task_status_api(task_id):
                 cache_data = execution_store[task_id]
                 cache_progress = cache_data.get('progress', 0)
                 db_progress = report_data.get('progress', 0)
-                
+
                 # 检查进度是否同步
                 if abs(cache_progress - db_progress) > 10:  # 允许 10% 的误差
                     cache_sync_status = 'out_of_sync'
@@ -2633,15 +2867,20 @@ def get_task_status_api(task_id):
             else:
                 cache_sync_status = 'cache_miss'
 
+            # 【P0 修复 - 架构师决策】添加详细调试日志
+            api_logger.info(f"[TaskStatus] 数据库查询结果：{task_id}, stage={report_data.get('stage')}, status={report_data.get('status')}, progress={report_data.get('progress')}, is_completed={report_data.get('is_completed')}")
+
             # 构建响应
             response_data = {
                 'task_id': task_id,
                 'progress': report_data.get('progress', 0),
-                'stage': report_data.get('stage', 'init'),
+                'stage': report_data.get('stage') or 'processing',  # 【修复】不要使用 'init' 作为默认值
                 'detailed_results': results,
-                'status': report_data.get('status', 'processing'),
+                'status': report_data.get('status') or 'processing',  # 【修复】不要使用 'processing' 作为默认值
                 'results': results,
                 'is_completed': report_data.get('is_completed', False),
+                # 【P0 关键修复】强制停止轮询标志
+                'should_stop_polling': report_data.get('status') in ['completed', 'failed'],
                 'created_at': report_data.get('created_at', ''),
                 'updated_at': report_data.get('updated_at', ''),
                 'has_updates': True,
@@ -2653,15 +2892,46 @@ def get_task_status_api(task_id):
             if report_data.get('status') == 'completed':
                 response_data.update(analysis)
 
-            api_logger.debug(f"[TaskStatus] 从数据库返回：{task_id}, 结果数：{len(results)}, 同步状态：{cache_sync_status}")
+            api_logger.info(f"[TaskStatus] 返回前端数据：{task_id}, stage={response_data['stage']}, is_completed={response_data['is_completed']}, results={len(results)}")
             return jsonify(response_data), 200
 
     except Exception as db_err:
         api_logger.error(f'[TaskStatus] 数据库查询失败：{task_id}, 错误：{db_err}')
         # 继续尝试从缓存读取
 
+    # ==================== 修复：优先使用数据库数据 ====================
+    # 【P0 修复】数据库查询成功时，直接返回，不检查缓存
+    # 避免缓存中的旧数据覆盖数据库的新数据
+    if report:
+        # 【P0 修复 - 架构师决策】添加详细调试日志
+        api_logger.info(f"[TaskStatus] 数据库查询结果（第二次检查）：{task_id}, stage={report_data.get('stage')}, status={report_data.get('status')}, is_completed={report_data.get('is_completed')}")
+
+        # 构建响应
+        response_data = {
+            'task_id': task_id,
+            'progress': report_data.get('progress', 0),
+            'stage': report_data.get('stage') or 'processing',  # 【修复】不要使用 'init' 作为默认值
+            'detailed_results': results,
+            'status': report_data.get('status') or 'processing',  # 【修复】不要使用 'processing' 作为默认值
+            'results': results,
+            'is_completed': report_data.get('is_completed', False),
+            'created_at': report_data.get('created_at', ''),
+            'updated_at': report_data.get('updated_at', ''),
+            'has_updates': True,
+            'source': 'database',  # 标识数据来源
+            'cache_sync_status': 'database_priority'  # 标记使用数据库优先
+        }
+
+        # 添加高级分析数据（如果已完成）
+        if report_data.get('status') == 'completed':
+            response_data.update(analysis)
+
+        api_logger.info(f"[TaskStatus] ✅ 返回前端数据（第二次）：{task_id}, stage={response_data['stage']}, is_completed={response_data['is_completed']}, results={len(results)}")
+        return jsonify(response_data), 200
+
     # ==================== 降级：execution_store 缓存 ====================
-    # 【降级方案】数据库不可用时，从内存缓存读取
+    # 【降级方案】数据库查询结果为空时，从内存缓存读取
+    api_logger.warning(f'[TaskStatus] 数据库无数据，降级到缓存：{task_id}')
     if task_id in execution_store:
         task_status = execution_store[task_id]
 
@@ -2749,9 +3019,9 @@ from wechat_backend.diagnosis_report_service import get_report_service
 #     # 1. 创建报告
 #     config = {
 #         'brand_name': main_brand,
-#         'competitor_brands': competitor_brands,
+#         'competitor_brands': competitor_brands if 'competitor_brands' in locals() else [],
 #         'selected_models': selected_models,
-#         'custom_questions': raw_questions
+#         'custom_questions': raw_questions if 'raw_questions' in locals() else []
 #     }
 #     report_id = service.create_report(execution_id, user_id or 'anonymous', config)
 #     

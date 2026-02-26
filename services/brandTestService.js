@@ -172,7 +172,7 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
 };
 
 /**
- * 创建轮询控制器（P3 优化：优先使用 SSE）
+ * 创建轮询控制器（P0 修复：微信小程序直接使用轮询）
  * @param {string} executionId - 执行 ID
  * @param {Function} onProgress - 进度回调
  * @param {Function} onComplete - 完成回调
@@ -180,48 +180,15 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
  * @returns {Object} 轮询控制器
  */
 const createPollingController = (executionId, onProgress, onComplete, onError) => {
-  // P3 优化：优先使用 SSE，自动降级为轮询
-  console.log('[brandTestService] 创建轮询控制器，优先使用 SSE');
+  // 【P0 关键修复】微信小程序不支持 SSE，直接使用传统轮询
+  console.log('[brandTestService] 创建轮询控制器，执行 ID:', executionId);
   
-  const sseController = createSSEController(executionId);
+  // 直接使用传统轮询（立即启动）
+  const controller = startLegacyPolling(executionId, onProgress, onComplete, onError);
   
-  sseController
-    .on('progress', (data) => {
-      console.log('[SSE] 进度更新:', data);
-      if (onProgress) {
-        onProgress({
-          ...data,
-          source: 'sse'  // 标记数据来源
-        });
-      }
-    })
-    .on('complete', (data) => {
-      console.log('[SSE] 任务完成:', data);
-      if (onComplete) {
-        onComplete({
-          ...data,
-          source: 'sse'
-        });
-      }
-    })
-    .on('error', (error) => {
-      console.warn('[SSE] 错误，降级为轮询模式:', error);
-      // SSE 失败时降级为传统轮询
-      startLegacyPolling(executionId, onProgress, onComplete, onError);
-    })
-    .start();
+  console.log('[brandTestService] ✅ 轮询已启动，执行 ID:', executionId);
   
-  return {
-    start: () => {
-      // SSE 已自动启动
-      console.log('[brandTestService] SSE 已启动');
-    },
-    stop: () => {
-      sseController.stop();
-      console.log('[brandTestService] SSE 已停止');
-    },
-    isStopped: () => !sseController.isUsingSSE && sseController.pollingTimer === null
-  };
+  return controller;
 };
 
 /**

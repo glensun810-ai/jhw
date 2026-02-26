@@ -34,38 +34,86 @@ function saveDiagnosisResult(executionId, data) {
       return false;
     }
 
-    // 构建统一的数据结构
+    // 【P0 关键修复】构建完整的 Storage 数据结构，保存所有详细字段
     const storageData = {
       version: STORAGE_VERSION,
       timestamp: Date.now(),
       executionId: executionId,
       brandName: data.brandName || '',
+      completedAt: data.completedAt || new Date().toISOString(),
+      
+      // 完整保存所有详细字段
       data: {
+        // 基础信息
+        competitorBrands: data.competitorBrands || [],
+        selectedModels: data.selectedModels || [],
+        customQuestions: data.customQuestions || [],
+        
+        // 详细诊断结果
         results: data.results || [],
+        detailedResults: data.detailedResults || [],
+        
+        // 竞争分析（完整字段）
         competitiveAnalysis: data.competitiveAnalysis || {},
         brandScores: data.brandScores || {},
-        detailedResults: data.detailedResults || {},
+        firstMentionByPlatform: data.firstMentionByPlatform || [],
+        interceptionRisks: data.interceptionRisks || [],
+        competitorComparisonData: data.competitorComparisonData || [],
+        
+        // 语义偏移分析（完整字段）
         semanticDriftData: data.semanticDriftData || null,
-        recommendationData: data.recommendationData || null
-      }
+        semanticContrastData: data.semanticContrastData || null,
+        
+        // 信源纯净度（完整字段）
+        sourcePurityData: data.sourcePurityData || null,
+        sourceIntelligenceMap: data.sourceIntelligenceMap || null,
+        
+        // 优化建议（完整字段）
+        recommendationData: data.recommendationData || null,
+        priorityRecommendations: data.priorityRecommendations || [],
+        actionItems: data.actionItems || [],
+        
+        // 质量评分（完整字段）
+        qualityScore: data.qualityScore || {},
+        overallScore: data.overallScore || 0,
+        dimensionScores: data.dimensionScores || {},
+        
+        // 模型性能统计
+        modelPerformanceStats: data.modelPerformanceStats || [],
+        
+        // 响应时间统计
+        responseTimeStats: data.responseTimeStats || {}
+      },
+      
+      // 保存原始响应（用于完整还原）
+      rawResponse: data.rawResponse || null
     };
 
     // 保存到统一 key
     const key = StorageKey.DIAGNOSIS_RESULT + executionId;
     wx.setStorageSync(key, storageData);
 
-    // 同时保存到 last_diagnostic_results（兼容旧逻辑）
+    // 同时保存到 last_diagnostic_results（兼容旧逻辑，保存完整数据）
     wx.setStorageSync(StorageKey.LAST_DIAGNOSIS, {
       version: STORAGE_VERSION,
       executionId: executionId,
       brandName: storageData.brandName,
+      completedAt: storageData.completedAt,
       results: storageData.data.results,
+      detailedResults: storageData.data.detailedResults,
       competitiveAnalysis: storageData.data.competitiveAnalysis,
       brandScores: storageData.data.brandScores,
+      firstMentionByPlatform: storageData.data.firstMentionByPlatform,
+      interceptionRisks: storageData.data.interceptionRisks,
+      semanticDriftData: storageData.data.semanticDriftData,
+      sourcePurityData: storageData.data.sourcePurityData,
+      recommendationData: storageData.data.recommendationData,
+      qualityScore: storageData.data.qualityScore,
+      overallScore: storageData.data.overallScore,
       timestamp: storageData.timestamp
     });
 
-    console.log(`[Storage] ✅ 诊断结果已保存：${executionId}`);
+    console.log(`[Storage] ✅ 诊断结果已完整保存：${executionId}`);
     return true;
   } catch (error) {
     console.error('[Storage] 保存诊断结果失败:', error);
