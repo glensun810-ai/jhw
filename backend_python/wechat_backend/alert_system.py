@@ -342,38 +342,45 @@ def send_dingtalk_alert(title: str, content: str, severity: AlertSeverity = Aler
 def send_email_alert(subject: str, body: str, severity: AlertSeverity = AlertSeverity.MEDIUM):
     """
     发送邮件告警
-    
+
     参数：
         subject: 邮件主题
         body: 邮件正文
         severity: 严重程度
+    
+    P0-003 修复：添加完整的异常处理
     """
     if not ALERT_EMAIL_RECIPIENTS or not ALERT_ENABLED:
         api_logger.info(f"[P2-021 告警] 邮件告警未配置或已禁用，跳过发送")
         return False
-    
+
     try:
+        # P0-003 修复：在 try 块中导入，捕获导入失败
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
-        
+    except ImportError as e:
+        api_logger.error(f"[P2-021 告警] 邮件模块导入失败：{e}")
+        return False
+
+    try:
         # 从环境变量读取 SMTP 配置
         smtp_server = os.getenv('SMTP_SERVER', '')
         smtp_port = int(os.getenv('SMTP_PORT', '587'))
         smtp_user = os.getenv('SMTP_USER', '')
         smtp_password = os.getenv('SMTP_PASSWORD', '')
         sender_email = os.getenv('SENDER_EMAIL', '')
-        
+
         if not all([smtp_server, smtp_user, smtp_password, sender_email]):
             api_logger.warning(f"[P2-021 告警] SMTP 配置不完整，跳过邮件发送")
             return False
-        
+
         # 创建邮件
         msg = MIMEMultipart()
         msg['From'] = sender_email
         msg['To'] = ', '.join(ALERT_EMAIL_RECIPIENTS)
         msg['Subject'] = f"[诊断系统告警] {subject} ({severity.value.upper()})"
-        
+
         # 邮件正文
         email_body = f"""
 <html>
@@ -390,19 +397,19 @@ def send_email_alert(subject: str, body: str, severity: AlertSeverity = AlertSev
 </body>
 </html>
         """
-        
+
         msg.attach(MIMEText(email_body, 'html', 'utf-8'))
-        
+
         # 发送邮件
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(smtp_user, smtp_password)
         server.send_message(msg)
         server.quit()
-        
+
         api_logger.info(f"[P2-021 告警] 邮件告警发送成功：{subject}")
         return True
-        
+
     except Exception as e:
         api_logger.error(f"[P2-021 告警] 发送邮件告警异常：{e}")
         return False
