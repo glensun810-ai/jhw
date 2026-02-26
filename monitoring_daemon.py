@@ -108,19 +108,52 @@ class DiagnosisMonitor:
         self.running = True
 
     def get_dashboard(self, period: str = 'today') -> Optional[Dict]:
-        """获取监控大盘数据"""
-        try:
-            response = requests.get(
-                f"{API_BASE_URL}/api/monitoring/dashboard",
-                params={'period': period},
-                timeout=10
-            )
-            response.raise_for_status()
-            result = response.json()
-            return result.get('data') if result.get('success') else None
-        except Exception as e:
-            api_logger.error(f"获取监控大盘失败：{e}")
-            return None
+        """
+        获取监控大盘数据
+        
+        P0-004 修复：添加完整的异常处理和重试机制
+        """
+        max_retries = 3
+        retry_delay = 5  # 秒
+        
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(
+                    f"{API_BASE_URL}/api/monitoring/dashboard",
+                    params={'period': period},
+                    timeout=10
+                )
+                response.raise_for_status()
+                result = response.json()
+                
+                if result.get('success'):
+                    return result.get('data')
+                else:
+                    api_logger.warning(f"监控 API 返回失败：{result.get('error', '未知错误')}")
+                    return None
+                    
+            except requests.exceptions.ConnectionError as e:
+                api_logger.error(f"监控 API 连接失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                else:
+                    return None
+                    
+            except requests.exceptions.Timeout as e:
+                api_logger.error(f"监控 API 请求超时 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                else:
+                    return None
+                    
+            except Exception as e:
+                api_logger.error(f"获取监控大盘失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                else:
+                    return None
+        
+        return None
 
     def check_metrics(self, data: Dict) -> list:
         """检查指标是否超过阈值"""

@@ -405,9 +405,12 @@ def get_recent_diagnosis_api():
 
 
 @app.route('/admin/monitoring')
+@require_auth  # P0-005 修复：添加身份验证
 def monitoring_dashboard_page():
     """
     监控大盘前端页面
+    
+    P0-005 修复：添加权限验证，仅允许认证用户访问
     """
     try:
         from flask import send_file

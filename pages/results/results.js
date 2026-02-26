@@ -309,19 +309,23 @@ Page({
       partialWarning: resultData.partial_warning || (completionRate < 100 ? `诊断部分完成：${results.length}/${resultData.total_tasks || results.length} (${completionRate}%)` : null),
       // P1-016 新增：配额恢复建议
       quotaRecoverySuggestions: resultData.quota_recovery_suggestions || [],
-      // P2-022 新增：错误日志列表
-      errorLogList: this.buildErrorLogList(results),
-      quotaExhaustedCount: (resultData.quota_exhausted_models || []).length,
-      otherErrorCount: 0  // 会在 buildErrorLogList 中计算
+      // P2-022 新增：错误日志列表（只计算一次）
+      errorLogList: [],
+      quotaExhaustedCount: 0,
+      otherErrorCount: 0
     });
 
-    // P2-022 新增：计算其他错误数
+    // P2-022 新增：计算错误日志和统计（只计算一次，避免重复）
     const errorLogList = this.buildErrorLogList(results);
+    const quotaExhaustedCount = errorLogList.filter(e => 
+      e.errorType === 'quota_exhausted' || e.errorType === 'insufficient_quota'
+    ).length;
     const otherErrorCount = errorLogList.filter(e => 
       e.errorType !== 'quota_exhausted' && e.errorType !== 'insufficient_quota'
     ).length;
     this.setData({
       errorLogList: errorLogList,
+      quotaExhaustedCount: quotaExhaustedCount,
       otherErrorCount: otherErrorCount
     });
 

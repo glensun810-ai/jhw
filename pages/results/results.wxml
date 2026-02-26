@@ -66,7 +66,7 @@
   </view>
 
   <!-- P2-022 新增：错误详情模态框 -->
-  <view class="error-details-modal" wx:if="{{showErrorDetailsModal}}">
+  <view class="error-details-modal" wx:if="{{showErrorDetailsModal && errorLogList.length > 0}}">
     <view class="modal-mask" bindtap="closeErrorDetails"></view>
     <view class="modal-content">
       <view class="modal-header">
@@ -74,7 +74,7 @@
         <text class="modal-close" bindtap="closeErrorDetails">✕</text>
       </view>
       <view class="modal-body">
-        <view class="error-summary-section">
+        <view class="error-summary-section" wx:if="{{errorLogList.length > 0}}">
           <text class="error-summary-title">错误摘要</text>
           <view class="error-summary-grid">
             <view class="summary-item">
@@ -92,7 +92,13 @@
           </view>
         </view>
         
-        <view class="error-list-section">
+        <!-- 无错误时的提示 -->
+        <view class="no-error-hint" wx:else>
+          <text class="no-error-icon">✅</text>
+          <text class="no-error-text">暂无错误记录</text>
+        </view>
+
+        <view class="error-list-section" wx:if="{{errorLogList.length > 0}}">
           <text class="error-list-title">错误列表</text>
           <view class="error-list">
             <view class="error-item" wx:for="{{errorLogList}}" wx:key="index">
