@@ -59,6 +59,16 @@ THRESHOLDS = {
 # 告警冷却时间（秒）- 避免重复告警
 ALERT_COOLDOWN = int(os.getenv('ALERT_COOLDOWN', '1800'))  # 默认 30 分钟
 
+# P2-003 修复：按告警类型配置的冷却时间（秒）
+ALERT_COOLDOWNS = {
+    'success_rate': int(os.getenv('SUCCESS_RATE_COOLDOWN', '1800')),  # 30 分钟
+    'completion_rate': int(os.getenv('COMPLETION_RATE_COOLDOWN', '1800')),  # 30 分钟
+    'quota_exhausted': int(os.getenv('QUOTA_COOLDOWN', '3600')),  # 60 分钟
+    'avg_duration': int(os.getenv('DURATION_COOLDOWN', '900')),  # 15 分钟
+    'error_rate': int(os.getenv('ERROR_RATE_COOLDOWN', '900')),  # 15 分钟
+    'daily_report': 86400,  # 日报 24 小时
+}
+
 # 告警状态文件
 ALERT_STATE_FILE = os.getenv('ALERT_STATE_FILE', '/tmp/diagnosis_monitor_state.json')
 
@@ -89,10 +99,19 @@ class MonitorState:
             api_logger.error(f"保存监控状态失败：{e}")
 
     def can_alert(self, alert_key: str) -> bool:
-        """检查是否可以发送告警（冷却检查）"""
+        """
+        检查是否可以发送告警（冷却检查）
+        
+        P2-003 修复：支持按告警类型使用不同的冷却时间
+        """
         last_alert_time = self.state['last_alerts'].get(alert_key, 0)
         now = time.time()
-        return (now - last_alert_time) > ALERT_COOLDOWN
+        
+        # P2-003 修复：根据告警类型获取冷却时间
+        alert_type = alert_key.split('_')[0]  # 获取告警类型前缀
+        cooldown = ALERT_COOLDOWNS.get(alert_type, ALERT_COOLDOWNS.get(alert_key, DEFAULT_ALERT_COOLDOWN))
+        
+        return (now - last_alert_time) > cooldown
 
     def record_alert(self, alert_key: str):
         """记录告警时间"""

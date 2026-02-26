@@ -299,12 +299,60 @@
         padding: 20px;
       }
 
+      .period-selector {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
       .container {
         padding: 20px;
       }
 
+      .metrics-grid {
+        grid-template-columns: 1fr; /* 移动端单列显示 */
+        gap: 15px;
+      }
+
+      .metric-value {
+        font-size: 28px; /* 移动端字体缩小 */
+      }
+
       .charts-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* 移动端单列显示图表 */
+      }
+
+      .chart-container {
+        height: 250px; /* 移动端图表高度减小 */
+      }
+
+      .diagnosis-table {
+        font-size: 12px; /* 移动端表格字体缩小 */
+      }
+
+      .diagnosis-table th,
+      .diagnosis-table td {
+        padding: 8px 4px; /* 移动端表格内边距减小 */
+      }
+
+      /* 隐藏次要列 */
+      .diagnosis-table th:nth-child(6),
+      .diagnosis-table td:nth-child(6) {
+        display: none; /* 移动端隐藏配额用尽列 */
+      }
+    }
+
+    @media (max-width: 480px) {
+      .metric-value {
+        font-size: 24px; /* 小屏手机字体更小 */
+      }
+
+      .chart-container {
+        height: 200px; /* 小屏手机图表高度更小 */
+      }
+
+      .period-btn {
+        padding: 8px 12px; /* 小屏手机按钮更小 */
+        font-size: 12px;
       }
     }
   </style>

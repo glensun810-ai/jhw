@@ -342,27 +342,31 @@ def get_config():
 def get_monitoring_dashboard_api():
     """
     获取监控大盘数据
-    
+
     查询参数：
         period: 时间周期 ('today', 'week', 'month'), 默认 'today'
-    
+
     返回：
         监控大盘数据
     """
     try:
         from wechat_backend.services.diagnosis_monitor_service import get_monitoring_dashboard
-        
+
         period = request.args.get('period', 'today')
         if period not in ['today', 'week', 'month']:
             period = 'today'
-        
+
+        # P2-006 修复：记录速率限制日志
+        client_ip = request.remote_addr
+        app_logger.info(f"[P2-006 监控 API] 访问大盘数据 - IP: {client_ip}, period: {period}")
+
         dashboard_data = get_monitoring_dashboard(period)
-        
+
         return jsonify({
             'success': True,
             'data': dashboard_data
         })
-        
+
     except Exception as e:
         app_logger.error(f"[P2-020 监控] 获取大盘数据失败：{e}")
         return jsonify({
@@ -398,6 +402,65 @@ def get_recent_diagnosis_api():
 
     except Exception as e:
         app_logger.error(f"[P2-020 监控] 获取最近诊断列表失败：{e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/monitoring/export', methods=['GET'])
+@require_auth  # 需要认证
+@rate_limit(limit=10, window=60, per='ip')  # 限制更严格
+def export_monitoring_data():
+    """
+    P2-007 新增：导出监控数据为 CSV
+
+    查询参数：
+        period: 时间周期 ('today', 'week', 'month')
+        format: 导出格式 ('csv', 'json'), 默认 'csv'
+
+    返回：
+        CSV 或 JSON 格式的文件
+    """
+    try:
+        from wechat_backend.services.diagnosis_monitor_service import get_recent_diagnosis_list
+        import csv
+        import io
+
+        period = request.args.get('period', 'today')
+        export_format = request.args.get('format', 'csv')
+
+        # 获取数据
+        limit = min(int(request.args.get('limit', '100')), 1000)
+        data = get_recent_diagnosis_list(limit)
+
+        if export_format == 'json':
+            # JSON 格式导出
+            return jsonify({
+                'success': True,
+                'data': data,
+                'count': len(data),
+                'period': period,
+                'exported_at': datetime.now().isoformat()
+            })
+        else:
+            # CSV 格式导出
+            output = io.StringIO()
+            if data:
+                writer = csv.DictWriter(output, fieldnames=data[0].keys())
+                writer.writeheader()
+                writer.writerows(data)
+
+            response = app.response_class(
+                response=output.getvalue(),
+                status=200,
+                mimetype='text/csv'
+            )
+            response.headers['Content-Disposition'] = f'attachment; filename=monitoring_{period}_{datetime.now().strftime("%Y%m%d")}.csv'
+            return response
+
+    except Exception as e:
+        app_logger.error(f"[P2-007 导出] 导出数据失败：{e}")
         return jsonify({
             'success': False,
             'error': str(e)
