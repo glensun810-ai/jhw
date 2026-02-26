@@ -102,57 +102,60 @@ class QualityScorer:
         - interception: 拦截分析
         """
         completeness_scores = []
-        
+
         for result in results:
-            geo_data = result.get('geo_data', {})
-            
+            # 【P0 修复】处理 geo_data 为 None 的情况
+            geo_data = result.get('geo_data') or {}
+
             fields = [
-                geo_data.get('brand_mentioned'),
+                geo_data.get('brand_mentioned', False),
                 geo_data.get('rank') is not None and geo_data.get('rank') >= 0,
                 geo_data.get('sentiment') is not None,
                 len(geo_data.get('cited_sources', [])) > 0,
                 geo_data.get('interception') is not None
             ]
-            
+
             field_score = sum(fields) / len(fields) * 100
             completeness_scores.append(field_score)
-        
+
         avg_completeness = sum(completeness_scores) / len(completeness_scores) if completeness_scores else 0
         return avg_completeness * self.WEIGHTS['completeness']
     
     def _calculate_source_quality(self, results: List[Dict[str, Any]]) -> float:
         """
         计算信源质量得分（20 分）
-        
+
         每个结果最多 5 个信源，每个信源 4 分
         """
         source_counts = []
-        
+
         for result in results:
-            geo_data = result.get('geo_data', {})
+            # 【P0 修复】处理 geo_data 为 None 的情况
+            geo_data = result.get('geo_data') or {}
             source_count = len(geo_data.get('cited_sources', []))
             # 最多 5 个信源，每个 20 分
             source_score = min(source_count, 5) / 5 * 100
             source_counts.append(source_score)
-        
+
         avg_sources = sum(source_counts) / len(source_counts) if source_counts else 0
         return avg_sources * self.WEIGHTS['sources']
-    
+
     def _calculate_sentiment_validity(self, results: List[Dict[str, Any]]) -> float:
         """
         计算情感分析有效性得分（10 分）
-        
+
         检查情感值是否在有效范围 [-1, 1]
         """
         sentiment_valid = 0
-        
+
         for result in results:
-            geo_data = result.get('geo_data', {})
+            # 【P0 修复】处理 geo_data 为 None 的情况
+            geo_data = result.get('geo_data') or {}
             sentiment = geo_data.get('sentiment')
-            
+
             if sentiment is not None and -1 <= sentiment <= 1:
                 sentiment_valid += 1
-        
+
         validity_rate = sentiment_valid / len(results) if results else 0
         return validity_rate * 100 * self.WEIGHTS['sentiment']
     

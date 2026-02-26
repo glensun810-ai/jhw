@@ -956,8 +956,13 @@ Page({
       return;
     }
 
-    const brand_list = [brandName, ...this.data.competitorBrands];
-    let selectedModels = [...this.data.domesticAiModels, ...this.data.overseasAiModels].filter(model => model.checked && !model.disabled);
+    // 【P0 修复】确保 domesticAiModels 和 overseasAiModels 是数组
+    const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
+    const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
+    const competitorBrands = Array.isArray(this.data.competitorBrands) ? this.data.competitorBrands : [];
+
+    const brand_list = [brandName, ...competitorBrands];
+    let selectedModels = [...domesticAiModels, ...overseasAiModels].filter(model => model.checked && !model.disabled);
     let customQuestions = this.getValidQuestions();
 
     if (selectedModels.length === 0) {
@@ -972,6 +977,9 @@ Page({
         "{brandName}与竞品的主要差异化体现在哪里？"
       ];
     }
+
+    // 【P2 新增】保存用户选择的 AI 平台偏好
+    this.saveUserPlatformPreferences();
 
     this.setData({
       isTesting: true,
@@ -1022,8 +1030,8 @@ Page({
         }
       );
 
-      // P2 优化：轮询间隔从 2000ms 缩短到 800ms，并立即触发第一次轮询
-      this.pollingController.start(800, true);
+      // 【P0 关键修复】删除手动 start 调用，轮询已在 createPollingController 内部启动
+      // this.pollingController.start(800, false);  // 已删除
     } catch (err) {
       wx.hideLoading();
       this.handleDiagnosisError(err);
@@ -1062,15 +1070,52 @@ Page({
       const competitiveAnalysisToSave = parsedStatus.competitive_analysis || {};
       const brandScoresToSave = competitiveAnalysisToSave.brandScores || {};
 
-      // P1-1 修复：使用统一 Storage 管理器保存
+      // 【P0 关键修复】保存完整的详细诊断结果，与结果页面展示完全一致
       const saveSuccess = saveDiagnosisResult(executionId, {
+        // 基础信息
         brandName: this.data.brandName,
-        results: resultsToSave,
-        competitiveAnalysis: competitiveAnalysisToSave,
-        brandScores: brandScoresToSave,
-        detailedResults: parsedStatus.detailed_results || {},
+        competitorBrands: this.data.competitorBrands || [],
+        selectedModels: parsedStatus.selectedModels || [],
+        customQuestions: parsedStatus.customQuestions || [],
+        completedAt: new Date().toISOString(),
+        
+        // 详细诊断结果
+        results: resultsToSave || [],
+        detailedResults: parsedStatus.detailed_results || [],
+        
+        // 竞争分析
+        competitiveAnalysis: parsedStatus.competitive_analysis || {},
+        brandScores: (parsedStatus.competitive_analysis || {}).brandScores || {},
+        firstMentionByPlatform: (parsedStatus.competitive_analysis || {}).firstMentionByPlatform || [],
+        interceptionRisks: (parsedStatus.competitive_analysis || {}).interceptionRisks || [],
+        competitorComparisonData: (parsedStatus.competitive_analysis || {}).competitorComparisonData || [],
+        
+        // 语义偏移分析
         semanticDriftData: parsedStatus.semantic_drift_data || null,
-        recommendationData: parsedStatus.recommendation_data || null
+        semanticContrastData: (parsedStatus.semantic_drift_data || {}).semanticContrastData || null,
+        
+        // 信源纯净度
+        sourcePurityData: parsedStatus.source_purity_data || null,
+        sourceIntelligenceMap: (parsedStatus.source_purity_data || {}).sourceIntelligenceMap || null,
+        
+        // 优化建议
+        recommendationData: parsedStatus.recommendation_data || null,
+        priorityRecommendations: (parsedStatus.recommendation_data || {}).priorityRecommendations || [],
+        actionItems: (parsedStatus.recommendation_data || {}).actionItems || [],
+        
+        // 质量评分
+        qualityScore: parsedStatus.quality_score || {},
+        overallScore: (parsedStatus.quality_score || {}).overall_score || 0,
+        dimensionScores: (parsedStatus.quality_score || {}).dimension_scores || {},
+        
+        // 模型性能统计
+        modelPerformanceStats: parsedStatus.model_performance_stats || [],
+        
+        // 响应时间统计
+        responseTimeStats: parsedStatus.response_time_stats || {},
+        
+        // 原始数据（用于完整还原）
+        rawResponse: parsedStatus
       });
 
       if (saveSuccess) {
