@@ -2290,13 +2290,14 @@
 }
 
 /* P2-022 新增：错误详情模态框样式 */
+/* P1-002 修复：提高 z-index 避免与其他组件冲突 */
 .error-details-modal {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1000;
+  z-index: 9999; /* P1-002: 从 1000 提高到 9999，确保在最上层 */
   display: flex;
   align-items: center;
   justify-content: center;
