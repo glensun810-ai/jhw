@@ -486,7 +486,8 @@ def initialize_wal_recovery():
                     app_logger.error(f"[WAL 恢复] 检查 WAL 文件失败：{wal_file}, 错误：{e}")
             
             if incomplete_count > 0:
-                app_logger.warning(
+                # P1-003 修复：降低日志级别为 INFO，避免日志过多
+                app_logger.info(
                     f"[WAL 恢复] 发现 {incomplete_count} 个未完成的执行，"
                     f"用户重新访问时可从 WAL 恢复进度"
                 )

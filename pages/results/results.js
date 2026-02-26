@@ -3167,5 +3167,19 @@ Page({
       });
       console.log('[P2-023 自动刷新] 页面卸载，清理定时器');
     }
+  },
+
+  /**
+   * P1-001 修复：页面隐藏时清理定时器（防止内存泄漏）
+   */
+  onHide: function() {
+    if (this.data.autoRefreshTimer) {
+      clearInterval(this.data.autoRefreshTimer);
+      this.setData({
+        autoRefreshTimer: null,
+        isAutoRefreshing: false
+      });
+      console.log('[P1-001 自动刷新] 页面隐藏，清理定时器');
+    }
   }
 });

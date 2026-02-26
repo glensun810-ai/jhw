@@ -1,11 +1,13 @@
 """
 诊断监控服务
 P2-020: 实时监控大盘 - 诊断成功率、完成率、错误分布
+P1-005 修复：监控数据持久化到数据库
 
 功能：
 1. 记录每次诊断的执行指标
 2. 聚合统计数据（按小时/天/周）
 3. 提供监控数据 API
+4. 数据持久化到 SQLite 数据库
 """
 
 from datetime import datetime, timedelta
@@ -13,6 +15,8 @@ from typing import Dict, List, Optional
 from wechat_backend.logging_config import api_logger
 import threading
 import json
+import sqlite3
+import os
 
 # 线程安全的锁
 _metrics_lock = threading.Lock()
@@ -23,6 +27,97 @@ _diagnosis_metrics: Dict[str, Dict] = {}
 
 # 指标保留天数
 METRICS_RETENTION_DAYS = 30
+
+# P1-005 修复：数据库路径
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    'monitoring.db'
+)
+
+
+def init_monitoring_db():
+    """
+    P1-005 修复：初始化监控数据库
+    创建监控数据表用于持久化存储
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # 创建监控数据表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS diagnosis_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                execution_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                total_tasks INTEGER,
+                completed_tasks INTEGER,
+                success BOOLEAN,
+                duration_seconds REAL,
+                completion_rate REAL,
+                quota_exhausted_models TEXT,
+                error_type TEXT,
+                error_message TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                date TEXT,
+                hour INTEGER
+            )
+        ''')
+        
+        # 创建索引加速查询
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_date ON diagnosis_metrics(date)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_execution_id ON diagnosis_metrics(execution_id)')
+        
+        conn.commit()
+        conn.close()
+        api_logger.info(f"[P1-005] 监控数据库初始化成功：{DB_PATH}")
+        
+    except Exception as e:
+        api_logger.error(f"[P1-005] 监控数据库初始化失败：{e}")
+
+
+def save_metric_to_db(metric: Dict):
+    """
+    P1-005 修复：保存指标到数据库
+    
+    参数：
+        metric: 指标数据字典
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO diagnosis_metrics (
+                execution_id, user_id, total_tasks, completed_tasks,
+                success, duration_seconds, completion_rate,
+                quota_exhausted_models, error_type, error_message,
+                date, hour
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            metric.get('execution_id', ''),
+            metric.get('user_id', 'anonymous'),
+            metric.get('total_tasks', 0),
+            metric.get('completed_tasks', 0),
+            1 if metric.get('success', False) else 0,
+            metric.get('duration_seconds', 0),
+            metric.get('completion_rate', 0),
+            json.dumps(metric.get('quota_exhausted_models', [])),
+            metric.get('error_type', ''),
+            metric.get('error_message', ''),
+            metric.get('date', ''),
+            metric.get('hour', 0)
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+    except Exception as e:
+        api_logger.error(f"[P1-005] 保存指标到数据库失败：{e}")
+
+
+# 初始化数据库
+init_monitoring_db()
 
 
 class DiagnosisMetrics:
@@ -109,19 +204,22 @@ def record_diagnosis_metric(
     )
     
     date_str = metric.timestamp.strftime('%Y-%m-%d')
-    
+
     with _metrics_lock:
         if date_str not in _diagnosis_metrics:
             _diagnosis_metrics[date_str] = {}
-        
+
         _diagnosis_metrics[date_str][execution_id] = metric.to_dict()
-        
+
         api_logger.info(
             f"[P2-020 监控] 记录诊断指标：execution_id={execution_id}, "
             f"完成率={metric.completion_rate:.1f}%, "
             f"耗时={duration_seconds:.2f}s"
         )
-    
+
+    # P1-005 修复：同时保存到数据库（服务重启后不丢失）
+    save_metric_to_db(metric.to_dict())
+
     # 清理过期数据
     _cleanup_expired_metrics()
 

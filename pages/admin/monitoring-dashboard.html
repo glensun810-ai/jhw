@@ -387,8 +387,15 @@
   </div>
 
   <script>
-    // 配置
-    const API_BASE_URL = 'http://localhost:5001';  // 修改为实际后端地址
+    // 配置 - P1-004 修复：从全局配置读取，支持生产环境
+    // 优先使用 window.config.API_BASE_URL，其次使用环境变量，最后使用默认值
+    const API_BASE_URL = (typeof window !== 'undefined' && window.config && window.config.API_BASE_URL) ||
+                         (typeof process !== 'undefined' && process.env && process.env.API_BASE_URL) ||
+                         'http://localhost:5001';  // 默认开发环境地址
+    
+    // 可以在部署时通过以下方式配置：
+    // 1. 在 HTML 中添加：<script>window.config = { API_BASE_URL: 'https://api.example.com' };</script>
+    // 2. 或使用环境变量：API_BASE_URL=https://api.example.com
     let currentPeriod = 'today';
     let trendChart, completionChart, durationChart, errorChart;
 
