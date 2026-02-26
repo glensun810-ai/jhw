@@ -17,6 +17,20 @@ _persistence_error_counts: Dict[str, Dict] = {}  # execution_id -> {count, last_
 PERSISTENCE_ERROR_THRESHOLD = 10  # 连续 10 次失败触发告警
 PERSISTENCE_ERROR_WINDOW = 300  # 5 分钟窗口（秒）
 
+# P2-003 修复：按告警类型配置的冷却时间（秒）
+ALERT_COOLDOWNS = {
+    'success_rate': int(os.getenv('SUCCESS_RATE_COOLDOWN', '1800')),  # 30 分钟
+    'completion_rate': int(os.getenv('COMPLETION_RATE_COOLDOWN', '1800')),  # 30 分钟
+    'quota_exhausted': int(os.getenv('QUOTA_COOLDOWN', '3600')),  # 60 分钟
+    'avg_duration': int(os.getenv('DURATION_COOLDOWN', '900')),  # 15 分钟
+    'error_rate': int(os.getenv('ERROR_RATE_COOLDOWN', '900')),  # 15 分钟
+    'persistence_error': int(os.getenv('PERSISTENCE_COOLDOWN', '1800')),  # 30 分钟
+    'daily_report': 86400,  # 日报 24 小时
+}
+
+# 默认冷却时间（秒）
+DEFAULT_ALERT_COOLDOWN = int(os.getenv('ALERT_COOLDOWN', '1800'))  # 30 分钟
+
 
 class AlertSeverity(Enum):
     """告警严重程度"""

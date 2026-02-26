@@ -2291,6 +2291,7 @@
 
 /* P2-022 新增：错误详情模态框样式 */
 /* P1-002 修复：提高 z-index 避免与其他组件冲突 */
+/* P2-004 修复：添加淡入动画效果 */
 .error-details-modal {
   position: fixed;
   top: 0;
@@ -2301,6 +2302,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: fadeIn 0.3s ease-out; /* P2-004: 淡入动画 */
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-mask {
@@ -2310,6 +2321,28 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.7);
+  animation: fadeIn 0.3s ease-out; /* P2-004: 遮罩淡入 */
+}
+
+.modal-content {
+  position: relative;
+  width: 90%;
+  max-height: 80vh;
+  background: linear-gradient(135deg, #1a2a3a 0%, #2a3a4a 100%);
+  border-radius: 24rpx;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out; /* P2-004: 内容上滑动画 */
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modal-content {
