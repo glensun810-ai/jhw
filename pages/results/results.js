@@ -98,19 +98,32 @@ Page({
     streamStage: 'loading',  // 当前渲染阶段
     streamProgress: 0,  // 渲染进度 (0-100)
     streamStageText: '准备渲染...',  // 阶段提示文本
-    streamingData: {}  // 流式渲染的中间数据
+    streamingData: {},  // 流式渲染的中间数据
+
+    // P2-022 新增：错误详情相关
+    showErrorDetailsModal: false,  // 是否显示错误详情模态框
+    errorLogList: [],  // 错误日志列表
+    quotaExhaustedCount: 0,  // 配额用尽错误数
+    otherErrorCount: 0,  // 其他错误数
+
+    // P2-023 新增：自动刷新相关
+    isAutoRefreshing: false,  // 是否正在自动刷新
+    autoRefreshTimer: null,  // 自动刷新定时器
+    useFallbackData: false  // 是否使用降级数据
   },
 
   /**
-   * P1-008 简化：统一数据加载逻辑
-   * 
-   * 简化策略：
-   * 1. 优先从 Storage 加载（快速）
-   * 2. Storage 无数据时从 API 加载（可靠）
+   * P0-005 修复：前端数据加载竞态条件
+   *
+   * 修复策略：
+   * 1. 并行加载所有数据源（Cache, Storage, API）
+   * 2. 使用 Promise.allSettled 确保所有数据源都尝试加载
+   * 3. 选择最优结果（优先级：API > Storage > Cache）
+   * 4. 避免竞态条件导致空结果展示
    */
   onLoad: async function(options) {
-    console.log('[结果页] 页面加载，开始加载数据...');
-    
+    console.log('[结果页 P0-005] 页面加载，开始并行加载数据...');
+
     const executionId = decodeURIComponent(options.executionId || '');
     const brandName = decodeURIComponent(options.brandName || '');
 
@@ -120,91 +133,229 @@ Page({
       return;
     }
 
-    // 显示加载提示
-    wx.showLoading({ title: '加载数据中...', mask: true });
+    // 显示加载中状态
+    this.setData({
+      isLoading: true,
+      showLoadingSpinner: true,
+      showErrorBanner: false
+    });
 
-    try {
-      // 使用统一数据加载服务
-      const result = await loadDiagnosisData(executionId, {
-        forceRefresh: false,  // 优先使用缓存
-        useCacheOnly: false   // 缓存失败时从 API 加载
-      });
+    // 并行加载所有数据源
+    const [cachedResult, storageResult, apiResult] = await Promise.allSettled([
+      this.loadFromCache(),
+      this.loadFromStorage(executionId),
+      this.loadFromApi(executionId)
+    ]);
 
-      wx.hideLoading();
+    // 选择最优结果（优先级：API > Storage > Cache）
+    let bestResult = null;
+    let loadError = null;
 
-      if (result.success && result.data) {
-        console.log(`✅ 数据加载成功：${result.data.results?.length || 0} 条结果，来自${result.fromCache ? '缓存' : 'API'}`);
-        
-        // 初始化页面
-        this.initializePageWithData(
-          result.data.results,
-          brandName,
-          [],
-          result.data.competitive_analysis || {},
-          result.data.negative_sources || [],
-          result.data.semantic_drift_data || null,
-          result.data.recommendation_data || null
-        );
+    if (apiResult.status === 'fulfilled' && apiResult.value && apiResult.value.results) {
+      bestResult = apiResult.value;
+      console.log('✅ 从 API 加载成功');
+    } else if (storageResult.status === 'fulfilled' && storageResult.value) {
+      bestResult = storageResult.value;
+      console.log('✅ 从 Storage 加载成功');
+      loadError = apiResult.reason?.message || 'API 加载失败';
+    } else if (cachedResult.status === 'fulfilled' && cachedResult.value) {
+      bestResult = cachedResult.value;
+      console.log('✅ 从缓存加载成功');
+      loadError = '使用缓存数据';
+    }
 
-        // 保存额外数据到 data
+    // 停止加载动画
+    this.setData({
+      isLoading: false,
+      showLoadingSpinner: false
+    });
+
+    // 如果有结果，展示数据
+    if (bestResult) {
+      this.processAndDisplayResults(bestResult, brandName);
+
+      // 如果有降级提示，显示
+      if (loadError) {
         this.setData({
-          sourcePurityData: result.data.source_purity_data,
-          sourceIntelligenceMap: result.data.source_intelligence_map,
-          warning: result.data.warning,
-          missingCount: result.data.missing_count,
-          qualityScore: result.data.quality_score,
-          qualityLevel: result.data.quality_level,
-          qualityLevelText: this.getQualityLevelText(result.data.quality_level)
+          showFallbackBanner: true,
+          fallbackMessage: loadError,
+          useFallbackData: true
         });
-
-        // BUG-005 修复：合并所有警告，避免重复弹窗
-        const warnings = [];
         
-        // 收集部分完成警告
-        if (result.data.warning) {
-          const resultsCount = (result.data.results || []).length;
-          const totalCount = resultsCount + (result.data.missing_count || 0);
-          warnings.push(`诊断部分完成：${result.data.warning}\n\n已获取 ${resultsCount}/${totalCount} 条有效结果`);
-        }
-        
-        // 收集质量评分警告
-        if (result.data.quality_warning) {
-          const suggestion = result.data.quality_suggestion === 'retry' 
-            ? '建议：重新运行诊断以获得更准确的结果' 
-            : '建议：结果仅供参考，建议结合其他数据源综合判断';
-          warnings.push(`${result.data.quality_warning}\n\n${suggestion}`);
-        }
-        
-        // 合并显示所有警告
-        if (warnings.length > 0) {
-          wx.showModal({
-            title: '诊断提示',
-            content: warnings.join('\n\n---\n\n'),
-            showCancel: false,
-            confirmText: '知道了'
-          });
-        }
-      } else {
-        console.error('[结果页] 数据加载失败:', result.error);
-        wx.showModal({
-          title: '加载失败',
-          content: result.error || '数据加载失败，请稍后重试',
-          showCancel: false,
-          confirmText: '重试',
-          success: (res) => {
-            if (res.confirm) {
-              this.onLoad(options);  // 重试
-            }
-          }
-        });
+        // P2-023 新增：启动后台自动刷新
+        this.startAutoRefresh(executionId, brandName);
       }
-    } catch (error) {
-      wx.hideLoading();
-      console.error('[结果页] 数据加载异常:', error);
+    } else {
+      // 所有数据源都失败
+      this.setData({
+        showErrorBanner: true,
+        errorMessage: '加载诊断结果失败，请重试'
+      });
       wx.showModal({
-        title: '加载异常',
-        content: '数据加载过程中出现异常，请稍后重试',
-        showCancel: false
+        title: '加载失败',
+        content: '所有数据源均加载失败，请重试',
+        showCancel: false,
+        confirmText: '重试',
+        success: (res) => {
+          if (res.confirm) {
+            this.onLoad(options);
+          }
+        }
+      });
+    }
+  },
+
+  /**
+   * P0-005 新增：从缓存加载
+   */
+  loadFromCache: function() {
+    return new Promise((resolve) => {
+      try {
+        const cached = wx.getStorageSync('last_diagnostic_results');
+        if (cached && cached.results && cached.results.length > 0) {
+          resolve(cached);
+        } else {
+          resolve(null);
+        }
+      } catch (e) {
+        console.warn('[loadFromCache] 缓存加载失败:', e);
+        resolve(null);
+      }
+    });
+  },
+
+  /**
+   * P0-005 新增：从 Storage 加载
+   */
+  loadFromStorage: function(executionId) {
+    return new Promise((resolve) => {
+      try {
+        const result = loadDiagnosisResult(executionId);
+        if (result && result.data && result.data.results && result.data.results.length > 0) {
+          resolve(result.data);
+        } else {
+          resolve(null);
+        }
+      } catch (e) {
+        console.warn('[loadFromStorage] Storage 加载失败:', e);
+        resolve(null);
+      }
+    });
+  },
+
+  /**
+   * P0-005 新增：从 API 加载
+   */
+  loadFromApi: function(executionId) {
+    return new Promise((resolve, reject) => {
+      try {
+        const { getFullReport } = require('../../services/diagnosisApi');
+        getFullReport(executionId)
+          .then(res => {
+            if (res && res.results && res.results.length > 0) {
+              resolve(res);
+            } else {
+              reject(new Error('API 返回空结果'));
+            }
+          })
+          .catch(err => reject(err));
+      } catch (e) {
+        console.warn('[loadFromApi] API 加载失败:', e);
+        reject(e);
+      }
+    });
+  },
+
+  /**
+   * P0-005 新增：处理并展示结果
+   */
+  processAndDisplayResults: function(resultData, brandName) {
+    console.log('[processAndDisplayResults] 处理结果数据:', resultData);
+
+    const results = resultData.results || [];
+    const competitiveAnalysis = resultData.competitive_analysis || resultData.competitiveAnalysis || {};
+
+    // 初始化页面
+    this.initializePageWithData(
+      results,
+      brandName,
+      [],
+      competitiveAnalysis,
+      resultData.negative_sources || [],
+      resultData.semantic_drift_data || null,
+      resultData.recommendation_data || null
+    );
+
+    // 保存额外数据到 data（P0-007/P0-009 增强：添加配额警告和完成率）
+    const completionRate = resultData.completion_rate !== undefined
+      ? resultData.completion_rate
+      : (resultData.total_tasks > 0 ? Math.round((resultData.completed_tasks || results.length) * 100 / resultData.total_tasks) : 100);
+
+    this.setData({
+      sourcePurityData: resultData.source_purity_data,
+      sourceIntelligenceMap: resultData.source_intelligence_map,
+      warning: resultData.warning,
+      missingCount: resultData.missing_count,
+      qualityScore: resultData.quality_score,
+      qualityLevel: resultData.quality_level,
+      qualityLevelText: this.getQualityLevelText(resultData.quality_level),
+      // P0-007/P0-009 新增：配额警告和完成率（总是设置，即使用户未提供）
+      quotaWarnings: resultData.quota_warnings || [],
+      quotaExhaustedModels: resultData.quota_exhausted_models || [],
+      completionRate: completionRate,
+      completedTasks: resultData.completed_tasks || results.length,
+      totalTasks: resultData.total_tasks || results.length,
+      hasPartialResults: resultData.has_partial_results || (completionRate < 100),
+      partialWarning: resultData.partial_warning || (completionRate < 100 ? `诊断部分完成：${results.length}/${resultData.total_tasks || results.length} (${completionRate}%)` : null),
+      // P1-016 新增：配额恢复建议
+      quotaRecoverySuggestions: resultData.quota_recovery_suggestions || [],
+      // P2-022 新增：错误日志列表
+      errorLogList: this.buildErrorLogList(results),
+      quotaExhaustedCount: (resultData.quota_exhausted_models || []).length,
+      otherErrorCount: 0  // 会在 buildErrorLogList 中计算
+    });
+
+    // P2-022 新增：计算其他错误数
+    const errorLogList = this.buildErrorLogList(results);
+    const otherErrorCount = errorLogList.filter(e => 
+      e.errorType !== 'quota_exhausted' && e.errorType !== 'insufficient_quota'
+    ).length;
+    this.setData({
+      errorLogList: errorLogList,
+      otherErrorCount: otherErrorCount
+    });
+
+    // P0-007 新增：如果有配额警告，更新提示条
+    if (resultData.quota_warnings && resultData.quota_warnings.length > 0) {
+      this.setData({
+        showFallbackBanner: true,
+        fallbackMessage: resultData.quota_warnings.join('; ') + '。请查看下方恢复建议'
+      });
+    }
+
+    // 合并所有警告
+    const warnings = [];
+    if (resultData.warning) {
+      const resultsCount = results.length;
+      const totalCount = resultsCount + (resultData.missing_count || 0);
+      warnings.push(`诊断部分完成：${resultData.warning}\n\n已获取 ${resultsCount}/${totalCount} 条有效结果`);
+    }
+    if (resultData.quality_warning) {
+      const suggestion = resultData.quality_suggestion === 'retry'
+        ? '建议：重新运行诊断以获得更准确的结果'
+        : '建议：结果仅供参考，建议结合其他数据源综合判断';
+      warnings.push(`${resultData.quality_warning}\n\n${suggestion}`);
+    }
+    // P0-007 新增：配额警告
+    if (resultData.quota_warnings && resultData.quota_warnings.length > 0) {
+      warnings.push(`⚠️ 配额警告：${resultData.quota_warnings.join('; ')}`);
+    }
+    if (warnings.length > 0) {
+      wx.showModal({
+        title: '诊断提示',
+        content: warnings.join('\n\n---\n\n'),
+        showCancel: false,
+        confirmText: '知道了'
       });
     }
   },
@@ -276,183 +427,6 @@ Page({
     console.log('🎯 从 results 计算的品牌评分:', brandScores);
     return brandScores;
   },
-  
-  onLoad: function(options) {
-    console.log('📥 结果页加载 options:', options);
-
-    const executionId = decodeURIComponent(options.executionId || '');
-    const brandName = decodeURIComponent(options.brandName || '');
-
-    // 【P0 修复】添加空结果处理
-    const showEmptyState = (message) => {
-      this.setData({
-        isEmpty: true,
-        emptyMessage: message || '暂无数据'
-      });
-      
-      wx.showModal({
-        title: '暂无数据',
-        content: message || '当前诊断没有可用结果',
-        confirmText: '重新诊断',
-        cancelText: '返回首页',
-        success: (res) => {
-          if (res.confirm) {
-            wx.reLaunch({ url: '/pages/index/index' });
-          } else {
-            wx.navigateBack();
-          }
-        }
-      });
-    };
-
-    // 高优先级修复 2: 缓存数据离线查看
-    // 优先尝试从统一缓存加载（离线查看）
-    const cachedResults = wx.getStorageSync('last_diagnostic_results');
-    if (cachedResults && cachedResults.timestamp) {
-      const cacheAge = Date.now() - cachedResults.timestamp;
-      const isExpired = cacheAge > 3600000; // 1 小时过期
-
-      if (!isExpired) {
-        console.log('[结果页] 使用缓存数据，缓存时间:', new Date(cachedResults.timestamp));
-        
-        // 【P0 修复】检查缓存是否有结果
-        if (!cachedResults.results || cachedResults.results.length === 0) {
-          showEmptyState('缓存数据无结果，请重新诊断');
-          return;
-        }
-        
-        this.setData({
-          ...cachedResults,
-          isCached: true,
-          cacheTime: cachedResults.timestamp
-        });
-        wx.showModal({
-          title: '使用缓存数据',
-          content: '正在使用缓存数据（1 小时内有效）',
-          showCancel: false,
-          confirmText: '知道了'
-        });
-        return;
-      } else {
-        console.log('[结果页] 缓存已过期，缓存时间:', new Date(cachedResults.timestamp));
-      }
-    }
-
-    // P1-1 修复：优先从统一 Storage 加载
-    let storageData = null;
-    if (executionId) {
-      storageData = loadDiagnosisResult(executionId);
-      console.log('📦 P1-1 统一 Storage 加载结果:', {
-        exists: !!storageData,
-        version: storageData?.version,
-        hasResults: !!(storageData?.data?.results && storageData.data.results.length > 0)
-      });
-      
-      // 【P0 修复】检查 Storage 是否有结果
-      if (!storageData || !storageData.data || !storageData.data.results || storageData.data.results.length === 0) {
-        showEmptyState('本地无缓存结果，请重新诊断');
-        return;
-      }
-    }
-
-    // 降级：从旧 Storage 加载（兼容旧数据）
-    if (!storageData) {
-      const lastDiagnosticResults = loadLastDiagnosis();
-      if (lastDiagnosticResults && lastDiagnosticResults.executionId === executionId) {
-        storageData = {
-          version: '1.0',
-          data: {
-            results: lastDiagnosticResults.results,
-            competitiveAnalysis: lastDiagnosticResults.competitiveAnalysis || {},
-            brandScores: lastDiagnosticResults.brandScores || {}
-          }
-        };
-        console.log('📦 从旧 Storage 降级加载成功');
-      }
-    }
-
-    // 【多层降级策略】
-    let results = null;
-    let competitiveAnalysis = null;
-    let targetBrand = brandName;
-    let useStorageData = false;
-    let hasErrors = false;
-    let errorMessages = [];
-    
-    // 1. 优先从统一 Storage 加载
-    if (storageData && storageData.data &&
-        storageData.data.results &&
-        Array.isArray(storageData.data.results) &&
-        storageData.data.results.length > 0) {
-      console.log('✅ 从统一 Storage 加载有效数据');
-      results = storageData.data.results;
-      competitiveAnalysis = storageData.data.competitiveAnalysis || {};
-      targetBrand = storageData.brandName || brandName;
-      useStorageData = true;
-      
-      // 【容错机制】检查是否有错误/警告
-      if (storageData.data.errors && storageData.data.errors.length > 0) {
-        hasErrors = true;
-        errorMessages = storageData.data.errors.map(e => e.error || e.message || '未知错误');
-        console.warn('⚠️  检测到执行错误:', errorMessages);
-      }
-      
-      // 【容错机制】检查配额警告
-      if (storageData.data.warnings && storageData.data.warnings.length > 0) {
-        const quotaWarnings = storageData.data.warnings.filter(w => 
-          w.includes('配额') || w.includes('429') || w.includes('AI 平台')
-        );
-        if (quotaWarnings.length > 0) {
-          this.setData({ quotaWarnings });
-          console.warn('⚠️  配额警告:', quotaWarnings);
-        }
-      }
-    }
-    // 2. 从 executionId 缓存加载（兼容旧逻辑）
-    else if (executionId) {
-      const cachedResults = wx.getStorageSync('latestTestResults_' + executionId);
-      const cachedCompetitiveAnalysis = wx.getStorageSync('latestCompetitiveAnalysis_' + executionId);
-      const cachedBrandScores = wx.getStorageSync('latestBrandScores_' + executionId);
-      const cachedBrand = wx.getStorageSync('latestTargetBrand');
-
-      console.log('📦 本地存储数据 (executionId 缓存):', {
-        hasResults: !!cachedResults && cachedResults.length > 0,
-        hasCompetitiveAnalysis: !!cachedCompetitiveAnalysis,
-        hasBrandScores: !!cachedBrandScores
-      });
-
-      if (cachedResults && Array.isArray(cachedResults) && cachedResults.length > 0) {
-        results = cachedResults;
-        competitiveAnalysis = cachedCompetitiveAnalysis || {};
-        if (cachedBrandScores) {
-          competitiveAnalysis.brandScores = cachedBrandScores;
-        }
-        targetBrand = cachedBrand || brandName;
-        useStorageData = true;
-      }
-    }
-
-    // 3. 数据完整性检查
-    if (competitiveAnalysis && !competitiveAnalysis.brandScores) {
-      if (storageData && storageData.data && storageData.data.brandScores) {
-        competitiveAnalysis.brandScores = storageData.data.brandScores;
-      } else {
-        competitiveAnalysis.brandScores = {};
-      }
-    }
-
-    // 4. 初始化页面或从后端拉取
-    if (useStorageData && results && results.length > 0) {
-      console.log('✅ 使用本地 Storage 数据初始化页面，结果数量:', results.length);
-      this.initializePageWithData(
-        results,
-        targetBrand || '',
-        [],
-        competitiveAnalysis,
-        null, null, null
-      );
-    }
-  },
 
   /**
    * P1-011 修复：从服务器获取结果数据
@@ -523,36 +497,46 @@ Page({
   },
 
   /**
-   * 【容错机制】显示部分结果警告
+   * 【容错机制】显示部分结果警告（P1-017 优化：避免过度弹窗）
+   * 
+   * 优化策略：
+   * 1. 不再自动弹窗，通过 UI 提示条展示
+   * 2. 用户点击"详情"按钮时才显示弹窗
+   * 3. 简化文案，突出关键信息
    */
   showPartialResultsWarning: function() {
-    const { hasPartialResults, platformErrors, quotaWarnings } = this.data;
-    
+    const { hasPartialResults, platformErrors, quotaWarnings, completionRate, completedTasks, totalTasks } = this.data;
+
     if (!hasPartialResults && !quotaWarnings.length) {
       return;
     }
+
+    // P1-017 优化：简化文案，突出关键信息
+    let content = '';
     
-    let content = '诊断过程中遇到以下问题：\n\n';
+    // 完成率信息（最重要）
+    if (completionRate !== undefined && completionRate < 100) {
+      content += `📊 诊断完成率：${completedTasks || 0}/${totalTasks || 0} (${completionRate}%)\n\n`;
+    }
     
+    // 配额警告（如果有）
     if (quotaWarnings.length > 0) {
-      content += '⚠️ 配额警告:\n';
-      content += quotaWarnings.join('\n');
-      content += '\n\n';
+      content += `⚠️ 配额用尽：${quotaWarnings.join(', ')}\n\n`;
     }
     
+    // 平台错误（如果有）
     if (platformErrors.length > 0) {
-      content += '❌ 平台错误:\n';
-      content += platformErrors.join('\n');
-      content += '\n\n';
+      content += `❌ 平台错误：${platformErrors.length} 个\n\n`;
     }
     
-    content += '💡 建议:\n';
-    content += '1. 查看可用结果\n';
-    content += '2. 充值 AI 平台配额后重试\n';
-    content += '3. 切换其他 AI 平台';
-    
+    // 建议（精简版）
+    content += `💡 建议：\n`;
+    content += `• 配额用尽：查看下方"配额恢复建议"卡片\n`;
+    content += `• 切换平台：点击错误平台的"切换其他平台"按钮\n`;
+    content += `• 重新诊断：返回首页重新运行诊断`;
+
     wx.showModal({
-      title: '⚠️ 部分结果不可用',
+      title: '⚠️ 诊断部分完成',
       content: content,
       confirmText: '查看结果',
       cancelText: '重试',
@@ -561,6 +545,218 @@ Page({
           // 用户选择重试
           this.refreshData();
         }
+      }
+    });
+  },
+
+  /**
+   * P0-006 新增：重试加载
+   */
+  retryLoad: function() {
+    const executionId = this.data.executionId || '';
+    if (executionId) {
+      this.onLoad({ executionId });
+    } else {
+      wx.reLaunch({ url: '/pages/index/index' });
+    }
+  },
+
+  /**
+   * P0-006 新增：显示部分结果详情
+   */
+  showPartialDetails: function() {
+    this.showPartialResultsWarning();
+  },
+
+  /**
+   * P1-016 新增：切换其他平台重试
+   */
+  retryWithOtherPlatform: function(e) {
+    const failedModel = e.currentTarget.dataset.model;
+    wx.showModal({
+      title: '切换平台',
+      content: `检测到 ${failedModel} 配额已用尽。您可以：\n\n1. 返回诊断页面切换其他 AI 平台\n2. 充值后重新诊断\n\n是否返回诊断页面？`,
+      confirmText: '去切换',
+      cancelText: '再看看',
+      success: (res) => {
+        if (res.confirm) {
+          // 返回诊断页面，带上当前结果
+          if (this.data.latestTestResults && this.data.targetBrand) {
+            wx.setStorageSync('latestTestResults', this.data.latestTestResults);
+            wx.setStorageSync('latestTargetBrand', this.data.targetBrand);
+          }
+          wx.navigateBack();
+        }
+      }
+    });
+  },
+
+  /**
+   * P2-022 新增：构建错误日志列表
+   */
+  buildErrorLogList: function(results) {
+    const errorLogList = [];
+    const now = new Date();
+    
+    if (results && Array.isArray(results)) {
+      results.forEach((result, index) => {
+        if (result.error || result.error_type) {
+          const errorType = result.error_type || 'unknown';
+          let errorTypeName = '未知错误';
+          
+          // 错误类型映射
+          switch (errorType) {
+            case 'quota_exhausted':
+            case 'insufficient_quota':
+              errorTypeName = '配额用尽';
+              break;
+            case 'timeout':
+              errorTypeName = '超时';
+              break;
+            case 'network_error':
+              errorTypeName = '网络错误';
+              break;
+            case 'invalid_api_key':
+              errorTypeName = 'API Key 无效';
+              break;
+            case 'rate_limit_exceeded':
+              errorTypeName = '频率限制';
+              break;
+            default:
+              errorTypeName = '其他错误';
+          }
+          
+          errorLogList.push({
+            index: index,
+            model: result.model || '未知平台',
+            errorType: errorType,
+            errorTypeName: errorTypeName,
+            message: result.error || '未知错误',
+            time: now.toLocaleTimeString('zh-CN')
+          });
+        }
+      });
+    }
+    
+    return errorLogList;
+  },
+
+  /**
+   * P2-022 新增：显示错误日志详情
+   */
+  showErrorLogDetails: function() {
+    this.setData({
+      showErrorDetailsModal: true
+    });
+  },
+
+  /**
+   * P2-022 新增：关闭错误详情
+   */
+  closeErrorDetails: function() {
+    this.setData({
+      showErrorDetailsModal: false
+    });
+  },
+
+  /**
+   * P2-023 新增：启动自动刷新
+   */
+  startAutoRefresh: function(executionId, brandName) {
+    // 清除之前的定时器
+    if (this.data.autoRefreshTimer) {
+      clearInterval(this.data.autoRefreshTimer);
+    }
+    
+    this.setData({
+      isAutoRefreshing: false
+    });
+    
+    console.log('[P2-023 自动刷新] 启动后台刷新，executionId:', executionId);
+    
+    // 每 30 秒尝试刷新一次
+    const refreshInterval = 30000;
+    const maxRefreshAttempts = 10;  // 最多尝试 10 次
+    let refreshAttempts = 0;
+    
+    const timer = setInterval(() => {
+      refreshAttempts++;
+      console.log(`[P2-023 自动刷新] 第 ${refreshAttempts}/${maxRefreshAttempts} 次刷新尝试`);
+      
+      if (refreshAttempts >= maxRefreshAttempts) {
+        clearInterval(timer);
+        this.setData({
+          autoRefreshTimer: null,
+          isAutoRefreshing: false
+        });
+        console.log('[P2-023 自动刷新] 达到最大尝试次数，停止刷新');
+        return;
+      }
+      
+      // 后台静默刷新
+      this.silentRefreshFromApi(executionId, brandName)
+        .then((success) => {
+          if (success) {
+            console.log('[P2-023 自动刷新] 刷新成功，停止定时器');
+            clearInterval(timer);
+            this.setData({
+              autoRefreshTimer: null,
+              isAutoRefreshing: false,
+              useFallbackData: false
+            });
+            
+            // 显示刷新成功提示
+            wx.showToast({
+              title: '已获取最新结果',
+              icon: 'success'
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn('[P2-023 自动刷新] 刷新失败:', err);
+        });
+      
+    }, refreshInterval);
+    
+    this.setData({
+      autoRefreshTimer: timer
+    });
+  },
+
+  /**
+   * P2-023 新增：后台静默刷新
+   */
+  silentRefreshFromApi: function(executionId, brandName) {
+    return new Promise((resolve, reject) => {
+      try {
+        const { getFullReport } = require('../../services/diagnosisApi');
+        
+        getFullReport(executionId)
+          .then((res) => {
+            if (res && res.results && res.results.length > 0) {
+              // 检查新结果是否比当前结果更好（更多结果或更高完成率）
+              const currentResults = this.data.latestTestResults || [];
+              const newResults = res.results || [];
+              
+              if (newResults.length > currentResults.length) {
+                console.log('[P2-023 自动刷新] 发现更新的结果，数量:', newResults.length);
+                
+                // 更新页面数据
+                this.processAndDisplayResults(res, brandName);
+                resolve(true);
+              } else {
+                console.log('[P2-023 自动刷新] 结果数量无变化，继续等待');
+                resolve(false);
+              }
+            } else {
+              reject(new Error('API 返回空结果'));
+            }
+          })
+          .catch((err) => {
+            reject(err);
+          });
+      } catch (e) {
+        reject(e);
       }
     });
   },
@@ -926,8 +1122,9 @@ Page({
 
       console.log('✅ 页面数据初始化完成');
 
-      // 【容错机制】显示部分结果警告
-      this.showPartialResultsWarning();
+      // P1-017 优化：移除自动弹窗，通过 UI 提示条展示错误信息
+      // 用户点击"详情"按钮时才显示弹窗
+      // this.showPartialResultsWarning();  // 已移除
 
       wx.showToast({
         title: '数据加载成功',
@@ -2353,6 +2550,22 @@ Page({
     const allBrands = Object.keys(competitiveAnalysis.brandScores);
     const competitors = allBrands.filter(b => b !== targetBrand);
 
+    // P0-008 新增：收集错误平台信息
+    const errorPlatforms = {};
+    const quotaExhaustedPlatforms = {};
+    if (results && Array.isArray(results)) {
+      results.forEach(item => {
+        if (item.aiModel && item.error) {
+          // 标记有错误的平台
+          errorPlatforms[item.aiModel] = true;
+          // 标记配额用尽的平台
+          if (item.error_type === 'quota_exhausted' || item.error_type === 'insufficient_quota') {
+            quotaExhaustedPlatforms[item.aiModel] = true;
+          }
+        }
+      });
+    }
+
     if (results && Array.isArray(results)) {
       results.forEach(item => {
         if (item.aiModel) {
@@ -2374,7 +2587,14 @@ Page({
         const myBrandData = competitiveAnalysis.brandScores[targetBrand] || { overallScore: 0, overallGrade: 'D' };
         const competitorData = competitiveAnalysis.brandScores[comp] || { overallScore: 0, overallGrade: 'D' };
 
-        const myBrandDataWithBrand = { ...myBrandData, brand: targetBrand };
+        // P0-008 新增：添加错误标记
+        const myBrandDataWithBrand = {
+          ...myBrandData,
+          brand: targetBrand,
+          hasError: !!errorPlatforms[platform],
+          isQuotaExhausted: !!quotaExhaustedPlatforms[platform],
+          errorMessage: errorPlatforms[platform] ? 'AI 调用失败' : null
+        };
         const competitorDataWithBrand = { ...competitorData, brand: comp };
 
         pkDataByPlatform[platform].push({
@@ -2922,12 +3142,26 @@ Page({
     
     // 隐藏加载提示
     wx.hideLoading();
-    
+
     // 显示完成提示
     wx.showToast({
       title: '渲染完成',
       icon: 'success',
       duration: 1500
     });
+  },
+
+  /**
+   * P2-023 新增：页面卸载时清理定时器
+   */
+  onUnload: function() {
+    if (this.data.autoRefreshTimer) {
+      clearInterval(this.data.autoRefreshTimer);
+      this.setData({
+        autoRefreshTimer: null,
+        isAutoRefreshing: false
+      });
+      console.log('[P2-023 自动刷新] 页面卸载，清理定时器');
+    }
   }
-})
+});

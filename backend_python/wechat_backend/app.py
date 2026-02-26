@@ -335,7 +335,171 @@ def get_config():
     })
 
 
+# ==================== P2-020 新增：监控大盘 API ====================
+
+@app.route('/api/monitoring/dashboard', methods=['GET'])
+@rate_limit(limit=30, window=60, per='ip')  # 每分钟 30 次
+def get_monitoring_dashboard_api():
+    """
+    获取监控大盘数据
+    
+    查询参数：
+        period: 时间周期 ('today', 'week', 'month'), 默认 'today'
+    
+    返回：
+        监控大盘数据
+    """
+    try:
+        from wechat_backend.services.diagnosis_monitor_service import get_monitoring_dashboard
+        
+        period = request.args.get('period', 'today')
+        if period not in ['today', 'week', 'month']:
+            period = 'today'
+        
+        dashboard_data = get_monitoring_dashboard(period)
+        
+        return jsonify({
+            'success': True,
+            'data': dashboard_data
+        })
+        
+    except Exception as e:
+        app_logger.error(f"[P2-020 监控] 获取大盘数据失败：{e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/monitoring/recent', methods=['GET'])
+@rate_limit(limit=30, window=60, per='ip')
+def get_recent_diagnosis_api():
+    """
+    获取最近的诊断列表
+
+    查询参数：
+        limit: 返回数量限制，默认 20
+
+    返回：
+        诊断列表
+    """
+    try:
+        from wechat_backend.services.diagnosis_monitor_service import get_recent_diagnosis_list
+
+        limit = min(int(request.args.get('limit', '20')), 100)  # 最多 100 条
+
+        recent_list = get_recent_diagnosis_list(limit)
+
+        return jsonify({
+            'success': True,
+            'data': recent_list,
+            'count': len(recent_list)
+        })
+
+    except Exception as e:
+        app_logger.error(f"[P2-020 监控] 获取最近诊断列表失败：{e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/admin/monitoring')
+def monitoring_dashboard_page():
+    """
+    监控大盘前端页面
+    """
+    try:
+        from flask import send_file
+        import os
+
+        dashboard_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            'pages', 'admin', 'monitoring-dashboard.html'
+        )
+
+        if os.path.exists(dashboard_path):
+            return send_file(dashboard_path)
+        else:
+            return jsonify({
+                'error': '监控大盘页面文件不存在',
+                'path': dashboard_path
+            }), 404
+
+    except Exception as e:
+        app_logger.error(f"[监控大盘] 页面加载失败：{e}")
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+
+# ==================== P1-015 新增：WAL 恢复机制 ====================
+
+def initialize_wal_recovery():
+    """
+    初始化 WAL 恢复机制
+    
+    功能：
+    1. 清理过期的 WAL 文件（超过 24 小时）
+    2. 检查是否有未完成的执行需要恢复
+    3. 记录恢复统计信息
+    
+    注意：此函数在服务启动时调用，不影响现有请求
+    """
+    try:
+        from wechat_backend.nxm_execution_engine import cleanup_expired_wal, read_wal
+        import glob
+        import os
+        
+        app_logger.info("[WAL 恢复] 开始初始化 WAL 恢复机制...")
+        
+        # 1. 清理过期 WAL 文件
+        cleanup_expired_wal(max_age_hours=24)
+        app_logger.info("[WAL 恢复] 过期 WAL 文件清理完成")
+        
+        # 2. 检查未完成的执行
+        wal_dir = '/tmp/nxm_wal'
+        if os.path.exists(wal_dir):
+            wal_files = glob.glob(os.path.join(wal_dir, 'nxm_wal_*.pkl'))
+            incomplete_count = 0
+            
+            for wal_file in wal_files:
+                try:
+                    filename = os.path.basename(wal_file)
+                    execution_id = filename.replace('nxm_wal_', '').replace('.pkl', '')
+                    wal_data = read_wal(execution_id)
+                    
+                    if wal_data:
+                        completed = wal_data.get('completed', 0)
+                        total = wal_data.get('total', 0)
+                        
+                        if completed < total:
+                            incomplete_count += 1
+                            app_logger.warning(
+                                f"[WAL 恢复] 发现未完成执行：{execution_id}, "
+                                f"进度：{completed}/{total} ({completed*100//max(total,1)}%)"
+                            )
+                except Exception as e:
+                    app_logger.error(f"[WAL 恢复] 检查 WAL 文件失败：{wal_file}, 错误：{e}")
+            
+            if incomplete_count > 0:
+                app_logger.warning(
+                    f"[WAL 恢复] 发现 {incomplete_count} 个未完成的执行，"
+                    f"用户重新访问时可从 WAL 恢复进度"
+                )
+            else:
+                app_logger.info("[WAL 恢复] 所有 WAL 执行均已完成或已过期")
+        
+        app_logger.info("[WAL 恢复] WAL 恢复机制初始化完成")
+        
+    except Exception as e:
+        app_logger.error(f"[WAL 恢复] 初始化失败：{e}\n{traceback.format_exc()}")
+
+
 if __name__ == '__main__':
+    # P1-015 新增：在服务启动时初始化 WAL 恢复机制
+    initialize_wal_recovery()
+    
     # Explicitly specify host and port to align with frontend contract
     # Using standard Flask port 5000 for consistency
     app.run(debug=Config.DEBUG, host='0.0.0.0', port=5000)
