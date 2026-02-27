@@ -114,19 +114,17 @@ class TestAddToDeadLetter:
     
     def test_add_to_dead_letter_invalid_context(self, dlq):
         """测试添加不可序列化的上下文"""
-        # 应该能够处理不可序列化的数据（转换为字符串）
+        # 应该抛出 DeadLetterQueueError
         class NonSerializable:
             pass
         
-        dead_letter_id = dlq.add_to_dead_letter(
-            execution_id='test-123',
-            task_type='ai_call',
-            error=ValueError("Error"),
-            task_context={'data': NonSerializable()},  # type: ignore
-        )
-        
-        # 应该抛出异常或正确处理
-        assert dead_letter_id > 0 or dead_letter_id == 0
+        with pytest.raises(DeadLetterQueueError):
+            dlq.add_to_dead_letter(
+                execution_id='test-123',
+                task_type='ai_call',
+                error=ValueError("Error"),
+                task_context={'data': NonSerializable()},  # type: ignore
+            )
 
 
 # ==================== 查询死信测试 ====================

@@ -16362,3 +16362,5 @@ ModuleNotFoundError: No module named 'config.hot_reload_config'; 'config' is not
 2026-02-26 07:18:55,537 - wechat_backend.api - INFO - hot_reload_config.py:155 - _notify_changes() - [HotReloadConfig] 配置变更：FLASK_DEBUG = 1
 2026-02-27 08:11:48,037 - wechat_backend.database - INFO - database_core.py:57 - init_db() - 初始化数据库于 /Users/sgl/PycharmProjects/PythonProject/backend_python/database.db
 2026-02-27 08:11:48,040 - wechat_backend.database - ERROR - database_core.py:174 - init_db() - 数据库初始化失败：malformed database schema (301)
+{"timestamp": "2026-02-27T00:17:13.903874+00:00", "level": "INFO", "logger": "root", "message": "UnifiedLoggerFactory initialized: log_dir=logs, level=INFO, queue_size=10000", "module": "unified_logger", "function": "initialize", "line": 392, "thread": "MainThread", "process": 90507, "taskName": null}
+{"timestamp": "2026-02-27T00:17:22.225653+00:00", "level": "INFO", "logger": "root", "message": "UnifiedLoggerFactory initialized: log_dir=logs, level=INFO, queue_size=10000", "module": "unified_logger", "function": "initialize", "line": 392, "thread": "MainThread", "process": 90563, "taskName": null}
