@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "品牌诊断",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "progress-display": "./components/ProgressDisplay"
+  }
+}

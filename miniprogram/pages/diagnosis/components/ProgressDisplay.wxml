@@ -1,0 +1,57 @@
+<!-- 进度显示组件模板 -->
+<view class="progress-display">
+  <!-- 进度条 -->
+  <view class="progress-bar">
+    <view 
+      class="progress-fill" 
+      style="width: {{progressPercent}}%; background-color: {{progressColor}};"
+    ></view>
+  </view>
+  
+  <!-- 进度百分比 -->
+  <view class="progress-text" style="color: {{progressColor}};">
+    {{progressText}}
+  </view>
+  
+  <!-- 阶段信息 -->
+  <view class="stage-info">
+    <view class="stage-icon">
+      <view class="icon {{stageIcon}}" style="color: {{progressColor}};">
+        <!-- 加载图标 -->
+        <block wx:if="{{stageIcon === 'loading'}}">
+          <view class="loading-spinner"></view>
+        </block>
+        <!-- 成功图标 -->
+        <block wx:elif="{{stageIcon === 'check-circle'}}">
+          ✓
+        </block>
+        <!-- 失败图标 -->
+        <block wx:elif="{{stageIcon === 'close-circle'}}">
+          ✕
+        </block>
+        <!-- 警告图标 -->
+        <block wx:elif="{{stageIcon === 'warning-circle'}}">
+          !
+        </block>
+      </view>
+    </view>
+    <view class="stage-text">{{stageText}}</view>
+  </view>
+  
+  <!-- 预计时间 -->
+  <view class="estimated-time">
+    {{estimatedTime}}
+  </view>
+  
+  <!-- 详细信息（可选） -->
+  <view class="details" wx:if="{{showDetails}}">
+    <view class="detail-item">
+      <text class="detail-label">已用时间:</text>
+      <text class="detail-value">{{elapsedTime}}秒</text>
+    </view>
+    <view class="detail-item" wx:if="{{status?.results_count}}">
+      <text class="detail-label">已获取结果:</text>
+      <text class="detail-value">{{status.results_count}}条</text>
+    </view>
+  </view>
+</view>
