@@ -409,6 +409,23 @@
   color: #00A9FF;
 }
 
+/* 已选平台提示内容 */
+.hint-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.hint-text .highlight {
+  font-weight: 600;
+  font-size: 30rpx;
+}
+
+.hint-sub {
+  font-size: 26rpx;
+  color: #00A9FF;
+}
+
 
 
 /* AI平台矩阵 */
