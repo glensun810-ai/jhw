@@ -16360,3 +16360,5 @@ ModuleNotFoundError: No module named 'config.hot_reload_config'; 'config' is not
 2026-02-26 07:18:55,537 - wechat_backend.api - INFO - hot_reload_config.py:155 - _notify_changes() - [HotReloadConfig] 配置变更：DOUBAO_MODEL_PRIORITY_4 = doubao-seed-2-0-lite-260215
 2026-02-26 07:18:55,537 - wechat_backend.api - INFO - hot_reload_config.py:311 - on_ai_config_change() - AI 配置变更：DOUBAO_MODEL_PRIORITY_4, 将影响后续 AI 调用
 2026-02-26 07:18:55,537 - wechat_backend.api - INFO - hot_reload_config.py:155 - _notify_changes() - [HotReloadConfig] 配置变更：FLASK_DEBUG = 1
+2026-02-27 08:11:48,037 - wechat_backend.database - INFO - database_core.py:57 - init_db() - 初始化数据库于 /Users/sgl/PycharmProjects/PythonProject/backend_python/database.db
+2026-02-27 08:11:48,040 - wechat_backend.database - ERROR - database_core.py:174 - init_db() - 数据库初始化失败：malformed database schema (301)

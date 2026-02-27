@@ -165,3 +165,25 @@ class DatabaseError(DiagnosisError):
             'original_error': original_error,
         }
         super().__init__(message, details)
+
+
+class DeadLetterQueueError(DiagnosisError):
+    """死信队列相关异常"""
+    
+    error_code = 'DEAD_LETTER_QUEUE_ERROR'
+    status_code = 500
+
+
+class RetryExhaustedError(DiagnosisError):
+    """重试耗尽异常"""
+    
+    error_code = 'RETRY_EXHAUSTED'
+    status_code = 500
+    
+    def __init__(self, original_error: Exception, retry_count: int):
+        self.original_error = original_error
+        self.retry_count = retry_count
+        super().__init__(
+            f"Retry exhausted after {retry_count} attempts. "
+            f"Original error: {original_error}"
+        )
