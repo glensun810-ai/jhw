@@ -349,6 +349,67 @@
 .modal-cancel-btn, .modal-confirm-btn { flex: 1; height: 80rpx; border-radius: 8rpx; font-size: 28rpx; }
 .modal-cancel-btn { background-color: #3a3a3a; color: #e8e8e8; margin-right: 20rpx; }
 .modal-confirm-btn { background-color: #00A9FF; color: #fff; margin-left: 20rpx; }
+/* ==================== 市场分段选择器 ==================== */
+.market-segmented-control {
+  display: flex;
+  background-color: #262626;
+  border-radius: 12rpx;
+  padding: 6rpx;
+  margin-bottom: 30rpx;
+  border: 1rpx solid #3a3a3a;
+}
+
+.segment-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 0;
+  border-radius: 8rpx;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.segment-option.active {
+  background: linear-gradient(135deg, #00A9FF 0%, #00F5A0 100%);
+  box-shadow: 0 4rpx 15rpx rgba(0, 169, 255, 0.3);
+}
+
+.segment-text {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #a6a6a6;
+  transition: color 0.3s ease;
+}
+
+.segment-option.active .segment-text {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 已选平台提示 */
+.selected-models-hint {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 20rpx;
+  background-color: rgba(0, 169, 255, 0.1);
+  border-radius: 8rpx;
+  margin-top: 20rpx;
+  border: 1rpx solid rgba(0, 169, 255, 0.2);
+}
+
+.hint-icon {
+  font-size: 28rpx;
+  color: #00A9FF;
+}
+
+.hint-text {
+  font-size: 26rpx;
+  color: #00A9FF;
+}
+
+
 
 /* AI平台矩阵 */
 .ai-category { margin-bottom: 40rpx; }
