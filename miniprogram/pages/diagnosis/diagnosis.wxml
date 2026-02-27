@@ -1,0 +1,79 @@
+<!-- 诊断页面 - 前端状态轮询优化版本 -->
+<view class="diagnosis-page">
+  <!-- 进度显示组件 -->
+  <view class="progress-section">
+    <progress-display
+      status="{{status}}"
+      elapsed-time="{{elapsedTime}}"
+      bind:progressupdate="onProgressUpdate"
+      bind:stagechange="onStageChange"
+    />
+  </view>
+
+  <!-- 错误提示 -->
+  <view class="error-section" wx:if="{{errorMessage}}">
+    <view class="error-content">
+      <view class="error-icon">!</view>
+      <view class="error-message">{{errorMessage}}</view>
+      <view class="error-actions">
+        <button class="btn-retry" bindtap="onRetry">重试</button>
+        <button class="btn-cancel" bindtap="onCancel">取消</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 详细信息 -->
+  <view class="details-section" wx:if="{{showDetails}}">
+    <view class="detail-card">
+      <view class="detail-title">诊断信息</view>
+      <view class="detail-row">
+        <text class="detail-label">执行 ID:</text>
+        <text class="detail-value">{{executionId}}</text>
+      </view>
+      <view class="detail-row">
+        <text class="detail-label">已用时间:</text>
+        <text class="detail-value">{{elapsedTime}}秒</text>
+      </view>
+      <view class="detail-row" wx:if="{{status?.results_count}}">
+        <text class="detail-label">已获取结果:</text>
+        <text class="detail-value">{{status.results_count}}条</text>
+      </view>
+      <view class="detail-row" wx:if="{{status?.progress}}">
+        <text class="detail-label">当前进度:</text>
+        <text class="detail-value">{{status.progress}}%</text>
+      </view>
+      <view class="detail-row" wx:if="{{retryCount > 0}}">
+        <text class="detail-label">重试次数:</text>
+        <text class="detail-value">{{retryCount}}次</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 进度历史（调试用） -->
+  <view class="history-section" wx:if="{{false}}">
+    <view class="history-title">进度历史</view>
+    <view class="history-list">
+      <view class="history-item" wx:for="{{progressHistory}}" wx:key="time">
+        <text>{{item.stage}}: {{item.progress}}%</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="action-bar">
+    <button class="btn-details" bindtap="onToggleDetails">
+      {{showDetails ? '收起详情' : '查看详情'}}
+    </button>
+    <button class="btn-cancel-outline" bindtap="onCancel" wx:if="{{isPolling}}">
+      取消诊断
+    </button>
+  </view>
+
+  <!-- 加载提示 -->
+  <view class="loading-mask" wx:if="{{!status && !errorMessage}}">
+    <view class="loading-content">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">正在加载诊断信息...</text>
+    </view>
+  </view>
+</view>

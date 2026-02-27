@@ -1,0 +1,156 @@
+/* 进度显示组件样式 */
+
+.progress-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 30rpx;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 16rpx;
+  margin: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+/* 进度条 */
+.progress-bar {
+  width: 100%;
+  height: 16rpx;
+  background-color: #e8e8e8;
+  border-radius: 8rpx;
+  overflow: hidden;
+  margin-bottom: 20rpx;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #07c160 0%, #1890ff 100%);
+  border-radius: 8rpx;
+  transition: width 0.5s ease, background-color 0.3s ease;
+}
+
+/* 进度文本 */
+.progress-text {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+  transition: color 0.3s ease;
+}
+
+/* 阶段信息 */
+.stage-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16rpx;
+}
+
+.stage-icon {
+  margin-right: 12rpx;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.05);
+  font-size: 32rpx;
+  font-weight: bold;
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+/* 加载动画 */
+.loading-spinner {
+  width: 32rpx;
+  height: 32rpx;
+  border: 4rpx solid #e8e8e8;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.stage-text {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 预计时间 */
+.estimated-time {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+
+/* 详细信息 */
+.details {
+  width: 100%;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.1);
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12rpx 0;
+}
+
+.detail-label {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.detail-value {
+  font-size: 24rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+/* 状态颜色 */
+.progress-display.success .progress-fill {
+  background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+}
+
+.progress-display.warning .progress-fill {
+  background: linear-gradient(90deg, #faad14 0%, #ffc53d 100%);
+}
+
+.progress-display.error .progress-fill {
+  background: linear-gradient(90deg, #ff4d4f 0%, #ff7875 100%);
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .progress-display {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  }
+  
+  .progress-bar {
+    background-color: #3d3d3d;
+  }
+  
+  .stage-text {
+    color: #ccc;
+  }
+  
+  .estimated-time {
+    color: #888;
+  }
+  
+  .detail-label {
+    color: #888;
+  }
+  
+  .detail-value {
+    color: #fff;
+  }
+}
