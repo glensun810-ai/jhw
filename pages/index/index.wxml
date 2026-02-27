@@ -120,7 +120,7 @@
         </view>
         
           <!-- 国内AI模型 -->
-          <view class="ai-category">
+          <view class="ai-category {{selectedMarketTab !== 'domestic' ? 'hidden' : ''}}">
             <view class="category-header">
               <text class="category-title">国内AI平台</text>
               <button class="select-all-btn" bindtap="selectAllModels" data-type="domestic">全选</button>
@@ -137,7 +137,7 @@
             </view>
           </view>
           <!-- 海外AI模型 -->
-          <view class="ai-category">
+          <view class="ai-category {{selectedMarketTab !== 'overseas' ? 'hidden' : ''}}">
             <view class="category-header">
               <text class="category-title">海外AI平台</text>
               <button class="select-all-btn" bindtap="selectAllModels" data-type="overseas">全选</button>

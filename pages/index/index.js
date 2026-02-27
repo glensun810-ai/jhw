@@ -819,6 +819,76 @@ Page({
     const totalCount = selectedDomesticCount + selectedOverseasCount;
     this.setData({ selectedModelCount: totalCount });
   },
+  /**
+   * 【新增】切换市场 Tab
+   * 核心防御逻辑：切换市场时立即清空当前已绑定的 selectedModels
+   */
+  switchMarketTab: function(e) {
+    const newMarket = e.currentTarget.dataset.market;
+    const currentMarket = this.data.selectedMarketTab;
+    
+    // 如果点击的是当前已选中的 Tab，不做任何操作
+    if (newMarket === currentMarket) {
+      return;
+    }
+    
+    console.log(`[市场切换] 从 ${currentMarket} 切换到 ${newMarket}`);
+    
+    // 核心防御：清空当前市场的所有选中状态
+    const keyToClear = currentMarket === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
+    const modelsToClear = Array.isArray(this.data[keyToClear]) ? this.data[keyToClear] : [];
+    const clearedModels = modelsToClear.map(model => ({ ...model, checked: false }));
+    
+    this.setData({
+      [keyToClear]: clearedModels,
+      selectedMarketTab: newMarket
+    });
+    
+    this.updateSelectedModelCount();
+    this.saveCurrentInput();
+    
+    wx.showToast({
+      title: `已切换到${newMarket === 'domestic' ? '国内' : '海外'}AI 平台`,
+      icon: 'none',
+      duration: 1500
+    });
+  },
+
+  /**
+   * 【新增】获取当前市场选中的模型 ID 列表
+   * 提交给后端的 Payload 中，selectedModels 只包含当前 Tab 下被选中的模型 ID
+   */
+  getCurrentMarketSelectedModels: function() {
+    const currentMarket = this.data.selectedMarketTab;
+    const key = currentMarket === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
+    const models = Array.isArray(this.data[key]) ? this.data[key] : [];
+    
+    return models
+      .filter(model => model.checked && !model.disabled)
+      .map(model => model.id);
+  },
+
+  /**
+   * 【新增】校验 AI 平台选择
+   * 提交表单时，校验 selectedModels 是否为空
+   */
+  validateModelSelection: function() {
+    const selectedModels = this.getCurrentMarketSelectedModels();
+    
+    if (selectedModels.length === 0) {
+      const marketName = this.data.selectedMarketTab === 'domestic' ? '国内' : '海外';
+      wx.showToast({
+        title: `请至少选择一个${marketName}AI 平台`,
+        icon: 'none',
+        duration: 2000
+      });
+      return false;
+    }
+    
+    return true;
+  },
+
+
 
   /**
    * P2 新增：重置所有输入
