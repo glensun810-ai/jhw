@@ -39,6 +39,30 @@
         </view>
       </view>
 
+      <!-- 已选平台详细提示 -->
+      <view class="selected-platforms-summary" wx:if="{{selectedModelCount > 0 || totalSelectedCount > 0}}">
+        <view class="summary-header">
+          <text class="summary-icon">🎯</text>
+          <text class="summary-title">已选 AI 平台</text>
+        </view>
+        <view class="summary-content">
+          <view class="platform-group" wx:if="{{domesticSelectedNames.length > 0}}">
+            <text class="group-label">国内：</text>
+            <text class="platform-names">{{domesticSelectedNames}}</text>
+            <text class="platform-count">（{{domesticSelectedNames.length}}个）</text>
+          </view>
+          <view class="platform-group" wx:if="{{overseasSelectedNames.length > 0}}">
+            <text class="group-label">海外：</text>
+            <text class="platform-names">{{overseasSelectedNames}}</text>
+            <text class="platform-count">（{{overseasSelectedNames.length}}个）</text>
+          </view>
+          <view class="summary-tip" wx:if="{{totalSelectedCount > 0}}">
+            <text class="tip-icon">💡</text>
+            <text class="tip-text">当前激活：{{selectedMarketTab === 'domestic' ? '国内' : '海外'}}市场，提交时只包含当前市场的 {{selectedModelCount}} 个平台</text>
+          </view>
+        </view>
+      </view>
+
       <view class="vs-icon">VS</view>
 
       <!-- 敌方阵营 -->
