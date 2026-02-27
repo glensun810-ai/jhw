@@ -32,7 +32,10 @@
         <!-- 已选平台提示 -->
         <view class="selected-models-hint" wx:if="{{selectedModelCount > 0}}">
           <text class="hint-icon">✓</text>
-          <text class="hint-text">已选择 {{selectedModelCount}} 个 AI 平台</text>
+          <view class="hint-content">
+            <text class="hint-text">当前市场已选择 <text class="highlight">{{selectedModelCount}}</text> 个 AI 平台</text>
+            <text class="hint-sub" wx:if="{{totalSelectedCount > selectedModelCount}}">（另一个市场还选择了 {{totalSelectedCount - selectedModelCount}} 个，切换后可见）</text>
+          </view>
         </view>
       </view>
 
@@ -102,7 +105,7 @@
       <view class="setting-block">
         <view class="setting-title">
           <text>AI平台矩阵</text>
-          <text class="setting-subtitle">选择您想诊断的AI平台</text>
+          <text class="setting-subtitle">请选择目标分析市场，系统将自动匹配该区域最具代表性的 AI 搜索引擎</text>
         </view>
         <view class="ai-model-selection">
         <!-- 市场分段选择器 -->
@@ -152,6 +155,15 @@
                 <view class="check-icon">✓</view>
               </view>
             </view>
+          </view>
+        </view>
+        
+        <!-- 已选平台提示 -->
+        <view class="selected-models-hint" wx:if="{{selectedModelCount > 0}}">
+          <text class="hint-icon">✓</text>
+          <view class="hint-content">
+            <text class="hint-text">当前市场已选择 <text class="highlight">{{selectedModelCount}}</text> 个 AI 平台</text>
+            <text class="hint-sub" wx:if="{{totalSelectedCount > selectedModelCount}}">（另一个市场还选择了 {{totalSelectedCount - selectedModelCount}} 个，切换后可见）</text>
           </view>
         </view>
       </view>
