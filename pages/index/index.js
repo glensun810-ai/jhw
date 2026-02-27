@@ -813,15 +813,24 @@ Page({
     // P3 修复：确保数据是数组
     const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
     const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
-    
+
     const selectedDomesticCount = domesticAiModels.filter(model => model.checked).length;
     const selectedOverseasCount = overseasAiModels.filter(model => model.checked).length;
-    const totalCount = selectedDomesticCount + selectedOverseasCount;
-    this.setData({ selectedModelCount: totalCount });
+    
+    // 【优化】只显示当前 Tab 的选中数量
+    const currentMarket = this.data.selectedMarketTab;
+    const displayCount = currentMarket === 'domestic' ? selectedDomesticCount : selectedOverseasCount;
+    
+    this.setData({ 
+      selectedModelCount: displayCount,
+      totalSelectedCount: selectedDomesticCount + selectedOverseasCount  // 保存总数用于提示
+    });
   },
   /**
    * 【新增】切换市场 Tab
-   * 核心防御逻辑：切换市场时立即清空当前已绑定的 selectedModels
+   * 优化逻辑：切换市场时保留选中状态，只控制生效范围
+   * - 国内 Tab 激活时：只提交国内平台的选中项
+   * - 海外 Tab 激活时：只提交海外平台的选中项
    */
   switchMarketTab: function(e) {
     const newMarket = e.currentTarget.dataset.market;
@@ -834,16 +843,12 @@ Page({
     
     console.log(`[市场切换] 从 ${currentMarket} 切换到 ${newMarket}`);
     
-    // 核心防御：清空当前市场的所有选中状态
-    const keyToClear = currentMarket === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
-    const modelsToClear = Array.isArray(this.data[keyToClear]) ? this.data[keyToClear] : [];
-    const clearedModels = modelsToClear.map(model => ({ ...model, checked: false }));
-    
+    // 只切换 Tab，不清空选中状态
     this.setData({
-      [keyToClear]: clearedModels,
       selectedMarketTab: newMarket
     });
     
+    // 更新选中数量显示（只计算当前 Tab 的选中项）
     this.updateSelectedModelCount();
     this.saveCurrentInput();
     
@@ -855,8 +860,14 @@ Page({
   },
 
   /**
-   * 【新增】获取当前市场选中的模型 ID 列表
+   * 【核心逻辑】获取当前市场选中的模型 ID 列表
    * 提交给后端的 Payload 中，selectedModels 只包含当前 Tab 下被选中的模型 ID
+   * 
+   * 交互逻辑说明：
+   * - 用户可以在国内和海外 Tab 下都选择平台
+   * - 切换 Tab 时，已选择的平台不会被清空
+   * - 但提交时，只提交当前激活 Tab 下的选中平台
+   * - 例如：当前在"国内"Tab，即使"海外"Tab 有选中，也不会提交
    */
   getCurrentMarketSelectedModels: function() {
     const currentMarket = this.data.selectedMarketTab;
