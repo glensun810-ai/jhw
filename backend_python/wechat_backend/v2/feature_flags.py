@@ -28,7 +28,8 @@ FEATURE_FLAGS: Dict[str, Any] = {
     'diagnosis_v2_retry': False,              # 重试机制（P1-T3）
     'diagnosis_v2_dead_letter': False,        # 死信队列（P1-T4）
     'diagnosis_v2_dead_letter_auto_retry': False,  # 自动重试死信
-    'diagnosis_v2_api_logging': False,        # API 调用日志（P1-T5）
+    'diagnosis_v2_api_logging': False,        # API 日志持久化（P1-T5）
+    'diagnosis_v2_api_log_cleanup': False,    # 自动清理旧日志
     'diagnosis_v2_storage': False,            # 原始数据持久化（P1-T6）
     'diagnosis_v2_report_stub': False,        # 报告存根（P1-T7）
     
