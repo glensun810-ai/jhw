@@ -121,6 +121,7 @@ Page({
     selectedQuestionCount: 0,
 
     // AI模型选择
+    selectedMarketTab: 'domestic', // 当前选中的市场 Tab（国内/海外）
     domesticAiModels: [
       { name: 'DeepSeek', id: 'deepseek', checked: true, logo: 'DS', tags: ['综合', '代码'] },
       { name: '豆包', id: 'doubao', checked: true, logo: 'DB', tags: ['综合', '创意'] },
@@ -976,13 +977,19 @@ Page({
       return;
     }
 
+    // 【新增】校验 AI 平台选择
+    if (!this.validateModelSelection()) {
+      return;
+    }
+
     // 【P0 修复】确保 domesticAiModels 和 overseasAiModels 是数组
     const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
     const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
     const competitorBrands = Array.isArray(this.data.competitorBrands) ? this.data.competitorBrands : [];
 
     const brand_list = [brandName, ...competitorBrands];
-    let selectedModels = [...domesticAiModels, ...overseasAiModels].filter(model => model.checked && !model.disabled);
+    // 【重构】只获取当前市场选中的模型
+    let selectedModels = this.getCurrentMarketSelectedModels();
     let customQuestions = this.getValidQuestions();
 
     if (selectedModels.length === 0) {

@@ -28,6 +28,12 @@
         <view class="brand-input-wrapper">
           <input class="brand-input" placeholder="输入品牌名称" value="{{brandName}}" bindinput="onBrandNameInput"/>
         </view>
+        
+        <!-- 已选平台提示 -->
+        <view class="selected-models-hint" wx:if="{{selectedModelCount > 0}}">
+          <text class="hint-icon">✓</text>
+          <text class="hint-text">已选择 {{selectedModelCount}} 个 AI 平台</text>
+        </view>
       </view>
 
       <view class="vs-icon">VS</view>
@@ -99,6 +105,20 @@
           <text class="setting-subtitle">选择您想诊断的AI平台</text>
         </view>
         <view class="ai-model-selection">
+        <!-- 市场分段选择器 -->
+        <view class="market-segmented-control">
+          <view class="segment-option {{selectedMarketTab === 'domestic' ? 'active' : ''}}" 
+                bindtap="switchMarketTab" 
+                data-market="domestic">
+            <text class="segment-text">国内 AI 平台</text>
+          </view>
+          <view class="segment-option {{selectedMarketTab === 'overseas' ? 'active' : ''}}" 
+                bindtap="switchMarketTab" 
+                data-market="overseas">
+            <text class="segment-text">海外 AI 平台</text>
+          </view>
+        </view>
+        
           <!-- 国内AI模型 -->
           <view class="ai-category">
             <view class="category-header">
