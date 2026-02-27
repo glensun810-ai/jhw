@@ -1,0 +1,85 @@
+<!--
+  统一错误提示组件
+  
+  提供多种错误类型的友好提示，包括：
+  - 网络错误
+  - 服务器错误
+  - 业务错误
+  - 权限错误
+  - 自定义错误
+  
+  使用示例（全局挂载）：
+  <error-toast id="globalErrorToast" />
+  
+  使用示例（页面内使用）：
+  <error-toast error="{{error}}" visible="{{showError}}" bind:close="onErrorClose" />
+-->
+
+<view class="error-toast-mask" wx:if="{{visible}}" catchtouchmove="true">
+  <view class="error-toast-container">
+    <!-- 错误图标 -->
+    <view class="error-icon-wrapper {{errorType}}">
+      <text class="error-icon">{{iconText}}</text>
+    </view>
+    
+    <!-- 错误标题 -->
+    <view class="error-title" wx:if="{{title}}">
+      {{title}}
+    </view>
+    
+    <!-- 错误消息 -->
+    <view class="error-message">
+      {{message}}
+    </view>
+    
+    <!-- 错误详情（可选展开） -->
+    <view class="error-detail-wrapper" wx:if="{{detail && showDetail}}">
+      <view class="error-detail" wx:if="{{expanded}}">
+        <text class="detail-text">{{detail}}</text>
+      </view>
+      <view class="error-toggle" bindtap="toggleExpand" wx:if="{{!expanded}}">
+        <text class="toggle-text">查看详情</text>
+        <text class="toggle-icon">▼</text>
+      </view>
+      <view class="error-toggle" bindtap="toggleExpand" wx:else>
+        <text class="toggle-text">收起详情</text>
+        <text class="toggle-icon">▲</text>
+      </view>
+    </view>
+    
+    <!-- 错误代码（开发模式显示） -->
+    <view class="error-code" wx:if="{{errorCode && isDevMode}}">
+      <text class="code-label">错误代码：</text>
+      <text class="code-value">{{errorCode}}</text>
+    </view>
+    
+    <!-- 操作按钮 -->
+    <view class="error-actions">
+      <button class="error-action-btn cancel" 
+              wx:if="{{showCancel}}" 
+              bindtap="onCancel">
+        {{cancelText}}
+      </button>
+      <button class="error-action-btn primary" 
+              wx:if="{{showRetry}}" 
+              bindtap="onRetry">
+        {{retryText}}
+      </button>
+      <button class="error-action-btn primary" 
+              wx:if="{{showConfirm}}" 
+              bindtap="onConfirm">
+        {{confirmText}}
+      </button>
+      <button class="error-action-btn primary" 
+              wx:if="{{!showRetry && !showConfirm}}" 
+              bindtap="onClose">
+        {{closeText}}
+      </button>
+    </view>
+    
+    <!-- 倒计时关闭提示 -->
+    <view class="error-countdown" wx:if="{{autoClose && countdown > 0}}">
+      <text class="countdown-text">{{countdown}}s 后自动关闭</text>
+    </view>
+  </view>
+</view>

@@ -228,9 +228,8 @@ def get_feature_usage():
                 for model in models:
                     model_usage[model] += 1
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
-                pass
+                api_logger.error(f"Error parsing AI models for feature usage: {e}", exc_info=True)
+                # JSON 解析失败，跳过该行数据
         
         top_features = sorted(
             [{'name': k, 'count': v} for k, v in model_usage.items()],
@@ -298,9 +297,8 @@ def get_ai_platform_stats():
                     # 简化：假设都成功（实际应从详细结果中统计）
                     platform_stats[model]['success'] += 1
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
-                pass
+                api_logger.error(f"Error parsing AI models for platform stats: {e}", exc_info=True)
+                # JSON 解析失败，跳过该行数据
         
         # 转换为列表并排序
         platforms_list = [
@@ -330,9 +328,8 @@ def get_ai_platform_stats():
                 for model in models:
                     daily_trend[date][model] += 1
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
-                pass
+                api_logger.error(f"Error parsing AI models for daily trend: {e}", exc_info=True)
+                # JSON 解析失败，跳过该行数据
         
         trend_data = [
             {'date': date, 'platforms': dict(counts)}
@@ -534,9 +531,8 @@ def get_analytics_dashboard():
                 for model in models:
                     platform_usage[model] += 1
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
-                pass
+                api_logger.error(f"Error parsing AI models for dashboard: {e}", exc_info=True)
+                # JSON 解析失败，跳过该行数据
         
         top_platform = max(platform_usage.items(), key=lambda x: x[1])[0] if platform_usage else 'N/A'
         

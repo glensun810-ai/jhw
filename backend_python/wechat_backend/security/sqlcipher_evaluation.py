@@ -109,17 +109,16 @@ class SQLCipherEvaluator:
                 wrong_conn.execute("PRAGMA key = 'wrong_password'")
                 wrong_conn.execute("SELECT * FROM test_data")
                 logger.error("❌ Encryption test failed: Could read with wrong password")
-                
+
                 self.results['tests'].append({
                     'name': 'Encryption Test',
                     'status': 'FAIL',
                     'details': 'Could read with wrong password'
                 })
-                
+
                 return {'status': 'FAIL'}
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
+                logger.error(f"Encryption verification error (expected behavior): {e}", exc_info=True)
                 logger.info("✅ Encryption test passed: Cannot read with wrong password")
             
             # 用正确密码读取

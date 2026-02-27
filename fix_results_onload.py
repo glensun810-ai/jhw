@@ -47,7 +47,7 @@ new_onload = '''  /**
    * 【关键优化】优先从 Storage 加载，支持后端 API 拉取
    */
   onLoad: function(options) {
-    console.log('📥 结果页加载 options:', options);
+    logger.debug('📥 结果页加载 options:', options);
 
     const executionId = decodeURIComponent(options.executionId || '');
     const brandName = decodeURIComponent(options.brandName || '');
@@ -55,7 +55,7 @@ new_onload = '''  /**
     // 【关键修复】优先从统一 Storage 加载（避免 URL 编码 2KB 限制）
     const lastDiagnosticResults = wx.getStorageSync('last_diagnostic_results');
     
-    console.log('📦 检查统一 Storage (last_diagnostic_results):', {
+    logger.debug('📦 检查统一 Storage (last_diagnostic_results):', {
       exists: !!lastDiagnosticResults,
       executionId: lastDiagnosticResults?.executionId,
       timestamp: lastDiagnosticResults?.timestamp
@@ -68,7 +68,7 @@ new_onload = '''  /**
 
     // 1. 优先从统一 Storage 加载（最新策略）
     if (lastDiagnosticResults && lastDiagnosticResults.results) {
-      console.log('✅ 从统一 Storage 加载数据');
+      logger.debug('✅ 从统一 Storage 加载数据');
       results = lastDiagnosticResults.results;
       competitiveAnalysis = lastDiagnosticResults.competitiveAnalysis || {};
       targetBrand = lastDiagnosticResults.targetBrand || brandName;
@@ -80,7 +80,7 @@ new_onload = '''  /**
       const cachedBrandScores = wx.getStorageSync('latestBrandScores_' + executionId);
       const cachedBrand = wx.getStorageSync('latestTargetBrand');
 
-      console.log('📦 本地存储数据 (executionId 缓存):', {
+      logger.debug('📦 本地存储数据 (executionId 缓存):', {
         hasResults: !!cachedResults && cachedResults.length > 0,
         hasCompetitiveAnalysis: !!cachedCompetitiveAnalysis,
         hasBrandScores: !!cachedBrandScores
@@ -108,7 +108,7 @@ new_onload = '''  /**
 
     // 4. 初始化页面或从后端拉取
     if (results && results.length > 0) {
-      console.log('✅ 使用本地数据初始化页面，结果数量:', results.length);
+      logger.debug('✅ 使用本地数据初始化页面，结果数量:', results.length);
       this.initializePageWithData(
         results,
         targetBrand || '',
@@ -118,10 +118,10 @@ new_onload = '''  /**
       );
     } else if (executionId) {
       // 【专家调优】从后端 API 拉取最新数据
-      console.log('🔄 本地无数据，从后端 API 拉取...');
+      logger.debug('🔄 本地无数据，从后端 API 拉取...');
       this.fetchResultsFromServer(executionId, targetBrand);
     } else {
-      console.error('❌ 无有效数据，显示友好提示');
+      logger.error('❌ 无有效数据，显示友好提示');
       this.showNoDataModal();
     }
   },
@@ -137,7 +137,7 @@ new_onload = '''  /**
       url: `${baseUrl}/api/test-progress?executionId=${executionId}`,
       method: 'GET',
       success: (res) => {
-        console.log('📡 后端 API 响应:', res.data);
+        logger.debug('📡 后端 API 响应:', res.data);
         
         if (res.data && (res.data.detailed_results || res.data.results)) {
           const resultsToUse = res.data.detailed_results || res.data.results || [];
@@ -164,12 +164,12 @@ new_onload = '''  /**
           
           wx.showToast({ title: '数据加载成功', icon: 'success' });
         } else {
-          console.error('❌ 后端 API 返回数据为空');
+          logger.error('❌ 后端 API 返回数据为空');
           this.showNoDataModal();
         }
       },
       fail: (err) => {
-        console.error('❌ 后端 API 请求失败:', err);
+        logger.error('❌ 后端 API 请求失败:', err);
         this.showNoDataModal();
       }
     });

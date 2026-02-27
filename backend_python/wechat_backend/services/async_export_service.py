@@ -222,9 +222,8 @@ class AsyncExportService:
                     if task_time < cutoff_time:
                         tasks_to_remove.append(task_id)
                 except Exception as e:
-
-                    pass  # TODO: 添加适当的错误处理
-                    pass
+                    self.logger.error(f"Error parsing task completion time for {task_id}: {e}", exc_info=True)
+                    # 时间戳解析失败，跳过该任务
         
         for task_id in tasks_to_remove:
             del self.task_status[task_id]

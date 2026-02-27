@@ -1,0 +1,377 @@
+/**
+ * 页面过渡动画样式
+ * 提供多种页面切换动画效果
+ */
+
+/* ==================== 基础过渡类 ==================== */
+
+/* 页面容器基础样式 */
+.page-transition-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ==================== 淡入淡出动画 ==================== */
+
+/* 淡入效果 */
+.fade-enter {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.fade-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+/* ==================== 滑动动画 ==================== */
+
+/* 从右向左滑入（前进） */
+.slide-left-enter {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-left-enter-active {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 350ms ease;
+}
+
+.slide-left-exit {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.slide-left-exit-active {
+  transform: translateX(-10%);
+  opacity: 0.8;
+  transition: transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 350ms ease;
+}
+
+/* 从左向右滑入（后退） */
+.slide-right-enter {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.slide-right-enter-active {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 350ms ease;
+}
+
+.slide-right-exit {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.slide-right-exit-active {
+  transform: translateX(10%);
+  opacity: 0.8;
+  transition: transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 350ms ease;
+}
+
+/* 从下向上滑入（页面呈现） */
+.slide-up-enter {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.slide-up-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease;
+}
+
+.slide-up-exit {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.slide-up-exit-active {
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease;
+}
+
+/* 从上向下滑入（关闭页面） */
+.slide-down-enter {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.slide-down-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease;
+}
+
+.slide-down-exit {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.slide-down-exit-active {
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1), opacity 400ms ease;
+}
+
+/* ==================== 缩放动画 ==================== */
+
+/* 放大呈现 */
+.zoom-enter {
+  transform: scale(0.9);
+  opacity: 0;
+}
+
+.zoom-enter-active {
+  transform: scale(1);
+  opacity: 1;
+  transition: transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 300ms ease;
+}
+
+.zoom-exit {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.zoom-exit-active {
+  transform: scale(1.1);
+  opacity: 0;
+  transition: transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 300ms ease;
+}
+
+/* 缩小消失 */
+.zoom-out-enter {
+  transform: scale(1.2);
+  opacity: 0;
+}
+
+.zoom-out-enter-active {
+  transform: scale(1);
+  opacity: 1;
+  transition: transform 300ms cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 300ms ease;
+}
+
+.zoom-out-exit {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.zoom-out-exit-active {
+  transform: scale(0.8);
+  opacity: 0;
+  transition: transform 300ms cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 300ms ease;
+}
+
+/* ==================== 旋转动画 ==================== */
+
+/* 旋转进入 */
+.rotate-enter {
+  transform: rotate(-10deg) scale(0.9);
+  opacity: 0;
+}
+
+.rotate-enter-active {
+  transform: rotate(0deg) scale(1);
+  opacity: 1;
+  transition: transform 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 400ms ease;
+}
+
+.rotate-exit {
+  transform: rotate(0deg) scale(1);
+  opacity: 1;
+}
+
+.rotate-exit-active {
+  transform: rotate(10deg) scale(1.1);
+  opacity: 0;
+  transition: transform 400ms cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 400ms ease;
+}
+
+/* ==================== 3D 翻转动画 ==================== */
+
+/* Y 轴翻转进入 */
+.flip-y-enter {
+  transform: perspective(1000px) rotateY(-90deg);
+  opacity: 0;
+}
+
+.flip-y-enter-active {
+  transform: perspective(1000px) rotateY(0deg);
+  opacity: 1;
+  transition: transform 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 500ms ease;
+}
+
+.flip-y-exit {
+  transform: perspective(1000px) rotateY(0deg);
+  opacity: 1;
+}
+
+.flip-y-exit-active {
+  transform: perspective(1000px) rotateY(90deg);
+  opacity: 0;
+  transition: transform 500ms cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 500ms ease;
+}
+
+/* X 轴翻转进入 */
+.flip-x-enter {
+  transform: perspective(1000px) rotateX(-90deg);
+  opacity: 0;
+}
+
+.flip-x-enter-active {
+  transform: perspective(1000px) rotateX(0deg);
+  opacity: 1;
+  transition: transform 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 500ms ease;
+}
+
+.flip-x-exit {
+  transform: perspective(1000px) rotateX(0deg);
+  opacity: 1;
+}
+
+.flip-x-exit-active {
+  transform: perspective(1000px) rotateX(90deg);
+  opacity: 0;
+  transition: transform 500ms cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 500ms ease;
+}
+
+/* ==================== 弹性动画 ==================== */
+
+/* 弹性进入 */
+.bounce-enter {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.bounce-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 500ms ease;
+}
+
+.bounce-exit {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.bounce-exit-active {
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55), opacity 500ms ease;
+}
+
+/* ==================== 内容元素动画 ==================== */
+
+/* 内容块依次进入动画 */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(20rpx);
+}
+
+.stagger-item.visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+
+/* 卡片浮动效果 */
+.card-float {
+  animation: cardFloat 3s ease-in-out infinite;
+}
+
+@keyframes cardFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10rpx);
+  }
+}
+
+/* 脉冲效果 */
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 闪烁效果 */
+.shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ==================== 页面过渡包装器 ==================== */
+
+/* 主内容包装器 - 用于触发进入动画 */
+.page-content-wrapper {
+  opacity: 0;
+  transform: translateY(20rpx);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.page-content-wrapper.loaded {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 子元素延迟进入 */
+.page-content-wrapper .stagger-1 {
+  transition-delay: 100ms;
+}
+
+.page-content-wrapper .stagger-2 {
+  transition-delay: 200ms;
+}
+
+.page-content-wrapper .stagger-3 {
+  transition-delay: 300ms;
+}
+
+.page-content-wrapper .stagger-4 {
+  transition-delay: 400ms;
+}
+
+.page-content-wrapper .stagger-5 {
+  transition-delay: 500ms;
+}

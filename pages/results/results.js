@@ -1,4 +1,5 @@
 const { debug, info, warn, error } = require('../../utils/logger');
+const { PageTransition } = require('../../utils/page-transition');
 
 const { saveResult } = require('../../utils/saved-results-sync');
 const { loadDiagnosisResult, loadLastDiagnosis } = require('../../utils/storage-manager');
@@ -18,6 +19,10 @@ const { createStreamingAggregator } = require('../../services/streamingReportAgg
 
 Page({
   data: {
+    // 页面过渡动画
+    pageTransitionClass: '',
+    pageLoaded: false,
+
     targetBrand: '',
     competitiveAnalysis: null,
     latestTestResults: null,
@@ -156,6 +161,9 @@ Page({
    */
   onLoad: async function(options) {
     console.log('[结果页 P0-005] 页面加载，开始并行加载数据...');
+
+    // 应用页面进入动画
+    this.applyPageEnterAnimation();
 
     const executionId = decodeURIComponent(options.executionId || '');
     const brandName = decodeURIComponent(options.brandName || '');
@@ -3278,6 +3286,18 @@ Page({
       });
       console.log('[P2-023 自动刷新] 页面卸载，清理定时器');
     }
+  },
+
+  /**
+   * 应用页面进入动画
+   */
+  applyPageEnterAnimation: function() {
+    setTimeout(() => {
+      this.setData({
+        pageTransitionClass: 'fade-enter-active',
+        pageLoaded: true
+      });
+    }, 50);
   },
 
   /**

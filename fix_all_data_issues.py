@@ -141,7 +141,7 @@ old_validation = '''          // 修复 2: 验证结果是否为空
           if (!resultsToUse || resultsToUse.length === 0) {'''
 
 new_validation = '''          // 验证高级分析数据
-          console.log('📊 验证后端返回的高级分析数据:', {
+          logger.debug('📊 验证后端返回的高级分析数据:', {
             hasResults: resultsToUse && resultsToUse.length > 0,
             hasBrandScores: brandScoresToUse && Object.keys(brandScoresToUse).length > 0,
             hasCompetitiveAnalysis: competitiveAnalysisToUse && Object.keys(competitiveAnalysisToUse).length > 0,
@@ -152,7 +152,7 @@ new_validation = '''          // 验证高级分析数据
           
           // 如果 brand_scores 为空，从 results 中计算
           if (!brandScoresToUse || Object.keys(brandScoresToUse).length === 0) {
-            console.warn('⚠️ 品牌评分数据为空，从 results 计算');
+            logger.warn('⚠️ 品牌评分数据为空，从 results 计算');
             brandScoresToUse = this.calculateBrandScoresFromResults(resultsToUse, brandName);
           }
           
@@ -161,7 +161,7 @@ new_validation = '''          // 验证高级分析数据
             r.brand && r.brand !== brandName
           );
           if (!hasCompetitorData) {
-            console.warn('⚠️ 没有竞品数据，无法进行对比分析');
+            logger.warn('⚠️ 没有竞品数据，无法进行对比分析');
           }
           
           // 修复 2: 验证结果是否为空
@@ -240,7 +240,7 @@ new_onload = '''  /**
       }
     });
     
-    console.log('🎯 从 results 计算的品牌评分:', brandScores);
+    logger.debug('🎯 从 results 计算的品牌评分:', brandScores);
     return brandScores;
   },
   

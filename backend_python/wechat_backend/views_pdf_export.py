@@ -120,8 +120,7 @@ def export_pdf_report():
                             ai_models_used = json.loads(record_data.get('ai_models_used', '[]'))
                             questions_used = json.loads(record_data.get('questions_used', '[]'))
                         except Exception as e:
-
-                            pass  # TODO: 添加适当的错误处理
+                            api_logger.error(f"Error parsing JSON fields for PDF export: {e}", exc_info=True)
                             ai_models_used = []
                             questions_used = []
 

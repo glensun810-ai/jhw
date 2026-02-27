@@ -1,8 +1,10 @@
 const { debug, info, warn, error } = require('../utils/logger');
+const { PageTransition, ANIMATION_TYPES } = require('../utils/page-transition');
 
 /**
  * 导航服务
  * 负责页面跳转和 Storage 数据保存
+ * 集成页面过渡动画
  */
 
 /**
@@ -39,17 +41,11 @@ const saveAndNavigateToResults = (resultData, executionId, brandName) => {
       hasBrandScores: Object.keys(brandScoresToSave).length > 0
     });
 
-    // 跳转
-    wx.navigateTo({
-      url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(brandName)}`,
-      success: () => {
-        console.log('✅ 已跳转到结果页');
-      },
-      fail: (err) => {
-        console.error('跳转失败:', err);
-        wx.showToast({ title: '跳转失败，请重试', icon: 'none' });
-      }
-    });
+    // 跳转到结果页（带动画）
+    PageTransition.navigateTo(
+      `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(brandName)}`,
+      ANIMATION_TYPES.SLIDE_LEFT
+    );
   } catch (error) {
     console.error('保存并跳转失败:', error);
     wx.showToast({ title: '保存失败', icon: 'none' });
@@ -94,16 +90,10 @@ const navigateToDashboard = (reportData, brandName) => {
     }
 
     setTimeout(() => {
-      wx.redirectTo({
-        url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(brandName || '品牌')}`,
-        success: () => {
-          console.log('✅ 诊断完成，已跳转到结果页');
-        },
-        fail: (err) => {
-          console.error('跳转失败:', err);
-          wx.showToast({ title: '请前往"我的"查看报告', icon: 'none' });
-        }
-      });
+      PageTransition.redirectTo(
+        `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(brandName || '品牌')}`,
+        ANIMATION_TYPES.SLIDE_UP
+      );
     }, 500);
   } catch (error) {
     console.error('导航失败:', error);
@@ -117,16 +107,13 @@ const navigateToDashboard = (reportData, brandName) => {
 const navigateToReportDetail = (reportData) => {
   try {
     if (reportData) {
-      const executionId = reportData.executionId || '';
+      const executionId = reportData?.executionId || '';
       wx.setStorageSync('lastReport', reportData);
 
-      wx.navigateTo({
-        url: `/pages/report/dashboard/index?executionId=${executionId}`,
-        fail: (err) => {
-          console.error('跳转报告页面失败:', err);
-          wx.showToast({ title: '跳转失败', icon: 'none' });
-        }
-      });
+      PageTransition.navigateTo(
+        `/pages/report/dashboard/index?executionId=${executionId}`,
+        ANIMATION_TYPES.SLIDE_UP
+      );
     } else {
       wx.showToast({ title: '暂无报告数据', icon: 'none' });
     }
@@ -139,60 +126,50 @@ const navigateToReportDetail = (reportData) => {
  * 跳转到历史记录
  */
 const navigateToHistory = () => {
-  wx.navigateTo({
-    url: '/pages/personal-history/personal-history',
-    fail: (err) => {
-      console.error('跳转历史失败:', err);
-    }
-  });
+  PageTransition.navigateTo(
+    '/pages/personal-history/personal-history',
+    ANIMATION_TYPES.SLIDE_LEFT
+  );
 };
 
 /**
  * 跳转到配置管理
  */
 const navigateToConfigManager = () => {
-  wx.navigateTo({
-    url: '/pages/config-manager/config-manager',
-    fail: (err) => {
-      console.error('跳转配置管理失败:', err);
-    }
-  });
+  PageTransition.navigateTo(
+    '/pages/config-manager/config-manager',
+    ANIMATION_TYPES.SLIDE_LEFT
+  );
 };
 
 /**
  * 跳转到权限管理
  */
 const navigateToPermissionManager = () => {
-  wx.navigateTo({
-    url: '/pages/permission-manager/permission-manager',
-    fail: (err) => {
-      console.error('跳转权限管理失败:', err);
-    }
-  });
+  PageTransition.navigateTo(
+    '/pages/permission-manager/permission-manager',
+    ANIMATION_TYPES.SLIDE_LEFT
+  );
 };
 
 /**
  * 跳转到数据管理
  */
 const navigateToDataManager = () => {
-  wx.navigateTo({
-    url: '/pages/data-manager/data-manager',
-    fail: (err) => {
-      console.error('跳转数据管理失败:', err);
-    }
-  });
+  PageTransition.navigateTo(
+    '/pages/data-manager/data-manager',
+    ANIMATION_TYPES.SLIDE_LEFT
+  );
 };
 
 /**
  * 跳转到用户指南
  */
 const navigateToUserGuide = () => {
-  wx.navigateTo({
-    url: '/pages/user-guide/user-guide',
-    fail: (err) => {
-      console.error('跳转用户指南失败:', err);
-    }
-  });
+  PageTransition.navigateTo(
+    '/pages/user-guide/user-guide',
+    ANIMATION_TYPES.SLIDE_LEFT
+  );
 };
 
 module.exports = {

@@ -628,8 +628,7 @@ def _is_non_business_hours(timestamp: str) -> bool:
         # 周末或工作时间外（9-18 点）
         return dt.weekday() >= 5 or dt.hour < 9 or dt.hour > 18
     except Exception as e:
-
-        pass  # TODO: 添加适当的错误处理
+        api_logger.error(f"Error checking non-business hours for timestamp {timestamp}: {e}", exc_info=True)
         return False
 
 

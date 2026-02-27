@@ -1,6 +1,8 @@
-<view class="page-container container">
-  <!-- 动态背景 -->
-  <canvas type="2d" id="particle-canvas" class="particle-canvas" disable-scroll="true"></canvas>
+<!-- 页面过渡动画包装器 -->
+<view class="page-transition-container {{pageTransitionClass}}">
+  <view class="page-container container {{pageLoaded ? 'loaded' : ''}}">
+    <!-- 动态背景 -->
+    <canvas type="2d" id="particle-canvas" class="particle-canvas" disable-scroll="true"></canvas>
 
   <!-- 吸顶效果：当滚动时显示的总分栏 -->
   <view class="sticky-header {{isSticky ? 'sticky' : ''}}">
@@ -350,4 +352,4 @@
       </view>
     </view>
   </view>
-</view>
+</view></view>

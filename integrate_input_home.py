@@ -55,7 +55,7 @@ content = content.replace(old_page, new_page)
 
 # 4. 在 onLoad 中初始化 inputManager 并恢复输入
 old_onload = '''  onLoad: function(options) {
-    console.log('品牌 AI 雷达 - 页面加载完成');
+    logger.debug('品牌 AI 雷达 - 页面加载完成');
     this.checkServerConnection();
     this.updateSelectedModelCount();
     this.updateSelectedQuestionCount();
@@ -70,7 +70,7 @@ old_onload = '''  onLoad: function(options) {
   },'''
 
 new_onload = '''  onLoad: function(options) {
-    console.log('品牌 AI 雷达 - 页面加载完成');
+    logger.debug('品牌 AI 雷达 - 页面加载完成');
     
     //【P1 新增】初始化输入管理器
     this.inputManager = new InputManager();
@@ -144,7 +144,7 @@ new_method = '''  /**
     if (result.success && result.data) {
       const input = result.data;
       
-      console.log('[InputManager] 恢复上次输入:', input);
+      logger.debug('[InputManager] 恢复上次输入:', input);
       
       // 恢复品牌名称
       this.setData({

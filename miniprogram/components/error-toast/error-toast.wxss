@@ -1,0 +1,309 @@
+/**
+ * 统一错误提示组件样式
+ * 
+ * 提供友好的错误提示视觉效果
+ */
+
+/* 遮罩层 */
+.error-toast-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 容器 */
+.error-toast-container {
+  width: 85%;
+  max-width: 600rpx;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 40rpx 32rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50rpx);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 错误图标包装器 */
+.error-icon-wrapper {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24rpx;
+  font-size: 64rpx;
+}
+
+/* 不同错误类型的图标背景色 */
+.error-icon-wrapper.network {
+  background-color: rgba(255, 152, 0, 0.1);
+}
+
+.error-icon-wrapper.server {
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.error-icon-wrapper.business {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.error-icon-wrapper.auth {
+  background-color: rgba(156, 39, 176, 0.1);
+}
+
+.error-icon-wrapper.timeout {
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.error-icon-wrapper.default {
+  background-color: rgba(158, 158, 158, 0.1);
+}
+
+/* 错误图标 */
+.error-icon {
+  line-height: 1;
+}
+
+/* 错误标题 */
+.error-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #333333;
+  text-align: center;
+  margin-bottom: 16rpx;
+}
+
+/* 错误消息 */
+.error-message {
+  font-size: 28rpx;
+  color: #666666;
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 24rpx;
+  padding: 0 16rpx;
+}
+
+/* 错误详情包装器 */
+.error-detail-wrapper {
+  margin-bottom: 24rpx;
+}
+
+/* 错误详情 */
+.error-detail {
+  background-color: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 16rpx;
+  max-height: 300rpx;
+  overflow-y: auto;
+}
+
+.detail-text {
+  font-size: 24rpx;
+  color: #999999;
+  line-height: 1.8;
+  word-break: break-all;
+}
+
+/* 展开/收起切换 */
+.error-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 12rpx;
+  color: #1890ff;
+  font-size: 26rpx;
+}
+
+.toggle-text {
+  color: #1890ff;
+}
+
+.toggle-icon {
+  font-size: 20rpx;
+}
+
+/* 错误代码（开发模式） */
+.error-code {
+  background-color: #fff3e0;
+  border-radius: 8rpx;
+  padding: 12rpx 16rpx;
+  margin-bottom: 24rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.code-label {
+  font-size: 24rpx;
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.code-value {
+  font-size: 24rpx;
+  color: #e65100;
+  font-family: monospace;
+}
+
+/* 操作按钮区域 */
+.error-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.error-action-btn {
+  flex: 1;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.error-action-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.error-action-btn.cancel {
+  background-color: #f5f5f5;
+  color: #666666;
+}
+
+.error-action-btn.primary {
+  background-color: #1890ff;
+  color: #ffffff;
+}
+
+.error-action-btn.danger {
+  background-color: #f44336;
+  color: #ffffff;
+}
+
+/* 倒计时关闭提示 */
+.error-countdown {
+  text-align: center;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #eeeeee;
+}
+
+.countdown-text {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* ==================== 暗黑模式支持 ==================== */
+
+@media (prefers-color-scheme: dark) {
+  .error-toast-mask {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+
+  .error-toast-container {
+    background-color: #2a2a2a;
+  }
+
+  .error-title {
+    color: #ffffff;
+  }
+
+  .error-message {
+    color: #cccccc;
+  }
+
+  .error-detail {
+    background-color: #333333;
+  }
+
+  .detail-text {
+    color: #999999;
+  }
+
+  .error-code {
+    background-color: #42301a;
+  }
+
+  .error-toggle {
+    color: #64b5f6;
+  }
+
+  .toggle-text {
+    color: #64b5f6;
+  }
+
+  .error-action-btn.cancel {
+    background-color: #333333;
+    color: #cccccc;
+  }
+
+  .error-countdown {
+    border-top-color: #444444;
+  }
+
+  .countdown-text {
+    color: #888888;
+  }
+}
+
+/* ==================== 响应式调整 ==================== */
+
+@media (max-width: 375px) {
+  .error-toast-container {
+    width: 90%;
+    padding: 32rpx 24rpx;
+  }
+
+  .error-icon-wrapper {
+    width: 100rpx;
+    height: 100rpx;
+    font-size: 56rpx;
+  }
+
+  .error-title {
+    font-size: 32rpx;
+  }
+
+  .error-message {
+    font-size: 26rpx;
+  }
+
+  .error-action-btn {
+    height: 64rpx;
+    font-size: 26rpx;
+  }
+}

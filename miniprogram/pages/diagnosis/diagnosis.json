@@ -2,6 +2,7 @@
   "navigationBarTitleText": "品牌诊断",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "progress-display": "./components/ProgressDisplay"
+    "progress-display": "./components/ProgressDisplay",
+    "error-toast": "/miniprogram/components/error-toast/error-toast"
   }
 }

@@ -312,8 +312,7 @@ class ReportDataService:
                         if competitor.get(field):
                             competitor[field] = json.loads(competitor[field])
                     except Exception as e:
-
-                        pass  # TODO: 添加适当的错误处理
+                        self.logger.error(f"Error parsing competitor field {field}: {e}", exc_info=True)
                         competitor[field] = []
                 competitors.append(competitor)
             

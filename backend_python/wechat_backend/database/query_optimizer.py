@@ -213,7 +213,24 @@ class IndexManager:
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
             )
             return [row['name'] for row in cursor.fetchall()]
-    
+
+    def table_exists(self, table: str) -> bool:
+        """检查表是否存在"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                (table,)
+            )
+            return cursor.fetchone() is not None
+
+    def get_table_columns(self, table: str) -> List[str]:
+        """获取表的所有列名"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"PRAGMA table_info({table})")
+            return [row['name'] for row in cursor.fetchall()]
+
     def list_indexes(self, table: str = None) -> List[Dict[str, Any]]:
         """列出索引"""
         with self.get_connection() as conn:
@@ -231,36 +248,59 @@ class IndexManager:
             
             return [dict(row) for row in cursor.fetchall()]
     
-    def create_index(self, table: str, columns: List[str], 
+    def create_index(self, table: str, columns: List[str],
                      index_name: str = None, unique: bool = False) -> Dict[str, Any]:
         """
-        创建索引
-        
+        创建索引（增强版：检查表和列是否存在）
+
         参数:
             table: 表名
             columns: 列名列表
             index_name: 索引名称（可选）
             unique: 是否唯一索引
-        
+
         返回:
             创建结果
         """
+        # 检查表是否存在
+        if not self.table_exists(table):
+            api_logger.warning(f'跳过索引创建：表 {table} 不存在')
+            return {
+                'success': False,
+                'error': f'Table {table} does not exist',
+                'skipped': True
+            }
+
+        # 检查列是否存在
+        table_columns = self.get_table_columns(table)
+        missing_columns = [col for col in columns if col not in table_columns]
+        
+        if missing_columns:
+            api_logger.warning(
+                f'跳过索引创建：表 {table} 缺少列 {missing_columns}，现有列：{table_columns}'
+            )
+            return {
+                'success': False,
+                'error': f'Columns {missing_columns} do not exist in table {table}',
+                'skipped': True
+            }
+
         if not index_name:
             index_name = f"idx_{table}_{'_'.join(columns)}"
-        
+
         columns_sql = ', '.join(columns)
         unique_str = 'UNIQUE ' if unique else ''
-        
+
         sql = f"CREATE {unique_str}INDEX IF NOT EXISTS {index_name} ON {table} ({columns_sql})"
-        
+
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(sql)
                 conn.commit()
-            
+
             api_logger.info(f'索引创建成功：{index_name} on {table}({columns_sql})')
-            
+
             return {
                 'success': True,
                 'index_name': index_name,
@@ -485,21 +525,23 @@ def init_recommended_indexes():
         {'table': 'brand_test_results', 'columns': ['created_at']},
         {'table': 'brand_test_results', 'columns': ['task_id', 'brand_name']},
 
-        # 审计日志相关
-        {'table': 'audit_logs', 'columns': ['user_id']},
+        # 审计日志相关（修复：使用 admin_id 而非 user_id，使用 created_at 而非 timestamp）
+        {'table': 'audit_logs', 'columns': ['admin_id']},
         {'table': 'audit_logs', 'columns': ['action']},
-        {'table': 'audit_logs', 'columns': ['timestamp']},
+        {'table': 'audit_logs', 'columns': ['created_at']},
 
         # 同步数据相关
         {'table': 'sync_results', 'columns': ['user_id']},
         {'table': 'sync_results', 'columns': ['sync_timestamp']},
-        
+
         # 缓存相关
         {'table': 'cache_entries', 'columns': ['expires_at']},
         {'table': 'cache_entries', 'columns': ['created_at']},
     ]
 
     created_count = 0
+    skipped_count = 0
+    failed_count = 0
 
     for idx_config in recommended_indexes:
         result = index_manager.create_index(
@@ -510,11 +552,28 @@ def init_recommended_indexes():
 
         if result.get('success'):
             created_count += 1
+        elif result.get('skipped'):
+            skipped_count += 1
+            api_logger.debug(
+                f'索引跳过：{idx_config["table"]}({idx_config["columns"]}) - '
+                f'{result.get("error", "未知原因")}'
+            )
+        else:
+            failed_count += 1
+            api_logger.error(
+                f'索引创建失败：{idx_config["table"]}({idx_config["columns"]}) - '
+                f'{result.get("error", "未知原因")}'
+            )
 
-    api_logger.info(f'推荐索引初始化完成，创建 {created_count} 个索引')
+    api_logger.info(
+        f'推荐索引初始化完成：成功 {created_count} 个，'
+        f'跳过 {skipped_count} 个，失败 {failed_count} 个'
+    )
 
     return {
         'success': True,
         'created_count': created_count,
+        'skipped_count': skipped_count,
+        'failed_count': failed_count,
         'total_indexes': len(recommended_indexes)
     }

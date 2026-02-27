@@ -66,7 +66,7 @@ radar_functions = '''  /**
       
       return radarData;
     } catch (e) {
-      console.error('准备雷达图数据失败:', e);
+      logger.error('准备雷达图数据失败:', e);
       return [];
     }
   },
@@ -81,7 +81,7 @@ radar_functions = '''  /**
         .fields({ node: true, size: true })
         .exec((res) => {
           if (!res[0] || !res[0].node) {
-            console.error('Canvas not found');
+            logger.error('Canvas not found');
             return;
           }
           
@@ -113,7 +113,7 @@ radar_functions = '''  /**
           this.setData({ radarChartRendered: true });
         });
     } catch (e) {
-      console.error('渲染雷达图失败:', e);
+      logger.error('渲染雷达图失败:', e);
     }
   },
 

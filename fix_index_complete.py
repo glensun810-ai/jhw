@@ -11,12 +11,12 @@ def fix_index_js():
     
     # 1. 在 onLoad 函数开头添加 try-catch 和 setDefaultData 调用
     old_onload_start = """  onLoad: function (options) {
-    console.log('品牌 AI 雷达 - 页面加载完成');
+    logger.debug('品牌 AI 雷达 - 页面加载完成');
     this.checkServerConnection();"""
     
     new_onload_start = """  onLoad: function (options) {
     try {
-      console.log('品牌 AI 雷达 - 页面加载完成');
+      logger.debug('品牌 AI 雷达 - 页面加载完成');
       
       // P0 修复：初始化默认数据，防止后续访问 null
       this.setDefaultData();
@@ -44,7 +44,7 @@ def fix_index_js():
       }, 1000);
     }
     } catch (error) {
-      console.error('onLoad 初始化失败', error);
+      logger.error('onLoad 初始化失败', error);
       // 确保即使出错也能显示基本界面
       this.setDefaultData();
     }
@@ -91,11 +91,11 @@ def fix_index_js():
           currentCompetitor: draft.currentCompetitor || '',
           competitorBrands: draft.competitorBrands || []
         });
-        console.log('草稿已恢复', draft);
+        logger.debug('草稿已恢复', draft);
       } else {
         // 草稿过期，清除
         wx.removeStorageSync('draft_diagnostic_input');
-        console.log('草稿已过期，已清除');
+        logger.debug('草稿已过期，已清除');
       }
     }
   },"""
@@ -109,7 +109,7 @@ def fix_index_js():
       
       // P0 修复：确保 draft 存在且为对象
       if (!draft || typeof draft !== 'object') {
-        console.log('无草稿数据或数据无效');
+        logger.debug('无草稿数据或数据无效');
         return;
       }
       
@@ -125,15 +125,15 @@ def fix_index_js():
             currentCompetitor: draft.currentCompetitor || '',
             competitorBrands: draft.competitorBrands || []
           });
-          console.log('草稿已恢复', draft);
+          logger.debug('草稿已恢复', draft);
         } else {
           // 草稿过期，清除
           wx.removeStorageSync('draft_diagnostic_input');
-          console.log('草稿已过期，已清除');
+          logger.debug('草稿已过期，已清除');
         }
       }
     } catch (error) {
-      console.error('restoreDraft 失败', error);
+      logger.error('restoreDraft 失败', error);
     }
   },"""
     

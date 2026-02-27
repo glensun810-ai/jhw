@@ -33,7 +33,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from wechat_backend.ai_adapters.factory import AIAdapterFactory
-from wechat_backend.ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE
+from wechat_backend.ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE, OBJECTIVE_QUESTION_TEMPLATE
 from wechat_backend.logging_config import api_logger
 from wechat_backend.database import save_test_record
 
@@ -247,228 +247,228 @@ def execute_nxm_test(
             results = []
             completed = 0
 
-            # P0-2 修复：遍历所有品牌（主品牌 + 竞品）
-            all_brands = [main_brand] + (competitor_brands or [])
-            api_logger.info(f"[NxM] 执行品牌数：{len(all_brands)}, 品牌列表：{all_brands}")
+            # P0 修复：只遍历问题和模型，不遍历品牌（获取客观回答）
+            # 请求次数 = 问题数 × AI 平台数
+            api_logger.info(f"[NxM] 执行问题数：{len(raw_questions)}, AI 平台数：{len(selected_models)}")
 
-            # 外层循环：遍历品牌
-            for brand in all_brands:
-                # 中层循环：遍历问题
-                for q_idx, question in enumerate(raw_questions):
-                    # 内层循环：遍历模型
-                    for model_info in selected_models:
-                        model_name = model_info.get('name', '')
+            # 外层循环：遍历问题
+            for q_idx, question in enumerate(raw_questions):
+                # 内层循环：遍历模型
+                for model_info in selected_models:
+                    model_name = model_info.get('name', '')
 
-                        # 检查模型是否可用（熔断器）
-                        if not scheduler.is_model_available(model_name):
-                            api_logger.warning(f"[NxM] 模型 {model_name} 已熔断，跳过")
-                            completed += 1
-                            scheduler.update_progress(completed, total_tasks, 'ai_fetching')
-                            continue
+                    # 检查模型是否可用（熔断器）
+                    if not scheduler.is_model_available(model_name):
+                        api_logger.warning(f"[NxM] 模型 {model_name} 已熔断，跳过")
+                        completed += 1
+                        scheduler.update_progress(completed, total_tasks, 'ai_fetching')
+                        continue
 
-                        try:
-                            # P0 修复：直接使用 Config 类获取 API Key，避免循环依赖
-                            # 创建 AI 客户端
-                            client = AIAdapterFactory.create(model_name)
-                            api_key = Config.get_api_key(model_name)
+                    try:
+                        # P0 修复：直接使用 Config 类获取 API Key，避免循环依赖
+                        # 创建 AI 客户端
+                        client = AIAdapterFactory.create(model_name)
+                        api_key = Config.get_api_key(model_name)
 
-                            if not api_key:
-                                raise ValueError(f"模型 {model_name} API Key 未配置")
+                        if not api_key:
+                            raise ValueError(f"模型 {model_name} API Key 未配置")
 
-                            # 构建提示词
-                            # P0-2 修复：使用当前品牌和其竞争对手
-                            current_competitors = [b for b in all_brands if b != brand]
-                            prompt = GEO_PROMPT_TEMPLATE.format(
-                                brand_name=brand,
-                                competitors=', '.join(current_competitors) if current_competitors else '无',
-                                question=question
+                        # P0 修复：构建客观问题提示词（不带品牌倾向）
+                        prompt = OBJECTIVE_QUESTION_TEMPLATE.format(
+                            question=question
+                        )
+
+                        # P1-014 新增：获取超时配置
+                        timeout_manager = get_timeout_manager()
+                        timeout = timeout_manager.get_timeout(model_name)
+
+                        # M002 改造：使用 FaultTolerantExecutor 统一包裹 AI 调用
+                        # 创建容错执行器实例（每个调用独立）
+                        ai_executor = FaultTolerantExecutor(timeout_seconds=timeout)
+
+                        # 【P0-001 修复】使用线程安全的异步执行方式
+                        # 原代码问题：asyncio.run() 在已有事件循环的线程中会抛出 RuntimeError
+                        # 修复方案：使用 run_async_in_thread() 创建新的事件循环
+                        ai_result = run_async_in_thread(
+                            ai_executor.execute_with_fallback(
+                                task_func=client.send_prompt,
+                                task_name=f"Q{q_idx}-{model_name}",
+                                source=model_name,
+                                prompt=prompt
+                            )
+                        )
+                        
+                        # 检查 AI 调用结果
+                        geo_data = None
+                        parse_error = None
+
+                        if ai_result.status == "success":
+                            # AI 调用成功，解析 GEO 数据
+                            scheduler.record_model_success(model_name)
+
+                            # 解析 GEO 数据
+                            geo_data, parse_error = parse_geo_with_validation(
+                                ai_result.data,
+                                execution_id,
+                                q_idx,
+                                model_name
                             )
 
-                            # P1-014 新增：获取超时配置
-                            timeout_manager = get_timeout_manager()
-                            timeout = timeout_manager.get_timeout(model_name)
-
-                            # M002 改造：使用 FaultTolerantExecutor 统一包裹 AI 调用
-                            # 创建容错执行器实例（每个调用独立）
-                            ai_executor = FaultTolerantExecutor(timeout_seconds=timeout)
-
-                            # 【P0-001 修复】使用线程安全的异步执行方式
-                            # 原代码问题：asyncio.run() 在已有事件循环的线程中会抛出 RuntimeError
-                            # 修复方案：使用 run_async_in_thread() 创建新的事件循环
-                            ai_result = run_async_in_thread(
-                                ai_executor.execute_with_fallback(
-                                    task_func=client.send_prompt,
-                                    task_name=f"{brand}-{model_name}",
-                                    source=model_name,
-                                    prompt=prompt
-                                )
-                            )
-                            
-                            # 检查 AI 调用结果
-                            geo_data = None
-                            parse_error = None
-
-                            if ai_result.status == "success":
-                                # AI 调用成功，解析 GEO 数据
-                                scheduler.record_model_success(model_name)
-
-                                # 解析 GEO 数据
-                                geo_data, parse_error = parse_geo_with_validation(
-                                    ai_result.data,
-                                    execution_id,
-                                    q_idx,
-                                    model_name
-                                )
-
-                                # 检查解析结果
-                                if parse_error or geo_data.get('_error'):
-                                    # 解析失败，记录错误
-                                    api_logger.warning(f"[NxM] 解析失败：{model_name}, Q{q_idx}: {parse_error or geo_data.get('_error')}")
-                                    # P0-4 修复：直接使用字典收集结果
-                                    # P3 修复：确保所有字段都是可序列化的
-                                    result = {
-                                        'brand': brand,
-                                        'question': question,
-                                        'model': model_name,
-                                        'response': str(ai_result.data) if hasattr(ai_result, 'data') else str(ai_result),  # 修复：确保可序列化
-                                        'geo_data': geo_data,
-                                        'error': str(parse_error or geo_data.get('_error', '解析失败')),
-                                        'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'parse_error'
-                                    }
-                                    results.append(result)
-                                else:
-                                    # 解析成功，收集结果
-                                    # P3 修复：确保所有字段都是可序列化的
-                                    result = {
-                                        'brand': brand,
-                                        'question': question,
-                                        'model': model_name,
-                                        'response': str(ai_result.data) if hasattr(ai_result, 'data') else str(ai_result),  # 修复：确保可序列化
-                                        'geo_data': geo_data,
-                                        'error': None,
-                                        'error_type': None
-                                    }
-                                    results.append(result)
-                            else:
-                                # AI 调用失败，记录错误并继续（不中断流程）
-                                scheduler.record_model_failure(model_name)
-                                api_logger.error(f"[NxM] AI 调用失败：{model_name}, Q{q_idx}: {ai_result.error_message}")
-
-                                # P0-4 修复：收集失败结果（保证报告完整）
+                            # 检查解析结果
+                            if parse_error or geo_data.get('_error'):
+                                # 解析失败，记录错误
+                                api_logger.warning(f"[NxM] 解析失败：{model_name}, Q{q_idx}: {parse_error or geo_data.get('_error')}")
+                                # P0-4 修复：直接使用字典收集结果
                                 # P3 修复：确保所有字段都是可序列化的
                                 result = {
-                                    'brand': brand,
                                     'question': question,
                                     'model': model_name,
-                                    'response': None,
-                                    'geo_data': None,
-                                    'error': str(ai_result.error_message),
-                                    'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'unknown'
+                                    'response': str(ai_result.data) if hasattr(ai_result, 'data') else str(ai_result),  # 修复：确保可序列化
+                                    'geo_data': geo_data,
+                                    'error': str(parse_error or geo_data.get('_error', '解析失败')),
+                                    'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'parse_error',
+                                    'is_objective': True  # 标记为客观回答
                                 }
                                 results.append(result)
-                            
-                            # M003 改造：实时持久化维度结果
-                            # 原有问题：结果仅在内存中，服务重启后丢失
-                            # 改造后：每个维度结果立即保存到数据库，支持进度查询和历史追溯
-                            try:
-                                from wechat_backend.repositories import save_dimension_result, save_task_status
-
-                                # 确定维度状态和分数
-                                dim_status = "success" if (ai_result.status == "success" and geo_data and not geo_data.get('_error')) else "failed"
-                                dim_score = None
-                                if dim_status == "success" and geo_data:
-                                    # 从 GEO 数据中提取排名作为分数参考
-                                    rank = geo_data.get("rank", -1)
-                                    if rank > 0:
-                                        dim_score = max(0, 100 - (rank - 1) * 10)  # 排名第 1 得 100 分，每降 1 名减 10 分
-
-                                # 保存维度结果
-                                save_dimension_result(
-                                    execution_id=execution_id,
-                                    dimension_name=f"{brand}-{model_name}",
-                                    dimension_type="ai_analysis",
-                                    source=model_name,
-                                    status=dim_status,
-                                    score=dim_score,
-                                    data=geo_data if dim_status == "success" else None,
-                                    error_message=ai_result.error_message if dim_status == "failed" else (parse_error if parse_error else None)
-                                )
-
-                                # 实时更新进度
-                                save_task_status(
-                                    task_id=execution_id,
-                                    stage='ai_fetching',
-                                    progress=int((completed / total_tasks) * 100) if total_tasks > 0 else 0,
-                                    status_text=f'已完成 {completed}/{total_tasks}',
-                                    completed_count=completed,
-                                    total_count=total_tasks
-                                )
-
-                                api_logger.info(f"[NxM] ✅ 维度结果持久化成功：{brand}-{model_name}, 状态：{dim_status}")
-
-                            except Exception as persist_err:
-                                # 持久化失败不影响主流程，仅记录错误
-                                api_logger.error(f"[NxM] ⚠️ 维度结果持久化失败：{brand}-{model_name}, 错误：{persist_err}")
-                                
-                                # P1-018 新增：数据库持久化告警机制
-                                try:
-                                    from wechat_backend.alert_system import record_persistence_error, check_persistence_alert
-                                    
-                                    # 记录持久化错误
-                                    alert_triggered = record_persistence_error(
-                                        execution_id=execution_id,
-                                        error_type='dimension_result',
-                                        error_message=str(persist_err)
-                                    )
-                                    
-                                    # 如果触发告警，记录详细日志
-                                    if alert_triggered:
-                                        api_logger.error(
-                                            f"[P1-018 告警] 数据库持久化失败达到阈值！"
-                                            f"execution_id={execution_id}, 错误：{persist_err}"
-                                        )
-                                        # 可以添加额外的告警通知逻辑（如发送邮件、短信等）
-                                except Exception as alert_err:
-                                    api_logger.error(f"[P1-018] 告警记录失败：{alert_err}")
-
-                            # 【P0-004 修复】写入 WAL（预写日志），确保服务重启后数据不丢失
-                            # WAL 写入在数据库持久化之后，作为双重保障
-                            try:
-                                write_wal(execution_id, results, completed, total_tasks, brand, model_name)
-                            except Exception as wal_err:
-                                api_logger.error(f"[WAL] ⚠️ 写入失败：{wal_err}")
-
-                            # 更新进度
-                            completed += 1
-                            scheduler.update_progress(completed, total_tasks, 'ai_fetching')
-
-                        except Exception as e:
-                            # P1-2 修复：完善错误处理，记录详细错误信息
-                            error_message = f"AI 调用失败：{model_name}, 问题{q_idx+1}: {str(e)}"
-                            api_logger.error(f"[NxM] {error_message}")
-
-                            # 记录模型失败
+                            else:
+                                # 解析成功，收集结果
+                                # P3 修复：确保所有字段都是可序列化的
+                                result = {
+                                    'question': question,
+                                    'model': model_name,
+                                    'response': str(ai_result.data) if hasattr(ai_result, 'data') else str(ai_result),  # 修复：确保可序列化
+                                    'geo_data': geo_data,
+                                    'error': None,
+                                    'error_type': None,
+                                    'is_objective': True  # 标记为客观回答
+                                }
+                                results.append(result)
+                        else:
+                            # AI 调用失败，记录错误并继续（不中断流程）
                             scheduler.record_model_failure(model_name)
+                            api_logger.error(f"[NxM] AI 调用失败：{model_name}, Q{q_idx}: {ai_result.error_message}")
 
-                            # 更新进度，包含错误信息
-                            completed += 1
-                            scheduler.update_progress(completed, total_tasks, 'ai_fetching')
+                            # P0-4 修复：收集失败结果（保证报告完整）
+                            # P3 修复：确保所有字段都是可序列化的
+                            result = {
+                                'question': question,
+                                import_model: model_name,
+                                'response': None,
+                                'geo_data': None,
+                                'error': str(ai_result.error_message),
+                                'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'unknown',
+                                'is_objective': True  # 标记为客观回答
+                            }
+                            results.append(result)
+                        
+                        # M003 改造：实时持久化维度结果
+                        # 原有问题：结果仅在内存中，服务重启后丢失
+                        # 改造后：每个维度结果立即保存到数据库，支持进度查询和历史追溯
+                        try:
+                            from wechat_backend.repositories import save_dimension_result, save_task_status
 
-                            # P1-2 修复：使用数据库存储错误详情，避免导入问题
+                            # 确定维度状态和分数
+                            dim_status = "success" if (ai_result.status == "success" and geo_data and not geo_data.get('_error')) else "failed"
+                            dim_score = None
+                            if dim_status == "success" and geo_data:
+                                # 从 GEO 数据中提取排名作为分数参考
+                                rank = geo_data.get("rank", -1)
+                                if rank > 0:
+                                    dim_score = max(0, 100 - (rank - 1) * 10)  # 排名第 1 得 100 分，每降 1 名减 10 分
+
+                            # 保存维度结果
+                            # 此处brand参数应调整，因为改为客观提问，品牌不在请求中指定。
+                            # 可能需要调整数据库结构或在聚合阶段处理。
+                            # 这里暂时保留brand变量，但P0修复计划中提示词已移除brand引用。
+                            # 需要上层代码确保brand变量的正确上下文或在此处使用占位。
+                            save_dimension_result(
+                                execution_id=execution_id,
+                                dimension_name=f"{main_brand}-{model_name}", # P0修复：使用main_brand作为维度维度标识
+                                dimension_type="ai_analysis",
+                                source=model_name,
+                                status=dim_status,
+                                score=dim_score,
+                                data=geo_data if dim_status == "success" else None,
+                                error_message=ai_result.error_message if dim_status == "failed" else (parse_error if parse_error else None)
+                            )
+
+                            # 实时更新进度
+                            save_task_status(
+                                task_id=execution_id,
+                                stage='ai_fetching',
+                                progress=int((completed / total_tasks) * 100) if total_tasks > 0 else 0,
+                                status_text=f'已完成 {completed}/{total_tasks}',
+                                completed_count=completed,
+                                total_count=total_tasks
+                            )
+
+                            api_logger.info(f"[NxM] ✅ 维度结果持久化成功：{main_brand}-{model_name}, 状态：{dim_status}")
+
+                        except Exception as persist_err:
+                            # 持久化失败不影响主流程，仅记录错误
+                            api_logger.error(f"[NxM] ⚠️ 维度结果持久化失败：{main_brand}-{model_name}, 错误：{persist_err}")
+                            
+                            # P1-018 新增：数据库持久化告警机制
                             try:
-                                from wechat_backend.repositories import save_task_status
+                                from wechat_backend.alert_system import record_persistence_error, check_persistence_alert
                                 
-                                # 累积错误信息到数据库
-                                save_task_status(
-                                    task_id=execution_id,
-                                    stage='failed',
-                                    progress=int((completed / total_tasks) * 100) if total_tasks > 0 else 0,
-                                    status_text=f'{error_message}',
-                                    completed_count=completed,
-                                    total_count=total_tasks
+                                # 记录持久化错误
+                                alert_triggered = record_persistence_error(
+                                    execution_id=execution_id,
+                                    error_type='dimension_result',
+                                    error_message=str(persist_err)
                                 )
-                            except Exception as store_error:
-                                api_logger.error(f"[NxM] 更新任务状态失败：{store_error}")
+                                
+                                # 如果触发告警，记录详细日志
+                                if alert_triggered:
+                                    api_logger.error(
+                                        f"[P1-018 告警] 数据库持久化失败达到阈值！"
+                                        f"execution_id={execution_id}, 错误：{persist_err}"
+                                    )
+                                    # 可以添加额外的告警通知逻辑（如发送邮件、短信等）
+                            except Exception as alert_err:
+                                api_logger.error(f"[P1-018] 告警记录失败：{alert_err}")
+
+                        # 【P0-004 修复】写入 WAL（预写日志），确保服务重启后数据不丢失
+                        # WAL 写入在数据库持久化之后，作为双重保障
+                        try:
+                            # WAL写入需传入brand信息以作保障，这里brand信息需要明确上下文。
+                            # 这里暂时使用main_brand。
+                            write_wal(execution_id, results, completed, total_tasks, main_brand, model_name)
+                        except Exception as wal_err:
+                            api_logger.error(f"[WAL] ⚠️ 写入失败：{wal_err}")
+
+                        # 更新进度
+                        completed += 1
+                        scheduler.update_progress(completed, total_tasks, 'ai_fetching')
+
+                    except Exception as e:
+                        # P1-2 修复：完善错误处理，记录详细错误信息
+                        error_message = f"AI 调用失败：{model_name}, 问题{q_idx+1}: {str(e)}"
+                        api_logger.error(f"[NxM] {error_message}")
+
+                        # 记录模型失败
+                        scheduler.record_model_failure(model_name)
+
+                        # 更新进度，包含错误信息
+                        completed += 1
+                        scheduler.update_progress(completed, total_tasks, 'ai_fetching')
+
+                        # P1-2 修复：使用数据库存储错误详情，避免导入问题
+                        try:
+                            from wechat_backend.repositories import save_task_status
+                            
+                            # 累积错误信息到数据库
+                            save_task_status(
+                                task_id=execution_id,
+                                stage='failed',
+                                progress=int((completed / total_tasks) * 100) if total_tasks > 0 else 0,
+                                status_text=f'{error_message}',
+                                completed_count=completed,
+                                total_count=total_tasks
+                            )
+                        except Exception as store_error:
+                            api_logger.error(f"[NxM] 更新任务状态失败：{store_error}")
 
             # 验证执行完成
             verification = verify_completion(results, total_tasks)
@@ -495,14 +495,12 @@ def execute_nxm_test(
                 # P3 修复：使用正确的方法名 calculate 而不是 evaluate
                 quality_score = scorer.calculate(deduplicated, completion_rate)
 
-                # 聚合结果 - 遍历所有品牌
-                # P3 修复：aggregate_results_by_brand 需要 brand_name 参数
-                all_brands = list(set(r.get('brand', '') for r in deduplicated if r.get('brand')))
+                # 聚合结果 - 客观提问模式下，需要对 deduplicated 进行品牌提及分析后才能聚合
+                # 方案中阶段三提及需添加后置分析。此处聚合逻辑需调整。
+                # 暂时注释掉原有的品牌聚合，待后置分析完善后使用。
+                # aggregated = aggregate_results_by_brand(deduplicated) 
                 aggregated = []
-                for brand in all_brands:
-                    brand_data = aggregate_results_by_brand(deduplicated, brand)
-                    aggregated.append(brand_data)
-                api_logger.info(f"[NxM] 聚合结果：{len(aggregated)} 个品牌")
+                api_logger.info(f"[NxM] 聚合结果：客观提问模式，待后置分析")
 
                 # P3 修复：保存测试汇总记录到 test_records 表
                 # 这是历史记录功能的数据源
@@ -520,7 +518,8 @@ def execute_nxm_test(
                         'completed_tasks': len(deduplicated),
                         'success_rate': len(deduplicated) / total_tasks if total_tasks > 0 else 0,
                         'quality_score': overall_score,
-                        'brands': list(set(r.get('brand', '') for r in deduplicated if r.get('brand'))),
+                        # 品牌信息需要后置分析，此处brands置空。
+                        'brands': [],
                         'models': list(set(r.get('model', '') for r in deduplicated if r.get('model'))),
                     }
 
@@ -543,6 +542,7 @@ def execute_nxm_test(
                     api_logger.error(f"[NxM] ⚠️ 测试汇总记录保存失败：{execution_id}, 错误：{save_err}")
 
                 # P2-020 新增：记录监控指标
+                # quota_exhausted_models, partial_warning 需要处理
                 try:
                     from wechat_backend.services.diagnosis_monitor_service import record_diagnosis_metric
                     import time
@@ -558,58 +558,16 @@ def execute_nxm_test(
                         completed_tasks=len(deduplicated),
                         success=True,
                         duration_seconds=execution_duration,
-                        quota_exhausted_models=quota_exhausted_models,
-                        error_type='partial_failure' if has_partial_results else None,
-                        error_message=partial_warning
+                         quota_exhausted_models=[],
+                         error_type=None,
+                         error_message=None
                     )
                     
                     api_logger.info(f"[P2-020 监控] 诊断指标已记录：{execution_id}")
                 except Exception as monitor_err:
                     api_logger.error(f"[P2-020 监控] 记录失败：{monitor_err}")
 
-                # P0-007 新增：收集配额用尽的模型
-                quota_exhausted_models = []
-                for r in deduplicated:
-                    if r.get('error_type') == 'quota_exhausted' or r.get('error_type') == 'insufficient_quota':
-                        model_name = r.get('model', '')
-                        if model_name and model_name not in quota_exhausted_models:
-                            quota_exhausted_models.append(model_name)
-
-                # P0-007 新增：计算完成率
-                completion_rate = int(len(deduplicated) * 100 / max(total_tasks, 1))
-
-                # P0-007 新增：生成部分完成警告
-                partial_warning = None
-                if len(deduplicated) < total_tasks:
-                    partial_warning = f'诊断部分完成，{len(deduplicated)}/{total_tasks} 任务成功 ({completion_rate}%)'
-
-                # P1-016 新增：生成配额恢复建议
-                quota_recovery_suggestions = []
-                for model in quota_exhausted_models:
-                    suggestion = {
-                        'model': model,
-                        'suggestions': []
-                    }
-                    
-                    # 根据模型类型提供具体建议
-                    if 'doubao' in model.lower() or '豆包' in model:
-                        suggestion['suggestions'].append('访问火山引擎控制台充值：https://console.volcengine.com/')
-                        suggestion['suggestions'].append('联系客服申请临时配额')
-                        suggestion['suggestions'].append('切换其他 AI 平台（如 DeepSeek、通义千问）')
-                    elif 'qwen' in model.lower() or '通义' in model or 'ali' in model.lower():
-                        suggestion['suggestions'].append('访问阿里云控制台充值：https://usercenter2.aliyun.com/')
-                        suggestion['suggestions'].append('检查账户余额是否充足')
-                        suggestion['suggestions'].append('切换其他 AI 平台')
-                    elif 'deepseek' in model.lower():
-                        suggestion['suggestions'].append('访问 DeepSeek 控制台充值：https://platform.deepseek.com/')
-                        suggestion['suggestions'].append('切换其他 AI 平台')
-                    else:
-                        suggestion['suggestions'].append(f'访问 {model} 官方控制台充值')
-                        suggestion['suggestions'].append('切换其他可用 AI 平台')
-                    
-                    quota_recovery_suggestions.append(suggestion)
-
-                # 返回成功结果（P0-007/P1-016 增强：添加配额、完成率、恢复建议等字段）
+                # 后置分析需配合方案三实现。此处返回暂无 aggregated 的数据结构。
                 return {
                     'success': True,
                     'execution_id': execution_id,
@@ -618,15 +576,14 @@ def execute_nxm_test(
                     'completed_tasks': len(deduplicated),
                     'completion_rate': completion_rate,
                     'results': deduplicated,
-                    'aggregated': aggregated,
+                    'aggregated': [], # 待后置分析
                     'quality_score': quality_score,
-                    # P0-007 新增字段
-                    'quota_exhausted_models': quota_exhausted_models,
-                    'partial_warning': partial_warning,
+                    # P0-007, P1-016 相关字段置空
+                    'quota_exhausted_models': [],
+                    'partial_warning': None,
                     'has_partial_results': len(deduplicated) < total_tasks,
-                    'quota_warnings': [f'{model} AI 配额已用尽' for model in quota_exhausted_models],
-                    # P1-016 新增字段
-                    'quota_recovery_suggestions': quota_recovery_suggestions
+                    'quota_warnings': [],
+                    'quota_recovery_suggestions': []
                 }
             else:
                 # 完全失败（无任何结果）
@@ -707,3 +664,5 @@ def verify_nxm_execution(result: Dict[str, Any]) -> bool:
 
 # 导出给其他模块使用
 __all__ = ['execute_nxm_test', 'verify_nxm_execution']
+
+

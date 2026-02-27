@@ -1,4 +1,5 @@
 const { debug, info, warn, error } = require('../../utils/logger');
+const { PageTransition } = require('../../utils/page-transition');
 
 // ==================== 模块化重构后引入的服务 ====================
 // 工具函数
@@ -104,6 +105,10 @@ Page({
     openid: '',
     loginStatus: '未登录',
     serverStatus: '未连接',
+
+    // 页面过渡动画
+    pageTransitionClass: '',
+    pageLoaded: false,
 
     // 品牌与竞品
     brandName: '',
@@ -241,6 +246,9 @@ Page({
           this.startBrandTest();
         }, 1000);
       }
+
+      // 6. 应用页面进入动画
+      this.applyPageEnterAnimation();
 
       // 注意：restoreDraft 移到 onShow 中调用，避免 onLoad 中重复 setData
     } catch (error) {
@@ -437,6 +445,18 @@ Page({
     if (this.pollingController && typeof this.pollingController.stop === 'function') {
       this.pollingController.stop();
     }
+  },
+
+  /**
+   * 应用页面进入动画
+   */
+  applyPageEnterAnimation: function() {
+    setTimeout(() => {
+      this.setData({
+        pageTransitionClass: 'fade-enter-active',
+        pageLoaded: true
+      });
+    }, 50);
   },
 
   initParticleCanvas: function() {

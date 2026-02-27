@@ -10,18 +10,6 @@
     />
   </view>
 
-  <!-- 错误提示 -->
-  <view class="error-section" wx:if="{{errorMessage}}">
-    <view class="error-content">
-      <view class="error-icon">!</view>
-      <view class="error-message">{{errorMessage}}</view>
-      <view class="error-actions">
-        <button class="btn-retry" bindtap="onRetry">重试</button>
-        <button class="btn-cancel" bindtap="onCancel">取消</button>
-      </view>
-    </view>
-  </view>
-
   <!-- 详细信息 -->
   <view class="details-section" wx:if="{{showDetails}}">
     <view class="detail-card">
@@ -76,4 +64,19 @@
       <text class="loading-text">正在加载诊断信息...</text>
     </view>
   </view>
+
+  <!-- 统一错误提示组件 -->
+  <error-toast
+    id="errorToast"
+    visible="{{showErrorToast}}"
+    error-type="{{errorType}}"
+    title="{{errorTitle}}"
+    message="{{errorMessage}}"
+    detail="{{errorDetail}}"
+    error-code="{{errorCode}}"
+    show-retry="{{showRetry}}"
+    show-cancel="{{showCancel}}"
+    bind:close="onErrorClose"
+    bind:retry="onRetry"
+  ></error-toast>
 </view>

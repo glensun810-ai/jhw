@@ -2,7 +2,7 @@
 """
 BUG-009 修复脚本：批量替换调试日志为条件日志
 
-将 console.log 替换为 logger.debug/info
+将 logger.debug 替换为 logger.debug/info
 将 print 替换为 logger.debug/info
 """
 
@@ -41,8 +41,8 @@ for filepath in js_files_to_process:
     # 检查是否已有 logger 导入
     has_logger_import = 'const logger = require' in content or 'const { debug, info, warn, error } = require' in content
     
-    # 替换 console.log 为 logger.debug（只替换调试性质的日志）
-    # 保留错误日志 console.error
+    # 替换 logger.debug 为 logger.debug（只替换调试性质的日志）
+    # 保留错误日志 logger.error
     debug_patterns = [
         r'console\.log\(\'📦',  # Storage 相关
         r'console\.log\(\'🔄',  # 加载相关
@@ -64,8 +64,8 @@ for filepath in js_files_to_process:
                 content = import_line + content
                 has_logger_import = True
             
-            # 替换 console.log 为 debug
-            content = re.sub(pattern, pattern.replace('console.log', 'debug'), content)
+            # 替换 logger.debug 为 debug
+            content = re.sub(pattern, pattern.replace('logger.debug', 'debug'), content)
             replaced = True
             js_replaced += len(matches)
     
@@ -116,4 +116,4 @@ print(f"\n总计替换：{js_replaced} 处 JS 调试日志，{py_replaced} 处 P
 print(f"\n修复说明:")
 print(f"- 调试日志已替换为 logger.debug/info")
 print(f"- 生产环境可通过设置日志级别关闭 DEBUG 日志")
-print(f"- 错误日志 console.error 和 logger.error 保持不变")
+print(f"- 错误日志 logger.error 和 logger.error 保持不变")

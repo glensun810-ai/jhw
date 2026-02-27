@@ -28,6 +28,7 @@ from wechat_backend.realtime_analyzer import get_analyzer
 from wechat_backend.incremental_aggregator import get_aggregator
 from wechat_backend.logging_config import api_logger, wechat_logger, db_logger
 from wechat_backend.ai_adapters.base_adapter import AIPlatformType, AIClient, AIResponse, GEO_PROMPT_TEMPLATE, parse_geo_json
+from wechat_backend.ai_adapters.base_adapter import validate_model_region_consistency
 
 # P0-004 新增：异常处理
 from wechat_backend.exceptions import (
@@ -265,6 +266,19 @@ def perform_brand_test():
             api_key = config_manager.get_api_key(normalized_model_name)
             if not api_key:
                 return jsonify({"status": "error", "error": f'Model {model_name} not configured - missing API key', "code": 400, 'message': 'API Key 缺失'}), 400
+
+        # P0- 新增：验证所选模型是否来自同一区域（国内或海外）
+        model_names = [model["name"] if isinstance(model, dict) else model for model in selected_models]
+        normalized_model_names = [AIAdapterFactory.get_normalized_model_name(name) for name in model_names]
+
+        is_valid, error_msg = validate_model_region_consistency(normalized_model_names)
+        if not is_valid:
+            api_logger.warning(f"Model region consistency check failed: {error_msg}")
+            return jsonify({
+                "status": "error",
+                "error": error_msg,
+                "code": 400
+            }), 400
 
         # 验证自定义问题的安全性
         for question in custom_questions:

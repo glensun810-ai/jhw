@@ -32,7 +32,7 @@ content = content.replace(
 # Fix 4: Add debug logging before return statement
 old_return = "  // 返回解析后的状态信息\n  return parsed;"
 new_return = """  // 【关键修复】添加调试日志
-  console.log('[parseTaskStatus] 解析结果:', {
+  logger.debug('[parseTaskStatus] 解析结果:', {
     stage: parsed.stage,
     progress: parsed.progress,
     is_completed: parsed.is_completed,

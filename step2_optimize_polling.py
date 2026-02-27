@@ -93,7 +93,7 @@ old_polling = '''  /**
             wx.setStorageSync('latestTargetBrand', this.brandList[0] || '');
             wx.setStorageSync('latestCompetitorBrands', this.brandList.slice(1) || []);
 
-            console.log('✅ 任务完成，测试结果已保存:', {
+            logger.debug('✅ 任务完成，测试结果已保存:', {
               executionId: this.executionId,
               resultsCount: resultsData.length,
               brands: this.brandList
@@ -138,7 +138,7 @@ old_polling = '''  /**
           this.checkProgressStagnation(statusData.progress);
         }
       } catch (error) {
-        console.error('轮询错误:', error);
+        logger.error('轮询错误:', error);
         this.pollAttemptCount++;
 
         // 如果错误次数过多，停止轮询
@@ -241,7 +241,7 @@ new_polling = '''  /**
             wx.setStorageSync('latestTargetBrand', this.brandList[0] || '');
             wx.setStorageSync('latestCompetitorBrands', this.brandList.slice(1) || []);
 
-            console.log('✅ 任务完成，测试结果已保存');
+            logger.debug('✅ 任务完成，测试结果已保存');
 
             // 跳转到结果页面
             wx.navigateTo({
@@ -272,7 +272,7 @@ new_polling = '''  /**
           this.checkProgressStagnation(parsedStatus.progress);
         }
       } catch (error) {
-        console.error('轮询错误:', error);
+        logger.error('轮询错误:', error);
         this.pollAttemptCount++;
 
         if (this.pollAttemptCount >= this.maxPollAttempts) {

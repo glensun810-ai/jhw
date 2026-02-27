@@ -19,13 +19,13 @@ new_poll = """      try {
         const res = await getTaskStatusApi(executionId);
 
         // 【DEBUG】输出后端响应
-        console.log('[brandTestService] 后端响应:', JSON.stringify(res, null, 2));
+        logger.debug('[brandTestService] 后端响应:', JSON.stringify(res, null, 2));
 
         if (res && (res.progress !== undefined || res.stage)) {
           const parsedStatus = parseTaskStatus(res);
           
           // 【DEBUG】输出解析后的状态
-          console.log('[brandTestService] 解析后的状态:', {
+          logger.debug('[brandTestService] 解析后的状态:', {
             stage: parsedStatus.stage,
             progress: parsedStatus.progress,
             is_completed: parsedStatus.is_completed,

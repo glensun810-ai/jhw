@@ -82,7 +82,7 @@ recommendation_function = '''  /**
         }
       };
     } catch (e) {
-      console.error('处理优化建议数据失败:', e);
+      logger.error('处理优化建议数据失败:', e);
       return {
         recommendationData: null
       };

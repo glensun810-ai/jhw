@@ -1,0 +1,338 @@
+/**
+ * 骨架屏组件样式
+ * 
+ * 提供多种模式的骨架屏动画效果
+ */
+
+/* 骨架屏动画 - 闪烁效果 */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* 骨架屏动画 - 波纹效果 */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+/* 容器 */
+.skeleton-container {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+/* ==================== 报告模式骨架屏 ==================== */
+
+/* 报告头部骨架 */
+.skeleton-report {
+  padding-bottom: 120rpx;
+}
+
+.skeleton-header {
+  padding: 24rpx 32rpx;
+  background: linear-gradient(135deg, #e8f4ff 0%, #d0e8ff 100%);
+}
+
+.skeleton-header-title {
+  width: 240rpx;
+  height: 48rpx;
+  background: linear-gradient(90deg, #c0c0c0 25%, #e0e0e0 50%, #c0c0c0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.skeleton-header-subtitle {
+  width: 160rpx;
+  height: 32rpx;
+  background: linear-gradient(90deg, #d0d0d0 25%, #e8e8e8 50%, #d0d0d0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 4rpx;
+}
+
+/* 标签页骨架 */
+.skeleton-tab-bar {
+  display: flex;
+  background-color: #ffffff;
+  padding: 8rpx 0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.skeleton-tab-item {
+  flex: 1;
+  height: 48rpx;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  margin: 0 8rpx;
+  border-radius: 8rpx;
+}
+
+/* 内容区域 */
+.skeleton-content {
+  padding: 16rpx;
+}
+
+/* 摘要卡片骨架 */
+.skeleton-summary-card {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+.skeleton-card-title {
+  width: 160rpx;
+  height: 40rpx;
+  background: linear-gradient(90deg, #c0c0c0 25%, #e0e0e0 50%, #c0c0c0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 8rpx;
+  margin-bottom: 24rpx;
+}
+
+.skeleton-stats-row {
+  display: flex;
+  justify-content: space-around;
+}
+
+.skeleton-stat-item {
+  width: 100rpx;
+  height: 80rpx;
+  background: linear-gradient(90deg, #d0d0d0 25%, #e8e8e8 50%, #d0d0d0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 8rpx;
+}
+
+/* 图表卡片骨架 */
+.skeleton-chart-card {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+.skeleton-chart-title {
+  width: 140rpx;
+  height: 36rpx;
+  background: linear-gradient(90deg, #c0c0c0 25%, #e0e0e0 50%, #c0c0c0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 8rpx;
+  margin-bottom: 20rpx;
+}
+
+.skeleton-chart-body {
+  width: 100%;
+  height: 300rpx;
+  background-color: #f5f7fa;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.skeleton-chart-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #e8e8e8 25%, #f0f0f0 50%, #e8e8e8 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+/* ==================== 列表模式骨架屏 ==================== */
+
+.skeleton-list {
+  padding: 16rpx;
+}
+
+.skeleton-list-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.skeleton-list-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #d0d0d0 25%, #e8e8e8 50%, #d0d0d0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.skeleton-list-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.skeleton-list-title {
+  width: 80%;
+  height: 32rpx;
+  background: linear-gradient(90deg, #c0c0c0 25%, #e0e0e0 50%, #c0c0c0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 8rpx;
+}
+
+.skeleton-list-desc {
+  width: 60%;
+  height: 28rpx;
+  background: linear-gradient(90deg, #d0d0d0 25%, #e8e8e8 50%, #d0d0d0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 4rpx;
+}
+
+/* ==================== 卡片模式骨架屏 ==================== */
+
+.skeleton-card-mode {
+  padding: 16rpx;
+}
+
+.skeleton-card {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  overflow: hidden;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+.skeleton-card-image {
+  width: 100%;
+  height: 240rpx;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+.skeleton-card-body {
+  padding: 24rpx;
+}
+
+.skeleton-card-title {
+  width: 90%;
+  height: 36rpx;
+  background: linear-gradient(90deg, #c0c0c0 25%, #e0e0e0 50%, #c0c0c0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 8rpx;
+  margin-bottom: 16rpx;
+}
+
+.skeleton-card-desc {
+  width: 100%;
+  height: 28rpx;
+  background: linear-gradient(90deg, #d0d0d0 25%, #e8e8e8 50%, #d0d0d0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 4rpx;
+  margin-bottom: 20rpx;
+}
+
+.skeleton-card-footer {
+  display: flex;
+  gap: 16rpx;
+}
+
+.skeleton-card-btn {
+  flex: 1;
+  height: 56rpx;
+  background: linear-gradient(90deg, #d0d0d0 25%, #e8e8e8 50%, #d0d0d0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 8rpx;
+}
+
+/* ==================== 文本模式骨架屏 ==================== */
+
+.skeleton-text-mode {
+  padding: 24rpx;
+  background-color: #ffffff;
+  border-radius: 12rpx;
+}
+
+.skeleton-text-line {
+  height: 28rpx;
+  background: linear-gradient(90deg, #d0d0d0 25%, #e8e8e8 50%, #d0d0d0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 4rpx;
+  margin-bottom: 16rpx;
+}
+
+.skeleton-text-line:last-child {
+  margin-bottom: 0;
+}
+
+/* ==================== 响应式调整 ==================== */
+
+@media (max-width: 375px) {
+  .skeleton-header-title {
+    width: 200rpx;
+    height: 40rpx;
+  }
+  
+  .skeleton-header-subtitle {
+    width: 140rpx;
+    height: 28rpx;
+  }
+  
+  .skeleton-stat-item {
+    width: 80rpx;
+    height: 70rpx;
+  }
+  
+  .skeleton-chart-body {
+    height: 240rpx;
+  }
+}
+
+/* ==================== 暗黑模式支持（预留） ==================== */
+
+@media (prefers-color-scheme: dark) {
+  .skeleton-container {
+    background-color: #1a1a1a;
+  }
+  
+  .skeleton-header {
+    background: linear-gradient(135deg, #2a2a2a 0%, #333333 100%);
+  }
+  
+  .skeleton-tab-bar {
+    background-color: #2a2a2a;
+  }
+  
+  .skeleton-summary-card,
+  .skeleton-chart-card,
+  .skeleton-list-item,
+  .skeleton-card,
+  .skeleton-text-mode {
+    background-color: #2a2a2a;
+  }
+  
+  .skeleton-chart-body {
+    background-color: #333333;
+  }
+}

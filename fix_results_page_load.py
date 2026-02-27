@@ -30,7 +30,7 @@ for i, line in enumerate(lines, 1):
         new_lines.append("            wx.setStorageSync('latestBrandScores_' + executionId, brandScoresToSave);\n")
         new_lines.append("            wx.setStorageSync('latestTargetBrand', this.data.brandName);\n")
         new_lines.append("            \n")
-        new_lines.append("            console.log('✅ 数据已保存到本地存储:', {\n")
+        new_lines.append("            logger.debug('✅ 数据已保存到本地存储:', {\n")
         new_lines.append("              resultsCount: resultsToSave.length,\n")
         new_lines.append("              hasCompetitiveAnalysis: Object.keys(competitiveAnalysisToSave).length > 0,\n")
         new_lines.append("              hasBrandScores: Object.keys(brandScoresToSave).length > 0\n")

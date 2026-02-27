@@ -58,8 +58,7 @@ class AlertManager:
                 with open(ALERT_HISTORY_FILE, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
+                api_logger.error(f"[Alert] Error loading alert history: {e}", exc_info=True)
                 return []
         return []
     

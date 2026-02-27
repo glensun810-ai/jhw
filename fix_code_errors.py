@@ -51,7 +51,7 @@ old_code2 = '''  requestMessageSubscription: function() {
 
 new_code2 = '''  requestMessageSubscription: function() {
     if (!this.progressNotifier) {
-      console.error('progressNotifier 未初始化');
+      logger.error('progressNotifier 未初始化');
       return;
     }
     

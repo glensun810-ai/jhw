@@ -79,7 +79,7 @@ if old_pattern in content:
       // 超时检查
       if (Date.now() - startTime > maxDuration) {
         stop();
-        console.error('轮询超时 (总超时 10 分钟)');
+        logger.error('轮询超时 (总超时 10 分钟)');
         if (onError) onError(new Error('诊断超时，请重试或联系管理员'));
         return;
       }
@@ -87,7 +87,7 @@ if old_pattern in content:
       // P0 修复：无进度超时检查
       if (Date.now() - lastProgressTime > noProgressTimeout) {
         stop();
-        console.error('轮询超时 (8 分钟无进度更新)');
+        logger.error('轮询超时 (8 分钟无进度更新)');
         if (onError) onError(new Error('诊断超时，长时间无响应，请重试'));
         return;
       }
@@ -112,7 +112,7 @@ if old_pattern in content:
           const newInterval = getPollingInterval(parsedStatus.progress, parsedStatus.stage);
           if (newInterval !== interval) {
             interval = newInterval;
-            console.log(`[性能优化] 调整轮询间隔：${interval}ms (进度：${parsedStatus.progress}%)`);
+            logger.debug(`[性能优化] 调整轮询间隔：${interval}ms (进度：${parsedStatus.progress}%)`);
           }
 
           if (onProgress) {
@@ -131,10 +131,10 @@ if old_pattern in content:
             return;
           }
         } else {
-          console.warn('获取任务状态返回空数据，继续轮询');
+          logger.warn('获取任务状态返回空数据，继续轮询');
         }
       } catch (err) {
-        console.error('轮询异常:', err);
+        logger.error('轮询异常:', err);
 
         // P1-2 修复：完善错误分类和处理
         const errorInfo = {
@@ -149,11 +149,11 @@ if old_pattern in content:
         // Step 1: 403/401 错误熔断机制
         if (errorInfo.isAuthError) {
           consecutiveAuthErrors++;
-          console.error(`认证错误计数：${consecutiveAuthErrors}/${MAX_AUTH_ERRORS}`);
+          logger.error(`认证错误计数：${consecutiveAuthErrors}/${MAX_AUTH_ERRORS}`);
 
           if (consecutiveAuthErrors >= MAX_AUTH_ERRORS) {
             stop();
-            console.error('认证错误熔断，停止轮询');
+            logger.error('认证错误熔断，停止轮询');
             if (onError) onError(new Error('权限验证失败，请重新登录'));
             return;
           }
@@ -163,9 +163,9 @@ if old_pattern in content:
 
           // P1-2 修复：网络错误和超时错误给予更友好的提示
           if (errorInfo.isNetworkError) {
-            console.warn('网络连接异常，请检查网络设置');
+            logger.warn('网络连接异常，请检查网络设置');
           } else if (errorInfo.isTimeout) {
-            console.warn('请求超时，服务器响应缓慢');
+            logger.warn('请求超时，服务器响应缓慢');
           }
         }
 

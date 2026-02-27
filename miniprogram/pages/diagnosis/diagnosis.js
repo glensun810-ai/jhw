@@ -16,8 +16,8 @@
 
 import diagnosisService from '../../services/diagnosisService';
 import { isFeatureEnabled } from '../../config/featureFlags';
-import { showToast, showModal, showLoading, hideLoading } from '../../utils/uiHelper';
-import { logError } from '../../utils/errorHandler';
+import { showToast, showModal, showLoading, hideLoading, showErrorToast } from '../../utils/uiHelper';
+import { logError, handleApiError, isRetryableError } from '../../utils/errorHandler';
 
 Page({
   /**
@@ -33,7 +33,15 @@ Page({
     progressHistory: [],  // 记录进度变化
     errorMessage: '',
     retryCount: 0,
-    showDetails: false
+    showDetails: false,
+    // 错误提示组件相关
+    showErrorToast: false,
+    errorType: 'default',
+    errorTitle: '',
+    errorDetail: '',
+    errorCode: '',
+    showRetry: false,
+    showCancel: false
   },
 
   /**
@@ -358,7 +366,7 @@ Page({
 
   /**
    * 处理错误
-   * @param {Object} error 
+   * @param {Object} error
    */
   async handleError(error) {
     console.error('[DiagnosisPage] Error:', error);
@@ -366,11 +374,29 @@ Page({
       context: 'diagnosisPage',
       executionId: this.data.executionId
     });
+
+    // 使用统一错误提示组件
+    const handled = handleApiError(error);
     
-    await showModal({
-      title: '出错了',
-      content: error.message || '未知错误',
+    this.setData({
+      showErrorToast: true,
+      errorType: handled.type,
+      errorTitle: handled.title,
+      errorMessage: handled.message,
+      errorDetail: error.detail || '',
+      errorCode: handled.code,
+      showRetry: handled.retryable,
       showCancel: false
+    });
+  },
+
+  /**
+   * 关闭错误提示
+   */
+  onErrorClose() {
+    this.setData({
+      showErrorToast: false,
+      errorMessage: ''
     });
   },
 
@@ -401,10 +427,14 @@ Page({
    */
   onRetry() {
     console.log('[DiagnosisPage] User clicked retry');
+    
+    // 关闭错误提示
     this.setData({
+      showErrorToast: false,
       errorMessage: '',
       retryCount: 0
     });
+    
     this.startPolling();
   },
 

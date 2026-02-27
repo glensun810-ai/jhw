@@ -1,6 +1,8 @@
-<view class="page-container container">
-  <!-- 高优先级修复 3: 刷新提示条 -->
-  <view class="refresh-bar" wx:if="{{isCached || refreshing}}">
+<!-- 页面过渡动画包装器 -->
+<view class="page-transition-container {{pageTransitionClass}}">
+  <view class="page-container container {{pageLoaded ? 'loaded' : ''}}">
+    <!-- 高优先级修复 3: 刷新提示条 -->
+    <view class="refresh-bar" wx:if="{{isCached || refreshing}}">
     <view class="cache-hint" wx:if="{{isCached && !refreshing}}">
       <text class="hint-icon">💾</text>
       <text class="hint-text">当前显示缓存数据</text>
@@ -818,4 +820,4 @@
 
   <!-- 隐藏的 Canvas 用于生成报告图片 -->
   <canvas type="2d" id="report-canvas" class="report-canvas-hidden"></canvas>
-</view>
+</view></view></view>

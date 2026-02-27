@@ -385,8 +385,7 @@ def _calculate_session_duration(events: List[Dict[str, Any]]) -> int:
         last_time = datetime.fromisoformat(events[0].get('timestamp', ''))
         return int((last_time - first_time).total_seconds())
     except Exception as e:
-
-        pass  # TODO: 添加适当的错误处理
+        api_logger.error(f"Error calculating session duration: {e}", exc_info=True)
         return 0
 
 
@@ -452,9 +451,8 @@ def _update_daily_stats(user_id: str, event: Dict[str, Any]):
         hour = datetime.fromisoformat(event.get('timestamp', '')).hour
         stats['hourly_distribution'][hour] += 1
     except Exception as e:
-
-        pass  # TODO: 添加适当的错误处理
-        pass
+        api_logger.error(f"Error updating hourly distribution: {e}", exc_info=True)
+        # 时间戳解析失败，跳过该事件的小时统计
 
 
 def _calculate_statistics(date_range: Dict[str, str]) -> Dict[str, Any]:

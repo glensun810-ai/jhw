@@ -19,6 +19,7 @@ import json
 import gzip
 import hashlib
 import os
+import sqlite3
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 from contextlib import contextmanager
@@ -277,9 +278,33 @@ class DiagnosisResultRepository:
             get_db_pool().return_connection(conn)
     
     def add_result(self, report_id: int, execution_id: str, result: Dict[str, Any]) -> int:
-        """添加单个诊断结果"""
+        """添加单个诊断结果（完整版 - Migration 004）
+        
+        存储完整的 API 响应数据，包括：
+        - 原始响应（raw_response）
+        - Token 统计（tokens_used, prompt_tokens, completion_tokens, cached_tokens）
+        - 响应详情（finish_reason, request_id, model_version, reasoning_content）
+        - API 信息（api_endpoint, service_tier）
+        - 重试信息（retry_count, is_fallback）
+        
+        Args:
+            report_id: 报告 ID
+            execution_id: 执行 ID
+            result: 诊断结果字典
+            
+        Returns:
+            result_id: 插入的记录 ID
+        """
         now = datetime.now().isoformat()
         
+        # 提取完整响应数据
+        response = result.get('response', {})
+        metadata = response.get('metadata', {})
+        usage = metadata.get('usage', {})
+        choices = metadata.get('choices', [{}])
+        first_choice = choices[0] if choices else {}
+        message = first_choice.get('message', {})
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -290,25 +315,46 @@ class DiagnosisResultRepository:
                     geo_data,
                     quality_score, quality_level, quality_details,
                     status, error_message,
-                    created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    raw_response, response_metadata,
+                    tokens_used, prompt_tokens, completion_tokens, cached_tokens,
+                    finish_reason, request_id, model_version, reasoning_content,
+                    api_endpoint, service_tier,
+                    retry_count, is_fallback,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 report_id,
                 execution_id,
                 result.get('brand', ''),
                 result.get('question', ''),
                 result.get('model', ''),
-                result.get('response', {}).get('content', '') if isinstance(result.get('response'), dict) else '',
-                result.get('response', {}).get('latency') if isinstance(result.get('response'), dict) else None,
+                response.get('content', '') if isinstance(response, dict) else '',
+                response.get('latency') if isinstance(response, dict) else None,
                 json.dumps(result.get('geo_data', {}), ensure_ascii=False),
                 result.get('quality_score', 0),
                 result.get('quality_level', 'unknown'),
                 json.dumps(result.get('quality_details', {}), ensure_ascii=False),
                 result.get('status', 'success'),
                 result.get('error'),
+                # API 响应完整字段（Migration 004）
+                json.dumps(metadata, ensure_ascii=False),  # raw_response
+                json.dumps(usage, ensure_ascii=False),     # response_metadata
+                usage.get('total_tokens', 0),
+                usage.get('prompt_tokens', 0),
+                usage.get('completion_tokens', 0),
+                usage.get('prompt_tokens_details', {}).get('cached_tokens', 0),
+                first_choice.get('finish_reason', 'stop'),
+                metadata.get('id', ''),
+                metadata.get('model', ''),
+                message.get('reasoning_content', ''),
+                metadata.get('api_endpoint', ''),
+                metadata.get('service_tier', 'default'),
+                result.get('retry_count', 0),
+                1 if result.get('is_fallback', False) else 0,
+                now,
                 now
             ))
-            
+
             result_id = cursor.lastrowid
             return result_id
     
