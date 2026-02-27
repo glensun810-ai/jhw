@@ -140,6 +140,9 @@ Page({
       { name: 'Grok', id: 'grok', checked: false, logo: 'GR', tags: ['推理', '多模态'] },
     ],
     selectedModelCount: 0,
+    totalSelectedCount: 0,
+    domesticSelectedNames: '',
+    overseasSelectedNames: '',
 
     // 测试状态
     isTesting: false,
@@ -817,13 +820,25 @@ Page({
     const selectedDomesticCount = domesticAiModels.filter(model => model.checked).length;
     const selectedOverseasCount = overseasAiModels.filter(model => model.checked).length;
     
+    // 【新增】获取已选平台名称列表
+    const domesticSelectedNames = domesticAiModels
+      .filter(model => model.checked)
+      .map(model => model.name)
+      .join('、');
+    const overseasSelectedNames = overseasAiModels
+      .filter(model => model.checked)
+      .map(model => model.name)
+      .join('、');
+
     // 【优化】只显示当前 Tab 的选中数量
     const currentMarket = this.data.selectedMarketTab;
     const displayCount = currentMarket === 'domestic' ? selectedDomesticCount : selectedOverseasCount;
-    
-    this.setData({ 
+
+    this.setData({
       selectedModelCount: displayCount,
-      totalSelectedCount: selectedDomesticCount + selectedOverseasCount  // 保存总数用于提示
+      totalSelectedCount: selectedDomesticCount + selectedOverseasCount,
+      domesticSelectedNames: domesticSelectedNames,
+      overseasSelectedNames: overseasSelectedNames
     });
   },
   /**
