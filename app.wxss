@@ -563,14 +563,4 @@ page {
 }
 
 /* ==================== 无障碍 ==================== */
-
-/* 减少动画 */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+/* 注：微信小程序不支持 @media (prefers-reduced-motion)，已在代码中默认使用适度动画 */
