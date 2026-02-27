@@ -820,4 +820,5 @@
 
   <!-- 隐藏的 Canvas 用于生成报告图片 -->
   <canvas type="2d" id="report-canvas" class="report-canvas-hidden"></canvas>
-</view></view></view>
+</view>
+</view>
