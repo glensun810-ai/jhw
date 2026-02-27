@@ -187,3 +187,22 @@ class RetryExhaustedError(DiagnosisError):
             f"Retry exhausted after {retry_count} attempts. "
             f"Original error: {original_error}"
         )
+
+
+class RepositoryError(DiagnosisError):
+    """仓库操作异常"""
+    
+    error_code = 'REPOSITORY_ERROR'
+    status_code = 500
+    
+    def __init__(
+        self,
+        message: str,
+        operation: Optional[str] = None,
+        original_error: Optional[str] = None,
+    ):
+        details = {
+            'operation': operation,
+            'original_error': original_error,
+        }
+        super().__init__(message, details)
