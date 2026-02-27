@@ -88,7 +88,7 @@ new_method = '''  /**
     const lastReport = app.globalData.lastReport;
     
     if (lastReport && lastReport.executionId && lastReport.dashboard) {
-      console.log('[首页] 发现完成的诊断:', lastReport.executionId);
+      logger.debug('[首页] 发现完成的诊断:', lastReport.executionId);
       
       const dashboard = lastReport.dashboard;
       const summary = dashboard.summary || {};
@@ -151,10 +151,10 @@ new_method = '''  /**
     wx.navigateTo({
       url: '/pages/report/dashboard/index',
       success: () => {
-        console.log('[首页] 跳转到诊断报告页面');
+        logger.debug('[首页] 跳转到诊断报告页面');
       },
       fail: (err) => {
-        console.error('[首页] 跳转失败:', err);
+        logger.error('[首页] 跳转失败:', err);
         wx.showToast({
           title: '跳转失败',
           icon: 'none'

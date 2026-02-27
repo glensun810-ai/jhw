@@ -61,9 +61,8 @@ def log_admin_action(resource_type=None, resource_id_field=None):
                             if sensitive_field in request_data:
                                 request_data[sensitive_field] = '***'
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
-                pass
+                api_logger.error(f"Error getting request data for audit log: {e}", exc_info=True)
+                # 获取请求数据失败，继续执行但不记录请求内容
             
             # 执行原函数
             response = None
@@ -143,9 +142,8 @@ def log_batch_action(resource_type=None):
                             if sensitive_field in request_data:
                                 request_data[sensitive_field] = '***'
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
-                pass
+                api_logger.error(f"Error getting request data for batch audit: {e}", exc_info=True)
+                # 获取请求数据失败，继续执行但不记录请求内容
             
             # 执行原函数
             response = None
@@ -178,20 +176,19 @@ def log_batch_action(resource_type=None):
                         response_data = response.get_json()
                     else:
                         response_data = response
-                    
+
                     if isinstance(response_data, dict):
                         processed_count = response_data.get('processed', 0)
                         failed_count = response_data.get('failed', 0)
                         deleted_count = response_data.get('deleted_count', 0)
                         target_count = response_data.get('target_count', 0)
-                        
+
                         # 使用最大的数量作为 resource_id
                         resource_id = max(processed_count, failed_count, deleted_count, target_count)
                     else:
                         resource_id = None
                 except Exception as e:
-
-                    pass  # TODO: 添加适当的错误处理
+                    api_logger.error(f"Error parsing response data for batch audit: {e}", exc_info=True)
                     resource_id = None
                     processed_count = 0
                     failed_count = 0

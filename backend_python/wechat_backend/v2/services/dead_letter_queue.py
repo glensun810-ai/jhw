@@ -166,6 +166,31 @@ class DeadLetterQueue:
             
             db_logger.info("dead_letter_queue_table_initialized")
     
+    def _serialize_context(self, obj: Any) -> Any:
+        """
+        递归序列化对象，确保可以 JSON 序列化
+
+        Args:
+            obj: 待序列化对象
+
+        Returns:
+            Any: 可 JSON 序列化的对象
+        """
+        if isinstance(obj, dict):
+            return {k: self._serialize_context(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [self._serialize_context(item) for item in obj]
+        elif isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif hasattr(obj, '__dict__'):
+            # 自定义对象，序列化其属性
+            return f"<{type(obj).__name__}: {str(obj)}>"
+        else:
+            # 其他不可序列化对象，转为字符串
+            return str(obj)
+
     def add_to_dead_letter(
         self,
         execution_id: str,
@@ -178,7 +203,7 @@ class DeadLetterQueue:
     ) -> int:
         """
         添加失败任务到死信队列
-        
+
         Args:
             execution_id: 任务执行 ID
             task_type: 任务类型（ai_call, analysis, report_generation）
@@ -187,22 +212,25 @@ class DeadLetterQueue:
             retry_count: 已重试次数
             max_retries: 最大重试次数
             priority: 优先级（0-10）
-        
+
         Returns:
             int: 死信记录 ID
-        
+
         Raises:
             DeadLetterQueueError: 添加失败
         """
         try:
             # 获取堆栈信息
             error_stack = ''.join(traceback.format_tb(error.__traceback__))
-            
+
+            # 序列化 task_context，确保可以 JSON 序列化
+            serializable_context = self._serialize_context(task_context)
+
             with self._get_connection() as conn:
                 cursor = conn.cursor()
-                
+
                 now = datetime.now().isoformat()
-                
+
                 cursor.execute('''
                     INSERT INTO dead_letter_queue (
                         execution_id, task_type, status,
@@ -217,7 +245,7 @@ class DeadLetterQueue:
                     type(error).__name__,
                     str(error),
                     error_stack,
-                    json.dumps(task_context, ensure_ascii=False),
+                    json.dumps(serializable_context, ensure_ascii=False),
                     retry_count,
                     max_retries,
                     priority,
@@ -225,9 +253,9 @@ class DeadLetterQueue:
                     now,
                     now,
                 ))
-                
+
                 dead_letter_id = cursor.lastrowid
-                
+
                 api_logger.info(
                     "dead_letter_added",
                     extra={
@@ -241,9 +269,9 @@ class DeadLetterQueue:
                         'priority': priority,
                     }
                 )
-                
+
                 return dead_letter_id
-                
+
         except Exception as e:
             db_logger.error(
                 "dead_letter_add_failed",

@@ -2,7 +2,8 @@
   "usingComponents": {
     "brand-distribution": "/miniprogram/components/brand-distribution/brand-distribution",
     "sentiment-chart": "/miniprogram/components/sentiment-chart/sentiment-chart",
-    "keyword-cloud": "/miniprogram/components/keyword-cloud/keyword-cloud"
+    "keyword-cloud": "/miniprogram/components/keyword-cloud/keyword-cloud",
+    "skeleton": "/miniprogram/components/skeleton/skeleton"
   },
   "navigationBarTitleText": "品牌诊断报告",
   "navigationBarBackgroundColor": "#1890ff",

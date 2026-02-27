@@ -126,9 +126,8 @@ class AnalyticsService:
                         hour = dt.hour
                         hour_counts[hour] = hour_counts.get(hour, 0) + 1
                     except Exception as e:
-
-                        pass  # TODO: 添加适当的错误处理
-                        pass
+                        api_logger.error(f"[AnalyticsService] Error parsing timestamp for hour distribution: {e}", exc_info=True)
+                        # 时间戳解析失败，跳过该动作
             
             most_active_hour = max(hour_counts, key=hour_counts.get) if hour_counts else 0
             

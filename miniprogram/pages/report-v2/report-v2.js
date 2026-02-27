@@ -35,7 +35,13 @@ Page({
     progressHistory: [],
     errorMessage: '',
     retryCount: 0,
-    showDetails: false
+    showDetails: false,
+    isLoading: true, // 加载状态，用于控制骨架屏显示
+    lastUpdateTime: null,
+    activeTab: 'overview',
+    brandDistribution: {},
+    sentimentDistribution: {},
+    keywords: []
   },
 
   /**
@@ -81,7 +87,8 @@ Page({
    * @param {Object} options
    */
   async initPage(options) {
-    showLoading('初始化中...');
+    // 设置加载状态，显示骨架屏
+    this.setData({ isLoading: true });
 
     try {
       // 如果是新发起的诊断
@@ -119,7 +126,8 @@ Page({
       console.error('[ReportPageV2] Initialization error:', error);
       this.handleError(error);
     } finally {
-      hideLoading();
+      // 数据加载完成，隐藏骨架屏
+      this.setData({ isLoading: false });
     }
   },
 

@@ -82,7 +82,7 @@ new_error = '''          if (isCompleted && onComplete) {
             const errorMsg = parsedStatus.error || 
                             (parsedStatus.stage === 'failed' ? '任务执行失败（stage=failed）' : '诊断失败');
             
-            console.error('[brandTestService] 诊断失败详情:', {
+            logger.error('[brandTestService] 诊断失败详情:', {
               stage: parsedStatus.stage,
               status: parsedStatus.status,
               progress: parsedStatus.progress,

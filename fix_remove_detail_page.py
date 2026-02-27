@@ -9,13 +9,13 @@ with open('/Users/sgl/PycharmProjects/PythonProject/pages/index/index.js', 'r', 
 
 # 替换 1: 删除 navigateToDetail 调用，改为直接显示进度
 old_call = """if (executionId) {
-        console.log('✅ 战局指令下达成功，执行 ID:', executionId);
+        logger.debug('✅ 战局指令下达成功，执行 ID:', executionId);
         wx.hideLoading(); // 确保配对关闭
         this.navigateToDetail(executionId, brand_list, selectedModels, custom_question); // 调用跳转
       } else {"""
 
 new_call = """if (executionId) {
-        console.log('✅ 战局指令下达成功，执行 ID:', executionId);
+        logger.debug('✅ 战局指令下达成功，执行 ID:', executionId);
         wx.hideLoading(); // 确保配对关闭
         
         // 【P0 修复】删除 detail 页后，直接在首页显示进度

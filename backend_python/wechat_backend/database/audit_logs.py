@@ -157,13 +157,11 @@ def create_audit_log(
         return audit_log.id
         
     except Exception as e:
-        logger.error(f"[Audit] 创建审计日志失败：{e}"
+        logger.error(f"[Audit] 创建审计日志失败：{e}")
         try:
-            session.rollback(
-        except Exception as e:
-
-            pass  # TODO: 添加适当的错误处理
-            pass
+            session.rollback()
+        except Exception as rollback_error:
+            logger.error(f"[Audit] 回滚审计日志失败：{rollback_error}", exc_info=True)
         return None
 
 
@@ -303,13 +301,11 @@ def clear_old_audit_logs(days: int = 90) -> int:
         return count
         
     except Exception as e:
-        logger.error(f"[Audit] 清理审计日志失败：{e}"
+        logger.error(f"[Audit] 清理审计日志失败：{e}")
         try:
-            session.rollback(
-        except Exception as e:
-
-            pass  # TODO: 添加适当的错误处理
-            pass
+            session.rollback()
+        except Exception as rollback_error:
+            logger.error(f"[Audit] 回滚清理审计日志失败：{rollback_error}", exc_info=True)
         return 0
 
 

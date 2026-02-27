@@ -104,7 +104,7 @@ process_trend_function = '''
         }
       };
     } catch (e) {
-      console.error('处理趋势图数据失败:', e);
+      logger.error('处理趋势图数据失败:', e);
       return {
         trendChartData: [],
         trendLinePoints: '',

@@ -27,11 +27,8 @@
     </view>
   </view>
 
-  <!-- 加载状态 -->
-  <view class="loading-state" wx:if="{{isLoading}}">
-    <view class="loading-spinner"></view>
-    <text class="loading-text">加载报告数据中...</text>
-  </view>
+  <!-- 骨架屏加载状态 -->
+  <skeleton mode="report" wx:if="{{isLoading}}"></skeleton>
 
   <!-- 错误状态 -->
   <view class="error-state" wx:elif="{{hasError}}">

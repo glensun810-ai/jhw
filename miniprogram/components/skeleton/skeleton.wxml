@@ -1,0 +1,95 @@
+<!--
+  骨架屏组件
+  
+  用于页面加载时显示占位动画，提升用户体验
+  
+  使用示例：
+  <skeleton mode="report"></skeleton>
+-->
+
+<view class="skeleton-container">
+  <!-- 报告模式骨架屏 -->
+  <view class="skeleton-report" wx:if="{{mode === 'report'}}">
+    <!-- 头部骨架 -->
+    <view class="skeleton-header">
+      <view class="skeleton-header-title"></view>
+      <view class="skeleton-header-subtitle"></view>
+    </view>
+    
+    <!-- 标签页骨架 -->
+    <view class="skeleton-tab-bar">
+      <view class="skeleton-tab-item"></view>
+      <view class="skeleton-tab-item"></view>
+      <view class="skeleton-tab-item"></view>
+      <view class="skeleton-tab-item"></view>
+    </view>
+    
+    <!-- 内容区域骨架 -->
+    <view class="skeleton-content">
+      <!-- 摘要卡片骨架 -->
+      <view class="skeleton-summary-card">
+        <view class="skeleton-card-title"></view>
+        <view class="skeleton-stats-row">
+          <view class="skeleton-stat-item"></view>
+          <view class="skeleton-stat-item"></view>
+          <view class="skeleton-stat-item"></view>
+        </view>
+      </view>
+      
+      <!-- 图表卡片骨架 -->
+      <view class="skeleton-chart-card">
+        <view class="skeleton-chart-title"></view>
+        <view class="skeleton-chart-body">
+          <view class="skeleton-chart-placeholder"></view>
+        </view>
+      </view>
+      
+      <!-- 第二个图表卡片骨架 -->
+      <view class="skeleton-chart-card">
+        <view class="skeleton-chart-title"></view>
+        <view class="skeleton-chart-body">
+          <view class="skeleton-chart-placeholder"></view>
+        </view>
+      </view>
+      
+      <!-- 第三个图表卡片骨架 -->
+      <view class="skeleton-chart-card">
+        <view class="skeleton-chart-title"></view>
+        <view class="skeleton-chart-body">
+          <view class="skeleton-chart-placeholder"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 列表模式骨架屏 -->
+  <view class="skeleton-list" wx:elif="{{mode === 'list'}}">
+    <view class="skeleton-list-item" wx:for="{{count}}" wx:key="*this">
+      <view class="skeleton-list-avatar"></view>
+      <view class="skeleton-list-content">
+        <view class="skeleton-list-title"></view>
+        <view class="skeleton-list-desc"></view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 卡片模式骨架屏 -->
+  <view class="skeleton-card-mode" wx:elif="{{mode === 'card'}}">
+    <view class="skeleton-card" wx:for="{{count}}" wx:key="*this">
+      <view class="skeleton-card-image"></view>
+      <view class="skeleton-card-body">
+        <view class="skeleton-card-title"></view>
+        <view class="skeleton-card-desc"></view>
+        <view class="skeleton-card-footer">
+          <view class="skeleton-card-btn"></view>
+          <view class="skeleton-card-btn"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 文本模式骨架屏 -->
+  <view class="skeleton-text-mode" wx:elif="{{mode === 'text'}}">
+    <view class="skeleton-text-line" wx:for="{{lines}}" wx:key="*this" style="width: {{lineWidths && lineWidths[index] ? lineWidths[index] : '100%'}}"></view>
+  </view>
+</view>

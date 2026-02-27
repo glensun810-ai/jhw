@@ -71,9 +71,8 @@ class RateLimitMonitor:
                                 if hour_dt >= cutoff:
                                     self.stats['hourly_stats'][hour_str] = hour_data
                             except Exception as e:
-
-                                pass  # TODO: 添加适当的错误处理
-                                pass
+                                api_logger.error(f"[RateLimit] Error parsing hour string {hour_str}: {e}", exc_info=True)
+                                # 小时时间戳解析失败，跳过该小时数据
         except Exception as e:
             api_logger.error(f"[RateLimit] 加载统计数据失败：{e}")
     

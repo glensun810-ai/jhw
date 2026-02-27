@@ -93,7 +93,7 @@ new_success = '''          const resultsToUse = res.data.detailed_results || res
           const recommendationDataToUse = res.data.recommendation_data || null;
           const negativeSourcesToUse = res.data.negative_sources || [];
           
-          console.log('📊 后端返回的高级分析数据:', {
+          logger.debug('📊 后端返回的高级分析数据:', {
             hasBrandScores: !!brandScoresToUse && Object.keys(brandScoresToUse).length > 0,
             hasCompetitiveAnalysis: !!competitiveAnalysisToUse && Object.keys(competitiveAnalysisToUse).length > 0,
             hasSemanticDrift: !!semanticDriftDataToUse,
@@ -131,7 +131,7 @@ new_save = '''          // 保存到 Storage
             timestamp: Date.now()
           });
           
-          console.log('✅ 数据已保存到 Storage，包含高级分析数据');'''
+          logger.debug('✅ 数据已保存到 Storage，包含高级分析数据');'''
 
 if old_save in content:
     content = content.replace(old_save, new_save)

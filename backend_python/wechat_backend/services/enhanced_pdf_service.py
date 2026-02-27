@@ -69,8 +69,7 @@ class EnhancedPDFExportService:
                 self.logger.info(f"Registered Chinese font: {font_path}")
                 return
             except Exception as e:
-
-                pass  # TODO: 添加适当的错误处理
+                self.logger.error(f"Error registering Chinese font {font_path}: {e}", exc_info=True)
                 continue
         
         self.logger.warning("No Chinese font found, using default")

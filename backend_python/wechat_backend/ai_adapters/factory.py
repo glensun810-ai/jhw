@@ -10,7 +10,7 @@ api_logger.info("=== Starting AI Adapter Imports ===")
 # 动态导入适配器，防止单个适配器的依赖问题导致整个应用崩溃
 try:
     from wechat_backend.ai_adapters.deepseek_adapter import DeepSeekAdapter
-    api_logger.info("Successfully imported DeepSeekAdapter")
+    api_logger.debug("Successfully imported DeepSeekAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import DeepSeekAdapter: {e}")
     import traceback
@@ -19,7 +19,7 @@ except ImportError as e:
 
 try:
     from .deepseek_r1_adapter import DeepSeekR1Adapter
-    api_logger.info("Successfully imported DeepSeekR1Adapter")
+    api_logger.debug("Successfully imported DeepSeekR1Adapter")
 except ImportError as e:
     api_logger.error(f"Failed to import DeepSeekR1Adapter: {e}")
     import traceback
@@ -28,7 +28,7 @@ except ImportError as e:
 
 try:
     from wechat_backend.ai_adapters.qwen_adapter import QwenAdapter
-    api_logger.info("Successfully imported QwenAdapter")
+    api_logger.debug("Successfully imported QwenAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import QwenAdapter: {e}")
     import traceback
@@ -37,7 +37,7 @@ except ImportError as e:
 
 try:
     from wechat_backend.ai_adapters.doubao_adapter import DoubaoAdapter
-    api_logger.info("Successfully imported DoubaoAdapter")
+    api_logger.debug("Successfully imported DoubaoAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import DoubaoAdapter: {e}")
     import traceback
@@ -47,7 +47,7 @@ except ImportError as e:
 # 导入豆包优先级适配器（支持多模型自动选择）
 try:
     from wechat_backend.ai_adapters.doubao_priority_adapter import DoubaoPriorityAdapter
-    api_logger.info("Successfully imported DoubaoPriorityAdapter")
+    api_logger.debug("Successfully imported DoubaoPriorityAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import DoubaoPriorityAdapter: {e}")
     import traceback
@@ -56,7 +56,7 @@ except ImportError as e:
 
 try:
     from .chatgpt_adapter import ChatGPTAdapter
-    api_logger.info("Successfully imported ChatGPTAdapter")
+    api_logger.debug("Successfully imported ChatGPTAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import ChatGPTAdapter: {e}")
     import traceback
@@ -65,7 +65,7 @@ except ImportError as e:
 
 try:
     from .gemini_adapter import GeminiAdapter
-    api_logger.info("Successfully imported GeminiAdapter")
+    api_logger.debug("Successfully imported GeminiAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import GeminiAdapter: {e}")
     import traceback
@@ -74,7 +74,7 @@ except ImportError as e:
 
 try:
     from wechat_backend.ai_adapters.zhipu_adapter import ZhipuAdapter
-    api_logger.info("Successfully imported ZhipuAdapter")
+    api_logger.debug("Successfully imported ZhipuAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import ZhipuAdapter: {e}")
     import traceback
@@ -83,7 +83,7 @@ except ImportError as e:
 
 try:
     from .erniebot_adapter import ErnieBotAdapter
-    api_logger.info("Successfully imported ErnieBotAdapter")
+    api_logger.debug("Successfully imported ErnieBotAdapter")
 except ImportError as e:
     api_logger.error(f"Failed to import ErnieBotAdapter: {e}")
     import traceback
@@ -222,8 +222,8 @@ class AIAdapterFactory:
             except ValueError:
                 raise ValueError(f"Unknown platform type: {platform_type}")
 
-        # 注入核心调试日志
-        api_logger.error(f"REGISTERED_MODELS: {list(cls._adapters.keys())}")
+        # 调试日志：记录已注册的适配器（DEBUG 级别，避免日志噪音）
+        api_logger.debug(f"REGISTERED_MODELS: {list(cls._adapters.keys())}")
 
         if platform_type not in cls._adapters:
             raise ValueError(f"No adapter registered for platform: {platform_type}")
@@ -257,70 +257,65 @@ class AIAdapterFactory:
         adapter_class = cls._adapters[platform_type]
         return adapter_class(api_key, model_name, **kwargs)
 
-# Debug logging for adapter availability
 api_logger.info("=== Adapter Registration Debug Info ===")
-api_logger.info(f"DeepSeekAdapter status: {DeepSeekAdapter is not None}")
-api_logger.info(f"DeepSeekR1Adapter status: {DeepSeekR1Adapter is not None}")
-api_logger.info(f"QwenAdapter status: {QwenAdapter is not None}")
-api_logger.info(f"DoubaoAdapter status: {DoubaoAdapter is not None}")
-api_logger.info(f"ChatGPTAdapter status: {ChatGPTAdapter is not None}")
-api_logger.info(f"GeminiAdapter status: {GeminiAdapter is not None}")
-api_logger.info(f"ZhipuAdapter status: {ZhipuAdapter is not None}")
-api_logger.info(f"ErnieBotAdapter status: {ErnieBotAdapter is not None}")
+api_logger.debug(f"DeepSeekAdapter status: {DeepSeekAdapter is not None}")
+api_logger.debug(f"DeepSeekR1Adapter status: {DeepSeekR1Adapter is not None}")
+api_logger.debug(f"QwenAdapter status: {QwenAdapter is not None}")
+api_logger.debug(f"DoubaoAdapter status: {DoubaoAdapter is not None}")
+api_logger.debug(f"ChatGPTAdapter status: {ChatGPTAdapter is not None}")
+api_logger.debug(f"GeminiAdapter status: {GeminiAdapter is not None}")
+api_logger.debug(f"ZhipuAdapter status: {ZhipuAdapter is not None}")
+api_logger.debug(f"ErnieBotAdapter status: {ErnieBotAdapter is not None}")
 
 # Register default providers
 if DeepSeekAdapter:
-    api_logger.info("Registering DeepSeekAdapter")
+    api_logger.debug("Registering DeepSeekAdapter")
     AIAdapterFactory.register(AIPlatformType.DEEPSEEK, DeepSeekAdapter)
 else:
     api_logger.warning("NOT registering DeepSeekAdapter - it is None or failed to import")
 
 if DeepSeekR1Adapter:
-    api_logger.info("Registering DeepSeekR1Adapter")
+    api_logger.debug("Registering DeepSeekR1Adapter")
     AIAdapterFactory.register(AIPlatformType.DEEPSEEKR1, DeepSeekR1Adapter)  # New R1 adapter
 else:
     api_logger.warning("NOT registering DeepSeekR1Adapter - it is None or failed to import")
 
 if QwenAdapter:
-    api_logger.info("Registering QwenAdapter")
+    api_logger.debug("Registering QwenAdapter")
     AIAdapterFactory.register(AIPlatformType.QWEN, QwenAdapter)
 else:
     api_logger.warning("NOT registering QwenAdapter - it is None or failed to import")
 
 if DoubaoAdapter:
-    api_logger.info("Registering DoubaoAdapter")
+    api_logger.debug("Registering DoubaoAdapter")
     AIAdapterFactory.register(AIPlatformType.DOUBAO, DoubaoAdapter)
 else:
     api_logger.warning("NOT registering DoubaoAdapter - it is None or failed to import")
 
 if ChatGPTAdapter:
-    api_logger.info("Registering ChatGPTAdapter")
+    api_logger.debug("Registering ChatGPTAdapter")
     AIAdapterFactory.register(AIPlatformType.CHATGPT, ChatGPTAdapter)
 else:
     api_logger.warning("NOT registering ChatGPTAdapter - it is None or failed to import")
 
 if GeminiAdapter:
-    api_logger.info("Registering GeminiAdapter")
+    api_logger.debug("Registering GeminiAdapter")
     AIAdapterFactory.register(AIPlatformType.GEMINI, GeminiAdapter)
 else:
     api_logger.warning("NOT registering GeminiAdapter - it is None or failed to import")
 
 if ZhipuAdapter:
-    api_logger.info("Registering ZhipuAdapter")
+    api_logger.debug("Registering ZhipuAdapter")
     AIAdapterFactory.register(AIPlatformType.ZHIPU, ZhipuAdapter)
 else:
     api_logger.warning("NOT registering ZhipuAdapter - it is None or failed to import")
 
 if ErnieBotAdapter:
-    api_logger.info("Registering ErnieBotAdapter")
+    api_logger.debug("Registering ErnieBotAdapter")
     AIAdapterFactory.register(AIPlatformType.WENXIN, ErnieBotAdapter)
 else:
     api_logger.warning("NOT registering ErnieBotAdapter - it is None or failed to import")
 
-# Final debug logging
+# Final summary logging (INFO level for important summary)
 api_logger.info(f"Final registered models: {[pt.value for pt in AIAdapterFactory._adapters.keys()]}")
 api_logger.info("=== End Adapter Registration Debug Info ===")
-
-# 添加日志，显示当前注册的模型
-api_logger.info(f"Current Registered Models: {[pt.value for pt in AIAdapterFactory._adapters.keys()]}")
-print(f"Current Registered Models: {[pt.value for pt in AIAdapterFactory._adapters.keys()]}")

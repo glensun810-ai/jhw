@@ -27,12 +27,12 @@ old_func = '''  /**
       } else if (response && response.results && Array.isArray(response.results) && response.results.length > 0) {
         // 即使任务未完成，但如果已有结果数据，也可以进行部分处理
         // 这有助于在长时间运行的任务中提供更好的用户体验
-        console.log('检测到部分结果数据，但任务尚未完成');
+        logger.debug('检测到部分结果数据，但任务尚未完成');
       }
 
       return response;
     } catch (error) {
-      console.error('获取任务状态失败:', error);
+      logger.error('获取任务状态失败:', error);
       throw error; // 重新抛出错误，让调用方处理
     }
   },'''
@@ -48,7 +48,7 @@ new_func = '''  /**
       if (!response || (response.error && response.error.includes('not found'))) {
         // 增加 404 计数器
         this.notFoundCount = (this.notFoundCount || 0) + 1;
-        console.warn(`[404] Task not found (count: ${this.notFoundCount})`);
+        logger.warn(`[404] Task not found (count: ${this.notFoundCount})`);
         
         // 如果连续 5 次 404，停止轮询并提示用户
         if (this.notFoundCount >= 5) {
@@ -85,12 +85,12 @@ new_func = '''  /**
       } else if (response && response.results && Array.isArray(response.results) && response.results.length > 0) {
         // 即使任务未完成，但如果已有结果数据，也可以进行部分处理
         // 这有助于在长时间运行的任务中提供更好的用户体验
-        console.log('检测到部分结果数据，但任务尚未完成');
+        logger.debug('检测到部分结果数据，但任务尚未完成');
       }
 
       return response;
     } catch (error) {
-      console.error('获取任务状态失败:', error);
+      logger.error('获取任务状态失败:', error);
       throw error; // 重新抛出错误，让调用方处理
     }
   },'''

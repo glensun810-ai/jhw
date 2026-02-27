@@ -94,7 +94,7 @@ keyword_functions = '''  /**
         keywordStats: stats
       };
     } catch (e) {
-      console.error('准备关键词云数据失败:', e);
+      logger.error('准备关键词云数据失败:', e);
       return {
         keywordCloudData: [],
         topKeywords: [],
@@ -117,7 +117,7 @@ keyword_functions = '''  /**
         .fields({ node: true, size: true })
         .exec((res) => {
           if (!res[0] || !res[0].node) {
-            console.error('Canvas not found');
+            logger.error('Canvas not found');
             return;
           }
           
@@ -145,7 +145,7 @@ keyword_functions = '''  /**
           this.setData({ wordCloudRendered: true });
         });
     } catch (e) {
-      console.error('渲染词云失败:', e);
+      logger.error('渲染词云失败:', e);
     }
   },
 

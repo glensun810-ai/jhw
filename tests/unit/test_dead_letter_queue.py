@@ -23,6 +23,7 @@ import pytest
 import os
 import tempfile
 import time
+import json
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
@@ -114,17 +115,25 @@ class TestAddToDeadLetter:
     
     def test_add_to_dead_letter_invalid_context(self, dlq):
         """测试添加不可序列化的上下文"""
-        # 应该抛出 DeadLetterQueueError
+        # 现在应该能够处理不可序列化的对象，将其转换为字符串
         class NonSerializable:
-            pass
-        
-        with pytest.raises(DeadLetterQueueError):
-            dlq.add_to_dead_letter(
-                execution_id='test-123',
-                task_type='ai_call',
-                error=ValueError("Error"),
-                task_context={'data': NonSerializable()},  # type: ignore
-            )
+            def __str__(self):
+                return "NonSerializableObject"
+
+        dead_letter_id = dlq.add_to_dead_letter(
+            execution_id='test-123',
+            task_type='ai_call',
+            error=ValueError("Error"),
+            task_context={'data': NonSerializable()},  # type: ignore
+        )
+
+        assert dead_letter_id > 0
+
+        letter = dlq.get_dead_letter(dead_letter_id)
+        assert letter is not None
+        # 验证不可序列化对象被转换为字符串
+        task_context = json.loads(letter['task_context'])
+        assert 'NonSerializableObject' in task_context['data']
 
 
 # ==================== 查询死信测试 ====================

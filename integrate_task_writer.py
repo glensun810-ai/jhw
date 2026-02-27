@@ -114,7 +114,7 @@ old_complete = '''            // 保存到本地存储
             wx.setStorageSync('latestTargetBrand', this.brandList[0] || '');
             wx.setStorageSync('latestCompetitorBrands', this.brandList.slice(1) || []);
 
-            console.log('✅ 任务完成，测试结果已保存');'''
+            logger.debug('✅ 任务完成，测试结果已保存');'''
 
 new_complete = '''            //【P0 优化】使用写入器的结果（包含所有实时写入的任务）
             const resultsData = this.taskResultWriter.getAllResults();
@@ -124,7 +124,7 @@ new_complete = '''            //【P0 优化】使用写入器的结果（包含
             wx.setStorageSync('latestTargetBrand', this.brandList[0] || '');
             wx.setStorageSync('latestCompetitorBrands', this.brandList.slice(1) || []);
 
-            console.log('✅ 任务完成，测试结果已保存，总结果数:', resultsData.length);'''
+            logger.debug('✅ 任务完成，测试结果已保存，总结果数:', resultsData.length);'''
 
 content = content.replace(old_complete, new_complete)
 

@@ -11,7 +11,7 @@ with open('pages/index/index.js', 'r', encoding='utf-8') as f:
 
 # 1. 修复 onLoad 函数，添加 try-catch 和 setDefaultData 调用
 old_onload = """  onLoad: function (options) {
-    console.log('品牌 AI 雷达 - 页面加载完成');
+    logger.debug('品牌 AI 雷达 - 页面加载完成');
     this.checkServerConnection();
     this.updateSelectedModelCount();
     this.updateSelectedQuestionCount();
@@ -27,7 +27,7 @@ old_onload = """  onLoad: function (options) {
 
 new_onload = """  onLoad: function (options) {
     try {
-      console.log('品牌 AI 雷达 - 页面加载完成');
+      logger.debug('品牌 AI 雷达 - 页面加载完成');
       
       // P0 修复：初始化默认数据，防止后续访问 null
       this.setDefaultData();
@@ -45,7 +45,7 @@ new_onload = """  onLoad: function (options) {
         }, 1000);
       }
     } catch (error) {
-      console.error('onLoad 初始化失败', error);
+      logger.error('onLoad 初始化失败', error);
       // 确保即使出错也能显示基本界面
       this.setDefaultData();
     }
@@ -88,7 +88,7 @@ new_restore = """  restoreDraft: function() {
       
       // P0 修复：确保 draft 存在且为对象
       if (!draft || typeof draft !== 'object') {
-        console.log('无草稿数据或数据无效');
+        logger.debug('无草稿数据或数据无效');
         return;
       }
       
@@ -103,14 +103,14 @@ old_restore_end = """      }
 
   addCompetitor: function() {"""
 
-new_restore_end = """        console.log('草稿已恢复', draft);
+new_restore_end = """        logger.debug('草稿已恢复', draft);
       } else {
         // 草稿过期，清除
         wx.removeStorageSync('draft_diagnostic_input');
-        console.log('草稿已过期，已清除');
+        logger.debug('草稿已过期，已清除');
       }
     } catch (error) {
-      console.error('restoreDraft 失败', error);
+      logger.error('restoreDraft 失败', error);
     }
   },
 

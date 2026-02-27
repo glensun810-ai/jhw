@@ -17,23 +17,22 @@ def get_execution_context():
     try:
         from flask import g, request
         context = {}
-        
+
         # 获取请求相关信息
         if request:
             context['request_id'] = getattr(request, 'id', None)
             context['request_method'] = request.method
             context['request_url'] = request.url
             context['remote_addr'] = request.remote_addr
-        
+
         # 获取用户相关信息
         user_id = get_current_user_id()
         if user_id:
             context['user_id'] = user_id
-            
+
         return context
     except Exception as e:
-
-        pass  # TODO: 添加适当的错误处理
+        api_logger.error(f"Error getting execution context: {e}", exc_info=True)
         # 如果无法获取上下文，返回空字典
         return {}
 

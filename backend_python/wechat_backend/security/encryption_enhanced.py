@@ -162,8 +162,7 @@ def decrypt_on_load(*fields):
                         try:
                             return decrypt_field(value)
                         except Exception as e:
-
-                            pass  # TODO: 添加适当的错误处理
+                            print(f"Error decrypting field {f}: {e}")
                             return value
                     return None
                 return getter
@@ -175,8 +174,7 @@ def decrypt_on_load(*fields):
                             encrypted = encrypt_field(str(value))
                             setattr(self, pf, encrypted)
                         except Exception as e:
-
-                            pass  # TODO: 添加适当的错误处理
+                            print(f"Error encrypting field {f}: {e}")
                             setattr(self, pf, value)
                     else:
                         setattr(self, pf, None)

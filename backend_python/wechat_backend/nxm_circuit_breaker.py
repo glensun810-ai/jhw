@@ -60,9 +60,8 @@ class ModelCircuitBreaker:
                     try:
                         self.model_last_failure[model_name] = datetime.fromisoformat(timestamp_str)
                     except Exception as e:
-
-                        pass  # TODO: 添加适当的错误处理
-                        pass
+                        api_logger.error(f"[CircuitBreaker] Error parsing timestamp for {model_name}: {e}", exc_info=True)
+                        # 时间戳解析失败，跳过该模型
 
                 self._check_recovery()
                 api_logger.info(f"[CircuitBreaker] 加载状态：{len(self.model_suspended)} 个模型处于熔断状态")

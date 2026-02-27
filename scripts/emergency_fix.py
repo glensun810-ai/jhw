@@ -19,11 +19,11 @@ for root, dirs, files in os.walk('pages'):
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # 修复 console\.log\( 为 console.log(
+            # 修复 console\.log\( 为 logger.debug(
             if 'console\\.log\\(' in content or 'console\\.error\\(' in content or 'console\\.warn\\(' in content:
-                content = content.replace('console\\.log\\(', 'console.log(')
-                content = content.replace('console\\.error\\(', 'console.error(')
-                content = content.replace('console\\.warn\\(', 'console.warn(')
+                content = content.replace('console\\.log\\(', 'logger.debug(')
+                content = content.replace('console\\.error\\(', 'logger.error(')
+                content = content.replace('console\\.warn\\(', 'logger.warn(')
                 content = content.replace('console\\.debug\\(', 'console.debug(')
                 content = content.replace("\\'", "'")
                 
@@ -41,7 +41,7 @@ for root, dirs, files in os.walk('services'):
                 content = f.read()
             
             if 'console\\.log\\(' in content:
-                content = content.replace('console\\.log\\(', 'console.log(')
+                content = content.replace('console\\.log\\(', 'logger.debug(')
                 content = content.replace("\\'", "'")
                 
                 with open(filepath, 'w', encoding='utf-8') as f:
