@@ -161,7 +161,7 @@ def verify_completion(
     }
 
 
-def calculate_result_quality(geo_data: Dict[str, Any]) -> Dict[str, Any]:
+def calculate_result_quality(geo_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """
     修复 4: 计算结果质量评分
 
@@ -176,7 +176,24 @@ def calculate_result_quality(geo_data: Dict[str, Any]) -> Dict[str, Any]:
     - quality_score: 0-100 分
     - quality_level: 'high', 'medium', 'low', 'failed'
     - quality_details: 详细评分信息
+    
+    P0 修复：添加空值保护，防止 geo_data 为 None 时崩溃
     """
+    # 【P0 关键修复】空值保护
+    if geo_data is None:
+        return {
+            'quality_score': 0,
+            'quality_level': 'failed',
+            'quality_details': {
+                'error': 'geo_data is None',
+                'brand_mentioned': False,
+                'rank': '无效',
+                'sentiment': '无效',
+                'sources': 0,
+                'interception': False
+            }
+        }
+    
     score = 0
     details = {}
 

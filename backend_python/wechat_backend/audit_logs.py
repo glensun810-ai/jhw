@@ -16,45 +16,90 @@ def init_audit_logs_table():
     """初始化审计日志表"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
+    # 检查表是否已存在
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS audit_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            admin_id TEXT NOT NULL,
-            action TEXT NOT NULL,
-            resource TEXT,
-            resource_id TEXT,
-            ip_address TEXT,
-            user_agent TEXT,
-            request_method TEXT,
-            request_data TEXT,
-            response_status INTEGER,
-            error_message TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='audit_logs'
     ''')
-    
+    table_exists = cursor.fetchone() is not None
+
+    if table_exists:
+        # 检查是否需要迁移（检查关键字段是否存在）
+        cursor.execute('PRAGMA table_info(audit_logs)')
+        columns = {col[1] for col in cursor.fetchall()}
+        
+        # 如果缺少 admin_id 列，说明是旧表结构，需要重建
+        if 'admin_id' not in columns:
+            db_logger.info("Detected old audit_logs table structure, migrating...")
+            # 备份旧数据（如果有的话）
+            cursor.execute('SELECT * FROM audit_logs')
+            old_data = cursor.fetchall()
+            
+            # 删除旧表
+            cursor.execute('DROP TABLE audit_logs')
+            
+            # 创建新表
+            cursor.execute('''
+                CREATE TABLE audit_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    admin_id TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    resource TEXT,
+                    resource_id TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    request_method TEXT,
+                    request_data TEXT,
+                    response_status INTEGER,
+                    error_message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            db_logger.info("Audit logs table recreated with new structure")
+        else:
+            db_logger.debug("Audit logs table already exists with correct structure")
+    else:
+        # 创建新表
+        cursor.execute('''
+            CREATE TABLE audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                admin_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                resource TEXT,
+                resource_id TEXT,
+                ip_address TEXT,
+                user_agent TEXT,
+                request_method TEXT,
+                request_data TEXT,
+                response_status INTEGER,
+                error_message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        db_logger.info("Audit logs table created")
+
     # 创建索引
     cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_audit_logs_admin_id 
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_admin_id
         ON audit_logs(admin_id)
     ''')
-    
+
     cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_audit_logs_action 
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_action
         ON audit_logs(action)
     ''')
-    
+
     cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at 
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
         ON audit_logs(created_at)
     ''')
-    
+
     cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_audit_logs_resource 
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_resource
         ON audit_logs(resource)
     ''')
-    
+
     conn.commit()
     conn.close()
     db_logger.info("Audit logs table initialized")

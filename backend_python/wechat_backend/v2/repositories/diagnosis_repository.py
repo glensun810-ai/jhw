@@ -573,3 +573,201 @@ class DiagnosisRepository:
                 operation='create_report',
                 original_error=str(e),
             ) from e
+
+    def get_by_execution_id(self, execution_id: str) -> Optional[Dict[str, Any]]:
+        """
+        根据执行 ID 获取诊断记录
+
+        Args:
+            execution_id: 执行 ID
+
+        Returns:
+            Optional[Dict[str, Any]]: 诊断记录字典，不存在返回 None
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor: sqlite3.Cursor = conn.cursor()
+
+                select_sql = """
+                    SELECT * FROM diagnosis_reports
+                    WHERE execution_id = ?
+                """
+
+                cursor.execute(select_sql, (execution_id,))
+                row = cursor.fetchone()
+
+                if row is None:
+                    return None
+
+                result: Dict[str, Any] = dict(row)
+
+                # 解析 JSON 字段
+                for field in ['competitor_brands', 'selected_models', 'custom_questions']:
+                    if result.get(field):
+                        try:
+                            result[field] = json.loads(result[field])
+                        except (json.JSONDecodeError, TypeError):
+                            result[field] = []
+
+                return result
+
+        except Exception as e:
+            db_logger.error(
+                "diagnosis_record_query_failed",
+                extra={
+                    'event': 'diagnosis_record_query_failed',
+                    'execution_id': execution_id,
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                }
+            )
+            return None
+
+    def get_expected_results_count(self, execution_id: str) -> int:
+        """
+        获取预期的结果总数（品牌数 × 模型数）
+
+        Args:
+            execution_id: 执行 ID
+
+        Returns:
+            int: 预期结果数量
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor: sqlite3.Cursor = conn.cursor()
+
+                cursor.execute('''
+                    SELECT 
+                        json_array_length(competitor_brands) + 1 as brand_count,
+                        json_array_length(selected_models) as model_count
+                    FROM diagnosis_reports
+                    WHERE execution_id = ?
+                ''', (execution_id,))
+
+                row = cursor.fetchone()
+                if row:
+                    brand_count = row['brand_count'] or 1  # 至少有一个主品牌
+                    model_count = row['model_count'] or 0
+                    return brand_count * model_count
+                return 0
+
+        except Exception:
+            return 0
+
+    def get_status_summary(self, execution_id: str) -> Dict[str, Any]:
+        """
+        获取状态摘要（用于存根）
+
+        Args:
+            execution_id: 执行 ID
+
+        Returns:
+            Dict[str, Any]: 状态摘要字典
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor: sqlite3.Cursor = conn.cursor()
+
+                # 获取基本信息
+                cursor.execute('''
+                    SELECT 
+                        status,
+                        progress,
+                        stage,
+                        is_completed,
+                        should_stop_polling,
+                        error_message,
+                        created_at,
+                        completed_at,
+                        brand_name
+                    FROM diagnosis_reports
+                    WHERE execution_id = ?
+                ''', (execution_id,))
+
+                basic_row = cursor.fetchone()
+                basic: Dict[str, Any] = dict(basic_row) if basic_row else {}
+
+                # 获取结果统计
+                cursor.execute('''
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN error_message IS NULL THEN 1 ELSE 0 END) as success_count
+                    FROM diagnosis_results
+                    WHERE execution_id = ?
+                ''', (execution_id,))
+
+                stats_row = cursor.fetchone()
+                stats: Dict[str, Any] = dict(stats_row) if stats_row else {'total': 0, 'success_count': 0}
+
+                return {
+                    **basic,
+                    'total_results': stats.get('total', 0),
+                    'successful_results': stats.get('success_count', 0),
+                    'expected_results': self.get_expected_results_count(execution_id),
+                }
+
+        except Exception as e:
+            db_logger.error(
+                "status_summary_query_failed",
+                extra={
+                    'event': 'status_summary_query_failed',
+                    'execution_id': execution_id,
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                }
+            )
+            return {
+                'total_results': 0,
+                'successful_results': 0,
+                'expected_results': 0,
+            }
+
+    def get_by_user_id(
+        self,
+        user_id: str,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """
+        根据用户 ID 获取诊断历史记录
+
+        Args:
+            user_id: 用户 ID
+            limit: 返回数量限制
+            offset: 偏移量
+
+        Returns:
+            List[Dict[str, Any]]: 诊断记录列表
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor: sqlite3.Cursor = conn.cursor()
+
+                select_sql = """
+                    SELECT 
+                        id, execution_id, user_id, brand_name,
+                        status, stage, progress, is_completed,
+                        created_at, completed_at
+                    FROM diagnosis_reports
+                    WHERE user_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT ? OFFSET ?
+                """
+
+                cursor.execute(select_sql, (user_id, limit, offset))
+                rows = cursor.fetchall()
+
+                return [dict(row) for row in rows]
+
+        except Exception as e:
+            db_logger.error(
+                "user_history_query_failed",
+                extra={
+                    'event': 'user_history_query_failed',
+                    'user_id': user_id,
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                }
+            )
+            return []

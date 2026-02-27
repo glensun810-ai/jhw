@@ -135,6 +135,8 @@ def init_task_status_db():
             progress INTEGER DEFAULT 0,
             stage TEXT NOT NULL,
             status_text TEXT,
+            completed_count INTEGER DEFAULT 0,
+            total_count INTEGER DEFAULT 0,
             is_completed BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

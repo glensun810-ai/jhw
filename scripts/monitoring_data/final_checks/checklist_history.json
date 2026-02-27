@@ -1,0 +1,115 @@
+[
+  {
+    "check_time": "2026-02-27T19:46:19.366643",
+    "checklist_id": "check_20260227_194619",
+    "passed": true,
+    "total_items": 10,
+    "passed_items": 10,
+    "failed_items": 0,
+    "warning_items": 0,
+    "skipped_items": 0,
+    "items": {
+      "error_rate": {
+        "name": "error_rate",
+        "description": "v2 错误率 < 3%",
+        "status": "passed",
+        "current_value": "2.50%",
+        "expected_value": "< 3%",
+        "message": "错误率 2.50% < 3%，符合要求",
+        "critical": true
+      },
+      "timeout_rate": {
+        "name": "timeout_rate",
+        "description": "v2 超时率 < 1%",
+        "status": "passed",
+        "current_value": "0.80%",
+        "expected_value": "< 1%",
+        "message": "超时率 0.80% < 1%，符合要求",
+        "critical": true
+      },
+      "dead_letter_cleaned": {
+        "name": "dead_letter_cleaned",
+        "description": "死信队列已清理",
+        "status": "passed",
+        "current_value": "数量：5, 增长率：2/h",
+        "expected_value": "已清理",
+        "message": "死信队列状态良好：5 条，增长 2/h",
+        "critical": true
+      },
+      "performance_baseline": {
+        "name": "performance_baseline",
+        "description": "性能基线测试通过",
+        "status": "passed",
+        "current_value": {
+          "avg_response_time": 18.5,
+          "p95_response_time": 25.0,
+          "p99_response_time": 35.0,
+          "throughput": 100
+        },
+        "expected_value": {
+          "avg_response_time": 20.0,
+          "p95_response_time": 30.0,
+          "p99_response_time": 45.0,
+          "throughput": 80
+        },
+        "message": "性能基线测试通过",
+        "critical": true
+      },
+      "user_feedback": {
+        "name": "user_feedback",
+        "description": "用户反馈积极",
+        "status": "passed",
+        "current_value": "积极率：80%",
+        "expected_value": "positive",
+        "message": "用户反馈积极：80% 好评率",
+        "critical": false
+      },
+      "ai_failure_rate": {
+        "name": "ai_failure_rate",
+        "description": "AI 调用失败率 < 5%",
+        "status": "passed",
+        "current_value": "3.00%",
+        "expected_value": "< 5%",
+        "message": "AI 失败率 3.00% < 5%，符合要求",
+        "critical": true
+      },
+      "database_error_rate": {
+        "name": "database_error_rate",
+        "description": "数据库错误率 < 1%",
+        "status": "passed",
+        "current_value": "0.50%",
+        "expected_value": "< 1%",
+        "message": "数据库错误率 0.50% < 1%，符合要求",
+        "critical": true
+      },
+      "avg_response_time": {
+        "name": "avg_response_time",
+        "description": "平均响应时间 < 20s",
+        "status": "passed",
+        "current_value": "18.5s",
+        "expected_value": "< 20s",
+        "message": "平均响应时间 18.5s < 20s，符合要求",
+        "critical": true
+      },
+      "monitoring_active": {
+        "name": "monitoring_active",
+        "description": "监控系统正常运行",
+        "status": "passed",
+        "current_value": "运行中",
+        "expected_value": true,
+        "message": "监控系统正常运行",
+        "critical": true
+      },
+      "rollback_ready": {
+        "name": "rollback_ready",
+        "description": "回滚脚本已准备",
+        "status": "passed",
+        "current_value": "/Users/sgl/PycharmProjects/PythonProject/scripts/rollback_v2.sh",
+        "expected_value": true,
+        "message": "回滚脚本已准备：/Users/sgl/PycharmProjects/PythonProject/scripts/rollback_v2.sh",
+        "critical": true
+      }
+    },
+    "recommendations": []
+  }
+]

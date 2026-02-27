@@ -19,23 +19,36 @@ from typing import List, Dict, Any
 
 FEATURE_FLAGS: Dict[str, Any] = {
     # ==================== 总开关 ====================
-    'diagnosis_v2_enabled': False,  # v2 系统总开关（默认关闭）
-    
+    'diagnosis_v2_enabled': True,  # v2 系统总开关（阶段一收尾：启用灰度）
+
     # ==================== 功能开关 ====================
     # 阶段一：基础能力加固
     'diagnosis_v2_state_machine': True,       # 状态机（P1-T1 已完成）
-    'diagnosis_v2_timeout': False,            # 超时机制（P1-T2）
+    'diagnosis_v2_timeout': True,             # 超时机制（P1-T2 阶段一启用）
     'diagnosis_v2_retry': False,              # 重试机制（P1-T3）
-    'diagnosis_v2_dead_letter': False,        # 死信队列（P1-T4）
+    'diagnosis_v2_dead_letter': True,         # 死信队列（P1-T4 阶段一启用）
     'diagnosis_v2_dead_letter_auto_retry': False,  # 自动重试死信
     'diagnosis_v2_api_logging': False,        # API 日志持久化（P1-T5）
     'diagnosis_v2_api_log_cleanup': False,    # 自动清理旧日志
     'diagnosis_v2_storage': False,            # 原始数据持久化（P1-T6）
-    'diagnosis_v2_report_stub': False,        # 报告存根（P1-T7）
+    'diagnosis_v2_report_stub': True,         # 报告存根（P1-T7 阶段一启用）
+    'diagnosis_v2_stub_suggestions': False,   # 智能建议（P1-T7）
     
     # 阶段二：核心业务功能
-    'diagnosis_v2_ai_adapter': False,         # AI 适配器层（P2-T1）
-    'diagnosis_v2_data_pipeline': False,      # 数据清洗管道（P2-T2）
+    'diagnosis_v2_ai_adapters': False,        # AI 适配器总开关（P2-T1）
+    'diagnosis_v2_ai_deepseek': False,        # DeepSeek 适配器开关
+    'diagnosis_v2_ai_doubao': False,          # 豆包适配器开关
+    'diagnosis_v2_ai_qwen': False,            # 通义千问适配器开关
+    
+    # 数据清洗管道（P2-T2）
+    'diagnosis_v2_data_pipeline': False,      # 数据清洗管道总开关
+    'diagnosis_v2_cleaning_text_extractor': False,  # 文本提取
+    'diagnosis_v2_cleaning_entity_recognizer': False,  # 实体识别
+    'diagnosis_v2_cleaning_deduplicator': False,  # 去重
+    'diagnosis_v2_cleaning_validator': False,  # 验证
+    'diagnosis_v2_cleaning_geo_preparer': False,  # GEO 准备
+    'diagnosis_v2_cleaning_quality_scorer': False,  # 质量评分
+    
     'diagnosis_v2_brand_distribution': False, # 品牌分布统计（P2-T3）
     'diagnosis_v2_sentiment_analysis': False, # 情感分析（P2-T4）
     'diagnosis_v2_keywords': False,           # 关键词提取（P2-T5）
@@ -47,9 +60,14 @@ FEATURE_FLAGS: Dict[str, Any] = {
     'diagnosis_v2_cache': False,              # 缓存优化（P3-T6）
     
     # ==================== 灰度控制 ====================
-    'diagnosis_v2_gray_users': [],            # 灰度用户列表 (OpenID)
-    'diagnosis_v2_gray_percentage': 0,        # 灰度百分比 (0-100)
-    
+    'diagnosis_v2_gray_users': [              # 灰度用户列表 (OpenID)
+        # Step 2.1: 内部测试白名单
+        'test_user_001',
+        'test_user_002',
+        'internal_staff_001',
+    ],
+    'diagnosis_v2_gray_percentage': 10,       # 灰度百分比 (0-100) - Step 2.1: 10%
+
     # ==================== 降级开关 ====================
     'diagnosis_v2_fallback_to_v1': True,      # v2 失败时降级到 v1
 }

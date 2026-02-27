@@ -76,6 +76,9 @@ from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimite
 # Monitoring imports
 from wechat_backend.monitoring.monitoring_decorator import monitored_endpoint
 
+# Timeout management (P1-T2: 全局超时保护)
+from wechat_backend.v2.services.timeout_service import TimeoutManager
+
 # 从主模块导入蓝图（修复 P0-3: 确保路由注册到正确的蓝图）
 from . import wechat_bp
 
@@ -276,6 +279,66 @@ def perform_brand_test():
 
     # 立即生成执行ID和基础存储，不等待测试用例生成
     execution_id = str(uuid.uuid4())
+
+    # 【P1-T2 新增】启动全局超时计时器（10 分钟）
+    timeout_manager = TimeoutManager()
+    
+    def on_timeout(eid: str):
+        """超时回调：记录日志并标记任务超时"""
+        api_logger.error(
+            "global_timeout_triggered",
+            extra={
+                'event': 'global_timeout_triggered',
+                'execution_id': eid,
+                'timeout_seconds': TimeoutManager.MAX_EXECUTION_TIME,
+            }
+        )
+        # 更新内存状态
+        if eid in execution_store:
+            execution_store[eid].update({
+                'status': 'timeout',
+                'stage': 'timeout',
+                'progress': 100,
+                'is_completed': True,
+                'should_stop_polling': True,
+                'error': f'诊断任务执行超时（>{TimeoutManager.MAX_EXECUTION_TIME}秒）'
+            })
+        # 尝试更新数据库状态
+        try:
+            from wechat_backend.state_manager import get_state_manager
+            state_manager = get_state_manager(execution_store)
+            state_manager.update_state(
+                execution_id=eid,
+                status='timeout',
+                stage='timeout',
+                progress=100,
+                is_completed=True,
+                error_message=f'诊断任务执行超时（>{TimeoutManager.MAX_EXECUTION_TIME}秒）',
+                write_to_db=True,
+                user_id=user_id or "anonymous",
+                brand_name=main_brand,
+                competitor_brands=competitor_brands if 'competitor_brands' in locals() else [],
+                selected_models=selected_models,
+                custom_questions=raw_questions if 'raw_questions' in locals() else []
+            )
+        except Exception as timeout_db_err:
+            api_logger.error(f"[超时处理] 数据库状态更新失败：{timeout_db_err}")
+
+    # 启动 10 分钟全局超时计时器
+    timeout_manager.start_timer(
+        execution_id=execution_id,
+        on_timeout=on_timeout,
+        timeout_seconds=TimeoutManager.MAX_EXECUTION_TIME
+    )
+    api_logger.info(
+        "global_timeout_timer_started",
+        extra={
+            'event': 'global_timeout_timer_started',
+            'execution_id': execution_id,
+            'timeout_seconds': TimeoutManager.MAX_EXECUTION_TIME,
+        }
+    )
+
 
     # 【P0 关键修复】立即创建数据库初始记录，避免前端轮询时数据库无记录
     report_id = None
@@ -496,6 +559,13 @@ def perform_brand_test():
                     except Exception as sse_err:
                         api_logger.error(f"[SSE] ⚠️ 通知发送失败：{sse_err}")
 
+                    # 【P1-T2 新增】任务完成，取消超时计时器
+                    try:
+                        timeout_manager.cancel_timer(execution_id)
+                        api_logger.info(f"[超时管理] ✅ 计时器已取消：{execution_id}")
+                    except Exception as timer_err:
+                        api_logger.warning(f"[超时管理] 计时器取消失败：{timer_err}")
+
                 except Exception as snapshot_err:
                     # 快照保存失败不影响主流程，仅记录错误
                     api_logger.error(f"[M004] ⚠️ 报告快照保存失败：{execution_id}, 错误：{snapshot_err}")
@@ -621,6 +691,14 @@ def perform_brand_test():
                 api_logger.info(f"[异常处理] ✅ 数据库状态已更新：{execution_id}")
             except Exception as state_err:
                 api_logger.error(f"[异常处理] ⚠️ 数据库更新失败：{state_err}")
+            
+            # 【P1-T2 新增】异常处理完成，取消超时计时器
+            try:
+                timeout_manager.cancel_timer(execution_id)
+                api_logger.info(f"[超时管理] ✅ 计时器已取消（异常处理）：{execution_id}")
+            except Exception as timer_err:
+                api_logger.warning(f"[超时管理] 计时器取消失败：{timer_err}")
+    
     thread = Thread(target=run_async_test)
     thread.start()
 
