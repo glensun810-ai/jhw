@@ -1,0 +1,122 @@
+<!--
+  情感分布组件模板
+
+  支持饼图和环形图两种展示方式
+  包含情感得分和详细统计
+-->
+
+<view class="sentiment-chart {{chartType}}">
+  <!-- 标题栏 -->
+  <view class="header">
+    <text class="title">{{title}}</text>
+    <view class="actions">
+      <text class="total-count" wx:if="{{hasData && distributionData.total_count}}">
+        样本：{{distributionData.total_count}}
+      </text>
+      <text class="toggle-btn" bindtap="onToggleChartType">
+        {{chartType === 'pie' ? '环形图' : '饼图'}}
+      </text>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:elif="{{!hasData}}">
+    <image class="empty-icon" src="/images/empty-data.png" mode="aspectFit"></image>
+    <text class="empty-text">{{errorMessage || '暂无数据'}}</text>
+  </view>
+
+  <!-- 图表内容 -->
+  <view class="chart-container" wx:else>
+    <!-- 情感概览卡片 -->
+    <view class="sentiment-overview">
+      <view class="overview-icon">{{sentimentLevel === 'positive' ? '😊' : sentimentLevel === 'negative' ? '😟' : '😐'}}</view>
+      <view class="overview-content">
+        <text class="overview-label">整体情感倾向</text>
+        <text class="overview-value" style="color: {{sentimentLevel === 'positive' ? '#28a745' : sentimentLevel === 'negative' ? '#dc3545' : '#6c757d'}};">
+          {{sentimentLevel === 'positive' ? '积极正面' : sentimentLevel === 'negative' ? '消极负面' : '中性平和'}}
+        </text>
+      </view>
+      <view class="overview-score">
+        <text class="score-value">{{sentimentScore > 0 ? '+' : ''}}{{sentimentScore}}</text>
+        <text class="score-label">情感得分</text>
+      </view>
+    </view>
+
+    <!-- 环形图/饼图 -->
+    <view class="chart-wrapper">
+      <!-- 环形图模式 -->
+      <view class="donut-chart" wx:if="{{chartType === 'donut'}}">
+        <view class="donut-outer">
+          <!-- 使用 CSS 渐变模拟环形图 -->
+          <view 
+            class="donut-ring"
+            style="background: conic-gradient(
+              {{chartData[0].color}} 0% {{chartData[0].value}}%,
+              {{chartData[1].color}} {{chartData[0].value}}% {{chartData[0].value + chartData[1].value}}%,
+              {{chartData[2].color}} {{chartData[0].value + chartData[1].value}}% 100%
+            );"
+          ></view>
+          <!-- 中心统计 -->
+          <view class="donut-center" wx:if="{{showCenterStat}}">
+            <text class="center-total">{{distributionData.total_count}}</text>
+            <text class="center-label">总样本</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 饼图模式 -->
+      <view class="pie-chart" wx:else>
+        <view 
+          class="pie-outer"
+          style="background: conic-gradient(
+            {{chartData[0].color}} 0% {{chartData[0].value}}%,
+            {{chartData[1].color}} {{chartData[0].value}}% {{chartData[0].value + chartData[1].value}}%,
+            {{chartData[2].color}} {{chartData[0].value + chartData[1].value}}% 100%
+          );"
+        ></view>
+      </view>
+    </view>
+
+    <!-- 详细数据 -->
+    <view class="details-section" wx:if="{{showDetails}}">
+      <view 
+        class="detail-item" 
+        wx:for="{{chartData}}" 
+        wx:key="key"
+        data-index="{{index}}"
+        bindtap="onSentimentTap"
+      >
+        <view class="detail-left">
+          <text class="detail-icon">{{item.icon}}</text>
+          <text class="detail-name">{{item.name}}</text>
+        </view>
+        <view class="detail-right">
+          <view class="detail-bar">
+            <view 
+              class="detail-bar-fill" 
+              style="width: {{item.value}}%; background-color: {{item.color}};"
+            ></view>
+          </view>
+          <text class="detail-value">{{item.value}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 情感描述 -->
+    <view class="description-section">
+      <text class="description-text">{{getSentimentDescription()}}</text>
+    </view>
+  </view>
+
+  <!-- 警告提示 -->
+  <view class="warning-tip" wx:if="{{distributionData.warning && hasData}}">
+    <text class="warning-icon">⚠️</text>
+    <text class="warning-text">{{distributionData.warning}}</text>
+  </view>
+</view>

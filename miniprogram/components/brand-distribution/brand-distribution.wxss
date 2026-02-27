@@ -1,0 +1,295 @@
+/**
+ * 品牌分布组件样式
+ *
+ * 支持饼图和柱状图两种展示方式
+ * 包含响应式设计和动画效果
+ */
+
+/* 组件容器 */
+.brand-distribution {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+/* 标题栏 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.total-count {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.toggle-btn {
+  font-size: 24rpx;
+  color: #1890ff;
+  padding: 8rpx 16rpx;
+  background-color: #f0f5ff;
+  border-radius: 8rpx;
+}
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+}
+
+.loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 4rpx solid #f0f0f0;
+  border-top-color: #1890ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  color: #999999;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+}
+
+.empty-icon {
+  width: 120rpx;
+  height: 120rpx;
+  opacity: 0.5;
+}
+
+.empty-text {
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  color: #999999;
+}
+
+/* 图表容器 */
+.chart-container {
+  padding: 20rpx 0;
+}
+
+/* 饼图样式 */
+.pie-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chart-canvas {
+  width: 300px;
+  height: 300px;
+}
+
+/* 图例 */
+.legend {
+  width: 100%;
+  margin-top: 24rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 16rpx;
+  background-color: #f8f8f8;
+  border-radius: 8rpx;
+  transition: all 0.2s ease;
+}
+
+.legend-item:active {
+  background-color: #e8e8e8;
+  transform: scale(0.98);
+}
+
+.legend-color {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 4rpx;
+  margin-right: 12rpx;
+}
+
+.legend-name {
+  font-size: 26rpx;
+  color: #333333;
+  margin-right: 12rpx;
+}
+
+.legend-value {
+  font-size: 26rpx;
+  color: #666666;
+  font-weight: 500;
+}
+
+/* 柱状图样式 */
+.bar-chart {
+  padding: 20rpx 0;
+}
+
+.bars-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.bar-label {
+  width: 120rpx;
+  font-size: 26rpx;
+  color: #333333;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.bar-wrapper {
+  flex: 1;
+  height: 32rpx;
+  background-color: #f0f0f0;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 16rpx;
+  transition: width 0.5s ease;
+  animation: growWidth 0.5s ease-out;
+}
+
+@keyframes growWidth {
+  from {
+    width: 0;
+  }
+}
+
+.bar-value {
+  width: 80rpx;
+  font-size: 26rpx;
+  color: #666666;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* 警告提示 */
+.warning-tip {
+  display: flex;
+  align-items: center;
+  padding: 16rpx;
+  margin-top: 16rpx;
+  background-color: #fff7e6;
+  border-radius: 8rpx;
+  border-left: 4rpx solid #faad14;
+}
+
+.warning-icon {
+  margin-right: 12rpx;
+}
+
+.warning-text {
+  font-size: 24rpx;
+  color: #fa8c16;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 16rpx 32rpx;
+  background-color: #1890ff;
+  color: #ffffff;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.action-btn:active {
+  background-color: #096dd9;
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+.btn-text {
+  font-size: 28rpx;
+}
+
+/* 响应式调整 */
+@media (max-width: 375px) {
+  .title {
+    font-size: 28rpx;
+  }
+
+  .legend-item {
+    padding: 6rpx 12rpx;
+  }
+
+  .legend-name,
+  .legend-value {
+    font-size: 24rpx;
+  }
+
+  .bar-label {
+    width: 100rpx;
+    font-size: 24rpx;
+  }
+
+  .bar-value {
+    width: 70rpx;
+    font-size: 24rpx;
+  }
+}

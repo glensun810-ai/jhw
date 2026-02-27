@@ -20,19 +20,20 @@ class QwenAdapter(AIClient):
     """
     def __init__(self, api_key: str, model_name: str = "qwen-max", base_url: Optional[str] = None):
         super().__init__(AIPlatformType.QWEN, model_name, api_key)
-        
+
+        # 【P0-001 修复】Qwen 模型响应较慢（43-55 秒），超时设置为 60 秒
         # 使用统一请求封装器
         self.request_wrapper = get_ai_request_wrapper(
             platform_name="qwen",
             base_url=base_url or "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
             api_key=api_key,
-            timeout=30,
+            timeout=60,  # 【P0-001】从 30 秒增加到 60 秒，适应 Qwen 模型实际响应时间
             max_retries=3
         )
-        
+
         # 初始化电路断路器
         self.circuit_breaker = get_circuit_breaker(platform_name="qwen", model_name=model_name)
-        
+
         api_logger.info(f"QwenAdapter initialized for model: {model_name} with unified request wrapper and circuit breaker")
 
     def generate_response(self, prompt: str, **kwargs) -> AIResponse:
@@ -101,13 +102,14 @@ class QwenAdapter(AIClient):
 
         start_time = time.time()
         try:
+            # 【P0-001 修复】使用 60 秒超时（Qwen 模型实际响应时间 43-55 秒）
             # 使用统一请求封装器发送请求
             response = self.request_wrapper.make_ai_request(
                 endpoint="",  # Qwen API endpoint is specified in base_url
                 prompt=prompt,
                 model=self.model_name,
                 json=payload,
-                timeout=30
+                timeout=60  # 【P0-001】从 30 秒增加到 60 秒
             )
             
             response.raise_for_status()

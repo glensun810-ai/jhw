@@ -1,0 +1,98 @@
+<!--
+  品牌分布组件模板
+
+  支持饼图和柱状图两种展示方式
+  包含加载状态、空状态和错误处理
+-->
+
+<view class="brand-distribution {{chartType}}">
+  <!-- 标题栏 -->
+  <view class="header">
+    <text class="title">{{title}}</text>
+    <view class="actions">
+      <text class="total-count" wx:if="{{hasData && distributionData.total_count}}">
+        总计：{{distributionData.total_count}}条
+      </text>
+      <text class="toggle-btn" bindtap="onToggleChartType">
+        {{chartType === 'pie' ? '切换柱状图' : '切换饼图'}}
+      </text>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:elif="{{!hasData}}">
+    <image class="empty-icon" src="/images/empty-data.png" mode="aspectFit"></image>
+    <text class="empty-text">{{errorMessage || '暂无数据'}}</text>
+  </view>
+
+  <!-- 图表内容 -->
+  <view class="chart-container" wx:else>
+    <!-- 饼图模式 -->
+    <view class="pie-chart" wx:if="{{chartType === 'pie'}}">
+      <!-- 使用 canvas 绘制饼图 -->
+      <canvas 
+        type="2d" 
+        class="chart-canvas"
+        id="pieChartCanvas"
+        style="width: {{chartConfig.width}}px; height: {{chartConfig.height}}px;"
+      ></canvas>
+      
+      <!-- 图例 -->
+      <view class="legend" wx:if="{{showLegend}}">
+        <view 
+          class="legend-item" 
+          wx:for="{{chartData}}" 
+          wx:key="name"
+          data-index="{{index}}"
+          bindtap="onBrandTap"
+        >
+          <view class="legend-color" style="background-color: {{item.color}};"></view>
+          <text class="legend-name">{{item.name}}</text>
+          <text class="legend-value" wx:if="{{showLabels}}">{{item.value}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 柱状图模式 -->
+    <view class="bar-chart" wx:else>
+      <view class="bars-container">
+        <view 
+          class="bar-item" 
+          wx:for="{{chartData}}" 
+          wx:key="name"
+          data-index="{{index}}"
+          bindtap="onBrandTap"
+        >
+          <view class="bar-label">{{item.name}}</view>
+          <view class="bar-wrapper">
+            <view 
+              class="bar-fill" 
+              style="width: {{item.value}}%; background-color: {{item.color}};"
+            ></view>
+          </view>
+          <view class="bar-value" wx:if="{{showLabels}}">{{item.value}}%</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 警告提示 -->
+  <view class="warning-tip" wx:if="{{distributionData.warning && hasData}}">
+    <text class="warning-icon">⚠️</text>
+    <text class="warning-text">{{distributionData.warning}}</text>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-buttons" wx:if="{{hasData}}">
+    <button class="action-btn" bindtap="exportImage">
+      <text class="btn-icon">📷</text>
+      <text class="btn-text">保存图片</text>
+    </button>
+  </view>
+</view>

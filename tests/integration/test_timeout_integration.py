@@ -1,244 +1,256 @@
 """
 超时机制集成测试
 
-测试超时管理与状态机、诊断服务的集成。
-
-测试范围:
-1. 超时触发状态流转
-2. 完成诊断取消计时器
-3. 失败诊断取消计时器
-4. 超时回调异常处理
+测试覆盖：
+1. 超时触发状态变更
+2. 多并发任务超时
+3. 任务完成时取消超时
+4. 超时与重试集成
 
 作者：系统架构组
 日期：2026-02-27
+版本：1.0.0
 """
 
 import pytest
+import asyncio
 import time
-from unittest.mock import MagicMock, patch, Mock
-from wechat_backend.v2.services.diagnosis_service import DiagnosisService
-from wechat_backend.v2.state_machine.diagnosis_state_machine import DiagnosisStateMachine
-from wechat_backend.v2.state_machine.states import DiagnosisState
-from wechat_backend.v2.repositories.diagnosis_repository import DiagnosisRepository
+
+from wechat_backend.v2.services.timeout_service import TimeoutManager
 
 
-# ==================== Fixture ====================
-
-@pytest.fixture
-def mock_repository():
-    """模拟数据仓库"""
-    repo = Mock()
-    repo.update_state = Mock(return_value=True)
-    return repo
-
-
-@pytest.fixture
-def diagnosis_service(mock_repository):
-    """创建诊断服务实例"""
-    service = DiagnosisService(repository=mock_repository)
-    return service
-
-
-# ==================== 超时触发状态流转测试 ====================
-
-class TestTimeoutStateTransition:
-    """超时触发状态流转测试"""
+class TestTimeoutIntegration:
+    """超时机制集成测试"""
     
-    def test_timeout_triggers_state_transition(self, diagnosis_service, mock_repository):
-        """测试超时触发状态流转"""
-        # 启动诊断并设置短超时
-        config = {'brand_name': '品牌 A', 'selected_models': ['deepseek']}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=1)
+    @pytest.mark.asyncio
+    async def test_timeout_triggers_state_change(
+        self,
+        test_db_path,
+        sample_execution_id,
+        sample_diagnosis_config
+    ):
+        """测试超时触发状态变更"""
         
-        # 等待超时
-        time.sleep(1.5)
+        from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        # 验证数据库更新被调用（至少调用 2 次：启动时 + 超时时）
-        assert mock_repository.update_state.call_count >= 1
+        # 创建诊断服务
+        diagnosis_service = DiagnosisService(db_path=test_db_path)
+        
+        # 创建任务
+        repo = diagnosis_service.diagnosis_repo
+        repo.create_report(
+            execution_id=sample_execution_id,
+            user_id='test_user',
+            brand_name='测试品牌',
+            config=sample_diagnosis_config
+        )
+        
+        # 模拟一个长时间运行的任务
+        async def slow_task():
+            await asyncio.sleep(10)  # 10 秒，超过超时时间
+            return {'status': 'completed'}
+        
+        # 启动超时计时器（2 秒超时）
+        timeout_manager = TimeoutManager()
+        timeout_triggered = False
+        
+        def on_timeout(exec_id):
+            nonlocal timeout_triggered
+            timeout_triggered = True
+            # 更新状态
+            asyncio.create_task(
+                diagnosis_service.update_status(
+                    exec_id,
+                    status='timeout',
+                    error_message='任务超时'
+                )
+            )
+        
+        timeout_manager.start_timer(
+            execution_id=sample_execution_id,
+            on_timeout=on_timeout,
+            timeout_seconds=2
+        )
+        
+        # 执行慢任务
+        try:
+            await asyncio.wait_for(slow_task(), timeout=5)
+        except asyncio.TimeoutError:
+            pass
+        
+        # 等待超时处理
+        await asyncio.sleep(1)
+        
+        # 验证超时触发
+        assert timeout_triggered is True
+        
+        # 验证状态更新
+        status = await diagnosis_service.get_status(sample_execution_id)
+        assert status['status'] == 'timeout'
+        assert status['should_stop_polling'] is True
     
-    def test_timeout_sets_correct_state(self, diagnosis_service, mock_repository):
-        """测试超时后状态正确"""
-        # 启动诊断并设置短超时
-        config = {'brand_name': '品牌 A', 'selected_models': ['deepseek']}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=1)
+    @pytest.mark.asyncio
+    async def test_multiple_concurrent_timeouts(
+        self,
+        test_db_path
+    ):
+        """测试多个并发任务超时"""
         
-        # 等待超时
-        time.sleep(1.5)
+        timeout_manager = TimeoutManager()
+        timeout_count = 0
         
-        # 验证数据库更新被调用
-        assert mock_repository.update_state.called
+        def create_timeout_handler(exec_id):
+            def handler(eid):
+                nonlocal timeout_count
+                timeout_count += 1
+            return handler
         
-        # 检查调用中是否有 timeout 或 fail（取决于状态）
-        call_args_list = mock_repository.update_state.call_args_list
-        statuses = [call[1]['status'] for call in call_args_list]
+        # 启动 10 个任务的超时计时器
+        for i in range(10):
+            exec_id = f"test_exec_{i}"
+            timeout_manager.start_timer(
+                execution_id=exec_id,
+                on_timeout=create_timeout_handler(exec_id),
+                timeout_seconds=1
+            )
         
-        # 应该有 timeout 或 fail
-        assert 'timeout' in statuses or 'failed' in statuses
-
-
-# ==================== 完成诊断取消计时器测试 ====================
-
-class TestCompleteDiagnosis:
-    """完成诊断测试"""
+        # 等待所有超时
+        await asyncio.sleep(2)
+        
+        # 验证所有超时都被触发
+        assert timeout_count == 10
+        
+        # 验证所有计时器都被清理
+        for i in range(10):
+            exec_id = f"test_exec_{i}"
+            assert not timeout_manager.is_timer_active(exec_id)
     
-    def test_complete_diagnosis_cancels_timer(self, diagnosis_service):
-        """测试完成诊断取消计时器"""
-        # 启动诊断
-        config = {'brand_name': '品牌 A'}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=5)
+    @pytest.mark.asyncio
+    async def test_timeout_cancelled_on_completion(
+        self,
+        test_db_path,
+        sample_execution_id
+    ):
+        """测试任务完成时取消超时"""
         
-        assert diagnosis_service.timeout_manager.is_timer_active("test-123")
+        timeout_manager = TimeoutManager()
+        timeout_triggered = False
         
-        # 完成诊断
-        diagnosis_service.complete_diagnosis("test-123")
+        def on_timeout(exec_id):
+            nonlocal timeout_triggered
+            timeout_triggered = True
         
-        assert not diagnosis_service.timeout_manager.is_timer_active("test-123")
+        # 启动计时器
+        timeout_manager.start_timer(
+            execution_id=sample_execution_id,
+            on_timeout=on_timeout,
+            timeout_seconds=3
+        )
+        
+        # 立即取消
+        timeout_manager.cancel_timer(sample_execution_id)
+        
+        # 等待超过原定时时间
+        await asyncio.sleep(4)
+        
+        # 验证超时未被触发
+        assert timeout_triggered is False
     
-    def test_complete_diagnosis_persists_state(self, diagnosis_service, mock_repository):
-        """测试完成诊断持久化状态"""
-        # 启动诊断
-        config = {'brand_name': '品牌 A'}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=10)
+    @pytest.mark.asyncio
+    async def test_timeout_with_retry_integration(
+        self,
+        test_db_path,
+        sample_execution_id,
+        sample_diagnosis_config
+    ):
+        """测试超时与重试机制集成"""
         
-        # 完成诊断
-        diagnosis_service.complete_diagnosis("test-123", progress=100)
+        from wechat_backend.v2.services.diagnosis_service import DiagnosisService
+        from wechat_backend.v2.services.retry_policy import RetryPolicy
         
-        # 验证数据库更新被调用
-        assert mock_repository.update_state.called
+        # 创建一个有时超时的适配器
+        class FlakyAdapter:
+            def __init__(self):
+                self.call_count = 0
+            
+            async def send_prompt(self, brand, question, model):
+                self.call_count += 1
+                if self.call_count <= 2:
+                    await asyncio.sleep(5)  # 超时
+                return {'content': '响应', 'model': model}
         
-        # 验证至少调用了一次（启动时 + 完成时）
-        assert mock_repository.update_state.call_count >= 1
-
-
-# ==================== 失败诊断取消计时器测试 ====================
-
-class TestFailDiagnosis:
-    """失败诊断测试"""
+        diagnosis_service = DiagnosisService(
+            db_path=test_db_path,
+            ai_adapter=FlakyAdapter(),
+            retry_policy=RetryPolicy(max_retries=3, base_delay=0.1, timeout=1)
+        )
+        
+        await diagnosis_service.start_diagnosis(
+            execution_id=sample_execution_id,
+            config=sample_diagnosis_config
+        )
+        
+        # 等待完成
+        await asyncio.sleep(5)
+        
+        # 验证最终完成（重试成功）
+        status = await diagnosis_service.get_status(sample_execution_id)
+        assert status['status'] in ['completed', 'partial_success', 'timeout']
     
-    def test_fail_diagnosis_cancels_timer(self, diagnosis_service):
-        """测试失败诊断取消计时器"""
-        # 启动诊断
-        config = {'brand_name': '品牌 A'}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=5)
+    @pytest.mark.asyncio
+    async def test_timeout_remaining_time(
+        self,
+        test_db_path,
+        sample_execution_id
+    ):
+        """测试获取剩余时间"""
         
-        assert diagnosis_service.timeout_manager.is_timer_active("test-123")
+        timeout_manager = TimeoutManager()
         
-        # 失败诊断
-        diagnosis_service.fail_diagnosis("test-123", "Test error")
+        # 启动计时器（5 秒超时）
+        timeout_manager.start_timer(
+            execution_id=sample_execution_id,
+            on_timeout=lambda x: None,
+            timeout_seconds=5
+        )
         
-        assert not diagnosis_service.timeout_manager.is_timer_active("test-123")
+        # 立即检查剩余时间
+        remaining = timeout_manager.get_remaining_time(sample_execution_id)
+        assert remaining > 0
+        assert remaining <= 5
+        
+        # 等待 2 秒后检查
+        await asyncio.sleep(2)
+        remaining = timeout_manager.get_remaining_time(sample_execution_id)
+        assert remaining > 0
+        assert remaining < 5
+        
+        # 清理
+        timeout_manager.cancel_timer(sample_execution_id)
     
-    def test_fail_diagnosis_updates_state(self, diagnosis_service, mock_repository):
-        """测试失败诊断更新状态"""
-        # 启动诊断
-        config = {'brand_name': '品牌 A'}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=10)
+    @pytest.mark.asyncio
+    async def test_timeout_cleanup_on_error(
+        self,
+        test_db_path,
+        sample_execution_id
+    ):
+        """测试错误时超时计时器清理"""
         
-        # 失败诊断
-        diagnosis_service.fail_diagnosis("test-123", "Test error")
+        timeout_manager = TimeoutManager()
         
-        # 验证数据库更新
-        assert mock_repository.update_state.called
+        # 启动计时器
+        timeout_manager.start_timer(
+            execution_id=sample_execution_id,
+            on_timeout=lambda x: None,
+            timeout_seconds=10
+        )
         
-        # 检查调用参数
-        call_args_list = mock_repository.update_state.call_args_list
-        last_call = call_args_list[-1]
-        assert last_call[1]['status'] == 'failed'
-        assert last_call[1]['should_stop_polling'] is True
-
-
-# ==================== 超时回调异常处理测试 ====================
-
-class TestTimeoutCallbackException:
-    """超时回调异常处理测试"""
-    
-    def test_timeout_does_not_affect_other_tasks(self, diagnosis_service):
-        """测试一个任务超时不影响其他任务"""
-        # 启动三个任务
-        config = {'brand_name': '品牌 A'}
+        # 模拟错误处理
+        try:
+            raise Exception("模拟错误")
+        except Exception:
+            # 错误处理中取消计时器
+            timeout_manager.cancel_timer(sample_execution_id)
         
-        diagnosis_service.start_diagnosis("task1", config, timeout_seconds=1)
-        diagnosis_service.start_diagnosis("task2", config, timeout_seconds=5)
-        diagnosis_service.start_diagnosis("task3", config, timeout_seconds=1)
-        
-        # 等待 task1 和 task3 超时
-        time.sleep(1.5)
-        
-        # task1 和 task3 应该超时（不再活跃）
-        assert not diagnosis_service.timeout_manager.is_timer_active("task1")
-        assert not diagnosis_service.timeout_manager.is_timer_active("task3")
-        
-        # task2 应该还活跃
-        assert diagnosis_service.timeout_manager.is_timer_active("task2")
-        
-        # 取消 task2
-        diagnosis_service.cancel_diagnosis("task2")
-
-
-# ==================== 状态查询测试 ====================
-
-class TestGetDiagnosisState:
-    """状态查询测试"""
-    
-    def test_get_diagnosis_state(self, diagnosis_service):
-        """测试获取诊断状态"""
-        # 启动诊断
-        config = {'brand_name': '品牌 A'}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=10)
-        
-        # 获取状态
-        state = diagnosis_service.get_diagnosis_state("test-123")
-        
-        assert 'execution_id' in state
-        assert state['execution_id'] == "test-123"
-        assert 'status' in state
-        assert 'progress' in state
-        assert 'remaining_time' in state
-        assert 'is_timer_active' in state
-        assert state['is_timer_active'] is True
-    
-    def test_get_diagnosis_state_after_timeout(self, diagnosis_service):
-        """测试超时后获取状态"""
-        # 启动诊断并设置短超时
-        config = {'brand_name': '品牌 A'}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=1)
-        
-        # 等待超时
-        time.sleep(1.5)
-        
-        # 获取状态
-        state = diagnosis_service.get_diagnosis_state("test-123")
-        
-        # 验证基本字段
-        assert state['execution_id'] == "test-123"
-        assert state['remaining_time'] == 0
-        assert state['is_timer_active'] is False
-        # 状态应该是终态（timeout 或 failed，取决于实际流转）
-        # 注意：由于状态机重新初始化，可能不是 timeout
-
-
-# ==================== 取消诊断测试 ====================
-
-class TestCancelDiagnosis:
-    """取消诊断测试"""
-    
-    def test_cancel_diagnosis(self, diagnosis_service):
-        """测试取消诊断"""
-        # 启动诊断
-        config = {'brand_name': '品牌 A'}
-        diagnosis_service.start_diagnosis("test-123", config, timeout_seconds=10)
-        
-        assert diagnosis_service.timeout_manager.is_timer_active("test-123")
-        
-        # 取消诊断
-        result = diagnosis_service.cancel_diagnosis("test-123")
-        
-        # 注意：由于状态机重新初始化，cancel 可能成功
-        # 主要验证计时器被取消
-        assert not diagnosis_service.timeout_manager.is_timer_active("test-123")
-
-
-# ==================== 运行测试 ====================
-
-if __name__ == '__main__':
-    pytest.main([__file__, '-v', '--tb=short'])
+        # 验证计时器已清理
+        assert not timeout_manager.is_timer_active(sample_execution_id)

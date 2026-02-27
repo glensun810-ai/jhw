@@ -1,0 +1,384 @@
+/**
+ * 报告页面 V2 样式
+ *
+ * 包含报告展示、图表渲染、响应式布局等样式
+ */
+
+/* 页面容器 */
+.report-page {
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  padding-bottom: 120rpx;
+}
+
+/* 顶部导航栏 */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 32rpx;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  box-shadow: 0 4rpx 16rpx rgba(24, 144, 255, 0.3);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.header-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.header-subtitle {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.header-actions {
+  display: flex;
+  gap: 24rpx;
+}
+
+.action-icon {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.action-icon:active {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(0.95);
+}
+
+.icon-refresh,
+.icon-share {
+  font-size: 32rpx;
+}
+
+.icon-refresh.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.loading-spinner {
+  width: 64rpx;
+  height: 64rpx;
+  border: 6rpx solid rgba(24, 144, 255, 0.2);
+  border-top-color: #1890ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: 24rpx;
+  font-size: 28rpx;
+  color: #999999;
+}
+
+/* 错误状态 */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 32rpx;
+  text-align: center;
+}
+
+.error-icon {
+  width: 160rpx;
+  height: 160rpx;
+  opacity: 0.6;
+}
+
+.error-text {
+  margin: 24rpx 0;
+  font-size: 28rpx;
+  color: #999999;
+  line-height: 1.6;
+}
+
+.retry-btn {
+  margin-top: 32rpx;
+  padding: 16rpx 48rpx;
+  background-color: #1890ff;
+  color: #ffffff;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.retry-btn:active {
+  background-color: #096dd9;
+}
+
+/* 报告内容 */
+.report-content {
+  height: calc(100vh - 200rpx);
+}
+
+/* 标签页切换 */
+.tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  background-color: #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.tab-item {
+  flex: 1;
+  padding: 24rpx 0;
+  text-align: center;
+  font-size: 28rpx;
+  color: #666666;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.tab-item.active {
+  color: #1890ff;
+  font-weight: 600;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48rpx;
+  height: 4rpx;
+  background-color: #1890ff;
+  border-radius: 2rpx;
+}
+
+.tab-item:active {
+  background-color: #f5f5f5;
+}
+
+/* 标签页内容 */
+.tab-content {
+  padding: 16rpx;
+}
+
+/* 摘要卡片 */
+.summary-card {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+.summary-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 24rpx;
+}
+
+.summary-stats {
+  display: flex;
+  justify-content: space-around;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-value {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1890ff;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* 区块 */
+.section {
+  margin: 16rpx;
+}
+
+.component-wrapper {
+  /* 组件包装器 */
+}
+
+/* 解读卡片 */
+.interpretation-card {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  border-left: 4rpx solid #1890ff;
+}
+
+.card-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 16rpx;
+}
+
+.interpretation-content {
+  padding: 16rpx;
+  background-color: #f8f9fa;
+  border-radius: 8rpx;
+}
+
+.interpretation-text {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.8;
+}
+
+/* 底部操作栏 */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  padding: 16rpx 32rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background-color: #ffffff;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.08);
+  gap: 24rpx;
+  z-index: 100;
+}
+
+.bottom-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 20rpx 0;
+  background-color: #f5f5f5;
+  color: #333333;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.bottom-btn.primary {
+  background-color: #1890ff;
+  color: #ffffff;
+}
+
+.bottom-btn:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+.btn-text {
+  font-weight: 500;
+}
+
+/* 组件通用样式覆盖 */
+brand-distribution,
+sentiment-chart,
+keyword-cloud {
+  display: block;
+}
+
+/* 响应式调整 */
+@media (max-width: 375px) {
+  .header {
+    padding: 20rpx 24rpx;
+  }
+
+  .header-title {
+    font-size: 32rpx;
+  }
+
+  .tab-item {
+    font-size: 26rpx;
+    padding: 20rpx 0;
+  }
+
+  .stat-value {
+    font-size: 36rpx;
+  }
+
+  .summary-stats {
+    gap: 16rpx;
+  }
+
+  .bottom-btn {
+    padding: 16rpx 0;
+    font-size: 26rpx;
+  }
+}
+
+/* 暗黑模式支持（预留） */
+@media (prefers-color-scheme: dark) {
+  .report-page {
+    background-color: #1a1a1a;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #096dd9 0%, #003a8c 100%);
+  }
+
+  .tab-bar {
+    background-color: #2a2a2a;
+  }
+
+  .tab-item {
+    color: #999999;
+  }
+
+  .tab-item.active {
+    color: #1890ff;
+  }
+
+  .tab-item:active {
+    background-color: #333333;
+  }
+}

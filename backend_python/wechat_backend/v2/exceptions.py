@@ -191,10 +191,10 @@ class RetryExhaustedError(DiagnosisError):
 
 class RepositoryError(DiagnosisError):
     """仓库操作异常"""
-    
+
     error_code = 'REPOSITORY_ERROR'
     status_code = 500
-    
+
     def __init__(
         self,
         message: str,
@@ -204,5 +204,95 @@ class RepositoryError(DiagnosisError):
         details = {
             'operation': operation,
             'original_error': original_error,
+        }
+        super().__init__(message, details)
+
+
+# ==================== 统计算法异常类 ====================
+
+class AnalyticsError(DiagnosisError):
+    """统计算法基础异常类
+    
+    所有统计算法模块的异常都继承自此类
+    
+    Attributes:
+        message: 错误消息
+        error_code: 错误代码
+        status_code: HTTP 状态码
+        details: 详细错误信息
+    """
+
+    error_code = 'ANALYTICS_ERROR'
+    status_code = 500
+
+
+class AnalyticsDataError(AnalyticsError):
+    """统计数据验证异常
+    
+    当输入数据格式错误或缺少必要字段时抛出
+    """
+
+    error_code = 'ANALYTICS_DATA_ERROR'
+    status_code = 400
+
+    def __init__(
+        self,
+        message: str,
+        field: Optional[str] = None,
+        value: Optional[Any] = None,
+        expected_type: Optional[str] = None,
+    ):
+        details = {
+            'field': field,
+            'value': str(value) if value is not None else None,
+            'expected_type': expected_type,
+        }
+        super().__init__(message, details)
+
+
+class AnalyticsConfigurationError(AnalyticsError):
+    """统计算法配置异常
+    
+    当配置参数无效或冲突时抛出
+    """
+
+    error_code = 'ANALYTICS_CONFIGURATION_ERROR'
+    status_code = 400
+
+    def __init__(
+        self,
+        message: str,
+        parameter: Optional[str] = None,
+        invalid_value: Optional[Any] = None,
+        suggestion: Optional[str] = None,
+    ):
+        details = {
+            'parameter': parameter,
+            'invalid_value': str(invalid_value) if invalid_value is not None else None,
+            'suggestion': suggestion,
+        }
+        super().__init__(message, details)
+
+
+class AnalyticsProcessingError(AnalyticsError):
+    """统计算法处理异常
+    
+    当分析处理过程中发生错误时抛出
+    """
+
+    error_code = 'ANALYTICS_PROCESSING_ERROR'
+    status_code = 500
+
+    def __init__(
+        self,
+        message: str,
+        analyzer_name: Optional[str] = None,
+        original_error: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ):
+        details = {
+            'analyzer_name': analyzer_name,
+            'original_error': original_error,
+            'context': context or {},
         }
         super().__init__(message, details)

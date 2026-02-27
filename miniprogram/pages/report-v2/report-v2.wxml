@@ -1,0 +1,206 @@
+<!--
+  报告页面 V2 模板
+
+  展示品牌诊断报告，包含：
+  - 品牌分布
+  - 情感分布
+  - 关键词云
+  - 趋势分析
+-->
+
+<view class="report-page">
+  <!-- 顶部导航栏 -->
+  <view class="header">
+    <view class="header-left">
+      <text class="header-title">品牌诊断报告</text>
+      <text class="header-subtitle" wx:if="{{lastUpdateTime}}">
+        更新于 {{lastUpdateTime}}
+      </text>
+    </view>
+    <view class="header-actions">
+      <view class="action-icon" bindtap="refreshReport">
+        <text class="icon-refresh {{isRefreshing ? 'rotating' : ''}}">🔄</text>
+      </view>
+      <view class="action-icon" bindtap="onShareReport">
+        <text class="icon-share">📤</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载报告数据中...</text>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="error-state" wx:elif="{{hasError}}">
+    <image class="error-icon" src="/images/error.png" mode="aspectFit"></image>
+    <text class="error-text">{{errorMessage}}</text>
+    <button class="retry-btn" bindtap="refreshReport">重新加载</button>
+  </view>
+
+  <!-- 报告内容 -->
+  <scroll-view class="report-content" wx:else scroll-y enhanced show-scrollbar="{{true}}">
+    <!-- 标签页切换 -->
+    <view class="tab-bar">
+      <view 
+        class="tab-item {{activeTab === 'overview' ? 'active' : ''}}"
+        data-tab="overview"
+        bindtap="onTabChange"
+      >
+        概览
+      </view>
+      <view 
+        class="tab-item {{activeTab === 'brand' ? 'active' : ''}}"
+        data-tab="brand"
+        bindtap="onTabChange"
+      >
+        品牌分布
+      </view>
+      <view 
+        class="tab-item {{activeTab === 'sentiment' ? 'active' : ''}}"
+        data-tab="sentiment"
+        bindtap="onTabChange"
+      >
+        情感分析
+      </view>
+      <view 
+        class="tab-item {{activeTab === 'keywords' ? 'active' : ''}}"
+        data-tab="keywords"
+        bindtap="onTabChange"
+      >
+        关键词
+      </view>
+    </view>
+
+    <!-- 概览页面 -->
+    <view class="tab-content" wx:if="{{activeTab === 'overview'}}">
+      <!-- 报告摘要 -->
+      <view class="summary-card">
+        <view class="summary-title">报告摘要</view>
+        <view class="summary-stats">
+          <view class="stat-item">
+            <text class="stat-value">{{brandDistribution?.total_count || 0}}</text>
+            <text class="stat-label">总样本数</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value">{{keywords?.length || 0}}</text>
+            <text class="stat-label">关键词</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value">{{Object.keys(brandDistribution?.data || {}).length || 0}}</text>
+            <text class="stat-label">涉及品牌</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 品牌分布 -->
+      <view class="section">
+        <import src="../../components/brand-distribution/brand-distribution.wxml" />
+        <view 
+          class="component-wrapper"
+          data="{{brandDistribution}}"
+        >
+          <brand-distribution
+            distribution-data="{{brandDistribution}}"
+            chart-type="pie"
+            title="品牌分布"
+            show-legend="{{true}}"
+            show-labels="{{true}}"
+            bind:brandTap="onBrandDistributionTap"
+          ></brand-distribution>
+        </view>
+      </view>
+
+      <!-- 情感分布 -->
+      <view class="section">
+        <import src="../../components/sentiment-chart/sentiment-chart.wxml" />
+        <sentiment-chart
+          distribution-data="{{sentimentDistribution}}"
+          chart-type="donut"
+          title="情感分布"
+          show-center-stat="{{true}}"
+          show-details="{{true}}"
+          bind:sentimentTap="onSentimentTap"
+        ></sentiment-chart>
+      </view>
+
+      <!-- 关键词云 -->
+      <view class="section">
+        <import src="../../components/keyword-cloud/keyword-cloud.wxml" />
+        <keyword-cloud
+          keywords-data="{{keywords}}"
+          display-mode="cloud"
+          title="关键词云"
+          max-keywords="{{50}}"
+          show-sentiment-color="{{true}}"
+          show-count="{{true}}"
+          bind:keywordTap="onKeywordTap"
+        ></keyword-cloud>
+      </view>
+    </view>
+
+    <!-- 品牌分布页面 -->
+    <view class="tab-content" wx:if="{{activeTab === 'brand'}}">
+      <brand-distribution
+        distribution-data="{{brandDistribution}}"
+        chart-type="bar"
+        title="品牌分布详情"
+        show-legend="{{true}}"
+        show-labels="{{true}}"
+        color-scheme="vibrant"
+        bind:brandTap="onBrandDistributionTap"
+      ></brand-distribution>
+    </view>
+
+    <!-- 情感分析页面 -->
+    <view class="tab-content" wx:if="{{activeTab === 'sentiment'}}">
+      <sentiment-chart
+        distribution-data="{{sentimentDistribution}}"
+        chart-type="pie"
+        title="情感分析详情"
+        show-center-stat="{{false}}"
+        show-details="{{true}}"
+        bind:sentimentTap="onSentimentTap"
+      ></sentiment-chart>
+
+      <!-- 情感解读 -->
+      <view class="interpretation-card">
+        <view class="card-title">情感解读</view>
+        <view class="interpretation-content">
+          <text class="interpretation-text>
+            {{sentimentDistribution?.data?.positive > 50 ? '整体评价积极正面，品牌口碑良好，建议继续保持当前的品牌策略。' : 
+              sentimentDistribution?.data?.negative > 50 ? '负面评价较多，需要关注品牌形象和用户体验，及时回应负面反馈。' : 
+              '评价较为中性，品牌认知度有待提升，建议加强品牌传播和用户互动。'}}
+          </text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 关键词页面 -->
+    <view class="tab-content" wx:if="{{activeTab === 'keywords'}}">
+      <keyword-cloud
+        keywords-data="{{keywords}}"
+        display-mode="list"
+        title="关键词详情"
+        max-keywords="{{100}}"
+        show-sentiment-color="{{true}}"
+        show-count="{{true}}"
+        bind:keywordTap="onKeywordTap"
+      ></keyword-cloud>
+    </view>
+
+    <!-- 底部操作栏 -->
+    <view class="bottom-bar">
+      <button class="bottom-btn" bindtap="onGoHome">
+        <text class="btn-icon">🏠</text>
+        <text class="btn-text">返回</text>
+      </button>
+      <button class="bottom-btn primary" bindtap="exportReport">
+        <text class="btn-icon">📥</text>
+        <text class="btn-text">导出报告</text>
+      </button>
+    </view>
+  </scroll-view>
+</view>
