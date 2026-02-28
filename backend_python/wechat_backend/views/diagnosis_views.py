@@ -21,7 +21,7 @@ from collections import defaultdict
 import concurrent.futures
 import asyncio
 
-from config import Config
+from legacy_config import Config
 from wechat_backend.database import save_test_record, get_user_test_history, get_test_record_by_id
 from wechat_backend.models import TaskStatus, TaskStage, get_task_status, save_task_status, get_deep_intelligence_result, save_deep_intelligence_result, update_task_stage
 from wechat_backend.realtime_analyzer import get_analyzer
@@ -3098,6 +3098,195 @@ def get_task_result(task_id):
     return jsonify(deep_intelligence_result.to_dict()), 200
 
 # ==================== 存储架构优化集成 ====================
+# 导入新的存储层服务
+from wechat_backend.diagnosis_report_service import get_report_service
+
+# ==================== P2-4 消息队列异步诊断接口 ====================
+from wechat_backend.services.async_diagnosis_executor import get_async_executor
+
+
+@wechat_bp.route('/api/perform-brand-test-async', methods=['POST', 'OPTIONS'])
+@handle_api_exceptions
+@require_auth_optional
+@rate_limit(limit=3, window=60, per='user')  # 异步任务限流更严格
+@monitored_endpoint('/api/perform-brand-test-async', require_auth=False, validate_inputs=True)
+def perform_brand_test_async():
+    """
+    异步执行品牌诊断任务（P2-4 消息队列实现）
+
+    使用 Celery 消息队列异步执行诊断任务，适用于：
+    - 大量品牌对比
+    - 多模型并行测试
+    - 长耗时诊断任务
+
+    请求格式与 /api/perform-brand-test 相同
+
+    返回:
+        {
+            "status": "queued",
+            "execution_id": "uuid",
+            "message": "任务已提交，正在处理中",
+            "estimated_time": 120  # 预估执行时间（秒）
+        }
+    """
+    # 处理 OPTIONS 预检请求
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        return response, 200
+
+    # 获取请求数据
+    data = request.get_json(force=True)
+    if data is None:
+        return jsonify({"status": "error", "error": "Empty or invalid JSON", "code": 400}), 400
+
+    # 获取当前用户 ID
+    try:
+        user_id = get_current_user_id()
+    except:
+        user_id = 'anonymous'
+
+    # 输入验证
+    try:
+        # 验证品牌列表
+        if 'brand_list' not in data:
+            return jsonify({"status": "error", "error": "Missing brand_list", "code": 400}), 400
+        if not isinstance(data['brand_list'], list):
+            return jsonify({"status": "error", "error": "brand_list must be a list", "code": 400}), 400
+        brand_list = data['brand_list']
+        if not brand_list:
+            return jsonify({"status": "error", "error": "brand_list cannot be empty", "code": 400}), 400
+
+        # 验证模型列表
+        if 'selectedModels' not in data:
+            return jsonify({"status": "error", "error": "Missing selectedModels", "code": 400}), 400
+        if not isinstance(data['selectedModels'], list):
+            return jsonify({"status": "error", "error": "selectedModels must be a list", "code": 400}), 400
+        selected_models = data['selectedModels']
+
+        # 验证自定义问题（可选）
+        custom_questions = data.get('customQuestions', [])
+        if isinstance(custom_questions, str):
+            import re
+            custom_questions = [q.strip() for q in re.split(r'[？?.\n]+', custom_questions) if q.strip()]
+
+        # 验证用户 OpenID
+        user_openid = data.get('userOpenid') or (user_id if user_id != 'anonymous' else 'anonymous')
+
+        # 验证优先级（可选，0-10）
+        priority = min(10, max(0, int(data.get('priority', 0))))
+
+    except Exception as e:
+        api_logger.error(f"Input validation failed: {e}")
+        return jsonify({'error': f'Invalid input data: {str(e)}'}), 400
+
+    # 提交异步任务
+    async_executor = get_async_executor()
+    execution_id, response = async_executor.submit_diagnosis_task(
+        user_id=user_id,
+        brand_list=brand_list,
+        selected_models=selected_models,
+        custom_questions=custom_questions,
+        user_openid=user_openid,
+        priority=priority
+    )
+
+    # 返回响应
+    status_code = 202 if response['status'] == 'queued' else 500
+    return jsonify(response), status_code
+
+
+@wechat_bp.route('/api/diagnosis/status/<execution_id>', methods=['GET'])
+@rate_limit(limit=30, window=60, per='user')
+@monitored_endpoint('/api/diagnosis/status', require_auth=False, validate_inputs=False)
+def get_diagnosis_status(execution_id):
+    """
+    获取诊断任务状态（P2-4 消息队列）
+
+    参数:
+        execution_id: 执行 ID
+
+    返回:
+        {
+            "execution_id": "uuid",
+            "status": "running|success|failed|pending|queued",
+            "progress": 50,
+            "task_type": "brand_diagnosis",
+            "created_at": "2026-02-28T10:00:00",
+            "started_at": "2026-02-28T10:00:05",
+            "completed_at": null,
+            "result": {...},  # 完成后返回
+            "error_message": null  # 失败时返回
+        }
+    """
+    if not execution_id:
+        return jsonify({'error': 'Execution ID is required'}), 400
+
+    async_executor = get_async_executor()
+    task_status = async_executor.get_task_status(execution_id)
+
+    if not task_status:
+        return jsonify({'error': 'Task not found', 'execution_id': execution_id}), 404
+
+    return jsonify(task_status), 200
+
+
+@wechat_bp.route('/api/diagnosis/cancel/<execution_id>', methods=['POST'])
+@require_auth
+@rate_limit(limit=5, window=60, per='user')
+@monitored_endpoint('/api/diagnosis/cancel', require_auth=True, validate_inputs=False)
+def cancel_diagnosis_task(execution_id):
+    """
+    取消诊断任务
+
+    参数:
+        execution_id: 执行 ID
+
+    返回:
+        {
+            "status": "success|error",
+            "message": "任务已取消"
+        }
+    """
+    if not execution_id:
+        return jsonify({'error': 'Execution ID is required'}), 400
+
+    async_executor = get_async_executor()
+    success = async_executor.cancel_task(execution_id)
+
+    if success:
+        return jsonify({'status': 'success', 'message': '任务已取消'}), 200
+    else:
+        return jsonify({'status': 'error', 'error': '无法取消任务，可能已完成或不存在'}), 400
+
+
+@wechat_bp.route('/api/diagnosis/statistics', methods=['GET'])
+@rate_limit(limit=10, window=60, per='user')
+@monitored_endpoint('/api/diagnosis/statistics', require_auth=False, validate_inputs=False)
+def get_diagnosis_statistics():
+    """
+    获取诊断任务统计信息
+
+    返回:
+        {
+            "total_tasks": 100,
+            "by_status": {"success": 80, "failed": 10, "running": 5, "pending": 5},
+            "by_type": {"brand_diagnosis": 90, "analytics": 10},
+            "avg_duration_seconds": 120.5,
+            "success_rate": 88.9
+        }
+    """
+    from wechat_backend.models_pkg.task_queue import get_task_statistics
+
+    days = request.args.get('days', 7, type=int)
+    stats = get_task_statistics(days)
+
+    return jsonify(stats), 200
+
+
+# ==================== 更新 perform_brand_test - 集成新存储层 ====================
 # 导入新的存储层服务
 from wechat_backend.diagnosis_report_service import get_report_service
 

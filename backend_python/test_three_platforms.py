@@ -18,7 +18,7 @@ os.environ['QWEN_API_KEY'] = 'sk-5261a4dfdf964a5c9a6364128cc4c653'
 os.environ['DOUBAO_API_KEY'] = '2a376e32-8877-4df8-9865-7eb3e99c9f92'
 os.environ['ZHIPU_API_KEY'] = '504d64a0ad234557a79ad0dbcba3685c.ZVznXgPMIsnHbiNh'
 
-from config import Config
+from legacy_config import Config
 
 TEST_PROMPT = "你好，请用一句话介绍你自己。"
 

@@ -21,7 +21,7 @@ from wechat_backend.error_handler import handle_api_exceptions
 from wechat_backend.ai_adapters.factory import AIAdapterFactory
 from wechat_backend.ai_adapters.base_adapter import GEO_PROMPT_TEMPLATE
 from wechat_backend.repositories import save_dimension_result, save_report_snapshot
-from config import Config
+from legacy_config import Config
 import asyncio
 
 # 创建蓝图

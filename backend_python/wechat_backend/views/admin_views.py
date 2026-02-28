@@ -23,7 +23,7 @@ from collections import defaultdict
 import concurrent.futures
 import asyncio
 
-from config import Config
+from legacy_config import Config
 from wechat_backend.database import save_test_record, get_user_test_history, get_test_record_by_id
 from wechat_backend.models import TaskStatus, TaskStage, get_task_status, save_task_status, get_deep_intelligence_result, save_deep_intelligence_result, update_task_stage
 from wechat_backend.realtime_analyzer import get_analyzer
