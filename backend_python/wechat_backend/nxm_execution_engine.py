@@ -56,6 +56,8 @@ from wechat_backend.nxm_result_aggregator import (
 from wechat_backend.services.quality_scorer import get_quality_scorer
 # P1-014 新增：AI 超时保护
 from wechat_backend.ai_timeout import get_timeout_manager, AITimeoutError
+# P1-2 新增：多模型冗余调用
+from wechat_backend.multi_model_executor import get_multi_model_executor
 
 # 配置导入
 from config import Config
@@ -201,6 +203,50 @@ def recover_from_wal(execution_id: str) -> Optional[Dict]:
     return None
 
 
+# ==================== P1-2 新增：多模型冗余调用辅助函数 ====================
+
+async def _execute_with_multi_model_redundancy(
+    prompt: str,
+    primary_model: str,
+    timeout: int,
+    execution_id: str = None,
+    q_idx: int = None
+):
+    """
+    P1-2: 执行多模型冗余调用
+    
+    策略：
+    1. 首先尝试主模型
+    2. 主模型失败时，自动尝试备用模型
+    3. 返回第一个成功的有效结果
+    
+    参数：
+        prompt: 提示词
+        primary_model: 主模型名称
+        timeout: 超时时间（秒）
+        execution_id: 执行 ID
+        q_idx: 问题索引
+        
+    返回：
+        (AIResponse, actual_model): AI 响应和实际使用的模型名称
+    """
+    from wechat_backend.multi_model_executor import get_multi_model_executor
+    
+    # 获取多模型执行器
+    executor = get_multi_model_executor(timeout_seconds=timeout)
+    
+    # 执行冗余调用
+    result, actual_model = await executor.execute_with_redundancy(
+        prompt=prompt,
+        primary_model=primary_model,
+        fallback_models=None,  # 使用默认备用模型配置
+        execution_id=execution_id,
+        q_idx=q_idx
+    )
+    
+    return result, actual_model
+
+
 def execute_nxm_test(
     execution_id: str,
     main_brand: str,
@@ -224,8 +270,10 @@ def execute_nxm_test(
     # 创建调度器
     scheduler = create_scheduler(execution_id, execution_store)
 
-    # 计算总任务数
-    total_tasks = (1 + len(competitor_brands or [])) * len(raw_questions) * len(selected_models)
+    # P0 修复：客观提问模式下，请求次数 = 问题数 × AI 平台数（不包含品牌遍历）
+    # 原代码：total_tasks = (1 + len(competitor_brands or [])) * len(raw_questions) * len(selected_models)
+    # 修复后：只计算问题×模型的组合数
+    total_tasks = len(raw_questions) * len(selected_models)
     scheduler.initialize_execution(total_tasks)
 
     # BUG-008 修复：统一超时配置
@@ -286,17 +334,49 @@ def execute_nxm_test(
                         # 创建容错执行器实例（每个调用独立）
                         ai_executor = FaultTolerantExecutor(timeout_seconds=timeout)
 
-                        # 【P0-001 修复】使用线程安全的异步执行方式
+                        # 【P1-2 新增】多模型冗余调用机制
+                        # 策略：
+                        # 1. 首先尝试主模型
+                        # 2. 主模型失败时，自动尝试备用模型
+                        # 3. 返回第一个成功的有效结果
+                        
+                        # P0-001 修复：使用线程安全的异步执行方式
                         # 原代码问题：asyncio.run() 在已有事件循环的线程中会抛出 RuntimeError
                         # 修复方案：使用 run_async_in_thread() 创建新的事件循环
-                        ai_result = run_async_in_thread(
-                            ai_executor.execute_with_fallback(
-                                task_func=client.send_prompt,
-                                task_name=f"Q{q_idx}-{model_name}",
-                                source=model_name,
-                                prompt=prompt
+                        
+                        # 检查是否启用多模型冗余（默认启用）
+                        use_multi_model = True  # 可配置化
+                        
+                        if use_multi_model:
+                            # P1-2: 使用多模型冗余调用
+                            api_logger.info(f"[NxM][P1-2] 启用多模型冗余调用：{model_name}, Q{q_idx}")
+                            
+                            ai_result, actual_model = run_async_in_thread(
+                                _execute_with_multi_model_redundancy(
+                                    prompt=prompt,
+                                    primary_model=model_name,
+                                    timeout=timeout,
+                                    execution_id=execution_id,
+                                    q_idx=q_idx
+                                )
                             )
-                        )
+                            
+                            # 如果实际使用的模型与主模型不同，记录日志
+                            if actual_model != model_name:
+                                api_logger.info(
+                                    f"[NxM][P1-2] 备用模型接管：主模型={model_name}, 实际={actual_model}, Q{q_idx}"
+                                )
+                                model_name = actual_model  # 更新模型名为实际使用的模型
+                        else:
+                            # 原有单模型调用逻辑
+                            ai_result = run_async_in_thread(
+                                ai_executor.execute_with_fallback(
+                                    task_func=client.send_prompt,
+                                    task_name=f"Q{q_idx}-{model_name}",
+                                    source=model_name,
+                                    prompt=prompt
+                                )
+                            )
                         
                         # 检查 AI 调用结果
                         geo_data = None
@@ -495,12 +575,61 @@ def execute_nxm_test(
                 # P3 修复：使用正确的方法名 calculate 而不是 evaluate
                 quality_score = scorer.calculate(deduplicated, completion_rate)
 
-                # 聚合结果 - 客观提问模式下，需要对 deduplicated 进行品牌提及分析后才能聚合
-                # 方案中阶段三提及需添加后置分析。此处聚合逻辑需调整。
-                # 暂时注释掉原有的品牌聚合，待后置分析完善后使用。
-                # aggregated = aggregate_results_by_brand(deduplicated) 
+                # 【P0 修复】后置品牌提及分析（客观提问模式的核心）
+                # 从 AI 客观回答中提取用户品牌提及情况和竞品对比
                 aggregated = []
-                api_logger.info(f"[NxM] 聚合结果：客观提问模式，待后置分析")
+                brand_analysis = None
+                try:
+                    from wechat_backend.services.brand_analysis_service import get_brand_analysis_service
+                    
+                    # 获取品牌分析服务
+                    analysis_service = get_brand_analysis_service(judge_model='doubao')
+                    
+                    # 执行品牌提及分析
+                    brand_analysis = analysis_service.analyze_brand_mentions(
+                        results=deduplicated,
+                        user_brand=main_brand,
+                        competitor_brands=competitor_brands  # 可为 None，自动从回答中提取
+                    )
+                    
+                    # 构建聚合结果（基于品牌分析）
+                    if brand_analysis:
+                        aggregated = [{
+                            'brand': main_brand,
+                            'is_user_brand': True,
+                            'mention_rate': brand_analysis['user_brand_analysis']['mention_rate'],
+                            'average_rank': brand_analysis['user_brand_analysis']['average_rank'],
+                            'average_sentiment': brand_analysis['user_brand_analysis']['average_sentiment'],
+                            'is_top3': brand_analysis['user_brand_analysis']['is_top3'],
+                            'mentioned_count': brand_analysis['user_brand_analysis']['mentioned_count'],
+                            'total_responses': brand_analysis['user_brand_analysis']['total_responses'],
+                            'comparison': brand_analysis['comparison']
+                        }]
+                        
+                        # 添加竞品分析
+                        for comp in brand_analysis.get('competitor_analysis', []):
+                            aggregated.append({
+                                'brand': comp['brand'],
+                                'is_user_brand': False,
+                                'mention_rate': comp['mention_rate'],
+                                'average_rank': comp['average_rank'],
+                                'average_sentiment': comp['average_sentiment'],
+                                'is_top3': comp['is_top3'],
+                                'mentioned_count': comp['mentioned_count'],
+                                'total_responses': len(comp['mentions']),
+                                'comparison': None
+                            })
+                        
+                        api_logger.info(
+                            f"[P0 修复] ✅ 品牌分析完成：{main_brand}, "
+                            f"提及率={brand_analysis['user_brand_analysis']['mention_rate']:.1%}, "
+                            f"竞品数={len(brand_analysis['competitor_analysis'])}"
+                        )
+                    
+                except Exception as analysis_err:
+                    api_logger.error(f"[P0 修复] ⚠️ 品牌分析失败：{analysis_err}")
+                    # 降级：返回空聚合结果
+                    aggregated = []
 
                 # P3 修复：保存测试汇总记录到 test_records 表
                 # 这是历史记录功能的数据源
@@ -519,7 +648,11 @@ def execute_nxm_test(
                         'success_rate': len(deduplicated) / total_tasks if total_tasks > 0 else 0,
                         'quality_score': overall_score,
                         # 品牌信息需要后置分析，此处brands置空。
-                        'brands': [],
+                        # 品牌信息（来自后置分析）
+                        'brands': [main_brand] + [c['brand'] for c in brand_analysis.get('competitor_analysis', [])] if brand_analysis else [],
+                        'models': list(set(r.get('model', '') for r in deduplicated if r.get('model'))),
+                        'user_brand_analysis': brand_analysis.get('user_brand_analysis') if brand_analysis else None,
+                        'comparison': brand_analysis.get('comparison') if brand_analysis else None,
                         'models': list(set(r.get('model', '') for r in deduplicated if r.get('model'))),
                     }
 
@@ -576,7 +709,8 @@ def execute_nxm_test(
                     'completed_tasks': len(deduplicated),
                     'completion_rate': completion_rate,
                     'results': deduplicated,
-                    'aggregated': [], # 待后置分析
+                    'aggregated': aggregated,
+                    'brand_analysis': brand_analysis,
                     'quality_score': quality_score,
                     # P0-007, P1-016 相关字段置空
                     'quota_exhausted_models': [],

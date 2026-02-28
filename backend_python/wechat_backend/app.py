@@ -30,6 +30,23 @@ init_db()
 from wechat_backend.models import init_task_status_db
 init_task_status_db()
 
+# Initialize task queue database (P2-4 消息队列实现)
+from wechat_backend.models_pkg.task_queue import init_task_queue_db
+init_task_queue_db()
+
+# P2-6: 初始化数据库读写分离
+try:
+    from wechat_backend.database.database_replication import initialize_replication
+    from wechat_backend.database.database_replication_monitor import start_replication_monitoring
+    
+    initialize_replication()
+    start_replication_monitoring()
+    app_logger.info("✅ 数据库读写分离已启动")
+except Exception as e:
+    app_logger.warning(f"⚠️  数据库读写分离启动失败：{e}")
+    import traceback
+    app_logger.error(f"[数据库读写分离] 错误详情：{traceback.format_exc()}")
+
 # Security imports
 from wechat_backend.security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer
 from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimiter
@@ -299,6 +316,25 @@ except Exception as e:
     app_logger.warning(f"⚠️  配置热更新启动失败：{e}")
     import traceback
     app_logger.error(f"[HotReloadConfig] 错误详情：{traceback.format_exc()}")
+
+# P2-5: 初始化 CDN 加速服务
+try:
+    from wechat_backend.middleware.cdn_middleware import init_cdn
+    init_cdn(app)
+    app_logger.info("✅ CDN 加速服务已启动")
+except Exception as e:
+    app_logger.warning(f"⚠️  CDN 加速服务启动失败：{e}")
+    import traceback
+    app_logger.error(f"[CDN] 错误详情：{traceback.format_exc()}")
+
+# P2-7: 初始化智能缓存预热
+try:
+    from wechat_backend.cache.cache_warmup_init import start_cache_warmup
+    start_cache_warmup()
+except Exception as e:
+    app_logger.warning(f"⚠️  智能缓存预热启动失败：{e}")
+    import traceback
+    app_logger.error(f"[缓存预热] 错误详情：{traceback.format_exc()}")
 
 @app.route('/')
 @rate_limit(limit=100, window=60, per='ip')  # 限制每个IP每分钟最多100个请求
