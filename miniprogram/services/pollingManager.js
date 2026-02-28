@@ -69,6 +69,17 @@ class PollingManager {
    * @returns {string} 任务 ID（用于取消）
    */
   startPolling(executionId, callbacks) {
+    // P0 修复：添加参数验证
+    if (!executionId) {
+      console.error('[PollingManager] startPolling 失败：缺少 executionId');
+      throw new Error('executionId 是必需的');
+    }
+
+    if (!callbacks || !callbacks.onStatus) {
+      console.error('[PollingManager] startPolling 失败：缺少回调函数');
+      throw new Error('onStatus 回调是必需的');
+    }
+
     // 如果已存在相同任务，先取消旧的
     if (this.pollingTasks.has(executionId)) {
       console.warn(`[PollingManager] Task ${executionId} already polling, canceling old task`);
@@ -77,7 +88,7 @@ class PollingManager {
 
     // 记录开始时间
     this.startTimes.set(executionId, Date.now());
-    
+
     // 初始化重试次数
     this.retryCounts.set(executionId, 0);
 
@@ -90,13 +101,20 @@ class PollingManager {
       attempt: 0
     };
 
+    // P0 修复：添加启动日志
+    console.log('[PollingManager] 开始轮询任务:', {
+      executionId,
+      hasCallbacks: !!callbacks,
+      timestamp: new Date().toISOString()
+    });
+
     // 立即执行第一次轮询
     this._poll(executionId);
 
     // 存储任务
     this.pollingTasks.set(executionId, task);
 
-    console.log(`[PollingManager] Started polling for task: ${executionId}`);
+    console.log(`[PollingManager] Started polling for task: ${executionId}, 当前活跃任务数：${this.pollingTasks.size}`);
     return executionId;
   }
 
@@ -159,7 +177,7 @@ class PollingManager {
   /**
    * 执行一次轮询
    * @private
-   * @param {string} executionId 
+   * @param {string} executionId
    */
   async _poll(executionId) {
     const task = this.pollingTasks.get(executionId);
@@ -174,13 +192,17 @@ class PollingManager {
     }
 
     try {
-      // 调用状态接口
-      const response = await wx.cloud.callFunction({
-        name: 'getDiagnosisStatus',
-        data: { executionId }
-      });
-
-      const statusData = response.result;
+      // P0-FRONTEND-2 修复：支持 HTTP 直连和云函数两种模式
+      let statusData;
+      
+      // 检查是否启用 HTTP 直连模式
+      if (isFeatureEnabled('diagnosis.useHttpDirect')) {
+        // HTTP 直连模式
+        statusData = await this._pollViaHttp(executionId);
+      } else {
+        // 云函数模式（默认）
+        statusData = await this._pollViaCloudFunction(executionId);
+      }
 
       // 保存最后一次状态
       this.lastStatusMap.set(executionId, statusData);
@@ -197,8 +219,8 @@ class PollingManager {
       // 判断是否需要停止轮询（关键逻辑）
       if (statusData.should_stop_polling === true) {
         console.log(`[PollingManager] Polling stopped by server flag: ${executionId}`);
-        
-        if (statusData.status === 'completed' || 
+
+        if (statusData.status === 'completed' ||
             statusData.status === 'partial_success') {
           // 成功完成
           if (task.callbacks.onComplete) {
@@ -214,7 +236,7 @@ class PollingManager {
             });
           }
         }
-        
+
         this.stopPolling(executionId);
         return;
       }
@@ -224,9 +246,111 @@ class PollingManager {
 
     } catch (error) {
       console.error(`[PollingManager] Polling error for ${executionId}:`, error);
-      
+
       // 处理轮询错误（使用指数退避）
       this._handlePollingError(executionId, error);
+    }
+  }
+
+  /**
+   * 通过 HTTP 直连方式轮询
+   * @private
+   * @param {string} executionId
+   * @returns {Promise<Object>} 状态数据
+   */
+  async _pollViaHttp(executionId) {
+    // 从配置获取 API 地址
+    const { API_BASE_URL } = require('../config/apiConfig');
+
+    console.log('[PollingManager] HTTP 轮询请求:', {
+      executionId,
+      url: `${API_BASE_URL}/test/status/${executionId}`,
+      timestamp: new Date().toISOString()
+    });
+
+    return new Promise((resolve, reject) => {
+      wx.request({
+        url: `${API_BASE_URL}/test/status/${executionId}`,
+        method: 'GET',
+        timeout: 10000,
+        success: (res) => {
+          console.log('[PollingManager] HTTP 轮询响应:', {
+            executionId,
+            statusCode: res.statusCode,
+            data: res.data
+          });
+          if (res.statusCode === 200) {
+            resolve(res.data);
+          } else {
+            reject(new Error(`HTTP 错误：${res.statusCode}`));
+          }
+        },
+        fail: (err) => {
+          console.error('[PollingManager] HTTP 轮询失败:', {
+            executionId,
+            error: err
+          });
+          reject(err);
+        }
+      });
+    });
+  }
+
+  /**
+   * 通过云函数方式轮询
+   * @private
+   * @param {string} executionId
+   * @returns {Promise<Object>} 状态数据
+   */
+  async _pollViaCloudFunction(executionId) {
+    console.log('[PollingManager] 通过云函数轮询:', {
+      executionId,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      const response = await wx.cloud.callFunction({
+        name: 'getDiagnosisStatus',
+        data: { executionId }
+      });
+
+      const result = response.result;
+
+      // P0 修复：添加详细的错误检查
+      if (!result) {
+        console.error('[PollingManager] 云函数返回空结果:', executionId);
+        throw new Error('云函数返回空结果');
+      }
+
+      if (!result.success) {
+        console.error('[PollingManager] 云函数调用失败:', executionId, result.error);
+        throw new Error(result.error || '云函数调用失败');
+      }
+
+      // P0 修复：添加返回数据验证
+      const data = result.data;
+      if (!data) {
+        console.error('[PollingManager] 云函数成功但无数据:', executionId);
+        throw new Error('云函数返回数据为空');
+      }
+
+      console.log('[PollingManager] 云函数轮询成功:', {
+        executionId,
+        status: data.status,
+        progress: data.progress,
+        stage: data.stage,
+        should_stop_polling: data.should_stop_polling,
+        timestamp: new Date().toISOString()
+      });
+
+      return data;
+    } catch (error) {
+      console.error('[PollingManager] 云函数轮询失败:', {
+        executionId,
+        error: error,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
     }
   }
 

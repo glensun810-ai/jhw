@@ -115,7 +115,8 @@ class PlatformHealthMonitor:
             if health.status == HealthStatus.UNHEALTHY and platform in cls.DOMESTIC_PLATFORMS:
                 error_msg = f"❌ {platform}: {health.message}"
                 results['errors'].append(error_msg)
-                api_logger.error(error_msg)
+                # P1-HEALTH-2 修复：启动健康检查失败降级为 WARNING，因为不影响主流程
+                api_logger.warning(error_msg)
             elif health.status == HealthStatus.DEGRADED:
                 warn_msg = f"⚠️  {platform}: {health.message}"
                 results['warnings'].append(warn_msg)

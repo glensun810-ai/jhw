@@ -234,23 +234,34 @@ Page({
    */
   async startPolling() {
     console.log('[ReportPageV2] Starting polling (fallback)...');
+
+    // P0 修复：添加执行 ID 验证
+    if (!this.data.executionId) {
+      console.error('[ReportPageV2] 无法启动轮询：缺少 executionId');
+      this.handleError(new Error('缺少 executionId，无法轮询'));
+      return;
+    }
+
     this.setData({
       isPolling: true,
       connectionMode: 'polling'
     });
 
     try {
+      console.log('[ReportPageV2] 调用 diagnosisService.startPolling, executionId:', this.data.executionId);
+
+      // P0 修复：直接传递 executionId 给 diagnosisService
       diagnosisService.startPolling({
         onStatus: this.handleStatusUpdate.bind(this),
         onComplete: this.handleComplete.bind(this),
         onError: this.handlePollingError.bind(this),
         onTimeout: this.handleTimeout.bind(this)
-      });
+      }, this.data.executionId);
 
       console.log('[ReportPageV2] Polling started successfully');
     } catch (error) {
       console.error('[ReportPageV2] Failed to start polling:', error);
-      throw error;
+      this.handleError(error);
     }
   },
 

@@ -2,6 +2,10 @@
 用户相关视图模块
 包含登录、注册、用户资料等路由
 """
+
+# 从__init__.py 导入共享的蓝图实例
+from . import wechat_bp
+
 from flask import Blueprint, request, jsonify, g
 import hashlib
 import hmac
@@ -58,9 +62,6 @@ from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimite
 
 # Monitoring imports
 from wechat_backend.monitoring.monitoring_decorator import monitored_endpoint
-
-# Create a blueprint
-wechat_bp = Blueprint('wechat', __name__)
 
 # Global store for execution progress (in production, use Redis or database)
 execution_store = {}

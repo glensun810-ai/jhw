@@ -293,8 +293,9 @@ def warmup_popular_questions() -> int:
                         }
                         _set_cache(cache_key, cache_value, cache_warmup_config.QUESTION_STATS_TTL)
                         cached_count += 1
-            except:
-                pass
+            except Exception as e:
+                # 单个问题预热失败不影响其他问题，记录日志
+                api_logger.debug(f"问题 {question} 预热失败：{e}")
         
         conn.close()
         
@@ -427,15 +428,19 @@ def _set_cache(key: str, value: Any, ttl: int):
             )
             return
         
-    except Exception:
-        pass
-    
+    except Exception as e:
+        # Redis 缓存失败，降级到内存缓存
+        api_logger.debug(f"[CacheWarmup] Redis 缓存失败：{e}, key: {key}, 降级到内存")
+
     # 回退到内存缓存
+    # P1-CACHE-2 修复：导入全局 memory_cache 实例
+    from wechat_backend.cache.api_cache import memory_cache
     try:
-        from wechat_backend.cache.api_cache import memory_cache
         memory_cache.set(key, value, ttl)
-    except Exception:
-        pass
+        api_logger.debug(f"[CacheWarmup] ✅ 内存缓存写入成功：{key}")
+    except Exception as mem_err:
+        # 内存缓存也失败，记录日志
+        api_logger.error(f"[CacheWarmup] 内存缓存失败：{mem_err}, key: {key}")
 
 
 def _get_cache(key: str) -> Optional[Any]:
@@ -459,9 +464,10 @@ def _get_cache(key: str) -> Optional[Any]:
                 import json
                 return json.loads(value)
         
-    except Exception:
-        pass
-    
+    except Exception as e:
+        # Redis 获取失败，降级到内存缓存
+        api_logger.debug(f"[CacheWarmup] Redis 获取失败：{e}, key: {key}")
+
     # 回退到内存缓存
     try:
         from wechat_backend.cache.api_cache import memory_cache

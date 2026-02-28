@@ -283,6 +283,20 @@ def warm_up_adapters():
             api_key = Config.get_api_key(adapter_name)
 
             if api_key:
+                # P1-HEALTH-1 修复：豆包使用 DoubaoPriorityAdapter，自动选择可用模型
+                if adapter_name == 'doubao':
+                    try:
+                        from wechat_backend.ai_adapters.doubao_priority_adapter import DoubaoPriorityAdapter
+                        adapter = DoubaoPriorityAdapter(api_key)
+                        selected_model = adapter.get_selected_model()
+                        if selected_model:
+                            api_logger.info(f"Adapter {adapter_name} health check completed with model: {selected_model}")
+                        else:
+                            api_logger.warning(f"Adapter {adapter_name} created but no model available")
+                        continue  # 跳过普通适配器的健康检查
+                    except Exception as priority_err:
+                        api_logger.warning(f"Adapter {adapter_name} PriorityAdapter failed: {priority_err}, falling back to standard adapter")
+                
                 # Create adapter with actual API key if available
                 adapter = AIAdapterFactory.create(adapter_name, api_key)
 

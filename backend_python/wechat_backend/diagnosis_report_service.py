@@ -179,11 +179,11 @@ class DiagnosisReportService:
     
     def get_full_report(self, execution_id: str) -> Optional[Dict[str, Any]]:
         """
-        获取完整报告
-        
+        获取完整报告（P0-REPORT-2 优化：处理失败场景）
+
         参数:
             execution_id: 执行 ID
-        
+
         返回:
             完整报告数据 {
                 report: 报告主数据
@@ -193,19 +193,39 @@ class DiagnosisReportService:
             }
         """
         db_logger.info(f"获取完整报告：{execution_id}")
-        
+
         # 1. 获取报告主数据
         report = self.report_repo.get_by_execution_id(execution_id)
         if not report:
             db_logger.warning(f"报告不存在：{execution_id}")
             return None
-        
+
+        # P0-REPORT-2 优化：处理诊断失败场景
+        # 如果报告状态为 failed，返回包含错误信息的结构
+        if report.get('status') == 'failed':
+            db_logger.info(f"报告为失败状态：{execution_id}")
+            return {
+                'report': report,  # 包含 execution_id, user_id, brand_name 等
+                'results': [],
+                'analysis': {},
+                'error': {
+                    'status': 'failed',
+                    'stage': report.get('stage', 'unknown'),
+                    'message': '诊断执行失败，请查看日志获取详细错误信息'
+                },
+                'meta': {
+                    'data_schema_version': report.get('data_schema_version', DATA_SCHEMA_VERSION),
+                    'server_version': report.get('server_version', 'unknown'),
+                    'retrieved_at': datetime.now().isoformat()
+                }
+            }
+
         # 2. 获取结果明细
         results = self.result_repo.get_by_execution_id(execution_id)
-        
+
         # 3. 获取分析数据
         analysis = self.analysis_repo.get_by_execution_id(execution_id)
-        
+
         # 4. 构建完整报告
         full_report = {
             'report': report,
@@ -217,12 +237,12 @@ class DiagnosisReportService:
                 'retrieved_at': datetime.now().isoformat()
             }
         }
-        
+
         # 5. 验证完整性（可选）
         checksum = report.get('checksum')
         if checksum:
             full_report['checksum_verified'] = True  # 简化验证
-        
+
         db_logger.info(f"✅ 获取完整报告成功：{execution_id}, 结果数：{len(results)}")
         return full_report
     
@@ -287,8 +307,8 @@ class ReportValidationService:
     @staticmethod
     def validate_report(report: Dict[str, Any]) -> Dict[str, Any]:
         """
-        验证报告数据
-        
+        验证报告数据（P0-REPORT-1 修复：检查正确的字段位置）
+
         返回:
             {
                 is_valid: 是否有效
@@ -298,13 +318,21 @@ class ReportValidationService:
         """
         errors = []
         warnings = []
+
+        # P0-REPORT-1 修复：报告结构是 {'report': {...}, 'results': [...], 'analysis': {...}}
+        # 必填字段在 report 对象内，不在顶层
+        report_data = report.get('report', {})
         
-        # 验证必填字段
+        # 验证必填字段（在 report 对象内）
         required_fields = ['execution_id', 'user_id', 'brand_name', 'created_at']
         for field in required_fields:
-            if field not in report:
+            if field not in report_data:
                 errors.append(f"缺少必填字段：{field}")
         
+        # 验证 report 对象是否存在
+        if not report_data:
+            errors.append("report 对象为空或缺失")
+
         # 验证结果数据
         if 'results' in report:
             if not isinstance(report['results'], list):
@@ -317,12 +345,16 @@ class ReportValidationService:
                         errors.append(f"结果 {i} 缺少 question 字段")
                     if 'model' not in result:
                         errors.append(f"结果 {i} 缺少 model 字段")
-        
+        else:
+            warnings.append("报告缺少 results 数据")
+
         # 验证分析数据
         if 'analysis' in report:
             if not isinstance(report['analysis'], dict):
                 errors.append("analysis 必须是对象")
-        
+        else:
+            warnings.append("报告缺少 analysis 数据")
+
         return {
             'is_valid': len(errors) == 0,
             'errors': errors,

@@ -1,6 +1,6 @@
 /**
  * 前端特性开关配置
- * 
+ *
  * 用于控制新功能的灰度发布和调试
  */
 
@@ -13,7 +13,9 @@ export const FeatureFlags = {
     useNewPolling: true,        // 使用新的轮询机制
     enableRetryStrategy: true,   // 启用重试策略
     showProgressHistory: false,   // 显示进度历史
-    enableAutoResume: true        // 启用自动恢复
+    enableAutoResume: true,       // 启用自动恢复
+    useHttpDirect: false,         // 使用 HTTP 直连（false = 云函数模式）
+    enableLogging: true           // 启用详细日志
   },
 
   // 灰度配置

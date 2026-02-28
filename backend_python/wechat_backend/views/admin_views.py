@@ -63,11 +63,9 @@ from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimite
 # Monitoring imports
 from wechat_backend.monitoring.monitoring_decorator import monitored_endpoint
 
-# Create a blueprint
-wechat_bp = Blueprint('wechat', __name__)
-
 # Global store for execution progress (in production, use Redis or database)
 execution_store = {}
+
 @wechat_bp.route('/api/test-history', methods=['GET'])
 def get_test_history():
     user_openid = request.args.get('userOpenid', 'anonymous')

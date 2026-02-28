@@ -521,9 +521,10 @@ class TestScheduler:
                     'failed_after': task.max_retries
                 }
             )
-        except Exception:
-            pass
-        
+        except Exception as e:
+            # 死信队列写入失败不影响主流程，记录日志
+            api_logger.error(f"[Scheduler] 死信队列写入失败：{e}, task_id: {task.id}")
+
         return {
             'task_id': task.id,
             'success': False,

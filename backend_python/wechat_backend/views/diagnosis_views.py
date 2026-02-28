@@ -365,7 +365,7 @@ def perform_brand_test():
             'custom_questions': raw_questions if 'raw_questions' in locals() else []
         }
         report_id = service.create_report(execution_id, user_id or 'anonymous', config)
-        service._repo.update_status(
+        service.report_repo.update_status(
             execution_id=execution_id,
             status='initializing',
             progress=0,
@@ -601,6 +601,7 @@ def perform_brand_test():
 
                 # 步骤 2: 使用状态管理器统一更新数据库
                 try:
+                    from wechat_backend.state_manager import get_state_manager
                     state_manager = get_state_manager(execution_store)
                     state_manager.update_state(
                         execution_id=execution_id,
@@ -658,8 +659,7 @@ def perform_brand_test():
                         status="failed",
                         progress=100,  # 进度设为 100%，因为执行已完成（虽然是失败）
                         stage="failed",
-                        is_completed=True,
-                        error_message=error_message
+                        is_completed=True
                     )
 
                     api_logger.info(f"[状态同步 - 失败处理 3/3] ✅ 错误报告已保存：{execution_id}")
@@ -687,6 +687,7 @@ def perform_brand_test():
             
             # 尝试更新数据库
             try:
+                from wechat_backend.state_manager import get_state_manager
                 state_manager = get_state_manager(execution_store)
                 state_manager.update_state(
                     execution_id=execution_id,
@@ -877,9 +878,10 @@ def mvp_deepseek_test():
                             total_questions=len(questions),
                             metadata={'source': 'deepseek_mvp_test_v2', 'error_phase': 'api_call'}
                         )
-                    except Exception:
-                        pass
-                
+                    except Exception as log_err:
+                        # 错误报告保存失败不影响主流程，记录日志
+                        api_logger.error(f"[DeepSeek MVP] 错误报告保存失败：{log_err}")
+
                 results.append(result_item)
                 execution_store[execution_id]['results'].append(result_item)
                 
@@ -1074,9 +1076,10 @@ def mvp_qwen_test():
                             total_questions=len(questions),
                             metadata={'source': 'qwen_mvp_test_v2', 'error_phase': 'api_call'}
                         )
-                    except Exception:
-                        pass
-                
+                    except Exception as log_err:
+                        # 错误报告保存失败不影响主流程，记录日志
+                        api_logger.error(f"[Qwen MVP] 错误报告保存失败：{log_err}")
+
                 results.append(result_item)
                 execution_store[execution_id]['results'].append(result_item)
                 
@@ -1271,9 +1274,10 @@ def mvp_zhipu_test():
                             total_questions=len(questions),
                             metadata={'source': 'zhipu_mvp_test_v2', 'error_phase': 'api_call'}
                         )
-                    except Exception:
-                        pass
-                
+                    except Exception as log_err:
+                        # 错误报告保存失败不影响主流程，记录日志
+                        api_logger.error(f"[Zhipu MVP] 错误报告保存失败：{log_err}")
+
                 results.append(result_item)
                 execution_store[execution_id]['results'].append(result_item)
                 

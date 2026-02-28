@@ -69,21 +69,29 @@ class DiagnosisService {
   /**
    * 开始轮询诊断状态
    * @param {Object} callbacks - 回调函数
+   * @param {string} executionId - 可选的执行 ID，如果提供则直接使用
    * @returns {string} 执行 ID
    */
-  startPolling(callbacks) {
-    if (!this.currentTask && !this.pendingTask) {
+  startPolling(callbacks, executionId) {
+    // P0 修复：支持直接传入 executionId 参数
+    let task;
+    
+    if (executionId) {
+      // 如果提供了 executionId，直接使用
+      task = { executionId };
+      console.log('[DiagnosisService] Starting polling with provided executionId:', executionId);
+    } else if (this.currentTask || this.pendingTask) {
+      // 使用 pendingTask 或 currentTask
+      task = this.pendingTask || this.currentTask;
+      executionId = task.executionId;
+      console.log('[DiagnosisService] Starting polling for task:', executionId);
+    } else {
       const error = new Error('No active diagnosis task');
       error.code = 'TASK_NOT_FOUND';
       throw error;
     }
 
-    // 使用 pendingTask 或 currentTask
-    const task = this.pendingTask || this.currentTask;
-    const executionId = task.executionId;
-
-    console.log('[DiagnosisService] Starting polling for task:', executionId);
-
+    // P0 修复：直接传递 executionId 给 pollingManager
     pollingManager.startPolling(executionId, {
       onStatus: (status) => {
         // 更新页面状态

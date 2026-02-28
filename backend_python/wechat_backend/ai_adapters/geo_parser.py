@@ -326,23 +326,17 @@ def _semantic_analysis_fallback(text: str, log_context: str) -> Optional[Dict[st
                         rank = chinese_nums[rank_str]
                         break
                     else:
-                        try:
-                            rank = int(rank_str)
+                        # 无捕获组，根据匹配内容判断排名
+                        matched_text = match.group(0).lower()
+                        if '第一' in matched_text or '首选' in matched_text or '最推荐' in matched_text:
+                            rank = 1
                             break
-                        except:
-                            continue
-                else:
-                    # 无捕获组，根据匹配内容判断排名
-                    matched_text = match.group(0).lower()
-                    if '第一' in matched_text or '首选' in matched_text or '最推荐' in matched_text:
-                        rank = 1
-                        break
-                    elif '第二' in matched_text:
-                        rank = 2
-                        break
-                    elif '第三' in matched_text:
-                        rank = 3
-                        break
+                        elif '第二' in matched_text:
+                            rank = 2
+                            break
+                        elif '第三' in matched_text:
+                            rank = 3
+                            break
 
         # 如果仍未提取到排名，但有推荐关键词，给一个默认排名
         if rank == -1 and brand_mentioned:
@@ -409,8 +403,9 @@ def _extract_site_name(url: str) -> str:
             match = re.search(r'://(?:www\.)?([^/]+)', url)
             if match:
                 return match.group(1).split('.')[0]
-    except:
-        pass
+    except Exception as e:
+        # 信源提取失败不影响主流程，记录日志
+        api_logger.debug(f"[GeoParser] 信源提取失败：{e}, URL: {url}")
     return '未知信源'
 
 
