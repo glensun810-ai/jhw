@@ -21,23 +21,39 @@ class PollingManager {
    * @param {Object} options - 配置选项
    */
   constructor(options = {}) {
-    this.baseInterval = options.baseInterval || 2000;        // 基础轮询间隔（2 秒）
-    this.maxInterval = options.maxInterval || 30000;         // 最大轮询间隔（30 秒）
+    this.baseInterval = options.baseInterval || 1000;        // 基础轮询间隔（1 秒）- P1-1 优化：从 2 秒降低到 1 秒
+    this.maxInterval = options.maxInterval || 10000;         // 最大轮询间隔（10 秒）- P1-1 优化：从 30 秒降低到 10 秒
     this.maxRetries = options.maxRetries || 5;               // 最大重试次数
     this.timeout = options.timeout || 600000;                // 总超时时间（10 分钟）
-    
+
+    // P1-1 新增：进度阈值配置
+    this.progressThresholds = {
+      low: 30,      // 低进度阈值
+      medium: 60,   // 中进度阈值
+      high: 80      // 高进度阈值
+    };
+
+    // P1-1 新增：各阶段的轮询间隔（毫秒）
+    this.stageIntervals = {
+      fast: 1000,     // 0-30%: 1 秒轮询一次
+      medium: 2000,   // 30-60%: 2 秒轮询一次
+      slow: 3000,     // 60-80%: 3 秒轮询一次
+      final: 5000     // 80-100%: 5 秒轮询一次
+    };
+
     this.pollingTasks = new Map();                            // 正在轮询的任务
     this.retryCounts = new Map();                             // 重试次数记录
     this.startTimes = new Map();                               // 开始时间记录
     this.lastStatusMap = new Map();                            // 最后一次状态记录
-    
+
     // 日志
     if (isFeatureEnabled('diagnosis.debug.enableLogging')) {
-      console.log('[PollingManager] Initialized with config:', {
+      console.log('[PollingManager] Initialized with optimized config:', {
         baseInterval: this.baseInterval,
         maxInterval: this.maxInterval,
         maxRetries: this.maxRetries,
-        timeout: this.timeout
+        timeout: this.timeout,
+        stageIntervals: this.stageIntervals
       });
     }
   }
@@ -217,40 +233,70 @@ class PollingManager {
   /**
    * 安排下一次轮询
    * @private
-   * @param {string} executionId 
+   * @param {string} executionId
    */
   _scheduleNextPoll(executionId) {
     const task = this.pollingTasks.get(executionId);
     if (!task || !task.isActive) return;
 
-    // 计算下一次轮询间隔（可根据进度动态调整）
-    let interval = this.baseInterval;
-    
-    // 如果进度较慢，适当增加间隔
+    // 获取当前进度
     const status = this.lastStatusMap.get(executionId);
-    if (status && status.progress < 30) {
-      interval = Math.min(interval * 1.5, this.maxInterval);
-    }
+    const progress = status ? status.progress : 0;
 
-    // 使用重试策略计算间隔
+    // P1-1 优化：根据进度动态调整轮询间隔
+    let interval = this._calculateProgressBasedInterval(progress);
+
+    // 如果启用了重试策略，使用更智能的间隔计算
     if (isFeatureEnabled('diagnosis.enableRetryStrategy')) {
-      interval = RetryStrategy.calculateNextPoll(
+      const retryInterval = RetryStrategy.calculateNextPoll(
         task.attempt || 0,
         status,
         {
           strategy: 'exponentialWithJitter',
-          baseDelay: this.baseInterval,
+          baseDelay: interval,  // 使用基于进度的间隔作为基础
           maxDelay: this.maxInterval
         }
       );
+      // 取两者中较大的值，避免过于频繁
+      interval = Math.max(interval, retryInterval);
     }
+
+    // 确保不超过最大间隔
+    interval = Math.min(interval, this.maxInterval);
 
     task.timerId = setTimeout(() => {
       this._poll(executionId);
     }, interval);
 
     if (isFeatureEnabled('diagnosis.debug.enableLogging')) {
-      console.log(`[PollingManager] Next poll for ${executionId} in ${interval}ms`);
+      console.log(`[PollingManager] Next poll for ${executionId} in ${interval}ms (progress: ${progress}%)`);
+    }
+  }
+
+  /**
+   * P1-1 新增：根据进度计算轮询间隔
+   * @private
+   * @param {number} progress - 当前进度（0-100）
+   * @returns {number} 轮询间隔（毫秒）
+   */
+  _calculateProgressBasedInterval(progress) {
+    // P1-1 核心优化：进度越低，轮询越频繁；进度越高，轮询越慢
+    if (progress < this.progressThresholds.low) {
+      // 0-30%: 快速轮询阶段，1 秒一次
+      // 公式：1 秒 + (进度/30) * 0.5 秒，范围：1000-1500ms
+      return this.stageIntervals.fast + (progress / 30) * 500;
+    } else if (progress < this.progressThresholds.medium) {
+      // 30-60%: 中速轮询阶段，2 秒一次
+      // 公式：2 秒 + ((进度 -30)/30) * 1 秒，范围：2000-3000ms
+      return this.stageIntervals.medium + ((progress - 30) / 30) * 1000;
+    } else if (progress < this.progressThresholds.high) {
+      // 60-80%: 慢速轮询阶段，3 秒一次
+      // 公式：3 秒 + ((进度 -60)/20) * 2 秒，范围：3000-5000ms
+      return this.stageIntervals.slow + ((progress - 60) / 20) * 2000;
+    } else {
+      // 80-100%: 最终阶段，5 秒一次（接近完成时减少轮询）
+      // 公式：5 秒 + ((进度 -80)/20) * 5 秒，范围：5000-10000ms
+      return this.stageIntervals.final + ((progress - 80) / 20) * 5000;
     }
   }
 

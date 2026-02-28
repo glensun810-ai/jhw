@@ -33,3 +33,9 @@ bcrypt>=4.0.0         # 用于密码加密
 # PDF 生成相关依赖包
 reportlab>=4.0.0      # PDF 生成库
 xhtml2pdf>=0.2.11     # HTML to PDF 转换（支持中文）
+
+# P2-4 消息队列相关依赖包
+celery>=5.3.0         # 异步任务队列
+kombu>=5.3.0          # Celery 消息库
+flower>=2.0.0         # Celery 监控工具（可选）
+

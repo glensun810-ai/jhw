@@ -4,11 +4,12 @@
 重构说明:
 - 连接池管理 → database_connection_pool.py
 - 数据仓库层 → database_repositories.py
+- P2-6: 读写分离支持 → database_read_write_split.py
 
 本文件保留:
 - 数据库初始化
 - 表结构定义
-- 核心连接函数
+- 核心连接函数（支持读写分离）
 """
 
 import sqlite3
@@ -19,7 +20,9 @@ from wechat_backend.database_connection_pool import (
     get_db_pool,
     get_db_pool_metrics,
     reset_db_pool_metrics,
-    close_db_pool
+    close_db_pool,
+    get_db_connection,
+    return_db_connection,
 )
 
 DB_PATH = Path(__file__).parent.parent / 'database.db'
@@ -35,14 +38,28 @@ DATABASE_ENCRYPTION = ENCRYPTION_ENABLED
 
 # ==================== 数据库连接 ====================
 
-def get_connection() -> sqlite3.Connection:
-    """获取数据库连接（从连接池）"""
-    return get_db_pool().get_connection()
+def get_connection(operation_type: str = 'read') -> sqlite3.Connection:
+    """
+    获取数据库连接（从连接池，支持读写分离）
+    
+    Args:
+        operation_type: 操作类型 ('read' 或 'write')
+        
+    Returns:
+        数据库连接
+    """
+    return get_db_connection(operation_type)
 
 
-def return_connection(conn: sqlite3.Connection):
-    """归还数据库连接"""
-    get_db_pool().return_connection(conn)
+def return_connection(conn: sqlite3.Connection, operation_type: str = 'read'):
+    """
+    归还数据库连接
+    
+    Args:
+        conn: 数据库连接
+        operation_type: 操作类型 ('read' 或 'write')
+    """
+    return_db_connection(conn, operation_type)
 
 
 def close_db_connection():

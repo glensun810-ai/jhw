@@ -12,8 +12,9 @@ from wechat_backend.ai_adapters.geo_parser import parse_geo_json_enhanced
 # 保持向后兼容
 parse_geo_json = parse_geo_json_enhanced
 
-# ==================== GEO 分析提示词模板 ====================
+# ==================== GEO 分析提示词模板（P1-4 增强版） ====================
 # GEO Analysis Prompt Template with self-audit instructions
+# P1-4 修复：增强 JSON 格式要求，添加自检指令和验证规则
 GEO_PROMPT_TEMPLATE = """
 用户品牌：{brand_name}
 竞争对手：{competitors}
@@ -23,8 +24,10 @@ GEO_PROMPT_TEMPLATE = """
 
 ---
 重要要求：
+
 1. 请以专业顾问的身份客观回答。
-2. 在回答结束后，必须另起一行，以严格的 JSON 格式输出以下字段（不要包含在 Markdown 代码块中）：
+
+2. **关键要求**：在回答结束后，必须另起一行，以严格的 JSON 格式输出以下字段：
 {{
   "geo_analysis": {{
     "brand_mentioned": boolean,
@@ -37,24 +40,43 @@ GEO_PROMPT_TEMPLATE = """
   }}
 }}
 
-字段说明：
-- brand_mentioned: 品牌是否被提到 (true/false) - **必须明确回答**
-- rank: 品牌在推荐列表中的排名（**必须为 1-10 的数字**，若未提到则为 -1）- **必须明确排名**
-- sentiment: 对品牌的情感评分（**必须为 -1.0 到 1.0 的数字**，positive=0.5~1.0, neutral=0.0, negative=-1.0~-0.5）- **必须明确情感**
-- cited_sources: 提到的或暗示的信源/网址列表 - **必须提供至少 2 个真实信源**（如知乎、小红书、中关村在线、太平洋电脑网等）
-- interception: 如果推荐了竞品而没推荐我，写下竞品名
+3. **字段详细说明**：
+   - brand_mentioned: 品牌是否被提到 (true/false) - **必须明确回答，不能省略**
+   - rank: 品牌在推荐列表中的排名（**必须为 1-10 的数字**，若未提到则为 -1）- **必须明确排名**
+   - sentiment: 对品牌的情感评分（**必须为 -1.0 到 1.0 的数字**，positive=0.5~1.0, neutral=-0.1~0.1, negative=-1.0~-0.5）- **必须明确情感，不能为 0.0**
+   - cited_sources: 提到的或暗示的信源/网址列表 - **必须提供至少 2 个真实信源**
+   - interception: 如果推荐了竞品而没推荐我，写下竞品名（如果没有则留空字符串""）
 
-**重要提示**：
-1. rank 字段**不能为 -1**，必须根据品牌在回答中的推荐程度给出 1-10 的排名
-2. sentiment 字段**不能为 0.0**，必须根据回答的倾向性给出 -1.0 到 1.0 的评分
-3. cited_sources 字段**必须包含至少 2 个信源**，可以从以下常见科技媒体中选择：
-   - 知乎 (zhihu.com)
-   - 小红书 (xiaohongshu.com)
-   - 中关村在线 (zol.com.cn)
-   - 太平洋电脑网 (pconline.com.cn)
-   - 什么值得买 (smzdm.com)
-   - 品牌官网
-4. 如果回答中未明确提及具体 URL，请根据内容推断可能来源的信源网站
+4. **JSON 格式要求**：
+   - 必须是合法的可解析 JSON（使用双引号，不是单引号）
+   - 不要包含在 Markdown 代码块中（不要用 ```json 包裹）
+   - 不要有任何额外说明文字在 JSON 之后
+   - 所有字段都必须存在，不能省略
+
+5. **信源要求**（cited_sources 字段）：
+   - 必须包含至少 2 个信源
+   - 可以从以下常见科技媒体中选择：
+     * 知乎 (zhihu.com)
+     * 小红书 (xiaohongshu.com)
+     * 中关村在线 (zol.com.cn)
+     * 太平洋电脑网 (pconline.com.cn)
+     * 什么值得买 (smzdm.com)
+     * 品牌官网
+   - 如果回答中未明确提及具体 URL，请根据内容推断可能来源的信源网站
+
+6. **自检指令**（在输出 JSON 前请自我检查）：
+   - ✓ brand_mentioned 是否为布尔值（true/false）？
+   - ✓ rank 是否为 1-10 或 -1 的数字？
+   - ✓ sentiment 是否为 -1.0 到 1.0 之间的数字（且不为 0.0）？
+   - ✓ cited_sources 是否包含至少 2 个信源？
+   - ✓ JSON 格式是否合法（可以用 JSON.parse 解析）？
+   - ✓ 是否没有使用 Markdown 代码块包裹？
+
+7. **输出示例**（请严格按照此格式）：
+
+[这里是您的详细回答内容...]
+
+{{"geo_analysis": {{"brand_mentioned": true, "rank": 2, "sentiment": 0.7, "cited_sources": [{{"url": "https://www.zhihu.com/question/xxx", "site_name": "知乎", "attitude": "positive"}}, {{"url": "https://www.xiaohongshu.com/discovery/item/xxx", "site_name": "小红书", "attitude": "neutral"}}], "interception": ""}}}}
 """
 
 # ==================== P0 修复：客观问题提示词模板 ====================
@@ -78,7 +100,56 @@ OBJECTIVE_QUESTION_TEMPLATE = """
 }}
 """
 
+# ==================== P0 修复：客观问题提示词模板（P1-4 增强版） ====================
+# 用于获取 AI 的客观推荐回答（不带品牌倾向）
+# P1-4 修复：增强 JSON 格式要求，添加自检指令，提高结构化输出率
+OBJECTIVE_QUESTION_TEMPLATE = """
+请回答以下用户问题：
+{question}
+
+---
+重要要求：
+
+1. 请以专业顾问的身份客观回答。
+
+2. 请列出您推荐的 TOP3 品牌/门店，并说明理由。
+
+3. **关键要求**：在回答结束后，必须另起一行，以严格的 JSON 格式输出以下字段：
+{{
+  "top3_brands": [
+    {{"name": "品牌 1", "rank": 1, "reason": "推荐理由 1"}},
+    {{"name": "品牌 2", "rank": 2, "reason": "推荐理由 2"}},
+    {{"name": "品牌 3", "rank": 3, "reason": "推荐理由 3"}}
+  ],
+  "total_brands_mentioned": 5
+}}
+
+4. **JSON 格式要求**：
+   - 必须是合法的可解析 JSON（使用双引号，不是单引号）
+   - 不要包含在 Markdown 代码块中（不要用 ```json 包裹）
+   - 不要有任何额外说明文字在 JSON 之后
+   - rank 字段必须是 1、2、3 这样的数字
+   - name 和 reason 字段必须是非空字符串
+
+5. **自检指令**（在输出 JSON 前请自我检查）：
+   - ✓ 是否推荐了恰好 3 个品牌？
+   - ✓ 每个品牌是否都有 name、rank、reason 三个字段？
+   - ✓ rank 是否按 1、2、3 顺序排列？
+   - ✓ JSON 格式是否合法（可以用 JSON.parse 解析）？
+   - ✓ 是否没有使用 Markdown 代码块包裹？
+
+6. **输出示例**（请严格按照此格式）：
+
+好的，基于我的了解，以下是我为您推荐的品牌：
+
+[这里是您的详细推荐内容...]
+
+{{"top3_brands": [{{"name": "品牌 A", "rank": 1, "reason": "理由 A"}}, {{"name": "品牌 B", "rank": 2, "reason": "理由 B"}}, {{"name": "品牌 C", "rank": 3, "reason": "理由 C"}}], "total_brands_mentioned": 3}}
+"""
+
 # 品牌分析提示词（用于分析 AI 回答中的品牌提及情况）
+# P0 修复：用于后置分析 AI 回答中的品牌提及
+# P1-4 增强：添加 JSON 格式要求和自检指令
 BRAND_ANALYSIS_TEMPLATE = """
 以下是 AI 对问题"{question}"的回答：
 {ai_response}
@@ -92,7 +163,7 @@ BRAND_ANALYSIS_TEMPLATE = """
 4. 是否被推荐为 TOP3（is_top3: true/false）
 5. 提及的上下文（mention_context）
 
-请以 JSON 格式输出：
+**关键要求**：请以严格的 JSON 格式输出，不要包含任何额外文字：
 {{
   "brand_analysis": {{
     "brand_mentioned": boolean,
@@ -102,51 +173,23 @@ BRAND_ANALYSIS_TEMPLATE = """
     "mention_context": "string"
   }}
 }}
-"""
 
-# 客观问题提示词（用于获取 AI 回答）
-OBJECTIVE_QUESTION_TEMPLATE = """
-请回答以下用户问题：
-{question}
+**JSON 格式要求**：
+- 必须是合法的可解析 JSON（使用双引号）
+- 不要包含在 Markdown 代码块中
+- brand_mentioned 和 is_top3 必须是 true/false 布尔值
+- rank 必须是数字（1-10 或 -1）
+- sentiment 必须是 -1.0 到 1.0 之间的数字
+- mention_context 必须是字符串（如果未提及则为空字符串""）
 
----
-重要要求：
-1. 请以专业顾问的身份客观回答。
-2. 请列出您推荐的 TOP3 品牌/门店，并说明理由。
-3. 在回答结束后，必须另起一行，以严格的 JSON 格式输出以下字段（不要包含在 Markdown 代码块中）：
-{{
-  "top3_brands": [
-    {{"name": "品牌 1", "rank": 1, "reason": "推荐理由 1"}},
-    {{"name": "品牌 2", "rank": 2, "reason": "推荐理由 2"}},
-    {{"name": "品牌 3", "rank": 3, "reason": "推荐理由 3"}}
-  ],
-  "total_brands_mentioned": 5
-}}
-"""
+**自检指令**：
+- ✓ brand_mentioned 是否为布尔值？
+- ✓ rank 是否为数字？
+- ✓ sentiment 是否在 -1.0 到 1.0 范围内？
+- ✓ JSON 格式是否合法？
 
-# 品牌分析提示词（用于分析 AI 回答）
-BRAND_ANALYSIS_TEMPLATE = """
-以下是 AI 对问题"{question}"的回答：
-{ai_response}
-
-用户关注的品牌：{user_brand}
-
-请分析该品牌在回答中的表现：
-1. 是否被提及（brand_mentioned: true/false）
-2. 排名是多少（rank: 1-10，未提及为 -1）
-3. 情感倾向（sentiment: -1.0 到 1.0）
-4. 是否被推荐为 TOP3（is_top3: true/false）
-
-请以 JSON 格式输出：
-{{
-  "brand_analysis": {{
-    "brand_mentioned": boolean,
-    "rank": number,
-    "sentiment": number,
-    "is_top3": boolean,
-    "mention_context": "提及的上下文"
-  }}
-}}
+**输出示例**：
+{{"brand_analysis": {{"brand_mentioned": true, "rank": 2, "sentiment": 0.8, "is_top3": true, "mention_context": "品牌 X 在推荐中排名第二，表现优秀"}}}}
 """
 
 class AIPlatformType(Enum):

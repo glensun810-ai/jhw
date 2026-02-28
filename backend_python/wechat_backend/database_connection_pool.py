@@ -6,6 +6,9 @@
 - 连接复用，减少创建开销
 - 最大连接数限制
 - 监控指标采集
+- P2-6: 支持读写分离
+
+参考：P2-6: 数据库读写分离未实现
 """
 
 import sqlite3
@@ -173,3 +176,41 @@ def close_db_pool():
     if _db_pool:
         _db_pool.close_all()
         _db_pool = None
+
+
+# ==================== P2-6: 读写分离兼容函数 ====================
+
+def get_db_connection(operation_type: str = 'read') -> sqlite3.Connection:
+    """
+    根据操作类型获取数据库连接（兼容旧代码）
+    
+    Args:
+        operation_type: 操作类型 ('read' 或 'write')
+        
+    Returns:
+        数据库连接
+    """
+    # 尝试使用读写分离连接
+    try:
+        from wechat_backend.database.database_read_write_split import get_db_connection as get_rw_db_connection
+        return get_rw_db_connection(operation_type)
+    except Exception:
+        # 回退到默认连接池
+        return get_db_pool().get_connection()
+
+
+def return_db_connection(conn: sqlite3.Connection, operation_type: str = 'read'):
+    """
+    归还数据库连接（兼容旧代码）
+    
+    Args:
+        conn: 数据库连接
+        operation_type: 操作类型 ('read' 或 'write')
+    """
+    # 尝试使用读写分离归还
+    try:
+        from wechat_backend.database.database_read_write_split import return_db_connection as return_rw_db_connection
+        return_rw_db_connection(conn, operation_type)
+    except Exception:
+        # 回退到默认连接池
+        get_db_pool().return_connection(conn)
