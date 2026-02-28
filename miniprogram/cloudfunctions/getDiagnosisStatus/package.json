@@ -1,0 +1,12 @@
+{
+  "name": "getDiagnosisStatus",
+  "version": "1.0.0",
+  "description": "获取诊断任务状态云函数",
+  "main": "index.js",
+  "author": "系统架构组",
+  "license": "MIT",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "axios": "^1.6.0"
+  }
+}

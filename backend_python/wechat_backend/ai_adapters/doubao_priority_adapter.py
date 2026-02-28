@@ -97,7 +97,7 @@ class DoubaoPriorityAdapter(AIClient):
             if model_id in self.exhausted_models:
                 api_logger.info(f"[DoubaoPriority] 跳过配额用尽模型：{model_id}")
                 continue
-            
+
             try:
                 api_logger.info(f"[DoubaoPriority] 尝试模型 {i+1}/{len(self.priority_models)}: {model_id}")
 
@@ -120,7 +120,20 @@ class DoubaoPriorityAdapter(AIClient):
                 return True
 
             except Exception as e:
-                api_logger.warning(f"[DoubaoPriority] ❌ 模型 {model_id} 不可用：{str(e)}")
+                error_str = str(e)
+                # P0-DOUBAO-2 修复：检测 429 配额用尽错误，加入黑名单
+                is_quota_exceeded = (
+                    '429' in error_str or 
+                    'SetLimitExceeded' in error_str or 
+                    'Too Many Requests' in error_str or
+                    'inference limit' in error_str
+                )
+                
+                if is_quota_exceeded:
+                    self.exhausted_models.add(model_id)
+                    api_logger.warning(f"[DoubaoPriority] ❌ 模型 {model_id} 配额用尽 (429)，已加入黑名单")
+                else:
+                    api_logger.warning(f"[DoubaoPriority] ❌ 模型 {model_id} 不可用：{str(e)}")
                 # 继续尝试下一个模型
                 continue
 
@@ -236,16 +249,27 @@ class DoubaoPriorityAdapter(AIClient):
 
             # 检查是否是 429 错误（配额用尽）
             error_str = str(e)
-            is_quota_exceeded = '429' in error_str or 'SetLimitExceeded' in error_str or 'Too Many Requests' in error_str
-            
-            # 尝试切换模型（如果是 429 错误或其他可恢复错误）
-            if is_quota_exceeded or self._retry_with_next_model(self.selected_model):
-                if is_quota_exceeded:
-                    api_logger.warning(f"[DoubaoPriority] 检测到配额用尽（429），尝试切换模型")
+            is_quota_exceeded = (
+                '429' in error_str or 
+                'SetLimitExceeded' in error_str or 
+                'Too Many Requests' in error_str or
+                'inference limit' in error_str
+            )
+
+            # P0-DOUBAO-2 修复：配额用尽时记录到黑名单
+            if is_quota_exceeded and self.selected_model:
+                self.exhausted_models.add(self.selected_model)
+                api_logger.warning(f"[DoubaoPriority] 模型 {self.selected_model} 配额用尽 (429)，已加入黑名单")
+
+            # 尝试切换模型（如果是 429 错误或当前模型失败）
+            if is_quota_exceeded:
+                api_logger.warning(f"[DoubaoPriority] 检测到配额用尽（429），尝试切换模型")
                 if self._retry_with_next_model(self.selected_model):
                     # 切换成功，使用新模型重试
                     api_logger.info(f"[DoubaoPriority] 使用新模型 {self.selected_model} 重试")
                     return self.selected_adapter.send_prompt(prompt, **kwargs)
+                else:
+                    api_logger.error(f"[DoubaoPriority] 所有模型都已尝试，无法切换")
 
             # 返回错误响应
             return AIResponse(

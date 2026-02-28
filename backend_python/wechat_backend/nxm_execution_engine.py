@@ -60,7 +60,7 @@ from wechat_backend.ai_timeout import get_timeout_manager, AITimeoutError
 from wechat_backend.multi_model_executor import get_multi_model_executor
 
 # 配置导入
-from config import Config
+from legacy_config import Config
 
 
 # ==================== P0-001 修复：异步执行辅助函数 ====================
@@ -231,9 +231,9 @@ async def _execute_with_multi_model_redundancy(
         (AIResponse, actual_model): AI 响应和实际使用的模型名称
     """
     from wechat_backend.multi_model_executor import get_multi_model_executor
-    
+
     # 获取多模型执行器
-    executor = get_multi_model_executor(timeout_seconds=timeout)
+    executor = get_multi_model_executor(timeout=timeout)
     
     # 执行冗余调用
     result, actual_model = await executor.execute_with_redundancy(
@@ -382,7 +382,8 @@ def execute_nxm_test(
                         geo_data = None
                         parse_error = None
 
-                        if ai_result.status == "success":
+                        # P0-STATUS-1 修复：AIResponse 使用 success 属性而非 status 属性
+                        if ai_result.success:
                             # AI 调用成功，解析 GEO 数据
                             scheduler.record_model_success(model_name)
 
@@ -447,8 +448,8 @@ def execute_nxm_test(
                         try:
                             from wechat_backend.repositories import save_dimension_result, save_task_status
 
-                            # 确定维度状态和分数
-                            dim_status = "success" if (ai_result.status == "success" and geo_data and not geo_data.get('_error')) else "failed"
+                            # P0-STATUS-1 修复：AIResponse 使用 success 属性而非 status 属性
+                            dim_status = "success" if (ai_result.success and geo_data and not geo_data.get('_error')) else "failed"
                             dim_score = None
                             if dim_status == "success" and geo_data:
                                 # 从 GEO 数据中提取排名作为分数参考

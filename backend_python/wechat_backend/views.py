@@ -2635,28 +2635,6 @@ def get_test_record(record_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@wechat_bp.route('/api/ai-platforms', methods=['GET'])
-def get_ai_platforms():
-    platforms = {
-        'domestic': [
-            {'name': 'DeepSeek', 'checked': False, 'available': True},
-            {'name': '豆包', 'checked': False, 'available': True},
-            {'name': '元宝', 'checked': False, 'available': True},
-            {'name': '通义千问', 'checked': True, 'available': True},  # Qwen now marked as available
-            {'name': '文心一言', 'checked': False, 'available': True},
-            {'name': 'Kimi', 'checked': True, 'available': True},
-            {'name': '讯飞星火', 'checked': False, 'available': True}
-        ],
-        'overseas': [
-            {'name': 'ChatGPT', 'checked': True, 'available': True},
-            {'name': 'Claude', 'checked': True, 'available': True},
-            {'name': 'Gemini', 'checked': False, 'available': True},
-            {'name': 'Perplexity', 'checked': False, 'available': True},
-            {'name': 'Grok', 'checked': False, 'available': True}
-        ]
-    }
-    return jsonify(platforms)
-
 @wechat_bp.route('/api/send_message', methods=['POST'])
 def send_template_message():
     return jsonify({'status': 'success'})

@@ -32,18 +32,17 @@
         <!-- 已选平台详细提示 -->
         <view class="selected-platforms-summary" wx:if="{{selectedModelCount > 0}}">
           <view class="summary-header">
-            <text class="summary-title">已选AI</text>
           </view>
           <view class="summary-content">
             <view class="platform-group" wx:if="{{selectedMarketTab == 'domestic' && domesticSelectedNames.length > 0}}">
-              <text class="group-label">国内：</text>
+              <text class="group-label">已选国内<text class="platform-count">{{selectedModelCount}}个：</text></text>
               <text class="platform-names">{{domesticSelectedNames}}</text>
-              <text class="platform-count">（{{selectedModelCount}}个）</text>
+
             </view>
             <view class="platform-group" wx:if="{{selectedMarketTab == 'overseas' && overseasSelectedNames.length > 0}}">
-              <text class="group-label">海外：</text>
+              <text class="group-label">已选海外<text class="platform-count">{{selectedModelCount}}个：</text></text>
               <text class="platform-names">{{overseasSelectedNames}}</text>
-              <text class="platform-count">（{{selectedModelCount}}个）</text>
+
             </view>
 
           </view>
@@ -173,7 +172,6 @@
         
         <!-- 已选平台提示 -->
         <view class="selected-models-hint" wx:if="{{selectedModelCount > 0}}">
-          <text class="hint-icon">✓</text>
           <view class="hint-content">
             <text class="hint-text">当前市场已选择 <text class="highlight">{{selectedModelCount}}</text> 个 AI 平台</text>
             <text class="hint-sub" wx:if="{{totalSelectedCount > selectedModelCount}}">（另一个市场还选择了 {{totalSelectedCount - selectedModelCount}} 个，切换后可见）</text>
@@ -227,7 +225,6 @@
               bindtap="startBrandTest"
               disabled="{{isTesting}}">
         <text class="button-content">
-          <text class="button-icon" wx:if="{{!isTesting}}">🔍</text>
           <text class="loading-spinner" wx:if="{{isTesting}}"></text>
           <text class="button-text">{{isTesting ? '诊断中... ' + testProgress + '%' : 'AI 品牌战略诊断'}}</text>
         </text>

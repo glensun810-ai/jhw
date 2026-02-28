@@ -809,3 +809,9 @@ def cache_invalidate_endpoint():
     data = request.get_json() or {}
     pattern = data.get('pattern', '*')
     return jsonify(delete_cache_pattern(pattern))
+
+# ==================== 全局内存缓存实例 ====================
+# P1-CACHE-1 修复：创建全局 memory_cache 实例供缓存预热使用
+
+memory_cache = MemoryCache(max_size=CacheConfig.MAX_ENTRIES)
+"""全局内存缓存实例，供缓存预热等模块使用"""

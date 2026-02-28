@@ -148,10 +148,11 @@ def retry_dimension():
         
         if result_container['error']:
             raise Exception(result_container['error'])
-        
+
         ai_result = result_container['result']
-        
-        if ai_result.status == 'failed':
+
+        # P0-STATUS-1 修复：AIResponse 使用 success 属性而非 status 属性
+        if not ai_result.success:
             # AI 调用失败，返回错误
             return jsonify({
                 'success': False,

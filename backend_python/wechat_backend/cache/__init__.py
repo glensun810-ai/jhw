@@ -3,6 +3,7 @@
 
 P2-2 修复：引入 Redis 缓存层
 P2-7 修复：智能缓存预热
+P1-CACHE 修复：内存缓存导入失败
 
 模块：
 - redis_config: Redis 配置
@@ -13,6 +14,7 @@ P2-7 修复：智能缓存预热
 - cache_warmup_tasks: 预热任务实现
 - cache_warmup_scheduler: 定时调度器
 - cache_warmup_init: 预热初始化
+- api_cache: API 缓存（含全局 memory_cache 实例）
 
 @author: 系统架构组
 @date: 2026-02-28
@@ -62,6 +64,9 @@ from wechat_backend.cache.cache_warmup_tasks import (
     warmup_api_responses,
 )
 
+# P1-CACHE: 全局内存缓存实例
+from wechat_backend.cache.api_cache import memory_cache
+
 __all__ = [
     # 配置
     'RedisConfig',
@@ -97,4 +102,7 @@ __all__ = [
     'warmup_popular_questions',
     'warmup_recent_reports',
     'warmup_api_responses',
+
+    # P1-CACHE: 全局内存缓存实例
+    'memory_cache',
 ]

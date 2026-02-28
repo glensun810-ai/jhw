@@ -243,20 +243,57 @@ def save_task_status(task_status):
 
 
 def get_task_status(task_id):
-    """获取任务状态"""
+    """
+    获取任务状态（P2-2 优化：带 Redis 缓存）
+    
+    优化策略：
+    1. 先查 Redis 缓存（5 分钟 TTL）
+    2. 缓存未命中时查数据库
+    3. 写入缓存
+    
+    参数：
+        task_id: 任务 ID
+        
+    返回：
+        TaskStatus 对象，不存在返回 None
+    """
     if not sql_protector.validate_input(task_id):
         raise ValueError("Invalid task_id")
+
+    # P2-2 优化：先尝试从 Redis 缓存获取
+    try:
+        from wechat_backend.cache import get_cached_task_status
+        
+        cached_data = get_cached_task_status(task_id)
+        if cached_data and not cached_data.get('_empty'):
+            db_logger.info(f"[P2-2] Cache HIT for task: {task_id}")
+            
+            # 从缓存重建 TaskStatus 对象
+            return TaskStatus(
+                task_id=cached_data['task_id'],
+                progress=cached_data['progress'],
+                stage=TaskStage(cached_data['stage']),
+                status_text=cached_data['status_text'],
+                is_completed=bool(cached_data['is_completed']),
+                created_at=cached_data['created_at']
+            )
+        
+        db_logger.info(f"[P2-2] Cache MISS for task: {task_id}")
+        
+    except Exception as cache_error:
+        db_logger.warning(f"[P2-2] 缓存查询失败：{cache_error}，降级到数据库查询")
     
+    # 缓存未命中或出错，查询数据库
     db_logger.info(f"Retrieving task status for task: {task_id}")
-    
+
     safe_query = SafeDatabaseQuery(DB_PATH)
-    
+
     rows = safe_query.execute_query('''
         SELECT task_id, progress, stage, status_text, is_completed, created_at
         FROM task_statuses
         WHERE task_id = ?
     ''', (task_id,))
-    
+
     if rows:
         row = rows[0]
         task_status = TaskStatus(
@@ -267,6 +304,25 @@ def get_task_status(task_id):
             is_completed=bool(row[4]),
             created_at=row[5]
         )
+        
+        # P2-2 优化：写入 Redis 缓存
+        try:
+            from wechat_backend.cache import set_cached_task_status
+            
+            set_cached_task_status(task_id, {
+                'task_id': task_status.task_id,
+                'progress': task_status.progress,
+                'stage': task_status.stage.value,
+                'status_text': task_status.status_text,
+                'is_completed': task_status.is_completed,
+                'created_at': task_status.created_at
+            })
+            
+            db_logger.debug(f"[P2-2] 缓存已写入：{task_id}")
+            
+        except Exception as cache_error:
+            db_logger.debug(f"[P2-2] 缓存写入失败：{cache_error}")
+        
         db_logger.info(f"Successfully retrieved task status for task: {task_id}")
         return task_status
     else:

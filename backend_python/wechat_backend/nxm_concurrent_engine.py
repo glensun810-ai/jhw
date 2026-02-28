@@ -29,7 +29,7 @@ from wechat_backend.nxm_result_aggregator import parse_geo_with_validation
 from wechat_backend.ai_timeout import get_timeout_manager
 from wechat_backend.smart_circuit_breaker import circuit_breaker
 from wechat_backend.repositories import save_dimension_result, save_task_status, save_dimension_results_batch
-from config import Config
+from legacy_config import Config
 
 
 # 并发配置
@@ -105,9 +105,10 @@ def execute_single_task(task: Dict[str, Any]) -> Dict[str, Any]:
             loop.close()
         
         elapsed = time.time() - start_time
-        
+
         # 6. 处理结果
-        if ai_result.status == "success":
+        # P0-STATUS-1 修复：AIResponse 使用 success 属性而非 status 属性
+        if ai_result.success:
             # AI 调用成功，解析 GEO 数据
             geo_data, parse_error = parse_geo_with_validation(
                 ai_result.data,

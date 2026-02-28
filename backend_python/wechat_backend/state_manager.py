@@ -95,6 +95,16 @@ class DiagnosisStateManager:
                         store['stage'] = stage
                     if progress is not None:
                         store['progress'] = progress
+                        # P1-3 新增：WebSocket 进度推送
+                        try:
+                            from wechat_backend.websocket_route import send_diagnosis_progress
+                            send_diagnosis_progress(execution_id, {
+                                'progress': progress,
+                                'stage': stage or store.get('stage', 'unknown'),
+                                'status': status or store.get('status', 'processing')
+                            })
+                        except Exception as ws_error:
+                            api_logger.debug(f"[WebSocket] 进度推送失败：{ws_error}")
                     if is_completed is not None:
                         store['is_completed'] = is_completed
                     if results is not None:
@@ -121,6 +131,8 @@ class DiagnosisStateManager:
                 # ==================== 步骤 2: 更新数据库（可选） ====================
                 if write_to_db:
                     try:
+                        # P0-STATE-1 修复：save_diagnosis_report 不接受 error_message 参数
+                        # 错误信息已通过 status_text 在 task_statuses 表中记录
                         save_diagnosis_report(
                             execution_id=execution_id,
                             user_id=user_id,
@@ -131,8 +143,7 @@ class DiagnosisStateManager:
                             status=status or 'processing',
                             progress=progress or 0,
                             stage=stage or 'processing',
-                            is_completed=is_completed or False,
-                            error_message=error_message
+                            is_completed=is_completed or False
                         )
                         api_logger.info(f"[StateManager] 数据库状态已更新：{execution_id}")
                     except Exception as db_err:
@@ -198,7 +209,18 @@ class DiagnosisStateManager:
 
         if success:
             api_logger.info(f"[StateManager] ✅ 执行完成：{execution_id}")
-            
+
+            # P1-3 新增：WebSocket 完成推送
+            try:
+                from wechat_backend.websocket_route import send_diagnosis_complete
+                send_diagnosis_complete(execution_id, {
+                    'status': 'completed',
+                    'progress': 100,
+                    'stage': 'completed'
+                })
+            except Exception as ws_error:
+                api_logger.debug(f"[WebSocket] 完成推送失败：{ws_error}")
+
             # 【P0 关键修复】验证数据库状态已正确写入
             try:
                 from wechat_backend.diagnosis_report_repository import DiagnosisReportRepository

@@ -45,12 +45,12 @@ class MultiModelExecutor:
     3. 如果所有模型都失败，返回最佳错误信息
     """
     
-    # 默认备用模型配置（当主模型失败时的备用选择）
+    # 默认备用模型配置（P0-DIAG 修复：确保备用模型列表完整且按优先级排序）
     DEFAULT_FALLBACK_MODELS = {
-        'doubao': ['qwen', 'deepseek', 'wenxin'],  # 豆包的备用
-        'qwen': ['doubao', 'deepseek', 'wenxin'],  # 通义的备用
-        'deepseek': ['doubao', 'qwen', 'wenxin'],  # 深度求索的备用
-        'wenxin': ['doubao', 'qwen', 'deepseek'],  # 文心的备用
+        'doubao': ['qwen', 'deepseek'],  # 豆包的备用：通义、深度求索
+        'qwen': ['doubao', 'deepseek'],  # 通义的备用：豆包、深度求索
+        'deepseek': ['qwen', 'doubao'],  # 深度求索的备用：通义、豆包
+        'wenxin': ['qwen', 'doubao', 'deepseek'],  # 文心的备用
     }
     
     # 模型优先级（数字越小优先级越高）
@@ -84,88 +84,114 @@ class MultiModelExecutor:
         q_idx: int = None
     ) -> Tuple[AIResponse, str]:
         """
-        带冗余的模型调用
-        
+        带冗余的模型调用（P0-DIAG 修复：顺序尝试版本）
+
         策略：
         1. 首先尝试主模型
-        2. 主模型失败时，并发尝试备用模型
+        2. 主模型失败时，按顺序尝试备用模型
         3. 返回第一个成功的有效结果
-        
+        4. 所有模型失败时，返回详细错误报告
+
         参数：
             prompt: 提示词
             primary_model: 主模型名称
             fallback_models: 备用模型列表（为 None 时使用默认配置）
             execution_id: 执行 ID（用于日志）
             q_idx: 问题索引（用于日志）
-            
+
         返回：
             (AIResponse, model_name): AI 响应和实际使用的模型名称
         """
         log_context = f"exec={execution_id}, Q={q_idx}" if execution_id else ""
-        
+
         # 确定备用模型列表
         if fallback_models is None:
             fallback_models = self.DEFAULT_FALLBACK_MODELS.get(
                 primary_model,
                 [m for m in self.MODEL_PRIORITY.keys() if m != primary_model]
             )
-        
+
         # 所有待尝试的模型（主模型 + 备用模型）
         all_models = [primary_model] + fallback_models
-        
+
+        # P0-DIAG-1 修复：记录尝试计划
         api_logger.info(
             f"[MultiModel] 启动冗余调用：{log_context}, "
             f"主模型={primary_model}, 备用模型={fallback_models}"
         )
-        
-        # 并发调用所有模型
-        tasks = [
-            self._call_single_model(model, prompt, log_context)
-            for model in all_models
-        ]
-        
-        # 等待所有任务完成
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # 查找第一个成功的结果
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                api_logger.warning(
-                    f"[MultiModel] 模型 {all_models[i]} 调用异常：{result}"
-                )
-                continue
-            
-            if isinstance(result, AIResponse) and result.success:
-                # 验证响应内容是否有效
-                if self._validate_ai_response(result):
+
+        # 记录每个模型的失败原因
+        failure_log = []
+
+        # P0-DIAG-1 修复：按顺序尝试每个模型
+        for i, model_name in enumerate(all_models):
+            is_primary = (i == 0)
+            attempt_msg = "主模型" if is_primary else f"备用模型#{i}"
+            api_logger.info(
+                f"[MultiModel] 尝试 {attempt_msg} {model_name}: {log_context} "
+                f"({i+1}/{len(all_models)})"
+            )
+
+            try:
+                result = await self._call_single_model(model_name, prompt, log_context)
+
+                # 检查是否成功
+                if result.success and self._validate_ai_response(result):
                     api_logger.info(
-                        f"[MultiModel] ✅ 模型 {all_models[i]} 调用成功"
+                        f"[MultiModel] ✅ {attempt_msg} {model_name} 调用成功"
                     )
-                    return result, all_models[i]
+                    return result, model_name
                 else:
+                    # 模型返回失败响应
+                    error_msg = result.error_message or "未知错误"
+                    error_type = result.error_type.value if result.error_type else "unknown"
+                    failure_log.append({
+                        'model': model_name,
+                        'error': error_msg,
+                        'type': error_type,
+                        'attempt': attempt_msg
+                    })
                     api_logger.warning(
-                        f"[MultiModel] 模型 {all_models[i]} 响应无效：{result.error_message}"
+                        f"[MultiModel] ⚠️ {attempt_msg} {model_name} 调用失败：{error_type} - {error_msg}"
                     )
-            else:
+
+            except Exception as e:
+                # 模型调用异常
+                error_msg = str(e)
+                failure_log.append({
+                    'model': model_name,
+                    'error': error_msg,
+                    'type': 'exception',
+                    'attempt': attempt_msg
+                })
                 api_logger.warning(
-                    f"[MultiModel] 模型 {all_models[i]} 调用失败：{result.error_message if isinstance(result, AIResponse) else 'Unknown'}"
+                    f"[MultiModel] ⚠️ {attempt_msg} {model_name} 调用异常：{error_msg}"
                 )
-        
-        # 所有模型都失败，返回最佳错误信息
+
+        # P0-DIAG-1 修复：所有模型都失败，返回详细错误报告
         api_logger.error(
-            f"[MultiModel] ❌ 所有模型调用失败：{log_context}"
+            f"[MultiModel] ❌ 所有 {len(all_models)} 个模型调用失败：{log_context}"
         )
-        
-        # 返回第一个模型的错误（或最详细的错误）
-        first_result = results[0]
-        if isinstance(first_result, AIResponse):
-            return first_result, primary_model
-        elif isinstance(first_result, Exception):
+
+        # 构建详细错误信息
+        error_details = []
+        for failure in failure_log:
+            error_details.append(
+                f"{failure['attempt']}({failure['model']}): {failure['type']} - {failure['error'][:100]}"
+            )
+
+        detailed_error = "所有模型调用失败:\n" + "\n".join(error_details)
+        api_logger.error(f"[MultiModel] 详细错误:\n{detailed_error}")
+
+        # 返回第一个错误（保持向后兼容）
+        first_failure = failure_log[0] if failure_log else None
+        if first_failure:
             return AIResponse(
                 success=False,
-                error_message=str(first_result),
-                model=primary_model
-            ), primary_model
+                error_message=detailed_error,
+                error_type=AIErrorType.SERVICE_UNAVAILABLE,
+                model=first_failure['model']
+            ), first_failure['model']
         else:
             return AIResponse(
                 success=False,
@@ -180,28 +206,41 @@ class MultiModelExecutor:
         log_context: str
     ) -> AIResponse:
         """
-        调用单个模型（带限流保护）
-        
+        调用单个模型（带限流保护和 API Key 检测）
+
         参数：
             model_name: 模型名称
             prompt: 提示词
             log_context: 日志上下文
-            
+
         返回：
             AIResponse: AI 响应
         """
         async with self._semaphore:
             try:
+                # P0-DIAG-2 修复：检查 API Key 是否配置
+                from config import Config
+                if not Config.is_api_key_configured(model_name):
+                    api_logger.warning(
+                        f"[MultiModel] 模型 {model_name} 未配置 API Key，跳过：{log_context}"
+                    )
+                    return AIResponse(
+                        success=False,
+                        error_message=f"模型 {model_name} 未配置 API Key",
+                        error_type=AIErrorType.INVALID_API_KEY,
+                        model=model_name
+                    )
+
                 # 创建 AI 客户端
                 client = AIAdapterFactory.create(model_name)
-                
+
                 # 调用模型
                 api_logger.debug(
                     f"[MultiModel] 调用模型 {model_name}: {log_context}"
                 )
-                
+
                 result = client.send_prompt(prompt)
-                
+
                 # 记录结果
                 if result and result.success:
                     api_logger.debug(
@@ -211,9 +250,9 @@ class MultiModelExecutor:
                     api_logger.debug(
                         f"[MultiModel] 模型 {model_name} 失败：{result.error_message if result else 'No response'}"
                     )
-                
+
                 return result
-                
+
             except Exception as e:
                 api_logger.error(
                     f"[MultiModel] 模型 {model_name} 异常：{e}, {log_context}"

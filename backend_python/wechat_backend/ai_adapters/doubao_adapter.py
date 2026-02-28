@@ -98,9 +98,11 @@ class DoubaoAdapter(AIClient):
             if response.status_code == 200:
                 debug_log("HEALTH_CHECK", "INIT", f"Doubao health check passed, latency: {latency:.2f}s")
             else:
-                exception_log("INIT", "HEALTH_CHECK", f"Doubao health check failed: {response.status_code}, response: {response.text[:200]}...")
+                # P1-HEALTH-2 修复：健康检查失败降级为 WARNING，因为不影响主流程
+                debug_log("HEALTH_CHECK", "INIT", f"Doubao health check failed: {response.status_code}, response: {response.text[:200]}...")
         except Exception as e:
-            exception_log("INIT", "HEALTH_CHECK", f"Doubao health check failed: {e}")
+            # P1-HEALTH-2 修复：健康检查异常降级为 WARNING，因为不影响主流程
+            debug_log("HEALTH_CHECK", "INIT", f"Doubao health check failed: {e}")
             # 不抛出异常，只是记录警告
             debug_log("HEALTH_CHECK", "INIT", "Doubao service may be unavailable at startup")
 
@@ -351,10 +353,10 @@ class DoubaoAdapter(AIClient):
                             response_text = e.response.text.lower() if e.response.text else ""
                             if "quota" in response_text or "credit" in response_text or "insufficient" in response_text or "余额" in response_text.lower() or "耗尽" in response_text.lower():
                                 error_type = AIErrorType.INSUFFICIENT_QUOTA
-                                api_logger.warning(f"[DoubaoAdapter] 检测到配额用尽：{model_name}, 响应：{e.response.text[:200]}")
+                                api_logger.warning(f"[DoubaoAdapter] 检测到配额用尽：{self.model_name}, 响应：{e.response.text[:200]}")
                             else:
                                 error_type = AIErrorType.RATE_LIMIT_EXCEEDED
-                                api_logger.warning(f"[DoubaoAdapter] 检测到频率限制：{model_name}, 响应：{e.response.text[:200]}")
+                                api_logger.warning(f"[DoubaoAdapter] 检测到频率限制：{self.model_name}, 响应：{e.response.text[:200]}")
                         elif status_code >= 500:
                             error_type = AIErrorType.SERVER_ERROR
                         else:
