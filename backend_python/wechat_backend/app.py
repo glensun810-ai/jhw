@@ -1,3 +1,12 @@
+import os
+import sys
+from pathlib import Path
+
+# Add backend_python to path for direct execution
+_backend_root = Path(__file__).parent.parent
+if str(_backend_root) not in sys.path:
+    sys.path.insert(0, str(_backend_root))
+
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 import hashlib
@@ -5,9 +14,8 @@ import hmac
 import json
 import requests
 from datetime import datetime
-import os
 
-from config import Config
+from legacy_config import Config
 
 # Initialize logging before other imports to capture all logs
 #
@@ -38,7 +46,7 @@ init_task_queue_db()
 try:
     from wechat_backend.database.database_replication import initialize_replication
     from wechat_backend.database.database_replication_monitor import start_replication_monitoring
-    
+
     initialize_replication()
     start_replication_monitoring()
     app_logger.info("✅ 数据库读写分离已启动")
@@ -46,6 +54,25 @@ except Exception as e:
     app_logger.warning(f"⚠️  数据库读写分离启动失败：{e}")
     import traceback
     app_logger.error(f"[数据库读写分离] 错误详情：{traceback.format_exc()}")
+
+# AI Platform Health Check - 防止平台消失问题复发
+try:
+    from wechat_backend.ai_adapters.platform_health_monitor import run_startup_health_check
+    
+    app_logger.info("=== AI Platform Health Check ===")
+    health_results = run_startup_health_check()
+    
+    if health_results:
+        if health_results['status'] == 'unhealthy':
+            app_logger.error("⚠️  AI Platform health check FAILED! Check logs for details.")
+        elif health_results['status'] == 'degraded':
+            app_logger.warning("⚠️  AI Platform health check completed with warnings.")
+        else:
+            app_logger.info("✅ AI Platform health check passed!")
+except Exception as e:
+    app_logger.error(f"AI Platform health check failed: {e}")
+    import traceback
+    app_logger.error(f"Traceback: {traceback.format_exc()}")
 
 # Security imports
 from wechat_backend.security.input_validation import validate_and_sanitize_request, InputValidator, InputSanitizer

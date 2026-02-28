@@ -10,7 +10,7 @@ from wechat_backend.ai_adapters.doubao_adapter import DoubaoAdapter
 from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType
 from wechat_backend.logging_config import api_logger
 from wechat_backend.config_manager import ConfigurationManager as PlatformConfigManager
-from config import Config
+from legacy_config import Config
 
 
 class DoubaoPriorityAdapter(AIClient):

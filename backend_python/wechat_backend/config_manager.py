@@ -3,7 +3,7 @@ Configuration Manager - Centralized API Key Management
 Provides secure access to API keys from environment variables
 """
 from typing import Optional
-from config import Config
+from legacy_config import Config
 
 
 class ConfigData:
