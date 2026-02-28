@@ -523,6 +523,10 @@ def perform_brand_test():
 
                     # ==================== 步骤 4: 保存快照并发送 SSE 通知 ====================
                     # 构建完整报告数据并保存快照
+                    # 防御性编程：安全获取嵌套字典值，避免 None.get() 错误
+                    quality_score = result.get('quality_score') or {}
+                    brand_analysis = result.get('brand_analysis') or {}
+                    
                     report_data = {
                         "reportId": execution_id,
                         "userId": user_id or "anonymous",
@@ -536,11 +540,17 @@ def perform_brand_test():
                             "userLevel": user_level.value
                         },
                         "reportData": {
-                            "overallScore": result.get('quality_score', {}).get('overall_score') if result.get('quality_score') else None,
+                            "overallScore": quality_score.get('overall_score') if quality_score else None,
                             "overallStatus": "completed",
                             "dimensions": results,
                             "aggregated": result.get('aggregated', []),
-                            "qualityScore": result.get('quality_score')
+                            "qualityScore": quality_score,
+                            # 【P0 关键修复】添加品牌分析数据
+                            "brandAnalysis": brand_analysis,
+                            "userBrandAnalysis": brand_analysis.get('user_brand_analysis') if brand_analysis else None,
+                            "competitorAnalysis": brand_analysis.get('competitor_analysis', []) if brand_analysis else [],
+                            "comparison": brand_analysis.get('comparison') if brand_analysis else None,
+                            "top3Brands": brand_analysis.get('top3_brands', []) if brand_analysis else []
                         },
                         "executionInfo": {
                             "formula": result.get('formula'),
@@ -559,19 +569,24 @@ def perform_brand_test():
                     api_logger.info(f"[状态同步 -4/4] ✅ 报告快照已保存：{execution_id}")
 
                     # 【关键修复】发送 SSE 完成通知，立即告知前端诊断已完成
+                    # 注意：SSE 服务暂未实现，使用日志记录替代
                     try:
-                        from wechat_backend.services.sse_service import send_completion_notification
-                        send_completion_notification(
+                        from wechat_backend.services.sse_service import get_sse_service
+                        sse_service = get_sse_service()
+                        sse_service.send_event(
                             execution_id=execution_id,
-                            progress=100,
-                            stage='completed',
-                            status_text='诊断完成',
-                            results_count=len(results),
-                            total_tasks=result.get('total_tasks', 0)
+                            event_type='complete',
+                            data={
+                                'progress': 100,
+                                'stage': 'completed',
+                                'status_text': '诊断完成',
+                                'results_count': len(results),
+                                'total_tasks': result.get('total_tasks', 0)
+                            }
                         )
                         api_logger.info(f"[SSE] ✅ 完成通知已发送：{execution_id}")
                     except Exception as sse_err:
-                        api_logger.error(f"[SSE] ⚠️ 通知发送失败：{sse_err}")
+                        api_logger.debug(f"[SSE] ⚠️ 通知发送失败：{sse_err}")
 
                     # 【P1-T2 新增】任务完成，取消超时计时器
                     try:
@@ -620,6 +635,20 @@ def perform_brand_test():
                     api_logger.info(f"[状态同步 - 失败处理 2/3] ✅ 数据库状态已更新：{execution_id}")
                 except Exception as state_err:
                     api_logger.error(f"[状态同步 - 失败处理 2/3] ⚠️ 状态管理器更新失败：{state_err}")
+
+                # 【P0-前端同步修复】同时更新 task_statuses 表，确保前端轮询能获取到失败状态
+                try:
+                    from wechat_backend.repositories.task_status_repository import save_task_status
+                    save_task_status(
+                        task_id=execution_id,
+                        stage='failed',
+                        progress=100,
+                        status_text='诊断失败：' + (error_message or '未知错误'),
+                        is_completed=True
+                    )
+                    api_logger.info(f"[状态同步 - 失败处理 2.5/3] ✅ task_statuses 表已同步更新：{execution_id}")
+                except Exception as task_err:
+                    api_logger.error(f"[状态同步 - 失败处理 2.5/3] ⚠️ task_statuses 表更新失败：{execution_id}, 错误：{task_err}")
 
                 # M004 改造：即使失败也保存错误报告
                 try:
@@ -2196,10 +2225,13 @@ def convert_to_dashboard_format(aggregate_result, all_brands, main_brand):
             # 准备模型响应数据
             model_responses = []
             for result in detailed_results:
+                # 防御性编程：安全获取嵌套字典值
+                quality_metrics = result.get('quality_metrics') or {}
+                detailed_feedback = quality_metrics.get('detailed_feedback') or {}
                 model_responses.append({
                     'model_name': result.get('aiModel', 'unknown'),
                     'ai_response': result.get('response', ''),
-                    'citations': result.get('quality_metrics', {}).get('detailed_feedback', {}).get('citations', []),
+                    'citations': detailed_feedback.get('citations', []),
                     'question': result.get('question', '')
                 })
             
@@ -2259,16 +2291,21 @@ def convert_to_dashboard_format(aggregate_result, all_brands, main_brand):
                 
                 # 合并所有模型的响应
                 combined_response = ' '.join([r.get('response', '') for r in results])
-                
+
                 # 分析排名
                 rank_analysis = analyzer.analyze(combined_response, all_brands)
-                
+
                 # 获取主品牌的排名
                 ranking_list = rank_analysis.get('ranking_list', [])
                 brand_rank = ranking_list.index(main_brand) + 1 if main_brand in ranking_list else -1
-                
+
                 # 计算平均排名 (基于 geo_score 和物理排名)
-                ranked_results = [r for r in results if r.get('enhanced_scores', {}).get('geo_score', 0) > 0]
+                # 防御性编程：安全获取 enhanced_scores
+                ranked_results = []
+                for r in results:
+                    enhanced_scores = r.get('enhanced_scores') or {}
+                    if enhanced_scores.get('geo_score', 0) > 0:
+                        ranked_results.append(r)
                 if ranked_results:
                     geo_avg_rank = sum(r['enhanced_scores']['geo_score'] for r in ranked_results) / len(ranked_results)
                     geo_avg_rank = round(geo_avg_rank / 10, 1)  # 转换为 1-10 排名
@@ -2316,10 +2353,15 @@ def convert_to_dashboard_format(aggregate_result, all_brands, main_brand):
                     question_map[question] = {'text': question, 'results': [], 'models': set()}
                 question_map[question]['results'].append(result)
                 question_map[question]['models'].add(result.get('aiModel', 'unknown'))
-            
+
             for question_text, q_data in question_map.items():
                 results = q_data['results']
-                ranked_results = [r for r in results if r.get('enhanced_scores', {}).get('geo_score', 0) > 0]
+                # 防御性编程：安全获取 enhanced_scores
+                ranked_results = []
+                for r in results:
+                    enhanced_scores = r.get('enhanced_scores') or {}
+                    if enhanced_scores.get('geo_score', 0) > 0:
+                        ranked_results.append(r)
                 if ranked_results:
                     avg_rank = sum(r['enhanced_scores']['geo_score'] for r in ranked_results) / len(ranked_results)
                     avg_rank = round(avg_rank / 10, 1)
@@ -2874,7 +2916,7 @@ def submit_brand_test():
                 brand_name=brand_list[0],
                 ai_models_used=selected_models,
                 questions_used=raw_questions,
-                overall_score=processed_results.get('main_brand', {}).get('overallScore', 0),
+                overall_score=(processed_results.get('main_brand') or {}).get('overallScore', 0),
                 total_tests=len(all_test_cases),
                 results_summary=processed_results.get('summary', {}),
                 detailed_results=processed_results.get('detailed_results', []),
@@ -3057,6 +3099,8 @@ def get_task_status_api(task_id):
             'status': task_status.get('status', 'init'),
             'results': results_list,
             'is_completed': task_status.get('status') == 'completed',
+            # 【P0 关键修复】添加 should_stop_polling 字段，确保前端能停止轮询
+            'should_stop_polling': task_status.get('status') in ['completed', 'failed'],
             'created_at': task_status.get('start_time', None),
             'updated_at': task_status.get('updated_at', ''),
             'has_updates': True,
