@@ -10,12 +10,19 @@
 参考：P2-7: 智能缓存预热未实现
 """
 
+import sys
 import time
 import threading
 import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Callable
 from pathlib import Path
+
+# 添加 backend_python 到路径
+backend_root = Path(__file__).parent.parent.parent
+if str(backend_root) not in sys.path:
+    sys.path.insert(0, str(backend_root))
+
 from wechat_backend.logging_config import api_logger, db_logger
 from config.config_cache_warmup import CacheWarmupConfig, cache_warmup_config
 
