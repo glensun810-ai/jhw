@@ -51,7 +51,9 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
     // P1-009 新增：详细进度信息
     detailText: '',
     remainingTime: '',
-    resultsCount: 0
+    resultsCount: 0,
+    // 【P0 关键修复】添加 should_stop_polling 字段
+    should_stop_polling: false
   };
 
   // 计算已用时间
@@ -59,13 +61,23 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
   parsed.remainingTime = calculateRemainingTime(parsed.progress, elapsedSeconds);
   parsed.resultsCount = parsed.results.length || parsed.detailed_results.length;
 
-  // 【P0 修复 - 架构师决策】优先使用后端返回的 is_completed 字段
-  const backendIsCompleted = (statusData && typeof statusData.is_completed === 'boolean') 
-    ? statusData.is_completed 
+  // 【P0 关键修复 - 架构师决策】优先使用后端返回的 should_stop_polling 字段
+  // 这是判断是否停止轮询的最可靠依据
+  const backendShouldStopPolling = (statusData && typeof statusData.should_stop_polling === 'boolean')
+    ? statusData.should_stop_polling
     : false;
   
-  // 优先使用 stage 字段而非 status 字段
-  const status = statusData.stage || statusData.status;
+  parsed.should_stop_polling = backendShouldStopPolling;
+
+  // 【P0 修复 - 架构师决策】优先使用后端返回的 is_completed 字段
+  const backendIsCompleted = (statusData && typeof statusData.is_completed === 'boolean')
+    ? statusData.is_completed
+    : false;
+
+  // 【P0 关键修复】优先使用 status 字段而非 stage 字段
+  // 原因：status 是后端状态机明确标记的终态标识，stage 可能只是阶段描述
+  // 例如：status='completed' 但 stage='processing' 时，应该以 status 为准
+  const status = statusData.status || statusData.stage;
 
   console.log('[parseTaskStatus] 原始数据:', {
     stage: statusData?.stage,
@@ -204,11 +216,35 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
     parsed.is_completed = statusData.is_completed;
   }
 
+  // 【P0 关键修复】如果后端明确标记 should_stop_polling=true，强制覆盖为完成状态
+  // 这是最可靠的终止信号，优先级高于所有其他判断
+  if (backendShouldStopPolling) {
+    console.log('[parseTaskStatus] ✅ 后端标记 should_stop_polling=true，强制设置为完成状态');
+    parsed.should_stop_polling = true;
+    
+    // 如果后端返回 status='completed' 或 status='failed'，直接使用
+    if (statusData.status === 'completed' || statusData.status === 'failed') {
+      parsed.stage = statusData.status;
+      parsed.status = statusData.status;
+      parsed.is_completed = (statusData.status === 'completed');
+      parsed.progress = 100;
+      parsed.statusText = statusData.status === 'completed' ? '诊断完成！' : '诊断完成（失败）';
+    } else if (parsed.stage !== 'completed' && parsed.stage !== 'failed') {
+      // 如果 stage 不是终态，但 should_stop_polling=true，说明是异常情况
+      console.warn('[parseTaskStatus] ⚠️ 异常：should_stop_polling=true 但 stage 不是终态，强制设置为 completed');
+      parsed.stage = 'completed';
+      parsed.is_completed = true;
+      parsed.progress = 100;
+      parsed.statusText = '诊断完成';
+    }
+  }
+
   // 调试日志
   console.log('[parseTaskStatus] 解析结果:', {
     stage: parsed.stage,
     progress: parsed.progress,
     is_completed: parsed.is_completed,
+    should_stop_polling: parsed.should_stop_polling,
     status: parsed.status,
     results_count: parsed.resultsCount,
     remaining_time: parsed.remainingTime,

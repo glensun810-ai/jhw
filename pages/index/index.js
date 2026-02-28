@@ -150,8 +150,13 @@ Page({
     progressText: '准备启动AI认知诊断...',
     testCompleted: false,
 
+    // 【Step 1 新增】统一状态管理（与现有变量并存，双轨运行）
+    // 状态枚举：'idle' | 'checking' | 'testing' | 'completed' | 'error'
+    appState: 'idle',
+
     // 高级设置控制
-    showAdvancedSettings: false,
+    // 【修复】默认展开，除非用户手动折叠
+    showAdvancedSettings: true,
 
     // 存储后端返回的最终结果
     latestTestResults: null,
@@ -228,12 +233,37 @@ Page({
       // 2. 检查服务器连接（使用服务，异步）
       checkServerConnection(this);
 
-      // 3. 加载用户 AI 平台偏好（使用服务）
+      // 3. 【P0 关键修复】初始化 AI 平台数据（同步，确保页面渲染时有数据）
+      this.initDomesticAiModels();
+      this.initOverseasAiModels();
+      
+      // 4. 加载用户 AI 平台偏好（使用服务，异步）
       loadUserPlatformPreferences(this);
       this.updateSelectedModelCount();
       this.updateSelectedQuestionCount();
 
-      // 4. 防御性读取 config.estimate（多层保护）
+      // 5. 【新增】从 Storage 读取高级设置展开/折叠状态
+      try {
+        const savedSettings = wx.getStorageSync('advanced_settings_state');
+        if (savedSettings && typeof savedSettings === 'object' && savedSettings.showAdvancedSettings !== undefined) {
+          // 恢复用户上次的状态
+          this.setData({
+            showAdvancedSettings: savedSettings.showAdvancedSettings
+          });
+          console.log('[高级设置] 恢复用户上次状态:', savedSettings.showAdvancedSettings ? '展开' : '折叠');
+        } else {
+          // 默认展开
+          this.setData({
+            showAdvancedSettings: true
+          });
+          console.log('[高级设置] 使用默认状态：展开');
+        }
+      } catch (e) {
+        console.warn('[高级设置] 读取 Storage 失败，使用默认展开状态');
+        this.setData({ showAdvancedSettings: true });
+      }
+
+      // 6. 防御性读取 config.estimate（多层保护）
       let estimate = { duration: '30s', steps: 5 };
       if (this.data && this.data.config) {
         const config = this.data.config;
@@ -244,14 +274,14 @@ Page({
 
       console.log('诊断预估配置:', estimate);
 
-      // 5. 检查是否需要立即启动快速搜索
+      // 7. 检查是否需要立即启动快速搜索
       if (options && options.quickSearch === 'true') {
         setTimeout(() => {
           this.startBrandTest();
         }, 1000);
       }
 
-      // 6. 应用页面进入动画
+      // 8. 应用页面进入动画
       this.applyPageEnterAnimation();
 
       // 注意：restoreDraft 移到 onShow 中调用，避免 onLoad 中重复 setData
@@ -341,6 +371,9 @@ Page({
       // 清除临时配置
       app.globalData.tempConfig = null;
     }
+
+    // 【P0 关键修复】先确保 AI 平台数据已初始化，再恢复草稿
+    this.refreshAiPlatforms();
 
     // P1-1 修复：恢复草稿
     this.restoreDraft();
@@ -546,10 +579,131 @@ Page({
     }
   },
 
+  /**
+   * 切换高级设置展开/折叠
+   * 【P0 修复】展开时刷新 AI 平台显示，确保数据正确
+   * 【新增】保存用户选择的状态到 Storage
+   */
   toggleAdvancedSettings: function() {
+    const willExpand = !this.data.showAdvancedSettings;
+
     this.setData({
-      showAdvancedSettings: !this.data.showAdvancedSettings
+      showAdvancedSettings: willExpand
     });
+
+    // 【新增】保存用户选择的状态到 Storage
+    try {
+      wx.setStorageSync('advanced_settings_state', {
+        showAdvancedSettings: willExpand,
+        updatedAt: Date.now()
+      });
+      console.log('[高级设置] 状态已保存:', willExpand ? '展开' : '折叠');
+    } catch (e) {
+      console.warn('[高级设置] 保存 Storage 失败:', e);
+    }
+
+    // 【P0 关键修复】展开时刷新 AI 平台数据，确保正确显示
+    if (willExpand) {
+      this.refreshAiPlatforms();
+    }
+  },
+
+  /**
+   * 【P0 新增】刷新 AI 平台数据
+   * 【关键修复】确保高级设置展开时 AI 平台矩阵正确显示
+   * 【修复】始终确保 AI 平台数据存在，杜绝消失问题
+   */
+  refreshAiPlatforms: function() {
+    try {
+      // 检查当前数据
+      const currentDomestic = this.data.domesticAiModels;
+      const currentOverseas = this.data.overseasAiModels;
+
+      // 【关键修复】无论数据是否为空，都确保数据存在且正确
+      // 如果数据不存在或格式不正确，立即初始化
+      if (!currentDomestic || !Array.isArray(currentDomestic) || currentDomestic.length === 0) {
+        console.log('[刷新 AI 平台] domesticAiModels 不存在或为空，初始化');
+        this.initDomesticAiModels();
+      }
+
+      if (!currentOverseas || !Array.isArray(currentOverseas) || currentOverseas.length === 0) {
+        console.log('[刷新 AI 平台] overseasAiModels 不存在或为空，初始化');
+        this.initOverseasAiModels();
+      }
+
+      // 更新选中计数
+      this.updateSelectedModelCount();
+
+      console.log('[刷新 AI 平台] 完成', {
+        domestic: this.data.domesticAiModels?.length || 0,
+        overseas: this.data.overseasAiModels?.length || 0
+      });
+    } catch (error) {
+      console.error('[刷新 AI 平台] 失败:', error);
+      // 【兜底方案】如果刷新失败，强制初始化
+      console.warn('[刷新 AI 平台] 失败，执行兜底初始化');
+      this.initDomesticAiModels();
+      this.initOverseasAiModels();
+    }
+  },
+
+  /**
+   * 【P0 新增】初始化国内 AI 平台列表
+   */
+  initDomesticAiModels: function() {
+    const defaultDomestic = [
+      { name: 'DeepSeek', id: 'deepseek', checked: true, logo: 'DS', tags: ['综合', '代码'] },
+      { name: '豆包', id: 'doubao', checked: true, logo: 'DB', tags: ['综合', '创意'] },
+      { name: '通义千问', id: 'qwen', checked: true, logo: 'QW', tags: ['综合', '长文本'] },
+      { name: '元宝', id: 'yuanbao', checked: false, logo: 'YB', tags: ['综合']},
+      { name: 'Kimi', id: 'kimi', checked: false, logo: 'KM', tags: ['长文本'] },
+      { name: '文心一言', id: 'wenxin', checked: false, logo: 'WX', tags: ['综合', '创意'] },
+      { name: '讯飞星火', id: 'xinghuo', checked: false, logo: 'XF', tags: ['综合', '语音'] },
+      { name: '智谱 AI', id: 'zhipu', checked: false, logo: 'ZP', tags: ['综合', 'GLM'] },
+    ];
+
+    // 尝试从存储中恢复用户偏好
+    try {
+      const prefs = wx.getStorageSync('user_ai_platform_preferences');
+      if (prefs && prefs.domestic && Array.isArray(prefs.domestic)) {
+        const selectedNames = prefs.domestic;
+        defaultDomestic.forEach(model => {
+          model.checked = selectedNames.includes(model.name);
+        });
+      }
+    } catch (e) {
+      console.warn('读取用户偏好失败，使用默认配置');
+    }
+
+    this.setData({ domesticAiModels: defaultDomestic });
+  },
+
+  /**
+   * 【P0 新增】初始化海外 AI 平台列表
+   */
+  initOverseasAiModels: function() {
+    const defaultOverseas = [
+      { name: 'ChatGPT', id: 'chatgpt', checked: true, logo: 'GPT', tags: ['综合', '代码'] },
+      { name: 'Gemini', id: 'gemini', checked: false, logo: 'GM', tags: ['综合', '多模态'] },
+      { name: 'Claude', id: 'claude', checked: false, logo: 'CD', tags: ['长文本', '创意'] },
+      { name: 'Perplexity', id: 'perplexity', checked: false, logo: 'PE', tags: ['综合', '长文本'] },
+      { name: 'Grok', id: 'grok', checked: false, logo: 'GR', tags: ['推理', '多模态'] },
+    ];
+
+    // 尝试从存储中恢复用户偏好
+    try {
+      const prefs = wx.getStorageSync('user_ai_platform_preferences');
+      if (prefs && prefs.overseas && Array.isArray(prefs.overseas)) {
+        const selectedNames = prefs.overseas;
+        defaultOverseas.forEach(model => {
+          model.checked = selectedNames.includes(model.name);
+        });
+      }
+    } catch (e) {
+      console.warn('读取用户偏好失败，使用默认配置');
+    }
+
+    this.setData({ overseasAiModels: defaultOverseas });
   },
 
   /**
@@ -613,6 +767,7 @@ Page({
 
   /**
    * P2 修复：从本地存储恢复草稿（使用服务）
+   * 【P0 增强】确保 AI 平台数据正确恢复
    */
   restoreDraft: function() {
     const draft = restoreDraft(); // 调用服务函数
@@ -621,15 +776,26 @@ Page({
       // 恢复自定义问题（确保格式正确）
       const formattedQuestions = formatDraftQuestions(draft.customQuestions);
 
-      // P3 修复：确保 domesticAiModels 和 overseasAiModels 是数组
-      const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
-      const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
-      
-      // 恢复 AI 平台选择状态
-      const formattedModels = formatDraftModels(
-        domesticAiModels.concat(overseasAiModels),
-        draft.selectedModels
-      );
+      // 【P0 关键修复】确保 AI 平台数组存在且正确
+      let domesticAiModels = this.data.domesticAiModels || [];
+      let overseasAiModels = this.data.overseasAiModels || [];
+
+      // 如果数组为空，先初始化
+      if (!domesticAiModels || domesticAiModels.length === 0) {
+        console.warn('[恢复草稿] domesticAiModels 为空，先初始化');
+        this.initDomesticAiModels();
+        domesticAiModels = this.data.domesticAiModels;
+      }
+
+      if (!overseasAiModels || overseasAiModels.length === 0) {
+        console.warn('[恢复草稿] overseasAiModels 为空，先初始化');
+        this.initOverseasAiModels();
+        overseasAiModels = this.data.overseasAiModels;
+      }
+
+      // 恢复 AI 平台选择状态（合并所有模型后格式化）
+      const allModels = domesticAiModels.concat(overseasAiModels);
+      const formattedModels = formatDraftModels(allModels, draft.selectedModels);
 
       // 合并为一次 setData，提高性能
       const updateData = {
@@ -637,8 +803,12 @@ Page({
         currentCompetitor: draft.currentCompetitor || '',
         competitorBrands: Array.isArray(draft.competitorBrands) ? draft.competitorBrands : [],
         customQuestions: formattedQuestions.length > 0 ? formattedQuestions : this.data.customQuestions,
-        domesticAiModels: formattedModels.domestic && Array.isArray(formattedModels.domestic) ? formattedModels.domestic : domesticAiModels,
-        overseasAiModels: formattedModels.overseas && Array.isArray(formattedModels.overseas) ? formattedModels.overseas : overseasAiModels
+        domesticAiModels: formattedModels.domestic && Array.isArray(formattedModels.domestic) && formattedModels.domestic.length > 0 
+          ? formattedModels.domestic 
+          : domesticAiModels,
+        overseasAiModels: formattedModels.overseas && Array.isArray(formattedModels.overseas) && formattedModels.overseas.length > 0 
+          ? formattedModels.overseas 
+          : overseasAiModels
       };
 
       this.setData(updateData);
@@ -647,6 +817,15 @@ Page({
       // 更新计数
       this.updateSelectedModelCount();
       this.updateSelectedQuestionCount();
+    } else {
+      // 没有草稿，确保 AI 平台数据已初始化
+      console.log('[恢复草稿] 没有可用草稿，确保 AI 平台已初始化');
+      if (!this.data.domesticAiModels || this.data.domesticAiModels.length === 0) {
+        this.initDomesticAiModels();
+      }
+      if (!this.data.overseasAiModels || this.data.overseasAiModels.length === 0) {
+        this.initOverseasAiModels();
+      }
     }
   },
 
@@ -1065,6 +1244,36 @@ Page({
     });
   },
 
+  /**
+   * 【Step 5 新增】辅助函数集合 - 用于简化 WXML 状态判断
+   */
+  getStateText: function() {
+    var appState = this.data.appState;
+    var testProgress = this.data.testProgress;
+    
+    switch(appState) {
+      case 'testing':
+        return '诊断中... ' + testProgress + '%';
+      case 'completed':
+        return '重新诊断';
+      case 'error':
+        return 'AI 品牌战略诊断';
+      default:
+        return 'AI 品牌战略诊断';
+    }
+  },
+
+  isButtonDisabled: function() {
+    return this.data.isTesting || this.data.appState === 'testing';
+  },
+
+  isLoading: function() {
+    return this.data.isTesting || this.data.appState === 'testing';
+  },
+
+  shouldShowViewReport: function() {
+    return (this.data.testCompleted && !this.data.hasLastReport) || this.data.appState === 'completed';
+  },
 
   startBrandTest: function() {
     const brandName = this.data.brandName.trim();
@@ -1109,7 +1318,8 @@ Page({
       testProgress: 0,
       progressText: '正在启动AI认知诊断...',
       testCompleted: false,
-      completedTime: null
+      completedTime: null,
+      appState: 'testing'
     });
 
     this.callBackendBrandTest(brand_list, selectedModels, customQuestions);
@@ -1181,10 +1391,13 @@ Page({
       }
 
       // P3 修复：立即更新按钮状态，不等待异步处理
+      // 【Step 3 新增】同步设置 appState
       this.setData({
         isTesting: false,
         testCompleted: true,
-        completedTime: this.getCompletedTimeText()
+        hasLastReport: true,
+        completedTime: this.getCompletedTimeText(),
+        appState: 'completed'  // 与 testCompleted: true 对应
       });
 
       // P2 优化：先跳转结果页，再异步处理数据
@@ -1315,10 +1528,13 @@ Page({
       console.error('处理诊断完成失败:', error);
       wx.showToast({ title: '处理结果失败', icon: 'none' });
       // P3 修复：即使处理失败也要更新按钮状态
+      // 【Step 3 新增】同步设置 appState
       this.setData({
         isTesting: false,
         testCompleted: true,
-        completedTime: this.getCompletedTimeText()
+        hasLastReport: true,
+        completedTime: this.getCompletedTimeText(),
+        appState: 'completed'  // 与 testCompleted: true 对应
       });
     }
   },

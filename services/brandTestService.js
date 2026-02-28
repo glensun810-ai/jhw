@@ -322,9 +322,48 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
             onProgress(parsedStatus);
           }
 
-          // P2 优化：使用统一的状态判断函数
+          // 【P0 关键修复】优先检查 should_stop_polling 字段
+          // 这是后端明确标记的终止信号，优先级最高
+          if (parsedStatus.should_stop_polling === true) {
+            controller.stop();
+            console.log('[轮询终止] 后端标记 should_stop_polling=true，停止轮询');
+            
+            // 判断是成功完成还是失败
+            const status = parsedStatus.status || parsedStatus.stage;
+            
+            if (status === 'completed' || parsedStatus.is_completed === true) {
+              // 成功完成
+              if (onComplete) {
+                onComplete(parsedStatus);
+              }
+            } else if (status === 'failed') {
+              // 失败
+              const hasResults = parsedStatus.results && parsedStatus.results.length > 0;
+              const hasDetailedResults = parsedStatus.detailed_results && parsedStatus.detailed_results.length > 0;
+              const hasAnyResults = hasResults || hasDetailedResults;
+
+              if (hasAnyResults) {
+                // 有结果的部分失败，视为部分完成
+                console.warn('[品牌诊断] 部分失败但有结果，继续展示可用数据');
+                if (onComplete) {
+                  onComplete(parsedStatus);
+                }
+              } else if (onError) {
+                // 完全失败
+                onError(new Error(parsedStatus.error || '诊断失败'));
+              }
+            } else {
+              // 其他情况，视为完成
+              if (onComplete) {
+                onComplete(parsedStatus);
+              }
+            }
+            return;
+          }
+
+          // P2 优化：使用统一的状态判断函数（兼容旧逻辑）
           const status = parsedStatus.status || parsedStatus.stage;
-          
+
           if (isTerminalStatus(status)) {
             // 任务完成（包括部分完成）
             controller.stop();
@@ -339,7 +378,7 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
             // 任务失败
             controller.stop();
             console.log('[轮询终止] 任务失败，status:', status);
-            
+
             const hasResults = parsedStatus.results && parsedStatus.results.length > 0;
             const hasDetailedResults = parsedStatus.detailed_results && parsedStatus.detailed_results.length > 0;
             const hasAnyResults = hasResults || hasDetailedResults;
