@@ -197,10 +197,10 @@
       </view>
     </view>
 
-    <!-- 主操作按钮 -->
+    <!-- 主操作按钮 - Step 6: 完全使用 appState -->
     <view class="main-action-section">
-      <!-- 状态 1: 有上次诊断报告 -->
-      <view class="completed-actions {{hasLastReport && !isTesting ? '' : 'hidden'}}">
+      <!-- 状态 1: 有上次诊断报告（保留，这是独立状态） -->
+      <view class="completed-actions {{hasLastReport && appState !== 'testing' ? '' : 'hidden'}}">
         <view class="completed-badge">
           <text class="badge-icon">✅</text>
           <text class="badge-text">已有诊断报告</text>
@@ -220,18 +220,31 @@
         </view>
       </view>
 
-      <!-- 状态 2: 诊断按钮（始终显示，根据状态改变文字） -->
+      <!-- 状态 2: 诊断按钮（完全使用 appState） -->
       <button class="scan-button {{hasLastReport ? 'hidden' : ''}}"
               bindtap="startBrandTest"
-              disabled="{{isTesting}}">
+              disabled="{{appState === 'testing'}}">
         <text class="button-content">
-          <text class="loading-spinner" wx:if="{{isTesting}}"></text>
-          <text class="button-text">{{isTesting ? '诊断中... ' + testProgress + '%' : 'AI 品牌战略诊断'}}</text>
+          <text class="loading-spinner" wx:if="{{appState === 'testing'}}"></text>
+          <text class="button-text">
+            <block wx:if="{{appState === 'testing'}}">
+              诊断中... {{testProgress}}%
+            </block>
+            <block wx:elif="{{appState === 'completed'}}">
+              重新诊断
+            </block>
+            <block wx:elif="{{appState === 'error'}}">
+              AI 品牌战略诊断
+            </block>
+            <block wx:else>
+              AI 品牌战略诊断
+            </block>
+          </text>
         </text>
       </button>
 
-      <!-- 状态 3: 诊断完成（当次）- 始终显示查看按钮 -->
-      <view class="completed-actions {{testCompleted && !hasLastReport ? '' : 'hidden'}}">
+      <!-- 状态 3: 诊断完成（当次）- 完全使用 appState -->
+      <view class="completed-actions {{appState === 'completed' ? '' : 'hidden'}}">
         <view class="completed-badge">
           <text class="badge-icon">✅</text>
           <text class="badge-text">诊断已完成</text>
@@ -260,16 +273,17 @@
       status="{{currentStage}}"
       progress="{{testProgress}}"
       data="{{reportData}}"
-      loading="{{isTesting}}"
-      wx:if="{{isTesting || reportData}}">
+      loading="{{appState === 'testing'}}"
+      wx:if="{{appState === 'testing' || appState === 'completed' || reportData}}">
     </analysis-card>
 
     <!-- Zone B: 维度雷达 (The Analyst View) -->
     <!-- 新增：综合分析图表组件 -->
+    <!-- Step 6: 使用 appState 控制 loading -->
     <analysis-charts
       radar-data="{{scoreData}}"
       trend-data="{{trendChartData}}"
-      loading="{{isTesting}}"
+      loading="{{appState === 'testing'}}"
       wx:if="{{reportData}}">
     </analysis-charts>
 
@@ -277,7 +291,7 @@
     <score-radar
       title="品牌认知评分雷达图"
       scores="{{scoreData}}"
-      loading="{{isTesting}}"
+      loading="{{appState === 'testing'}}"
       wx:if="{{reportData && !analysisChartsEnabled}}">
     </score-radar>
 
@@ -286,7 +300,7 @@
       title="品牌认知趋势分析"
       chart-data="{{trendChartData}}"
       prediction-data="{{predictionData}}"
-      loading="{{isTesting}}"
+      loading="{{appState === 'testing'}}"
       wx:if="{{reportData && !analysisChartsEnabled}}">
     </trend-chart>
 
@@ -294,7 +308,7 @@
     <!-- 竞品攻防矩阵：展示品牌占位情况 -->
     <competitor-matrix
       competition-data="{{competitionData}}"
-      loading="{{isTesting}}"
+      loading="{{appState === 'testing'}}"
       wx:if="{{reportData}}">
     </competitor-matrix>
 
@@ -303,7 +317,7 @@
     <source-card
       title="证据链 (Source of Truth)"
       sources="{{sourceListData}}"
-      loading="{{isTesting}}"
+      loading="{{appState === 'testing'}}"
       wx:if="{{reportData}}">
     </source-card>
 

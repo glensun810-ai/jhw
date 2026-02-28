@@ -1391,13 +1391,11 @@ Page({
       }
 
       // P3 修复：立即更新按钮状态，不等待异步处理
-      // 【Step 3 新增】同步设置 appState
+      // Step 7: 主要使用 appState
       this.setData({
-        isTesting: false,
-        testCompleted: true,
+        appState: 'completed',
         hasLastReport: true,
-        completedTime: this.getCompletedTimeText(),
-        appState: 'completed'  // 与 testCompleted: true 对应
+        completedTime: this.getCompletedTimeText()
       });
 
       // P2 优化：先跳转结果页，再异步处理数据
@@ -1528,13 +1526,11 @@ Page({
       console.error('处理诊断完成失败:', error);
       wx.showToast({ title: '处理结果失败', icon: 'none' });
       // P3 修复：即使处理失败也要更新按钮状态
-      // 【Step 3 新增】同步设置 appState
+      // Step 7: 主要使用 appState
       this.setData({
-        isTesting: false,
-        testCompleted: true,
+        appState: 'completed',
         hasLastReport: true,
-        completedTime: this.getCompletedTimeText(),
-        appState: 'completed'  // 与 testCompleted: true 对应
+        completedTime: this.getCompletedTimeText()
       });
     }
   },
