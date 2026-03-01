@@ -19,6 +19,8 @@ from dotenv import load_dotenv
 # 动态将 backend_python 目录添加到 sys.path，确保项目根目录被正确识别
 # =============================================================================
 base_dir = os.path.dirname(os.path.abspath(__file__))
+
+# 添加 backend_python 根目录到路径（确保 utils 等顶层模块可被导入）
 if base_dir not in sys.path:
     sys.path.insert(0, base_dir)
 

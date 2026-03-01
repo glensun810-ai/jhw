@@ -60,7 +60,7 @@ def enforce_auth_middleware():
         
         # 对于 /api/perform-brand-test 等端点，允许匿名访问
         # 由 @require_auth_optional 装饰器处理
-        # 只对严格需要认证的端点（如 /api/test-progress, /api/user/*）返回 401
+        # 只对严格需要认证的端点（如 /test/status, /api/user/*）返回 401
         if is_strict_auth_endpoint(request.path):
             # 需要认证但未提供，返回 401
             logger.warning(f"[Auth Middleware] 未认证访问敏感端点：{request.path} from {request.remote_addr}")
@@ -80,17 +80,17 @@ def enforce_auth_middleware():
 def is_strict_auth_endpoint(path: str) -> bool:
     """
     判断端点是否需要严格认证（不允许匿名）
-    
+
     严格认证的端点：
-    - 用户数据查询：/api/test-progress, /api/test-history, /api/user/*
+    - 用户数据查询：/test/status/*, /api/test-history, /api/user/*
     - 管理接口：/api/admin/*, /admin/*
-    
+
     可选认证的端点：
     - /api/perform-brand-test (允许匿名用户使用)
     """
     # 严格认证的端点列表
     strict_endpoints = [
-        '/api/test-progress',
+        '/test/status/',
         '/api/test-history',
         '/api/user/',
         '/api/user_info',
@@ -113,12 +113,11 @@ def is_strict_auth_endpoint(path: str) -> bool:
 def require_strict_auth(f):
     """
     严格认证装饰器（差距 1 修复）
-    
+
     用于保护敏感 API 端点：
-    - /api/test-progress（测试进度，包含用户数据）
     - /test/status/{id}（任务状态，包含用户数据）
     - 其他包含用户敏感数据的 API
-    
+
     认证方式:
     1. JWT Token (Authorization: Bearer <token>)
     2. 微信 OpenID (X-WX-OpenID 头)
@@ -307,24 +306,22 @@ def log_audit_access(endpoint_name: str):
 # 实际强制认证由 is_strict_auth_endpoint() 控制
 STRICT_AUTH_ENDPOINTS = [
     # 测试相关 - 包含用户测试数据
-    '/api/test-progress',
-    '/api/test-history',
     '/test/status/',
     '/test/submit',
     # 注意：/api/perform-brand-test 使用可选认证，不在严格认证列表中
-    
+
     # 用户数据相关 - 个人隐私信息
     '/api/user/',
     '/api/user_info',
     '/api/user/profile',
     '/api/user/update',
     '/api/user-data/',
-    
+
     # 结果和报告相关
     '/api/saved-results/',
     '/api/deep-intelligence/',
     '/api/dashboard/aggregate',
-    
+
     # 管理相关
     '/api/admin/',
     '/admin/',

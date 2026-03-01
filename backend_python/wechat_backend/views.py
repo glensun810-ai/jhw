@@ -1921,55 +1921,6 @@ def get_platform_status():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-@wechat_bp.route('/api/test-progress', methods=['GET'])
-@require_strict_auth
-@monitored_endpoint('/api/test-progress', require_auth=True, validate_inputs=False)
-def get_test_progress():
-    """
-    获取测试进度 - 【任务 3 优化】
-
-    新增 is_synced 字段：
-    - 当 status == 'completed' 且 len(results) == expected 时，is_synced 为 true
-    - 告知前端，数据不仅运行完了，而且已经完全同步到了报告引擎中
-    """
-    execution_id = request.args.get('executionId')
-    if execution_id and execution_id in execution_store:
-        progress_data = execution_store[execution_id]
-
-        # 【任务 3】数据同步检查 - 增加 is_synced 字段
-        status = progress_data.get('status', 'unknown')
-        results = progress_data.get('results', [])
-        expected = progress_data.get('expected_total', progress_data.get('total', 0))
-        completion_verified = progress_data.get('completion_verified', False)
-
-        # is_synced 为 true 的条件：
-        # 1. status == 'completed'
-        # 2. len(results) == expected
-        # 3. completion_verified == True（可选，增强检查）
-        is_synced = (
-            status == 'completed' and
-            len(results) == expected and
-            expected > 0 and
-            completion_verified
-        )
-
-        progress_data['is_synced'] = is_synced
-        progress_data['sync_check'] = {
-            'status': status,
-            'results_count': len(results),
-            'expected_count': expected,
-            'completion_verified': completion_verified
-        }
-
-        # 如果任务已完成，添加一个标志来通知前端停止轮询
-        if progress_data.get('status') in ['completed', 'failed']:
-            progress_data['should_stop_polling'] = True
-
-        return jsonify(progress_data)
-    else:
-        return jsonify({'error': 'Execution ID not found'}), 404
-
-
 # ====================
 # SSE 实时推送端点
 # ====================

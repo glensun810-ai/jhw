@@ -51,14 +51,22 @@ def parse_geo_with_validation(
     response_text: str,
     execution_id: str,
     q_idx: int,
-    model_name: str
+    model_name: str,
+    brand_name: str = None
 ) -> Tuple[Dict[str, Any], Optional[str]]:
     """
     解析 GEO 数据并验证
 
-    返回：
-    - geo_data: 解析后的 GEO 数据
-    - error: 错误信息（如果有）
+    Args:
+        response_text: AI 响应文本
+        execution_id: 执行 ID
+        q_idx: 问题索引
+        model_name: 模型名称
+        brand_name: 品牌名称（用于 top3_brands 转换）
+
+    Returns:
+        geo_data: 解析后的 GEO 数据
+        error: 错误信息（如果有）
     """
     try:
         # 【P0 修复】处理 AIResponse 对象
@@ -76,9 +84,9 @@ def parse_geo_with_validation(
                     'interception': '',
                     '_error': f'AI 调用失败：{response_text.error_message}'
                 }, response_text.error_message or 'AI 调用失败'
-        
-        # 修复 1: 传递 execution_id, q_idx, model_name 参数
-        geo_data = parse_geo_json_enhanced(response_text, execution_id, q_idx, model_name)
+
+        # 修复 1: 传递 execution_id, q_idx, model_name, brand_name 参数
+        geo_data = parse_geo_json_enhanced(response_text, execution_id, q_idx, model_name, brand_name)
 
         # 修复 1: 检查是否有错误标记
         if geo_data.get('_error'):

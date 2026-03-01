@@ -74,7 +74,7 @@ class RedisCacheService:
         if not REDIS_AVAILABLE:
             api_logger.warning("[Redis] 未安装 redis 库，使用内存缓存降级方案")
             return
-        
+
         try:
             # 创建连接池
             self._pool = ConnectionPool(
@@ -87,20 +87,39 @@ class RedisCacheService:
                 socket_connect_timeout=self.config.SOCKET_CONNECT_TIMEOUT,
                 decode_responses=True
             )
-            
+
             # 创建客户端
             self._client = Redis(connection_pool=self._pool)
-            
+
             # 测试连接
             self._client.ping()
-            
+
             api_logger.info(
                 f"[Redis] 连接成功：{self.config.HOST}:{self.config.PORT}"
             )
-            
+
         except Exception as e:
-            api_logger.error(f"[Redis] 连接失败：{e}，使用内存缓存降级方案")
+            error_msg = str(e)
+            
+            # P0-DB-INIT-005: 针对常见错误提供友好提示
+            if "Connection refused" in error_msg or "Error 61" in error_msg:
+                api_logger.warning(
+                    f"[Redis] 连接被拒绝 (Error 61)：{self.config.HOST}:{self.config.PORT} - "
+                    f"Redis 服务可能未启动。使用内存缓存降级方案。"
+                    f"如需启用 Redis，请运行：brew services start redis"
+                )
+            elif "No such file or directory" in error_msg:
+                api_logger.warning(
+                    f"[Redis] 无法连接到 Unix socket - "
+                    f"Redis 可能配置为使用 socket 连接。使用内存缓存降级方案。"
+                )
+            else:
+                api_logger.warning(
+                    f"[Redis] 连接失败：{e}，使用内存缓存降级方案"
+                )
+            
             self._client = None
+            self._stats['errors'] += 1
     
     def _get_client(self) -> Optional[Redis]:
         """获取 Redis 客户端"""
@@ -568,3 +587,16 @@ def init_redis_cache(config: RedisConfig = None) -> RedisCacheService:
     global _redis_cache
     _redis_cache = RedisCacheService(config)
     return _redis_cache
+
+
+def get_redis_client():
+    """
+    获取 Redis 客户端实例（兼容旧代码）
+    
+    返回：
+        Redis 客户端实例或 None（如果不可用）
+    """
+    cache_service = get_redis_cache()
+    if cache_service and hasattr(cache_service, '_client'):
+        return cache_service._client
+    return None

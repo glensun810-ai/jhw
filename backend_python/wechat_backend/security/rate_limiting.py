@@ -168,7 +168,7 @@ class EndpointRateLimiter:
             '/api/login': {'limit': 5, 'window': 60},  # 每分钟5次
             '/api/test': {'limit': 100, 'window': 60},  # 每分钟100次
             '/api/platform-status': {'limit': 50, 'window': 60},  # 每分钟50次
-            '/api/test-progress': {'limit': 30, 'window': 60},  # 每分钟30次
+            '/test/status/': {'limit': 30, 'window': 60},  # 每分钟30次
             '/api/test-history': {'limit': 20, 'window': 60},  # 每分钟20次
             '/api/test-record': {'limit': 20, 'window': 60},  # 每分钟20次
         }

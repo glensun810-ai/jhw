@@ -72,7 +72,15 @@ def close_db_connection():
 def init_db():
     """初始化数据库表结构"""
     db_logger.info(f"初始化数据库于 {DB_PATH}")
+    db_logger.info(f"数据库路径解析：{DB_PATH.resolve()}")
+    db_logger.info(f"数据库文件存在：{DB_PATH.exists()}")
     
+    # P0-DB-INIT-004: 诊断数据库路径一致性
+    import os
+    db_logger.info(f"当前工作目录：{os.getcwd()}")
+    db_logger.info(f"__file__ 路径：{__file__}")
+    db_logger.info(f"__file__ 解析路径：{Path(__file__).resolve()}")
+
     conn = None
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -159,17 +167,19 @@ def init_db():
             )
         ''')
         
-        # 审计日志表
+        # 审计日志表（修复：添加 admin_id 列以匹配索引定义）
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS audit_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT,
+                admin_id TEXT,
                 action TEXT,
                 resource TEXT,
                 details TEXT,
                 ip_address TEXT,
                 user_agent TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
 
@@ -185,8 +195,12 @@ def init_db():
         ''')
 
         conn.commit()
-        db_logger.info("数据库表结构初始化完成")
         
+        # P0-DB-INIT-003: 确保表创建后触发 WAL 检查点，使其他连接可见
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        
+        db_logger.info("数据库表结构初始化完成")
+
     except Exception as e:
         db_logger.error(f"数据库初始化失败：{e}")
         if conn:

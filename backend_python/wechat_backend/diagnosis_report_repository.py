@@ -108,23 +108,29 @@ class DiagnosisReportRepository:
     
     def create(self, execution_id: str, user_id: str, config: Dict[str, Any]) -> int:
         """
-        创建诊断报告
-        
+        创建诊断报告（P0 修复：添加存在性检查，避免 UNIQUE constraint 错误）
+
         参数:
             execution_id: 执行 ID
             user_id: 用户 ID
             config: 诊断配置 {brand_name, competitor_brands, selected_models, custom_questions}
-        
+
         返回:
             report_id: 报告 ID
         """
+        # 【P0 修复】先检查是否已存在
+        existing = self.get_by_execution_id(execution_id)
+        if existing:
+            db_logger.info(f"⚠️ 诊断报告已存在，返回已有记录：{execution_id}, report_id: {existing['id']}")
+            return existing['id']
+        
         now = datetime.now().isoformat()
         checksum = calculate_checksum({
             'execution_id': execution_id,
             'user_id': user_id,
             'config': config
         })
-        
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -153,7 +159,7 @@ class DiagnosisReportRepository:
                 get_server_version(),
                 checksum
             ))
-            
+
             report_id = cursor.lastrowid
             db_logger.info(f"✅ 创建诊断报告：{execution_id}, report_id: {report_id}")
             return report_id

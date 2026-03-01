@@ -261,82 +261,164 @@ class DiagnosisService:
             }
         )
 
-        state_machine = None
+        state_machine: Optional[DiagnosisStateMachine] = None
         try:
-            # 获取状态机实例
-            state_machine = DiagnosisStateMachine(
-                execution_id=execution_id,
-                repository=self._repository,
-            )
-
-            current_state = state_machine.get_current_state()
-            current_progress = state_machine.get_progress()
-
-            # 检查是否已经是终态
-            if current_state.is_terminal:
-                api_logger.warning(
-                    "diagnosis_timeout_already_terminal",
-                    extra={
-                        'event': 'diagnosis_timeout_already_terminal',
-                        'execution_id': execution_id,
-                        'current_state': current_state.value,
-                    }
-                )
+            state_machine = self._get_state_machine(execution_id)
+            
+            if self._is_terminal_state(state_machine, execution_id):
                 return
-
-            # 执行超时状态流转
-            # 注意：timeout 事件只在 AI_FETCHING 状态有效
-            # 如果是其他状态，使用合适的事件
-            if current_state == DiagnosisState.AI_FETCHING:
-                event = 'timeout'
-            elif current_state == DiagnosisState.ANALYZING:
-                # 分析阶段超时，视为部分成功或失败
-                event = 'fail'
-            else:
-                # INITIALIZING 或其他状态
-                event = 'fail'
-
-            state_machine.transition(
+            
+            event = self._determine_timeout_event(state_machine)
+            self._transition_timeout_state(
+                state_machine=state_machine,
+                execution_id=execution_id,
                 event=event,
-                progress=current_progress,  # 保留已有进度
-                error_message=f"诊断任务执行超时（>{TimeoutManager.MAX_EXECUTION_TIME}秒）",
-            )
-
-            api_logger.info(
-                "diagnosis_timeout_handled",
-                extra={
-                    'event': 'diagnosis_timeout_handled',
-                    'execution_id': execution_id,
-                    'progress': current_progress,
-                    'state': state_machine.get_current_state().value,
-                }
             )
 
         except Exception as e:
-            # 安全地获取状态信息用于日志
-            state_value = None
-            progress_value = None
-            if state_machine is not None:
-                try:
-                    state_value = state_machine.get_current_state().value
-                    progress_value = state_machine.get_progress()
-                except Exception:
-                    # 如果状态机对象存在但无法获取状态，使用未知值
-                    state_value = 'unknown'
-                    progress_value = None
+            self._log_timeout_error(
+                execution_id=execution_id,
+                error=e,
+                state_machine=state_machine,
+            )
 
-            api_logger.error(
-                "diagnosis_timeout_handler_error",
+    def _get_state_machine(
+        self,
+        execution_id: str,
+    ) -> DiagnosisStateMachine:
+        """
+        获取状态机实例
+
+        Args:
+            execution_id: 任务执行 ID
+
+        Returns:
+            DiagnosisStateMachine: 状态机实例
+        """
+        return DiagnosisStateMachine(
+            execution_id=execution_id,
+            repository=self._repository,
+        )
+
+    def _is_terminal_state(
+        self,
+        state_machine: DiagnosisStateMachine,
+        execution_id: str,
+    ) -> bool:
+        """
+        检查是否为终态
+
+        Args:
+            state_machine: 状态机实例
+            execution_id: 任务执行 ID
+
+        Returns:
+            bool: True 表示终态
+        """
+        current_state = state_machine.get_current_state()
+        
+        if current_state.is_terminal:
+            api_logger.warning(
+                "diagnosis_timeout_already_terminal",
                 extra={
-                    'event': 'diagnosis_timeout_handler_error',
+                    'event': 'diagnosis_timeout_already_terminal',
                     'execution_id': execution_id,
-                    'error': str(e),
-                    'error_type': type(e).__name__,
-                    'state_machine_state': state_value,
-                    'state_machine_progress': progress_value,
+                    'current_state': current_state.value,
                 }
             )
-            # 超时处理中的异常不应该影响其他任务，记录日志后返回
+            return True
+        return False
+
+    def _determine_timeout_event(
+        self,
+        state_machine: DiagnosisStateMachine,
+    ) -> str:
+        """
+        确定超时事件类型
+
+        Args:
+            state_machine: 状态机实例
+
+        Returns:
+            str: 事件名称 ('timeout' 或 'fail')
+        """
+        current_state = state_machine.get_current_state()
+        
+        if current_state == DiagnosisState.AI_FETCHING:
+            return 'timeout'
+        elif current_state == DiagnosisState.ANALYZING:
+            return 'fail'
+        else:
+            return 'fail'
+
+    def _transition_timeout_state(
+        self,
+        state_machine: DiagnosisStateMachine,
+        execution_id: str,
+        event: str,
+    ) -> None:
+        """
+        执行超时状态流转
+
+        Args:
+            state_machine: 状态机实例
+            execution_id: 任务执行 ID
+            event: 事件名称
+        """
+        current_progress = state_machine.get_progress()
+        
+        state_machine.transition(
+            event=event,
+            progress=current_progress,
+            error_message=f"诊断任务执行超时（>{TimeoutManager.MAX_EXECUTION_TIME}秒）",
+        )
+
+        api_logger.info(
+            "diagnosis_timeout_handled",
+            extra={
+                'event': 'diagnosis_timeout_handled',
+                'execution_id': execution_id,
+                'progress': current_progress,
+                'state': state_machine.get_current_state().value,
+            }
+        )
+
+    def _log_timeout_error(
+        self,
+        execution_id: str,
+        error: Exception,
+        state_machine: Optional[DiagnosisStateMachine],
+    ) -> None:
+        """
+        记录超时处理错误日志
+
+        Args:
+            execution_id: 任务执行 ID
+            error: 异常对象
+            state_machine: 状态机实例（可选）
+        """
+        state_value: Optional[str] = None
+        progress_value: Optional[int] = None
+        
+        if state_machine is not None:
+            try:
+                state_value = state_machine.get_current_state().value
+                progress_value = state_machine.get_progress()
+            except Exception:
+                state_value = 'unknown'
+                progress_value = None
+
+        api_logger.error(
+            "diagnosis_timeout_handler_error",
+            extra={
+                'event': 'diagnosis_timeout_handler_error',
+                'execution_id': execution_id,
+                'error': str(error),
+                'error_type': type(error).__name__,
+                'state_machine_state': state_value,
+                'state_machine_progress': progress_value,
+            }
+        )
     
     def get_diagnosis_state(self, execution_id: str) -> Dict[str, Any]:
         """

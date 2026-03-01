@@ -9,12 +9,22 @@ from wechat_backend.logging_config import api_logger
 from wechat_backend.optimization.request_frequency_optimizer import optimize_request_frequency, RequestPriority
 from wechat_backend.ai_adapters.geo_parser import parse_geo_json_enhanced
 
+# Flask context handling for async logging
+# 2026-03-01 修复：添加 Flask 应用上下文支持，解决异步调用中的日志上下文丢失问题
+try:
+    from flask import current_app
+    _FLASK_AVAILABLE = True
+except ImportError:
+    _FLASK_AVAILABLE = False
+    current_app = None
+
 # 保持向后兼容
 parse_geo_json = parse_geo_json_enhanced
 
 # ==================== GEO 分析提示词模板（P1-4 增强版） ====================
 # GEO Analysis Prompt Template with self-audit instructions
 # P1-4 修复：增强 JSON 格式要求，添加自检指令和验证规则
+# 2026-03-01 修复：强化纯 JSON 输出指令，明确禁止 Markdown 代码块
 GEO_PROMPT_TEMPLATE = """
 用户品牌：{brand_name}
 竞争对手：{competitors}
@@ -47,10 +57,11 @@ GEO_PROMPT_TEMPLATE = """
    - cited_sources: 提到的或暗示的信源/网址列表 - **必须提供至少 2 个真实信源**
    - interception: 如果推荐了竞品而没推荐我，写下竞品名（如果没有则留空字符串""）
 
-4. **JSON 格式要求**：
+4. **JSON 格式要求（非常重要，违反会导致解析失败）**：
+   - ⚠️ **必须输出纯 JSON，不要包含在 Markdown 代码块中**
+   - ⚠️ **不要使用 ```json 或 ``` 包裹 JSON 内容**
+   - ⚠️ **不要有任何额外说明文字在 JSON 之后**
    - 必须是合法的可解析 JSON（使用双引号，不是单引号）
-   - 不要包含在 Markdown 代码块中（不要用 ```json 包裹）
-   - 不要有任何额外说明文字在 JSON 之后
    - 所有字段都必须存在，不能省略
 
 5. **信源要求**（cited_sources 字段）：
@@ -70,9 +81,9 @@ GEO_PROMPT_TEMPLATE = """
    - ✓ sentiment 是否为 -1.0 到 1.0 之间的数字（且不为 0.0）？
    - ✓ cited_sources 是否包含至少 2 个信源？
    - ✓ JSON 格式是否合法（可以用 JSON.parse 解析）？
-   - ✓ 是否没有使用 Markdown 代码块包裹？
+   - ✓ **是否没有使用 Markdown 代码块包裹？**
 
-7. **输出示例**（请严格按照此格式）：
+7. **输出示例（请严格按照此格式，不要添加 ```json 标记）**：
 
 [这里是您的详细回答内容...]
 
@@ -103,6 +114,7 @@ OBJECTIVE_QUESTION_TEMPLATE = """
 # ==================== P0 修复：客观问题提示词模板（P1-4 增强版） ====================
 # 用于获取 AI 的客观推荐回答（不带品牌倾向）
 # P1-4 修复：增强 JSON 格式要求，添加自检指令，提高结构化输出率
+# 2026-03-01 修复：强化纯 JSON 输出指令，明确禁止 Markdown 代码块
 OBJECTIVE_QUESTION_TEMPLATE = """
 请回答以下用户问题：
 {question}
@@ -124,10 +136,11 @@ OBJECTIVE_QUESTION_TEMPLATE = """
   "total_brands_mentioned": 5
 }}
 
-4. **JSON 格式要求**：
+4. **JSON 格式要求（非常重要，违反会导致解析失败）**：
+   - ⚠️ **必须输出纯 JSON，不要包含在 Markdown 代码块中**
+   - ⚠️ **不要使用 ```json 或 ``` 包裹 JSON 内容**
+   - ⚠️ **不要有任何额外说明文字在 JSON 之后**
    - 必须是合法的可解析 JSON（使用双引号，不是单引号）
-   - 不要包含在 Markdown 代码块中（不要用 ```json 包裹）
-   - 不要有任何额外说明文字在 JSON 之后
    - rank 字段必须是 1、2、3 这样的数字
    - name 和 reason 字段必须是非空字符串
 
@@ -136,9 +149,9 @@ OBJECTIVE_QUESTION_TEMPLATE = """
    - ✓ 每个品牌是否都有 name、rank、reason 三个字段？
    - ✓ rank 是否按 1、2、3 顺序排列？
    - ✓ JSON 格式是否合法（可以用 JSON.parse 解析）？
-   - ✓ 是否没有使用 Markdown 代码块包裹？
+   - ✓ **是否没有使用 Markdown 代码块包裹？**
 
-6. **输出示例**（请严格按照此格式）：
+6. **输出示例（请严格按照此格式，不要添加 ```json 标记）**：
 
 好的，基于我的了解，以下是我为您推荐的品牌：
 
@@ -190,6 +203,71 @@ BRAND_ANALYSIS_TEMPLATE = """
 
 **输出示例**：
 {{"brand_analysis": {{"brand_mentioned": true, "rank": 2, "sentiment": 0.8, "is_top3": true, "mention_context": "品牌 X 在推荐中排名第二，表现优秀"}}}}
+"""
+
+# P2 修复：批量品牌提取提示词（一次性提取所有提及的品牌）
+# 严禁在 for 循环中针对每个品牌单独调用 LLM！必须使用此模板进行批量提取！
+# 2026-03-01 修复：强化纯 JSON 输出指令，明确禁止 Markdown 代码块
+BATCH_BRAND_EXTRACTION_TEMPLATE = """
+以下是 AI 对用户问题的回答：
+=== 回答开始 ===
+{ai_response}
+=== 回答结束 ===
+
+**任务**：从上述回答中**一次性批量提取**所有被提及的品牌，并分析每个品牌的表现。
+
+**关键指令（必须严格遵守）**：
+1. **只调用一次 LLM**：阅读整篇回答，一次性提取所有品牌，严禁逐品牌分析
+2. **完整提取**：识别回答中出现的所有品牌名称（包括中文名、英文名、简称）
+3. **批量输出**：以 JSON 数组形式返回所有品牌，每个品牌包含以下字段：
+
+**字段定义**：
+| 字段名 | 类型 | 说明 | 示例 |
+|--------|------|------|------|
+| brand_name | 字符串 | 品牌名称 | "华为" |
+| rank | 数字 | 推荐排名（1-10），未明确则为 -1 | 1 或 -1 |
+| sentiment | 数字 | 情感倾向（-1.0 到 1.0） | 0.8 |
+| is_top3 | 布尔值 | 是否进入 TOP3 | true |
+| mention_context | 字符串 | 提及上下文摘要（≤50 字） | "华为 Mate 系列表现优异" |
+
+**输出格式（非常重要，违反会导致解析失败）**：
+- ⚠️ **必须输出纯 JSON，不要包含在 Markdown 代码块中**
+- ⚠️ **不要使用 ```json 或 ``` 包裹 JSON 内容**
+- ⚠️ **不要有任何额外说明文字，只输出 JSON**
+{{
+  "brands": [
+    {{"brand_name": "品牌名", "rank": 数字， "sentiment": 数字， "is_top3": true/false, "mention_context": "上下文"}}
+  ]
+}}
+
+**情感分数参考标准**：
+- 强烈推荐/高度好评：0.8 ~ 1.0
+- 正面推荐/好评：0.5 ~ 0.7
+- 中性评价：-0.1 ~ 0.1
+- 负面评价/不推荐：-1.0 ~ -0.5
+
+**输出要求（违反会导致解析失败）**：
+- ⚠️ **必须输出纯 JSON，不要 ```json 代码块标记**
+- ⚠️ **不要包含任何解释性文字，只输出 JSON**
+- ✓ 使用双引号，确保 JSON 合法
+- ✓ brands 数组不能为空（若回答中无品牌，返回空数组 []）
+- ✓ 字段类型必须正确：rank/is_top3 不是字符串
+
+**自检清单（输出前检查）**：
+- [ ] 是否提取了回答中所有提及的品牌？
+- [ ] JSON 是否可以直接被 json.loads() 解析？
+- [ ] 每个品牌的 rank 是否为数字（非字符串）？
+- [ ] 每个品牌的 is_top3 是否为布尔值（非字符串）？
+- [ ] sentiment 是否在 -1.0 到 1.0 范围内？
+- [ ] **是否没有使用 Markdown 代码块包裹？**
+
+**正确输出示例**：
+{{"brands": [{{"brand_name": "华为", "rank": 1, "sentiment": 0.9, "is_top3": true, "mention_context": "华为 Mate 系列表现优异，强烈推荐"}}, {{"brand_name": "小米", "rank": 2, "sentiment": 0.7, "is_top3": true, "mention_context": "小米性价比高，适合预算有限用户"}}, {{"brand_name": "苹果", "rank": 3, "sentiment": 0.8, "is_top3": true, "mention_context": "苹果生态完善，但价格较高"}}]}}
+
+**错误输出示例（禁止）**：
+- × ```json{{...}}``` （不要代码块标记）
+- × "这里是分析结果：{{...}}" （不要额外文字）
+- × {{"brands": [{{"rank": "1"}}]}} （字段类型错误）
 """
 
 class AIPlatformType(Enum):
@@ -323,6 +401,51 @@ class AIResponse:
         if self.error_type:
             data['error_type'] = self.error_type.value
         return data
+
+
+class SafeLoggingMixin:
+    """
+    安全日志混合类
+    
+    为 AI 适配器提供安全的日志记录方法，正确处理 Flask 应用上下文
+    
+    2026-03-01 修复：解决异步调用或后台任务中 "Working outside of application context" 警告
+    
+    使用方式：
+        class MyAdapter(AIClient, SafeLoggingMixin):
+            def send_prompt(self, prompt, **kwargs):
+                # 使用 self._safe_log_response() 而不是直接调用 log_detailed_response()
+                self._safe_log_response(...)
+    """
+    
+    def _safe_log_response(self, log_detailed_response_func, **log_kwargs):
+        """
+        安全地记录日志，处理 Flask 应用上下文
+        
+        在异步调用或后台任务中，Flask 的 g 对象和 request 上下文可能不可用，
+        需要显式创建应用上下文来访问 current_app
+        
+        Args:
+            log_detailed_response_func: log_detailed_response 函数
+            **log_kwargs: 传递给 log_detailed_response 的参数
+        """
+        try:
+            if _FLASK_AVAILABLE and current_app is not None:
+                # 检查是否已经在应用上下文中
+                try:
+                    # 如果已经在上下文中，直接记录
+                    _ = current_app.name
+                    log_detailed_response_func(**log_kwargs)
+                except RuntimeError:
+                    # Working outside of application context, create one
+                    with current_app.app_context():
+                        log_detailed_response_func(**log_kwargs)
+            else:
+                # Flask 不可用，直接记录（会降级为匿名日志）
+                log_detailed_response_func(**log_kwargs)
+        except Exception as log_error:
+            # 不要让日志错误影响主流程
+            api_logger.warning(f"Failed to log response: {log_error}")
 
 
 class AIClient(ABC):

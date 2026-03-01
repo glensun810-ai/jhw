@@ -22,12 +22,23 @@ from wechat_backend.logging_config import api_logger
 # ==================== 数据库配置 ====================
 
 # 从配置管理器获取数据库路径（优先使用环境变量）
-DATABASE_PATH = os.environ.get('DATABASE_PATH') or 'database.db'
+# P0-DB-INIT-004 修复：统一使用与 database_core.py 相同的数据库路径
+import sys
+from pathlib import Path
+
+# P0-DB-INIT-004: 直接计算 backend_python 目录，避免相对路径错误
+# 无论此文件在哪个子目录，都能正确定位到 backend_python/database.db
 DATABASE_DIR = os.environ.get('DATABASE_DIR') or ''
 
-# 如果设置了 DATABASE_DIR，则使用完整路径
 if DATABASE_DIR:
+    # 如果设置了 DATABASE_DIR，则使用完整路径
     DATABASE_PATH = os.path.join(DATABASE_DIR, 'database.db')
+else:
+    # P0-DB-INIT-004: 使用绝对路径计算，确保与 database_core.py 一致
+    # 此文件路径：/.../backend_python/wechat_backend/database/query_optimizer.py
+    # 需要上溯 3 层到 backend_python 目录
+    backend_root = Path(__file__).resolve().parent.parent.parent
+    DATABASE_PATH = backend_root / 'database.db'
 
 SLOW_QUERY_THRESHOLD = 1.0  # 秒
 
@@ -501,22 +512,159 @@ def get_index_manager() -> IndexManager:
 # ==================== 初始化推荐索引 ====================
 
 def init_recommended_indexes():
-    """初始化推荐索引（增强版）"""
+    """
+    初始化推荐索引（增强版 - P0-DB-INIT-003 修复）
+    
+    修复说明：
+    1. 增加重试次数和等待时间，应对多进程竞争
+    2. 添加表创建后的验证延迟（WAL 检查点）
+    3. 使用文件锁防止多进程同时初始化
+    4. 即使部分表缺失，也为已存在的表创建索引
+    5. P0-DB-INIT-003: 确保使用与 init_db() 相同的连接方式
+    """
+    import time
+    import fcntl
+    import os
+
     index_manager = get_index_manager()
 
+    # P0-DB-INIT-003: 记录数据库路径用于诊断
+    api_logger.info(f"[索引初始化] 数据库路径：{index_manager.db_path}")
+    api_logger.info(f"[索引初始化] 数据库文件存在：{os.path.exists(index_manager.db_path)}")
+
+    # P0-DB-INIT-002: 使用文件锁防止多进程同时初始化
+    lock_file = '/tmp/wechat_db_init.lock'
+    lock_fd = None
+    
+    try:
+        # 尝试获取独占锁（非阻塞）
+        lock_fd = open(lock_file, 'w')
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            api_logger.info("已获取数据库初始化锁")
+        except BlockingIOError:
+            # 其他进程正在初始化，等待获取锁
+            api_logger.info("等待其他进程完成数据库初始化...")
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            api_logger.info("已获取数据库初始化锁")
+        
+        # 获取锁后，再次检查表是否已存在（可能已被其他进程创建）
+        tables = index_manager.list_tables()
+        required_tables = ['users', 'test_records', 'brand_test_results', 'audit_logs', 'sync_results', 'cache_entries']
+        existing_tables = [t for t in required_tables if t in tables]
+        
+        # P0-DB-INIT-003: 详细诊断日志
+        api_logger.info(f"[索引初始化] 当前存在的表：{tables}")
+        api_logger.info(f"[索引初始化] 必需的表：{required_tables}")
+        api_logger.info(f"[索引初始化] 已存在的表：{existing_tables}")
+        
+        if len(existing_tables) == len(required_tables):
+            api_logger.info("所有必需表已存在（可能已被其他进程创建），开始创建索引")
+            _create_indexes(index_manager, required_tables)
+            return
+        
+        # P0-DB-INIT-003: 如果表完全为空，可能是数据库路径问题或 init_db() 未执行
+        if not tables:
+            api_logger.warning(
+                "[索引初始化] 数据库中没有任何表！"
+                "这可能是 database_core.py:init_db() 未执行或数据库路径配置错误。"
+                "尝试等待 init_db() 完成..."
+            )
+        
+        # P0-DB-INIT-002: 增强重试机制
+        # 增加重试次数和等待时间，应对表创建延迟
+        max_retries = 10
+        retry_delays = [0.5, 0.5, 1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 5.0, 5.0]  # 渐进式延迟
+        
+        for attempt in range(max_retries):
+            tables = index_manager.list_tables()
+            missing_tables = [t for t in required_tables if t not in tables]
+
+            if not missing_tables:
+                # P0-DB-INIT-002: 表创建后添加短暂延迟，确保 WAL 检查点完成
+                api_logger.info(f"所有必需表已存在，等待 0.5s 确保事务提交完成...")
+                time.sleep(0.5)
+                
+                # 验证表确实可用
+                verification_tables = index_manager.list_tables()
+                still_missing = [t for t in required_tables if t not in verification_tables]
+                if still_missing:
+                    api_logger.warning(f"验证失败，表再次消失：{still_missing}，继续等待...")
+                    continue
+                
+                api_logger.info("表验证通过，开始创建索引")
+                _create_indexes(index_manager, required_tables)
+                return
+            else:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    api_logger.warning(
+                        f"等待表创建：缺少 {missing_tables}，"
+                        f"尝试 {attempt + 1}/{max_retries}，{delay}s 后重试..."
+                    )
+                    time.sleep(delay)
+                    
+                    # P0-DB-INIT-002: 触发 WAL 检查点，确保事务持久化
+                    try:
+                        with index_manager.get_connection() as conn:
+                            conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
+                    except Exception as e:
+                        api_logger.debug(f"WAL 检查点触发失败（可忽略）：{e}")
+                else:
+                    api_logger.error(f"表创建超时，跳过索引创建：{missing_tables}")
+                    api_logger.error(f"当前存在的表：{tables}")
+                    api_logger.error(
+                        "可能的原因：1) init_db() 未执行 2) 数据库路径不一致 3) 权限问题"
+                    )
+                    
+                    # P0-DB-INIT-003: 尝试直接检查数据库文件
+                    if os.path.exists(index_manager.db_path):
+                        api_logger.error(f"数据库文件大小：{os.path.getsize(index_manager.db_path)} bytes")
+                    else:
+                        api_logger.error(f"数据库文件不存在：{index_manager.db_path}")
+                    
+                    api_logger.warning("将为已存在的表创建索引...")
+                    
+                    # 为已存在的表创建索引
+                    _create_indexes(index_manager, existing_tables)
+                    return
+    
+    except Exception as e:
+        api_logger.error(f"初始化索引失败：{e}")
+        import traceback
+        api_logger.error(traceback.format_exc())
+    finally:
+        # 释放文件锁
+        if lock_fd:
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                lock_fd.close()
+                api_logger.debug("数据库初始化锁已释放")
+            except Exception as e:
+                api_logger.debug(f"释放锁失败（可忽略）：{e}")
+
+
+def _create_indexes(index_manager, tables_to_create: list):
+    """
+    为指定的表创建索引
+    
+    Args:
+        index_manager: 索引管理器实例
+        tables_to_create: 需要创建索引的表名列表
+    """
     # 定义推荐索引
+    # 注意：字段名必须与 database_core.py 中的表结构一致
     recommended_indexes = [
         # 用户相关
         {'table': 'users', 'columns': ['openid'], 'unique': True},
         {'table': 'users', 'columns': ['created_at']},
 
-        # 测试结果相关（修复：使用正确的表名 test_records）
-        {'table': 'test_records', 'columns': ['user_id']},
+        # 测试结果相关（P0-DB-INIT-005 修复：使用 user_openid 而非 user_id）
+        {'table': 'test_records', 'columns': ['user_openid']},
         {'table': 'test_records', 'columns': ['brand_name']},
         {'table': 'test_records', 'columns': ['test_date']},
         {'table': 'test_records', 'columns': ['overall_score']},
-        # 复合索引：优化常用查询
-        {'table': 'test_records', 'columns': ['user_id', 'test_date']},
+        {'table': 'test_records', 'columns': ['user_openid', 'test_date']},
         {'table': 'test_records', 'columns': ['brand_name', 'test_date']},
 
         # 品牌测试结果相关
@@ -525,7 +673,7 @@ def init_recommended_indexes():
         {'table': 'brand_test_results', 'columns': ['created_at']},
         {'table': 'brand_test_results', 'columns': ['task_id', 'brand_name']},
 
-        # 审计日志相关（修复：使用 admin_id 而非 user_id，使用 created_at 而非 timestamp）
+        # 审计日志相关
         {'table': 'audit_logs', 'columns': ['admin_id']},
         {'table': 'audit_logs', 'columns': ['action']},
         {'table': 'audit_logs', 'columns': ['created_at']},
@@ -544,6 +692,10 @@ def init_recommended_indexes():
     failed_count = 0
 
     for idx_config in recommended_indexes:
+        # 只为指定的表创建索引
+        if idx_config['table'] not in tables_to_create:
+            continue
+
         result = index_manager.create_index(
             table=idx_config['table'],
             columns=idx_config['columns'],

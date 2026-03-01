@@ -183,12 +183,20 @@ class AIJudgeClient:
         prompt = self.prompt_builder.build_judge_prompt(brand_name, question, ai_answer)
 
         try:
-            ai_response = self.ai_client.send_prompt(prompt)
+            # 【重构】使用优先级调用器评估回答
+            # 优先级顺序：DeepSeek → 豆包 → 通义千问
+            from wechat_backend.multi_model_executor import get_priority_evaluator
+            
+            evaluator = get_priority_evaluator(timeout=30)
+            ai_response, actual_model = evaluator.execute_with_priority(
+                prompt=prompt,
+                execution_id=None
+            )
 
             if ai_response.success:
                 parsed_result = self.parser.parse(ai_response.content)
                 if parsed_result:
-                    api_logger.info(f"Successfully evaluated response for brand '{brand_name}' on question '{question}'")
+                    api_logger.info(f"Successfully evaluated response for brand '{brand_name}' on question '{question}' using model '{actual_model}'")
                     return parsed_result
                 else:
                     api_logger.warning(f"Failed to parse judge LLM's response: {ai_response.content[:200]}...")  # Limit log length

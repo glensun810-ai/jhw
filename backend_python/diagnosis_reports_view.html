@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诊断报告数据可视化查看器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stat-value { font-size: 32px; font-weight: bold; color: #3498db; }
+        .stat-label { font-size: 14px; color: #7f8c8d; margin-top: 5px; }
+        .table-container { padding: 30px; overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            background: #34495e;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        tr:hover { background: #f8f9fa; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .status-processing { background: #fff3cd; color: #856404; }
+        .progress-bar {
+            width: 100px;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            transition: width 0.3s;
+        }
+        .detail-section {
+            padding: 30px;
+            border-top: 1px solid #e9ecef;
+        }
+        .detail-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .detail-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .detail-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #3498db;
+        }
+        .detail-label { font-size: 12px; color: #7f8c8d; }
+        .detail-value { font-size: 14px; color: #2c3e50; margin-top: 4px; word-break: break-word; }
+        .tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .integrity-ok { color: #28a745; }
+        .integrity-warning { color: #ffc107; }
+        .integrity-error { color: #dc3545; }
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: background 0.3s;
+        }
+        .btn:hover { background: #2980b9; }
+        .dimension-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid #e9ecef;
+        }
+        .dimension-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .dimension-name { font-weight: 600; color: #2c3e50; }
+        .dimension-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 诊断报告数据可视化查看器</h1>
+            <p>生成时间：2026-02-28 16:33:28</p>
+        </div>
+        
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value">5</div>
+                <div class="stat-label">总报告数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: #28a745;">5</div>
+                <div class="stat-label">已完成</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: #dc3545;">3</div>
+                <div class="stat-label">失败</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: #ffc107;">100.0%</div>
+                <div class="stat-label">平均进度</div>
+            </div>
+        </div>
+    
+        
+        <div class="table-container">
+            <h2 style="margin-bottom: 20px; color: #2c3e50;">报告列表</h2>
+            
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Execution ID</th>
+                    <th>品牌</th>
+                    <th>竞品数</th>
+                    <th>AI 平台</th>
+                    <th>状态</th>
+                    <th>进度</th>
+                    <th>阶段</th>
+                    <th>完成</th>
+                    <th>创建时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            <tr>
+                <td>15</td>
+                <td style="font-family: monospace; font-size: 11px;">1758f33c-cbed-41ed-b7d0-094b286e...</td>
+                <td><strong>趣车良品</strong></td>
+                <td>1</td>
+                <td>deepseek</td>
+                <td><span class="status-badge status-failed">failed</span></td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%;"></div>
+                    </div>
+                    <span style="font-size: 11px; margin-top: 4px; display: block;">100%</span>
+                </td>
+                <td>failed</td>
+                <td>✅</td>
+                <td style="font-size: 11px;">2026-02-28T16:05:53</td>
+            </tr>
+        
+            <tr>
+                <td>13</td>
+                <td style="font-family: monospace; font-size: 11px;">b0dea37b-e39d-4333-8017-b1c6781f...</td>
+                <td><strong>趣车良品</strong></td>
+                <td>1</td>
+                <td>deepseek</td>
+                <td><span class="status-badge status-failed">failed</span></td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%;"></div>
+                    </div>
+                    <span style="font-size: 11px; margin-top: 4px; display: block;">100%</span>
+                </td>
+                <td>failed</td>
+                <td>✅</td>
+                <td style="font-size: 11px;">2026-02-28T15:42:54</td>
+            </tr>
+        
+            <tr>
+                <td>11</td>
+                <td style="font-family: monospace; font-size: 11px;">aa5ad118-771f-47af-8c1f-8697b9f2...</td>
+                <td><strong>华为</strong></td>
+                <td>3</td>
+                <td>qwen</td>
+                <td><span class="status-badge status-failed">failed</span></td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%;"></div>
+                    </div>
+                    <span style="font-size: 11px; margin-top: 4px; display: block;">100%</span>
+                </td>
+                <td>failed</td>
+                <td>✅</td>
+                <td style="font-size: 11px;">2026-02-28T13:00:16</td>
+            </tr>
+        
+            <tr>
+                <td>7</td>
+                <td style="font-family: monospace; font-size: 11px;">9b892873-1293-467e-8cef-dd9c78f9...</td>
+                <td><strong>华为</strong></td>
+                <td>0</td>
+                <td>doubao, qwen</td>
+                <td><span class="status-badge status-completed">completed</span></td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%;"></div>
+                    </div>
+                    <span style="font-size: 11px; margin-top: 4px; display: block;">100%</span>
+                </td>
+                <td>completed</td>
+                <td>✅</td>
+                <td style="font-size: 11px;">2026-02-28T01:10:08</td>
+            </tr>
+        
+            <tr>
+                <td>3</td>
+                <td style="font-family: monospace; font-size: 11px;">0ba8dd4b-6251-470c-a748-eed098a4...</td>
+                <td><strong>趣车良品</strong></td>
+                <td>0</td>
+                <td>doubao, qwen</td>
+                <td><span class="status-badge status-completed">completed</span></td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%;"></div>
+                    </div>
+                    <span style="font-size: 11px; margin-top: 4px; display: block;">100%</span>
+                </td>
+                <td>completed</td>
+                <td>✅</td>
+                <td style="font-size: 11px;">2026-02-27T22:17:21</td>
+            </tr>
+        
+            </tbody>
+        </table>
+    
+        </div>
+        
+        
+            <div class="detail-section">
+                <div class="detail-card">
+                    <div class="detail-title">📋 报告 #15: 趣车良品 (1758f33c-cbed-41ed-b7d0-094b286e...)</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">用户 ID</div>
+                            <div class="detail-value">anonymous</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">竞品数量</div>
+                            <div class="detail-value">1 车尚艺</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">AI 平台</div>
+                            <div class="detail-value"><span class='tag'>deepseek</span></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">问题数量</div>
+                            <div class="detail-value">1</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">自定义问题</div>
+                        <div class='tag'>深圳新能源汽车改装门店推荐</div>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📈 报告数据</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">报告版本</div>
+                            <div class="detail-value">v2.0</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">生成时间</div>
+                            <div class="detail-value">2026-02-28T16:05:53.243709</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">总体评分</div>
+                            <div class="detail-value">N/A (N/A)</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">维度分析 (0 个)</div>
+                        <p style='color: #7f8c8d; font-size: 13px;'>⚠️ 无维度数据</p>
+                    </div>
+                
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📊 任务状态</div>
+                    
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">阶段</div>
+                        <div class="detail-value">failed</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">进度</div>
+                        <div class="detail-value">100%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">状态文本</div>
+                        <div class="detail-value">诊断失败：所有 AI 调用均失败，未获取任何有效结果</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">完成情况</div>
+                        <div class="detail-value">0/0</div>
+                    </div>
+                </div>
+            
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">🔍 数据完整性检查</div>
+                    <div class='integrity-warning'>⚠️  状态不一致：is_completed=true 但 status=failed</div>
+                </div>
+            </div>
+        
+            <div class="detail-section">
+                <div class="detail-card">
+                    <div class="detail-title">📋 报告 #13: 趣车良品 (b0dea37b-e39d-4333-8017-b1c6781f...)</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">用户 ID</div>
+                            <div class="detail-value">anonymous</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">竞品数量</div>
+                            <div class="detail-value">1 车尚艺</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">AI 平台</div>
+                            <div class="detail-value"><span class='tag'>deepseek</span></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">问题数量</div>
+                            <div class="detail-value">1</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">自定义问题</div>
+                        <div class='tag'>深圳新能源汽车改装门店推荐</div>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📈 报告数据</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">报告版本</div>
+                            <div class="detail-value">v2.0</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">生成时间</div>
+                            <div class="detail-value">2026-02-28T15:42:54.277992</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">总体评分</div>
+                            <div class="detail-value">N/A (N/A)</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">维度分析 (0 个)</div>
+                        <p style='color: #7f8c8d; font-size: 13px;'>⚠️ 无维度数据</p>
+                    </div>
+                
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📊 任务状态</div>
+                    
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">阶段</div>
+                        <div class="detail-value">failed</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">进度</div>
+                        <div class="detail-value">100%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">状态文本</div>
+                        <div class="detail-value">AI 调用失败：deepseek, 问题1: name 'import_model' is not defined</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">完成情况</div>
+                        <div class="detail-value">1/1</div>
+                    </div>
+                </div>
+            
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">🔍 数据完整性检查</div>
+                    <div class='integrity-warning'>⚠️  状态不一致：is_completed=true 但 status=failed</div>
+                </div>
+            </div>
+        
+            <div class="detail-section">
+                <div class="detail-card">
+                    <div class="detail-title">📋 报告 #11: 华为 (aa5ad118-771f-47af-8c1f-8697b9f2...)</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">用户 ID</div>
+                            <div class="detail-value">anonymous</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">竞品数量</div>
+                            <div class="detail-value">3 小米, Oppo, vivo</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">AI 平台</div>
+                            <div class="detail-value"><span class='tag'>qwen</span></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">问题数量</div>
+                            <div class="detail-value">1</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">自定义问题</div>
+                        <div class='tag'>3000元拍照好看的手机品牌推荐</div>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📈 报告数据</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">报告版本</div>
+                            <div class="detail-value">v2.0</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">生成时间</div>
+                            <div class="detail-value">2026-02-28T13:00:16.484681</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">总体评分</div>
+                            <div class="detail-value">N/A (N/A)</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">维度分析 (0 个)</div>
+                        <p style='color: #7f8c8d; font-size: 13px;'>⚠️ 无维度数据</p>
+                    </div>
+                
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📊 任务状态</div>
+                    
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">阶段</div>
+                        <div class="detail-value">failed</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">进度</div>
+                        <div class="detail-value">100%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">状态文本</div>
+                        <div class="detail-value">AI 调用失败：qwen, 问题1: 'AIResponse' object has no attribute 'status'</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">完成情况</div>
+                        <div class="detail-value">1/1</div>
+                    </div>
+                </div>
+            
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">🔍 数据完整性检查</div>
+                    <div class='integrity-warning'>⚠️  状态不一致：is_completed=true 但 status=failed</div>
+                </div>
+            </div>
+        
+            <div class="detail-section">
+                <div class="detail-card">
+                    <div class="detail-title">📋 报告 #7: 华为 (9b892873-1293-467e-8cef-dd9c78f9...)</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">用户 ID</div>
+                            <div class="detail-value">anonymous</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">竞品数量</div>
+                            <div class="detail-value">0 </div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">AI 平台</div>
+                            <div class="detail-value"><span class='tag'>doubao</span>, <span class='tag'>qwen</span></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">问题数量</div>
+                            <div class="detail-value">1</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">自定义问题</div>
+                        <div class='tag'>2500元左右拍照好看的手机品牌推荐</div>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📈 报告数据</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">报告版本</div>
+                            <div class="detail-value">v2.0</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">生成时间</div>
+                            <div class="detail-value">2026-02-28T01:11:07.242935</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">总体评分</div>
+                            <div class="detail-value">N/A (N/A)</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">维度分析 (0 个)</div>
+                        <p style='color: #7f8c8d; font-size: 13px;'>⚠️ 无维度数据</p>
+                    </div>
+                
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📊 任务状态</div>
+                    
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">阶段</div>
+                        <div class="detail-value">failed</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">进度</div>
+                        <div class="detail-value">25%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">状态文本</div>
+                        <div class="detail-value">AI 调用失败：qwen, 问题1: name 'import_model' is not defined</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">完成情况</div>
+                        <div class="detail-value">2/8</div>
+                    </div>
+                </div>
+            
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">🔍 数据完整性检查</div>
+                    <div class='integrity-ok'>✅ 数据完整性检查通过</div>
+                </div>
+            </div>
+        
+            <div class="detail-section">
+                <div class="detail-card">
+                    <div class="detail-title">📋 报告 #3: 趣车良品 (0ba8dd4b-6251-470c-a748-eed098a4...)</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">用户 ID</div>
+                            <div class="detail-value">anonymous</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">竞品数量</div>
+                            <div class="detail-value">0 </div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">AI 平台</div>
+                            <div class="detail-value"><span class='tag'>doubao</span>, <span class='tag'>qwen</span></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">问题数量</div>
+                            <div class="detail-value">1</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">自定义问题</div>
+                        <div class='tag'>深圳新能源汽车改装门店哪家好</div>
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📈 报告数据</div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">报告版本</div>
+                            <div class="detail-value">v2.0</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">生成时间</div>
+                            <div class="detail-value">2026-02-27T22:19:29.883277</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">总体评分</div>
+                            <div class="detail-value">N/A (N/A)</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div class="detail-title">维度分析 (0 个)</div>
+                        <p style='color: #7f8c8d; font-size: 13px;'>⚠️ 无维度数据</p>
+                    </div>
+                
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">📊 任务状态</div>
+                    
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">阶段</div>
+                        <div class="detail-value">ai_fetching</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">进度</div>
+                        <div class="detail-value">83%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">状态文本</div>
+                        <div class="detail-value">已完成 5/6</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">完成情况</div>
+                        <div class="detail-value">5/6</div>
+                    </div>
+                </div>
+            
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">🔍 数据完整性检查</div>
+                    <div class='integrity-ok'>✅ 数据完整性检查通过</div>
+                </div>
+            </div>
+        
+    </div>
+</body>
+</html>

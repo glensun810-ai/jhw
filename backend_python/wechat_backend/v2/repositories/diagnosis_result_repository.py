@@ -180,7 +180,30 @@ class DiagnosisResultRepository:
         index_name: str,
         index_def: str,
     ) -> None:
-        """创建索引（如果不存在）"""
+        """
+        创建索引（如果不存在）
+
+        Args:
+            cursor: 数据库游标
+            index_name: 索引名称
+            index_def: 索引定义
+
+        Note:
+            索引名称和定义必须是预定义的，不允许动态拼接
+        """
+        # 白名单验证索引名称
+        allowed_indexes = {
+            'idx_diagnosis_results_execution_id': 'diagnosis_results(execution_id)',
+            'idx_diagnosis_results_report_id': 'diagnosis_results(report_id)',
+            'idx_diagnosis_results_brand': 'diagnosis_results(brand)',
+        }
+        
+        if index_name not in allowed_indexes:
+            raise ValueError(f"不允许的索引名称：{index_name}")
+        
+        if allowed_indexes[index_name] != index_def:
+            raise ValueError(f"索引定义不匹配：{index_def}")
+        
         try:
             cursor.execute(f'CREATE INDEX IF NOT EXISTS {index_name} ON {index_def}')
         except sqlite3.OperationalError:

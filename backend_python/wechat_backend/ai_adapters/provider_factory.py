@@ -101,7 +101,7 @@ class ProviderFactory:
     def _register_with_key_check(cls, platform_name: str, provider_class: Type[BaseAIProvider], platform_display: str):
         """
         检查 API key 配置后注册 provider
-        
+
         Args:
             platform_name: 平台名称（内部标识）
             provider_class: 提供者类（如果为 None，则跳过注册）
@@ -113,21 +113,50 @@ class ProviderFactory:
             api_logger.warning(error_msg)
             cls._initialization_errors.append(error_msg)
             return
-        
+
         # 检查 API key 是否配置
         api_key_configured = Config.is_api_key_configured(platform_name)
         
-        if not api_key_configured:
-            # 获取 API key 配置状态的详细信息
-            api_key = cls._get_api_key_for_debug(platform_name)
-            error_msg = f"⚠️  Provider NOT registered for '{platform_name}' ({platform_display}): API key not configured (value: '{api_key[:10] if api_key else 'EMPTY'}...')"
+        # 获取 API key 进行严格校验
+        api_key = cls._get_api_key_raw(platform_name)
+        
+        # 严格校验：如果 Key 包含 EMPTY 或长度小于阈值，判定为未配置
+        is_valid_key = api_key_configured
+        if api_key:
+            # 检查是否为占位符值
+            if 'EMPTY' in api_key.upper() or api_key.strip() in ('', 'YOUR_API_KEY', 'YOUR_KEY_HERE'):
+                is_valid_key = False
+            # 检查长度（有效 API key 通常不会太短）
+            elif len(api_key.strip()) < 8:
+                is_valid_key = False
+
+        if not is_valid_key:
+            error_msg = f"⚠️  Provider NOT registered for '{platform_name}' ({platform_display}): API key not configured or invalid (value: '{cls._mask_api_key(api_key)}')"
             api_logger.warning(error_msg)
             cls._initialization_errors.append(error_msg)
             return
-        
+
         # 注册 provider
         cls.register(platform_name, provider_class)
         api_logger.info(f"✅ Provider registered for '{platform_name}' ({platform_display})")
+    
+    @classmethod
+    def _get_api_key_raw(cls, platform_name: str) -> str:
+        """获取原始 API key（用于校验）"""
+        try:
+            return Config.get_api_key(platform_name) or ''
+        except Exception:
+            return ''
+    
+    @classmethod
+    def _mask_api_key(cls, api_key: str) -> str:
+        """脱敏 API key 用于日志显示"""
+        if not api_key:
+            return 'EMPTY'
+        # 显示前 3 个和后 3 个字符
+        if len(api_key) > 10:
+            return api_key[:3] + "***" + api_key[-3:]
+        return "***"
 
     @classmethod
     def _get_api_key_for_debug(cls, platform_name: str) -> str:

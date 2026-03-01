@@ -111,7 +111,7 @@ def execute_single_task(task: Dict[str, Any]) -> Dict[str, Any]:
         if ai_result.success:
             # AI 调用成功，解析 GEO 数据
             geo_data, parse_error = parse_geo_with_validation(
-                ai_result.data,
+                ai_result.content,
                 execution_id,
                 q_idx,
                 model_name

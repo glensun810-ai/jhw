@@ -18,7 +18,10 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from wechat_backend.logging_config import db_logger
 
-DB_PATH = Path(__file__).parent.parent / 'database.db'
+# P0-DB-INIT-004: 修复数据库路径计算，确保与 database_core.py 一致
+# 此文件路径：/.../backend_python/wechat_backend/database_connection_pool.py
+# 需要上溯 2 层到 backend_python 目录
+DB_PATH = Path(__file__).resolve().parent.parent / 'database.db'
 
 # 监控指标
 _db_pool_metrics = {

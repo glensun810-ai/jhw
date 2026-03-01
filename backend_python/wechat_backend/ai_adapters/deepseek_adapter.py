@@ -9,6 +9,14 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from wechat_backend.utils.ai_response_wrapper import log_detailed_response
 
+# Flask context handling for async logging
+try:
+    from flask import current_app
+    _FLASK_AVAILABLE = True
+except ImportError:
+    _FLASK_AVAILABLE = False
+    current_app = None
+
 
 class DeepSeekAdapter(AIClient):
     """
@@ -17,6 +25,34 @@ class DeepSeekAdapter(AIClient):
     支持两种模式：普通对话模式（deepseek-chat）和搜索/推理模式（deepseek-reasoner）
     包含内部 Prompt 约束逻辑，可配置是否启用中文回答及事实性约束
     """
+
+    def _safe_log_response(self, **log_kwargs):
+        """
+        安全地记录日志，处理 Flask 应用上下文
+
+        在异步调用或后台任务中，Flask 的 g 对象和 request 上下文可能不可用，
+        需要显式创建应用上下文来访问 current_app
+
+        Args:
+            **log_kwargs: 传递给 log_detailed_response 的参数
+        """
+        try:
+            if _FLASK_AVAILABLE and current_app is not None:
+                # 检查是否已经在应用上下文中
+                try:
+                    # 如果已经在上下文中，直接记录
+                    _ = current_app.name
+                    log_detailed_response(**log_kwargs)
+                except RuntimeError:
+                    # Working outside of application context, create one
+                    with current_app.app_context():
+                        log_detailed_response(**log_kwargs)
+            else:
+                # Flask 不可用，直接记录（会降级为匿名日志）
+                log_detailed_response(**log_kwargs)
+        except Exception as log_error:
+            # 不要让日志错误影响主流程
+            api_logger.warning(f"Failed to log response: {log_error}")
 
     def __init__(
         self,
@@ -55,10 +91,10 @@ class DeepSeekAdapter(AIClient):
             timeout=30,
             max_retries=3
         )
-        
+
         # 初始化电路断路器
         self.circuit_breaker = get_circuit_breaker(platform_name="deepseek", model_name=model_name)
-        
+
         api_logger.info(f"DeepSeekAdapter initialized for model: {model_name} with unified request wrapper and circuit breaker")
 
     def generate_response(self, prompt: str, **kwargs) -> AIResponse:
@@ -77,33 +113,29 @@ class DeepSeekAdapter(AIClient):
         # 记录请求开始时间以计算延迟
         start_time = time.time()
 
-        # 使用电路断路器保护API调用
+        # 使用电路断路器保护 API 调用
         try:
             response = self.circuit_breaker.call(self._make_request_internal, prompt, **kwargs)
             return response
         except CircuitBreakerOpenError as e:
             error_message = f"DeepSeek 服务暂时不可用（熔断器开启）: {e}"
             api_logger.warning(error_message)
-            
+
             # Log failed response to enhanced logger with context
-            try:
-                execution_id = kwargs.get('execution_id', 'unknown')
-                log_detailed_response(
-                    question=prompt,  # 使用原始prompt
-                    response="",  # No content in case of failure
-                    platform=self.platform_type.value,
-                    model=self.model_name,
-                    success=False,
-                    error_message=error_message,
-                    error_type=AIErrorType.SERVICE_UNAVAILABLE,
-                    latency_ms=0,  # No latency since no actual request was made
-                    execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
-                )
-            except Exception as log_error:
-                # Don't let logging errors affect the main response
-                api_logger.warning(f"Failed to log failed response to enhanced logger: {log_error}")
-            
+            execution_id = kwargs.get('execution_id', 'unknown')
+            self._safe_log_response(
+                question=prompt,  # 使用原始 prompt
+                response="",  # No content in case of failure
+                platform=self.platform_type.value,
+                model=self.model_name,
+                success=False,
+                error_message=error_message,
+                error_type=AIErrorType.SERVICE_UNAVAILABLE,
+                latency_ms=0,  # No latency since no actual request was made
+                execution_id=execution_id,
+                **kwargs  # Pass any additional context from kwargs
+            )
+
             return AIResponse(
                 success=False,
                 error_message=error_message,
@@ -115,7 +147,7 @@ class DeepSeekAdapter(AIClient):
 
     def _make_request_internal(self, prompt: str, **kwargs) -> AIResponse:
         """
-        实际的API请求逻辑
+        实际的 API 请求逻辑
         """
         # 记录请求开始时间以计算延迟
         start_time = time.time()
@@ -163,7 +195,7 @@ class DeepSeekAdapter(AIClient):
                 prompt=processed_prompt,
                 model=self.model_name,
                 json=payload,
-                timeout=kwargs.get('timeout', 30)  # 设置请求超时时间为30秒
+                timeout=kwargs.get('timeout', 30)  # 设置请求超时时间为 30 秒
             )
 
             # 计算请求延迟
@@ -171,27 +203,23 @@ class DeepSeekAdapter(AIClient):
 
             # 检查响应状态码
             if response.status_code != 200:
-                error_message = f"API 请求失败，状态码: {response.status_code}, 响应: {response.text}"
-                
+                error_message = f"API 请求失败，状态码：{response.status_code}, 响应：{response.text}"
+
                 # Log failed response to enhanced logger with context
-                try:
-                    execution_id = kwargs.get('execution_id', 'unknown')
-                    log_detailed_response(
-                        question=prompt,  # 使用原始prompt
-                        response="",  # No content in case of failure
-                        platform=self.platform_type.value,
-                        model=self.model_name,
-                        success=False,
-                        error_message=error_message,
-                        error_type=AIErrorType.SERVER_ERROR,
-                        latency_ms=int(latency * 1000),  # Convert to milliseconds
-                        execution_id=execution_id,
-                        **kwargs  # Pass any additional context from kwargs
-                    )
-                except Exception as log_error:
-                    # Don't let logging errors affect the main response
-                    api_logger.warning(f"Failed to log failed response to enhanced logger: {log_error}")
-                
+                execution_id = kwargs.get('execution_id', 'unknown')
+                self._safe_log_response(
+                    question=prompt,  # 使用原始 prompt
+                    response="",  # No content in case of failure
+                    platform=self.platform_type.value,
+                    model=self.model_name,
+                    success=False,
+                    error_message=error_message,
+                    error_type=AIErrorType.SERVER_ERROR,
+                    latency_ms=int(latency * 1000),  # Convert to milliseconds
+                    execution_id=execution_id,
+                    **kwargs  # Pass any additional context from kwargs
+                )
+
                 return AIResponse(
                     success=False,
                     error_message=error_message,
@@ -217,23 +245,19 @@ class DeepSeekAdapter(AIClient):
             usage = response_data.get("usage", {})
 
             # Log response to enhanced logger with context
-            try:
-                execution_id = kwargs.get('execution_id', 'unknown')
-                log_detailed_response(
-                    question=prompt,  # 使用原始prompt，而不是processed_prompt
-                    response=content,
-                    platform=self.platform_type.value,
-                    model=response_data.get("model", self.model_name),
-                    success=True,
-                    latency_ms=int(latency * 1000),  # Convert to milliseconds
-                    tokens_used=usage.get("total_tokens", 0),
-                    execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
-                )
-            except Exception as log_error:
-                # Don't let logging errors affect the main response
-                api_logger.warning(f"Failed to log response to enhanced logger: {log_error}")
-            
+            execution_id = kwargs.get('execution_id', 'unknown')
+            self._safe_log_response(
+                question=prompt,  # 使用原始 prompt，而不是 processed_prompt
+                response=content,
+                platform=self.platform_type.value,
+                model=response_data.get("model", self.model_name),
+                success=True,
+                latency_ms=int(latency * 1000),  # Convert to milliseconds
+                tokens_used=usage.get("total_tokens", 0),
+                execution_id=execution_id,
+                **kwargs  # Pass any additional context from kwargs
+            )
+
             # 返回成功的 AIResponse，包含模式信息
             return AIResponse(
                 success=True,
@@ -248,26 +272,22 @@ class DeepSeekAdapter(AIClient):
         except requests.exceptions.Timeout:
             # 处理请求超时异常
             latency = time.time() - start_time
-            
+
             # Log failed response to enhanced logger with context
-            try:
-                execution_id = kwargs.get('execution_id', 'unknown')
-                log_detailed_response(
-                    question=prompt,  # 使用原始prompt
-                    response="",  # No content in case of failure
-                    platform=self.platform_type.value,
-                    model=self.model_name,
-                    success=False,
-                    error_message="请求超时",
-                    error_type=AIErrorType.SERVER_ERROR,
-                    latency_ms=int(latency * 1000),  # Convert to milliseconds
-                    execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
-                )
-            except Exception as log_error:
-                # Don't let logging errors affect the main response
-                api_logger.warning(f"Failed to log timeout error to enhanced logger: {log_error}")
-            
+            execution_id = kwargs.get('execution_id', 'unknown')
+            self._safe_log_response(
+                question=prompt,  # 使用原始 prompt
+                response="",  # No content in case of failure
+                platform=self.platform_type.value,
+                model=self.model_name,
+                success=False,
+                error_message="请求超时",
+                error_type=AIErrorType.SERVER_ERROR,
+                latency_ms=int(latency * 1000),  # Convert to milliseconds
+                execution_id=execution_id,
+                **kwargs  # Pass any additional context from kwargs
+            )
+
             # Re-raise the exception to trigger circuit breaker
             raise requests.exceptions.Timeout("Request timed out")
 
@@ -275,33 +295,29 @@ class DeepSeekAdapter(AIClient):
             # 处理其他请求相关异常
             latency = time.time() - start_time
             error_type = self._map_request_exception(e)
-            
+
             # Log failed response to enhanced logger with context
-            try:
-                execution_id = kwargs.get('execution_id', 'unknown')
-                log_detailed_response(
-                    question=prompt,  # 使用原始prompt
-                    response="",  # No content in case of failure
-                    platform=self.platform_type.value,
-                    model=self.model_name,
-                    success=False,
-                    error_message=f"请求异常: {str(e)}",
-                    error_type=error_type if error_type else AIErrorType.UNKNOWN_ERROR,
-                    latency_ms=int(latency * 1000),  # Convert to milliseconds
-                    execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
-                )
-            except Exception as log_error:
-                # Don't let logging errors affect the main response
-                api_logger.warning(f"Failed to log request exception to enhanced logger: {log_error}")
-            
+            execution_id = kwargs.get('execution_id', 'unknown')
+            self._safe_log_response(
+                question=prompt,  # 使用原始 prompt
+                response="",  # No content in case of failure
+                platform=self.platform_type.value,
+                model=self.model_name,
+                success=False,
+                error_message=f"请求异常：{str(e)}",
+                error_type=error_type if error_type else AIErrorType.UNKNOWN_ERROR,
+                latency_ms=int(latency * 1000),  # Convert to milliseconds
+                execution_id=execution_id,
+                **kwargs  # Pass any additional context from kwargs
+            )
+
             # Re-raise the exception to trigger circuit breaker for connection-related errors
             if isinstance(e, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
                 raise e
-            
+
             return AIResponse(
                 success=False,
-                error_message=f"请求异常: {str(e)}",
+                error_message=f"请求异常：{str(e)}",
                 error_type=error_type,
                 model=self.model_name,
                 platform=self.platform_type.value,
@@ -311,26 +327,22 @@ class DeepSeekAdapter(AIClient):
         except ValueError as e:
             # 处理 API Key 验证等值错误
             latency = time.time() - start_time
-            
+
             # Log failed response to enhanced logger with context
-            try:
-                execution_id = kwargs.get('execution_id', 'unknown')
-                log_detailed_response(
-                    question=prompt,  # 使用原始prompt
-                    response="",  # No content in case of failure
-                    platform=self.platform_type.value,
-                    model=self.model_name,
-                    success=False,
-                    error_message=str(e),
-                    error_type=AIErrorType.INVALID_API_KEY,
-                    latency_ms=int(latency * 1000),  # Convert to milliseconds
-                    execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
-                )
-            except Exception as log_error:
-                # Don't let logging errors affect the main response
-                api_logger.warning(f"Failed to log value error to enhanced logger: {log_error}")
-            
+            execution_id = kwargs.get('execution_id', 'unknown')
+            self._safe_log_response(
+                question=prompt,  # 使用原始 prompt
+                response="",  # No content in case of failure
+                platform=self.platform_type.value,
+                model=self.model_name,
+                success=False,
+                error_message=str(e),
+                error_type=AIErrorType.INVALID_API_KEY,
+                latency_ms=int(latency * 1000),  # Convert to milliseconds
+                execution_id=execution_id,
+                **kwargs  # Pass any additional context from kwargs
+            )
+
             return AIResponse(
                 success=False,
                 error_message=str(e),
@@ -343,33 +355,29 @@ class DeepSeekAdapter(AIClient):
         except Exception as e:
             # 处理其他未预期的异常
             latency = time.time() - start_time
-            
+
             # Log failed response to enhanced logger with context
-            try:
-                execution_id = kwargs.get('execution_id', 'unknown')
-                log_detailed_response(
-                    question=prompt,  # 使用原始prompt
-                    response="",  # No content in case of failure
-                    platform=self.platform_type.value,
-                    model=self.model_name,
-                    success=False,
-                    error_message=f"未知错误: {str(e)}",
-                    error_type=AIErrorType.UNKNOWN_ERROR,
-                    latency_ms=int(latency * 1000),  # Convert to milliseconds
-                    execution_id=execution_id,
-                    **kwargs  # Pass any additional context from kwargs
-                )
-            except Exception as log_error:
-                # Don't let logging errors affect the main response
-                api_logger.warning(f"Failed to log unexpected error to enhanced logger: {log_error}")
-            
+            execution_id = kwargs.get('execution_id', 'unknown')
+            self._safe_log_response(
+                question=prompt,  # 使用原始 prompt
+                response="",  # No content in case of failure
+                platform=self.platform_type.value,
+                model=self.model_name,
+                success=False,
+                error_message=f"未知错误：{str(e)}",
+                error_type=AIErrorType.UNKNOWN_ERROR,
+                latency_ms=int(latency * 1000),  # Convert to milliseconds
+                execution_id=execution_id,
+                **kwargs  # Pass any additional context from kwargs
+            )
+
             # Re-raise the exception to trigger circuit breaker for critical errors
             if isinstance(e, (ConnectionError, TimeoutError)):
                 raise e
-            
+
             return AIResponse(
                 success=False,
-                error_message=f"未知错误: {str(e)}",
+                error_message=f"未知错误：{str(e)}",
                 error_type=AIErrorType.UNKNOWN_ERROR,
                 model=self.model_name,
                 platform=self.platform_type.value,

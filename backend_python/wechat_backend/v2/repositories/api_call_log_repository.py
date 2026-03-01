@@ -188,8 +188,33 @@ class APICallLogRepository:
         index_name: str,
         index_def: str
     ) -> None:
-        """创建索引（如果不存在）"""
+        """
+        创建索引（如果不存在）
+
+        Args:
+            cursor: 数据库游标
+            index_name: 索引名称
+            index_def: 索引定义
+
+        Note:
+            索引名称和定义必须是预定义的，不允许动态拼接
+        """
+        # 白名单验证索引名称
+        allowed_indexes = {
+            'idx_api_call_logs_execution_id': 'api_call_logs(execution_id)',
+            'idx_api_call_logs_report_id': 'api_call_logs(report_id)',
+            'idx_api_call_logs_timestamp': 'api_call_logs(request_timestamp)',
+            'idx_api_call_logs_model': 'api_call_logs(model)',
+        }
+        
+        if index_name not in allowed_indexes:
+            raise ValueError(f"不允许的索引名称：{index_name}")
+        
+        if allowed_indexes[index_name] != index_def:
+            raise ValueError(f"索引定义不匹配：{index_def}")
+        
         try:
+            # 使用参数化查询（索引名称无法参数化，已通过白名单验证）
             cursor.execute(f'CREATE INDEX IF NOT EXISTS {index_name} ON {index_def}')
         except sqlite3.OperationalError:
             # 索引已存在

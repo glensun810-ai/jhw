@@ -56,8 +56,8 @@ from wechat_backend.nxm_result_aggregator import (
 from wechat_backend.services.quality_scorer import get_quality_scorer
 # P1-014 新增：AI 超时保护
 from wechat_backend.ai_timeout import get_timeout_manager, AITimeoutError
-# P1-2 新增：多模型冗余调用
-from wechat_backend.multi_model_executor import get_multi_model_executor
+# 【重构】单模型调用与优先级评估
+from wechat_backend.multi_model_executor import get_single_model_executor, get_priority_evaluator
 
 # 配置导入
 from legacy_config import Config
@@ -203,47 +203,46 @@ def recover_from_wal(execution_id: str) -> Optional[Dict]:
     return None
 
 
-# ==================== P1-2 新增：多模型冗余调用辅助函数 ====================
+# ==================== 单模型调用辅助函数（移除多模型冗余） ====================
 
-async def _execute_with_multi_model_redundancy(
+async def _execute_single_model(
     prompt: str,
-    primary_model: str,
+    model_name: str,
     timeout: int,
     execution_id: str = None,
     q_idx: int = None
 ):
     """
-    P1-2: 执行多模型冗余调用
-    
+    执行单模型调用（用户选择哪个模型就用哪个）
+
     策略：
-    1. 首先尝试主模型
-    2. 主模型失败时，自动尝试备用模型
-    3. 返回第一个成功的有效结果
-    
+    1. 只调用用户指定的模型
+    2. 失败时直接返回错误，不自动尝试其他模型
+    3. 由上层决定如何处理失败
+
     参数：
         prompt: 提示词
-        primary_model: 主模型名称
+        model_name: 模型名称（用户选择的模型）
         timeout: 超时时间（秒）
         execution_id: 执行 ID
         q_idx: 问题索引
-        
-    返回：
-        (AIResponse, actual_model): AI 响应和实际使用的模型名称
-    """
-    from wechat_backend.multi_model_executor import get_multi_model_executor
 
-    # 获取多模型执行器
-    executor = get_multi_model_executor(timeout=timeout)
-    
-    # 执行冗余调用
-    result, actual_model = await executor.execute_with_redundancy(
+    返回：
+        (AIResponse, model_name): AI 响应和实际使用的模型名称
+    """
+    from wechat_backend.multi_model_executor import get_single_model_executor
+
+    # 获取单模型执行器
+    executor = get_single_model_executor(timeout=timeout)
+
+    # 执行单模型调用
+    result, actual_model = await executor.execute(
         prompt=prompt,
-        primary_model=primary_model,
-        fallback_models=None,  # 使用默认备用模型配置
+        model_name=model_name,
         execution_id=execution_id,
         q_idx=q_idx
     )
-    
+
     return result, actual_model
 
 
@@ -343,40 +342,26 @@ def execute_nxm_test(
                         # P0-001 修复：使用线程安全的异步执行方式
                         # 原代码问题：asyncio.run() 在已有事件循环的线程中会抛出 RuntimeError
                         # 修复方案：使用 run_async_in_thread() 创建新的事件循环
-                        
-                        # 检查是否启用多模型冗余（默认启用）
-                        use_multi_model = True  # 可配置化
-                        
-                        if use_multi_model:
-                            # P1-2: 使用多模型冗余调用
-                            api_logger.info(f"[NxM][P1-2] 启用多模型冗余调用：{model_name}, Q{q_idx}")
-                            
-                            ai_result, actual_model = run_async_in_thread(
-                                _execute_with_multi_model_redundancy(
-                                    prompt=prompt,
-                                    primary_model=model_name,
-                                    timeout=timeout,
-                                    execution_id=execution_id,
-                                    q_idx=q_idx
-                                )
+
+                        # 【重构】使用单模型调用（用户选择哪个模型就用哪个）
+                        api_logger.info(f"[NxM] 使用用户选择的模型：{model_name}, Q{q_idx}")
+
+                        ai_result, actual_model = run_async_in_thread(
+                            _execute_single_model(
+                                prompt=prompt,
+                                model_name=model_name,
+                                timeout=timeout,
+                                execution_id=execution_id,
+                                q_idx=q_idx
                             )
-                            
-                            # 如果实际使用的模型与主模型不同，记录日志
-                            if actual_model != model_name:
-                                api_logger.info(
-                                    f"[NxM][P1-2] 备用模型接管：主模型={model_name}, 实际={actual_model}, Q{q_idx}"
-                                )
-                                model_name = actual_model  # 更新模型名为实际使用的模型
-                        else:
-                            # 原有单模型调用逻辑
-                            ai_result = run_async_in_thread(
-                                ai_executor.execute_with_fallback(
-                                    task_func=client.send_prompt,
-                                    task_name=f"Q{q_idx}-{model_name}",
-                                    source=model_name,
-                                    prompt=prompt
-                                )
+                        )
+
+                        # 用户选择的模型应该与实际使用的模型一致
+                        if actual_model != model_name:
+                            api_logger.warning(
+                                f"[NxM] 实际使用模型与选择不同：选择={model_name}, 实际={actual_model}, Q{q_idx}"
                             )
+                            model_name = actual_model  # 更新模型名为实际使用的模型
                         
                         # 检查 AI 调用结果
                         geo_data = None
@@ -387,9 +372,9 @@ def execute_nxm_test(
                             # AI 调用成功，解析 GEO 数据
                             scheduler.record_model_success(model_name)
 
-                            # 解析 GEO 数据
+                            # 解析 GEO 数据（修复：使用 content 而非 data）
                             geo_data, parse_error = parse_geo_with_validation(
-                                ai_result.data,
+                                ai_result.content,
                                 execution_id,
                                 q_idx,
                                 model_name
@@ -401,10 +386,15 @@ def execute_nxm_test(
                                 api_logger.warning(f"[NxM] 解析失败：{model_name}, Q{q_idx}: {parse_error or geo_data.get('_error')}")
                                 # P0-4 修复：直接使用字典收集结果
                                 # P3 修复：确保所有字段都是可序列化的
+                                # 【P0 关键修复】response 改为字典格式，兼容存储层要求
                                 result = {
                                     'question': question,
                                     'model': model_name,
-                                    'response': str(ai_result.data) if hasattr(ai_result, 'data') else str(ai_result),  # 修复：确保可序列化
+                                    'response': {  # 字典格式：{content, latency, metadata}
+                                        'content': str(ai_result.content) if hasattr(ai_result, 'content') else str(ai_result),
+                                        'latency': None,
+                                        'metadata': {}
+                                    },
                                     'geo_data': geo_data,
                                     'error': str(parse_error or geo_data.get('_error', '解析失败')),
                                     'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'parse_error',
@@ -414,10 +404,15 @@ def execute_nxm_test(
                             else:
                                 # 解析成功，收集结果
                                 # P3 修复：确保所有字段都是可序列化的
+                                # 【P0 关键修复】response 改为字典格式，兼容存储层要求
                                 result = {
                                     'question': question,
                                     'model': model_name,
-                                    'response': str(ai_result.data) if hasattr(ai_result, 'data') else str(ai_result),  # 修复：确保可序列化
+                                    'response': {  # 字典格式：{content, latency, metadata}
+                                        'content': str(ai_result.content) if hasattr(ai_result, 'content') else str(ai_result),
+                                        'latency': None,
+                                        'metadata': {}
+                                    },
                                     'geo_data': geo_data,
                                     'error': None,
                                     'error_type': None,
@@ -431,10 +426,15 @@ def execute_nxm_test(
 
                             # P0-4 修复：收集失败结果（保证报告完整）
                             # P3 修复：确保所有字段都是可序列化的
+                            # 【P0 关键修复】response 改为字典格式，兼容存储层要求
                             result = {
                                 'question': question,
-                                import_model: model_name,
-                                'response': None,
+                                'model': model_name,
+                                'response': {  # 字典格式：{content, latency, metadata}
+                                    'content': None,
+                                    'latency': None,
+                                    'metadata': {}
+                                },
                                 'geo_data': None,
                                 'error': str(ai_result.error_message),
                                 'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'unknown',
@@ -582,10 +582,16 @@ def execute_nxm_test(
                 brand_analysis = None
                 try:
                     from wechat_backend.services.brand_analysis_service import get_brand_analysis_service
+
+                    # 提取用户选择的模型名称列表
+                    user_model_names = [m.get('name', '') for m in selected_models if m.get('name')]
                     
-                    # 获取品牌分析服务
-                    analysis_service = get_brand_analysis_service(judge_model='doubao')
-                    
+                    # 获取品牌分析服务（动态选择裁判模型，优先使用用户选择的模型）
+                    analysis_service = get_brand_analysis_service(
+                        judge_model=None,  # 不指定，让服务自动选择
+                        user_selected_models=user_model_names  # 传入用户选择的模型列表
+                    )
+
                     # 执行品牌提及分析
                     brand_analysis = analysis_service.analyze_brand_mentions(
                         results=deduplicated,
@@ -664,10 +670,9 @@ def execute_nxm_test(
                         ai_models_used=','.join(m.get('name', '') for m in selected_models),
                         questions_used=';'.join(raw_questions),
                         overall_score=overall_score,
-                        total_tasks=len(deduplicated),
+                        total_tests=len(deduplicated),  # 修复：使用 total_tests 而非 total_tasks
                         results_summary=gzip.compress(json.dumps(results_summary, ensure_ascii=False).encode()).decode('latin-1'),
-                        detailed_results=gzip.compress(json.dumps(deduplicated, ensure_ascii=False).encode()).decode('latin-1'),
-                        execution_id=execution_id
+                        detailed_results=gzip.compress(json.dumps(deduplicated, ensure_ascii=False).encode()).decode('latin-1')
                     )
 
                     api_logger.info(f"[NxM] ✅ 测试汇总记录保存成功：{execution_id}")

@@ -332,7 +332,7 @@ class ConcurrentExecutionEngine:
             return AIResult(
                 task=task,
                 success=ai_result.status == 'success',
-                data=ai_result.data if ai_result.status == 'success' else None,
+                data=ai_result.content if ai_result.success else None,
                 error_message=ai_result.error_message,
                 error_type=ai_result.error_type.value if ai_result.error_type else None,
                 execution_time=execution_time

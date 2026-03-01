@@ -2469,178 +2469,88 @@ def get_source_intelligence():
 
 @wechat_bp.route('/api/platform-status', methods=['GET'])
 @require_auth_optional  # 可选身份验证，支持微信会话
-@rate_limit(limit=20, window=60, per='endpoint')  # 限制每分钟20次请求
+@rate_limit(limit=20, window=60, per='endpoint')  # 限制每分钟 20 次请求
 @monitored_endpoint('/api/platform-status', require_auth=False, validate_inputs=False)
 def get_platform_status():
-    """获取所有AI平台的状态信息"""
+    """获取所有 AI 平台的状态信息（前端用于显示可用性和配置状态）"""
     try:
         # 从配置管理器获取平台状态
         from wechat_backend.config_manager import ConfigurationManager as PlatformConfigManager
         config_manager = PlatformConfigManager()
+        
+        # 从健康检查模块获取详细状态
+        from wechat_backend.ai_adapters.platform_health_monitor import PlatformHealthMonitor
+        health_results = PlatformHealthMonitor.run_health_check()
 
         status_info = {}
 
-        # 预定义支持的平台
-        supported_platforms = [
-            'deepseek', 'deepseekr1', 'doubao', 'qwen', 'wenxin',
-            'kimi', 'chatgpt', 'claude', 'gemini'
+        # 预定义支持的平台（按前端显示顺序）
+        domestic_platforms = [
+            {'id': 'deepseek', 'name': 'DeepSeek'},
+            {'id': 'doubao', 'name': '豆包'},
+            {'id': 'qwen', 'name': '通义千问'},
+            {'id': 'wenxin', 'name': '文心一言'},
+        ]
+        
+        overseas_platforms = [
+            {'id': 'chatgpt', 'name': 'ChatGPT'},
+            {'id': 'gemini', 'name': 'Gemini'},
+            {'id': 'zhipu', 'name': '智谱 AI'},
         ]
 
-        for platform in supported_platforms:
+        # 处理国内平台
+        for platform_info in domestic_platforms:
+            platform = platform_info['id']
             config = config_manager.get_platform_config(platform)
-            if config and config.api_key:
-                # 检查配额和状态
-                quota_info = getattr(config, 'quota_info', None)
-                status = getattr(config, 'api_status', None)
+            health_data = health_results.get('platforms', {}).get(platform, {})
+            
+            is_configured = bool(config and config.api_key)
+            
+            status_info[platform] = {
+                'id': platform,
+                'name': platform_info['name'],
+                'isConfigured': is_configured,  # 【前端需要】是否已配置
+                'status': 'active' if is_configured else 'inactive',
+                'has_api_key': is_configured,
+                'category': 'domestic',  # 【新增】平台类别
+                'quota': {
+                    'daily_limit': getattr(config, 'daily_limit', None) if config else None,
+                    'used_today': getattr(config, 'used_today', 0) if config else 0,
+                } if config and is_configured else None,
+            }
 
-                status_info[platform] = {
-                    'status': status.value if status else 'active',
-                    'has_api_key': bool(config.api_key),
-                    'quota': {
-                        'daily_limit': quota_info.daily_limit if quota_info else None,
-                        'used_today': quota_info.used_today if quota_info else 0,
-                        'remaining': quota_info.remaining if quota_info else None
-                    } if quota_info else None,
-                    'cost_per_request': getattr(config, 'cost_per_token', 0) * 1000,  # per 1k tokens
-                    'rate_limit': getattr(config, 'rate_limit_per_minute', None)
-                }
-            else:
-                status_info[platform] = {
-                    'status': 'inactive',
-                    'has_api_key': False,
-                    'quota': None,
-                    'cost_per_request': 0,
-                    'rate_limit': None
-                }
+        # 处理海外平台
+        for platform_info in overseas_platforms:
+            platform = platform_info['id']
+            config = config_manager.get_platform_config(platform)
+            health_data = health_results.get('platforms', {}).get(platform, {})
+            
+            is_configured = bool(config and config.api_key)
+            
+            status_info[platform] = {
+                'id': platform,
+                'name': platform_info['name'],
+                'isConfigured': is_configured,  # 【前端需要】是否已配置
+                'status': 'active' if is_configured else 'inactive',
+                'has_api_key': is_configured,
+                'category': 'overseas',  # 【新增】平台类别
+            }
 
-        return jsonify({'status': 'success', 'platforms': status_info})
+        return jsonify({
+            'status': 'success',
+            'platforms': status_info,
+            'summary': {
+                'total': len(domestic_platforms) + len(overseas_platforms),
+                'configured': sum(1 for p in status_info.values() if p['isConfigured']),
+                'unconfigured': sum(1 for p in status_info.values() if not p['isConfigured']),
+            }
+        })
 
     except Exception as e:
         api_logger.error(f"Error getting platform status: {e}")
+        import traceback
+        api_logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
-
-
-
-
-@wechat_bp.route('/api/test-progress', methods=['GET'])
-@require_strict_auth  # 差距 1 修复：添加严格认证
-def get_test_progress():
-    """
-    获取测试进度 - 【P0 紧急修复】
-
-    P0 修复核心原则：
-    1. 数据库是唯一事实源 - 内存找不到时查数据库
-    2. 完成状态必须可查 - 即使内存丢失也能从数据库恢复
-    3. 强制停止轮询 - 完成/失败时必须返回 should_stop_polling=true
-
-    安全增强（差距 1 修复）:
-    - 需要 JWT Token 或微信 OpenID 认证
-    - 记录审计日志
-    """
-    execution_id = request.args.get('executionId')
-    
-    if not execution_id:
-        return jsonify({'error': 'Missing executionId parameter'}), 400
-    
-    # 【P0 修复 - 步骤 1】优先从内存读取（快速路径）
-    if execution_id in execution_store:
-        progress_data = execution_store[execution_id]
-        
-        # 【任务 3】数据同步检查 - 增加 is_synced 字段
-        status = progress_data.get('status', 'unknown')
-        results = progress_data.get('results', [])
-        expected = progress_data.get('expected_total', progress_data.get('total', 0))
-        completion_verified = progress_data.get('completion_verified', False)
-
-        # is_synced 为 true 的条件：
-        # 1. status == 'completed'
-        # 2. len(results) == expected
-        # 3. completion_verified == True（可选，增强检查）
-        is_synced = (
-            status == 'completed' and
-            len(results) == expected and
-            expected > 0 and
-            completion_verified
-        )
-
-        progress_data['is_synced'] = is_synced
-        progress_data['sync_check'] = {
-            'status': status,
-            'results_count': len(results),
-            'expected_count': expected,
-            'completion_verified': completion_verified
-        }
-
-        # 【关键修复】如果任务已完成，添加一个标志来通知前端停止轮询
-        if progress_data.get('status') in ['completed', 'failed']:
-            progress_data['should_stop_polling'] = True
-
-        api_logger.info(f"[进度查询] 内存命中：{execution_id}, status={status}, progress={progress_data.get('progress')}")
-        return jsonify(progress_data)
-    
-    # 【P0 修复 - 步骤 2】内存未找到，从数据库恢复（降级路径）
-    api_logger.warning(f"[进度查询] 内存未找到，尝试从数据库恢复：{execution_id}")
-    
-    try:
-        from wechat_backend.diagnosis_report_repository import DiagnosisReportRepository
-        repo = DiagnosisReportRepository()
-        
-        # 从数据库查询报告状态
-        report = repo.get_by_execution_id(execution_id)
-        
-        if report:
-            api_logger.info(f"[进度查询] ✅ 数据库恢复成功：{execution_id}, status={report.get('status')}")
-            
-            # 构建符合前端期望的响应格式
-            db_data = {
-                'execution_id': execution_id,
-                'status': report.get('status', 'processing'),
-                'stage': report.get('stage', 'init'),
-                'progress': report.get('progress', 0),
-                'is_completed': report.get('is_completed', False) == 1,
-                'should_stop_polling': report.get('status') in ['completed', 'failed'],
-                'recovered_from_db': True,  # 标记是从数据库恢复的
-                'created_at': report.get('created_at'),
-                'updated_at': report.get('updated_at'),
-            }
-            
-            # 如果有错误信息，添加到响应
-            if report.get('error_message'):
-                db_data['error'] = report.get('error_message')
-            
-            # 【关键修复】如果数据库显示已完成，强制停止轮询
-            if report.get('is_completed') == 1 or report.get('status') in ['completed', 'failed']:
-                db_data['should_stop_polling'] = True
-                api_logger.info(f"[进度查询] ✅ 数据库显示已完成，强制停止轮询：{execution_id}")
-            
-            # 尝试从数据库加载结果（如果已完成）
-            if report.get('status') == 'completed':
-                try:
-                    from wechat_backend.diagnosis_report_repository import DiagnosisResultRepository
-                    result_repo = DiagnosisResultRepository()
-                    results = result_repo.get_by_execution_id(execution_id)
-                    db_data['results'] = results
-                    db_data['results_count'] = len(results)
-                    api_logger.info(f"[进度查询] ✅ 已加载 {len(results)} 条结果")
-                except Exception as result_err:
-                    api_logger.error(f"[进度查询] ⚠️ 加载结果失败：{result_err}")
-            
-            return jsonify(db_data)
-        else:
-            api_logger.error(f"[进度查询] ❌ 数据库也未找到：{execution_id}")
-            return jsonify({
-                'error': 'Execution ID not found',
-                'execution_id': execution_id,
-                'suggestion': '诊断任务不存在或已被清理，请重新开始诊断'
-            }), 404
-            
-    except Exception as e:
-        api_logger.error(f"[进度查询] ❌ 数据库查询失败：{e}")
-        return jsonify({
-            'error': 'Failed to query progress',
-            'message': str(e),
-            'execution_id': execution_id
-        }), 500
 
 
 # ====================
@@ -3123,27 +3033,6 @@ def get_task_status_api(task_id):
     return jsonify({'error': 'Task not found', 'task_id': task_id}), 404
 
 
-@wechat_bp.route('/test/result/<task_id>', methods=['GET'])
-@rate_limit(limit=20, window=60, per='endpoint')
-@monitored_endpoint('/test/result', require_auth=False, validate_inputs=False)
-def get_task_result(task_id):
-    """获取诊断任务的完整情报深度结果"""
-    if not task_id:
-        return jsonify({'error': 'Task ID is required'}), 400
-
-    # 检查任务是否已完成
-    task_status = get_task_status(task_id)
-    if not task_status or not task_status.is_completed:
-        return jsonify({'error': 'Task not completed or not found'}), 400
-
-    # 获取深度情报结果
-    deep_intelligence_result = get_deep_intelligence_result(task_id)
-
-    if not deep_intelligence_result:
-        return jsonify({'error': 'Deep intelligence result not found'}), 404
-
-    # 返回完整的深度情报分析结果
-    return jsonify(deep_intelligence_result.to_dict()), 200
 
 # ==================== 存储架构优化集成 ====================
 # 导入新的存储层服务

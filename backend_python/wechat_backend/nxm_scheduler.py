@@ -142,6 +142,19 @@ class NxMScheduler:
                             stage=stage
                         )
                         api_logger.debug(f"[Scheduler] 数据库进度已更新：{self.execution_id}, progress={progress}")
+
+                        # 【P0-前端同步修复】同时更新 task_statuses 表，确保前端轮询能获取到最新状态
+                        from wechat_backend.repositories.task_status_repository import save_task_status
+                        save_task_status(
+                            task_id=self.execution_id,
+                            stage=stage,
+                            progress=progress,
+                            status_text=status_text,
+                            completed_count=completed,
+                            total_count=total,
+                            is_completed=(progress >= 100)
+                        )
+                        api_logger.debug(f"[Scheduler] task_statuses 表已同步更新：{self.execution_id}")
                     except Exception as db_err:
                         api_logger.error(f"[Scheduler] 数据库更新失败：{db_err}")
                         # 数据库失败不影响内存更新，但记录告警

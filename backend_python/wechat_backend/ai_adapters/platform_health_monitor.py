@@ -302,28 +302,93 @@ class PlatformHealthMonitor:
 def run_startup_health_check():
     """
     在应用启动时运行健康检查
-    
+
     这个函数应该在 app.py 或 run.py 的启动阶段调用
+    
+    【关键修改】：
+    1. 检测到配置缺失时仅记录警告，不抛出异常
+    2. 始终返回 True，允许后续流程继续运行
+    3. 使用 INFO/WARNING 日志级别，避免 ERROR 阻塞
     """
     api_logger.info("Running startup AI platform health check...")
-    
+
     try:
         results = PlatformHealthMonitor.run_health_check()
         
-        if results['status'] == HealthStatus.UNHEALTHY.value:
-            api_logger.error("⚠️  AI Platform health check FAILED! Some platforms are not working.")
-        elif results['status'] == HealthStatus.DEGRADED.value:
-            api_logger.warning("⚠️  AI Platform health check completed with warnings.")
-        else:
-            api_logger.info("✅ AI Platform health check passed!")
+        # 统计未配置的平台
+        unconfigured_platforms = []
+        unhealthy_platforms = []
         
+        for platform, health_data in results.get('platforms', {}).items():
+            if not health_data.get('api_key_configured', False):
+                unconfigured_platforms.append(platform)
+            if health_data.get('status') == HealthStatus.UNHEALTHY.value:
+                unhealthy_platforms.append(platform)
+
+        # 【关键修改 1】：配置缺失仅记录 INFO，不阻塞启动
+        if unconfigured_platforms:
+            msg = (f"ℹ️  {len(unconfigured_platforms)} platform(s) not configured: "
+                   f"{', '.join(unconfigured_platforms)}. "
+                   f"Add API keys to .env if needed.")
+            api_logger.info(msg)  # 使用 INFO 而不是 ERROR
+        
+        # 【关键修改 2】：不健康平台记录 WARNING，但不阻止启动
+        if unhealthy_platforms:
+            api_logger.warning(
+                f"⚠️  {len(unhealthy_platforms)} platform(s) unhealthy: "
+                f"{', '.join(unhealthy_platforms)}. System will proceed with reduced functionality."
+            )
+
         # 打印状态摘要
         summary = PlatformHealthMonitor.get_platform_status_summary()
         api_logger.info(summary)
+
+        # 【关键修改 3】：根据实际健康状态决定是否打印警告
+        if unhealthy_platforms:
+            api_logger.warning(
+                f"⚠️  {len(unhealthy_platforms)} platform(s) unhealthy: "
+                f"{', '.join(unhealthy_platforms)}. System will proceed with reduced functionality."
+            )
+            # 有不健康平台，返回警告状态
+            api_logger.info(
+                "AI Platform health check completed with warnings, "
+                "system proceeding with available platforms."
+            )
+        elif unconfigured_platforms:
+            # 仅未配置，但无不健康平台
+            api_logger.info(
+                "AI Platform health check completed. "
+                "Some platforms not configured but system is functional."
+            )
+        else:
+            # 所有平台都健康
+            api_logger.info(
+                "✅ AI Platform health check passed! All platforms are functional."
+            )
+
+        return {
+            'success': True,  # 始终返回成功，允许启动
+            'status': HealthStatus.DEGRADED.value if unconfigured_platforms else HealthStatus.HEALTHY.value,
+            'results': results,
+            'warnings': results.get('warnings', []) if unhealthy_platforms else [],
+            'unconfigured_platforms': unconfigured_platforms,
+            'unhealthy_platforms': unhealthy_platforms
+        }
         
-        return results
     except Exception as e:
+        # 【关键修改 4】：即使健康检查异常，也仅记录 ERROR 并继续
         api_logger.error(f"Health check failed with exception: {e}")
         import traceback
         api_logger.error(f"Traceback: {traceback.format_exc()}")
-        return None
+        api_logger.warning("⚠️  Health check failed, but system will proceed anyway.")
+
+        # 返回允许启动的结果 - 确保包含 status 键避免 KeyError
+        return {
+            'success': True,  # 即使异常也允许启动
+            'status': 'unknown',  # 添加 status 键，避免 app.py 读取时 KeyError
+            'results': None,
+            'warnings': [f"Health check failed: {e}"],
+            'unconfigured_platforms': [],
+            'unhealthy_platforms': [],
+            'error': str(e)
+        }

@@ -52,13 +52,12 @@ def warmup_popular_brands() -> int:
         cursor = conn.cursor()
         
         # 查询热门品牌
+        # 注意：diagnosis_reports 表没有 geo_data 字段
+        # 品牌统计数据在 calculate_brand_stats 中从 diagnosis_results 表查询
         cursor.execute('''
-            SELECT 
+            SELECT
                 brand_name,
-                COUNT(*) as report_count,
-                AVG(
-                    CAST(json_extract(geo_data, '$.quality_score') AS REAL)
-                ) as avg_score
+                COUNT(*) as report_count
             FROM diagnosis_reports
             WHERE brand_name IS NOT NULL
               AND brand_name != ''
@@ -70,15 +69,17 @@ def warmup_popular_brands() -> int:
         
         brands = cursor.fetchall()
         cached_count = 0
-        
+
         for brand in brands:
             brand_name = brand['brand_name']
             report_count = brand['report_count']
-            avg_score = brand['avg_score'] or 0
             
-            # 计算品牌统计数据
+            # 计算品牌统计数据（包括平均分）
             stats = calculate_brand_stats(brand_name, cursor)
             
+            # 从 stats 中获取平均分
+            avg_score = stats.get('avg_quality_score', 0)
+
             # 缓存品牌统计
             cache_key = f"brand_stats:{brand_name}"
             cache_value = {
@@ -89,7 +90,7 @@ def warmup_popular_brands() -> int:
                 'cached_at': time.time(),
                 'ttl': cache_warmup_config.get_brand_stats_ttl(),
             }
-            
+
             # 写入缓存（使用内存缓存或 Redis）
             _set_cache(cache_key, cache_value, cache_warmup_config.get_brand_stats_ttl())
             cached_count += 1
