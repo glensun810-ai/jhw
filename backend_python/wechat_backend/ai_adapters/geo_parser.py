@@ -43,11 +43,12 @@ def parse_geo_json_enhanced(
     text: str,
     execution_id: str = None,
     q_idx: int = None,
-    model_name: str = None
+    model_name: str = None,
+    brand_name: str = None
 ) -> Dict[str, Any]:
     """
     从 AI 返回的混合文本中提取 geo_analysis JSON（最大容错版本）
-    
+
     P0-2 修复：增强容错性，支持多种格式和降级方案
 
     解析策略（按优先级）:
@@ -63,11 +64,12 @@ def parse_geo_json_enhanced(
         execution_id: 执行 ID（可选，用于日志）
         q_idx: 问题索引（可选，用于日志）
         model_name: 模型名称（可选，用于日志）
+        brand_name: 品牌名称（可选，用于 top3_brands 转换）
 
     Returns:
         包含 geo_analysis 字段的字典，如果解析失败则返回带错误标记的默认值
     """
-    log_context = f"exec={execution_id}, Q={q_idx}, model={model_name}" if execution_id else ""
+    log_context = f"exec={execution_id}, Q={q_idx}, model={model_name}, brand={brand_name}" if execution_id else ""
     
     # 验证输入
     if not text or not isinstance(text, str):

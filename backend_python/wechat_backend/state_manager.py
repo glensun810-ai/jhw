@@ -199,6 +199,7 @@ class DiagnosisStateManager:
             stage='completed',
             progress=100,
             is_completed=True,
+            should_stop_polling=True,  # 【P0 关键修复】添加 should_stop_polling，通知前端停止轮询
             write_to_db=True,
             user_id=user_id,
             brand_name=brand_name,
@@ -226,18 +227,18 @@ class DiagnosisStateManager:
                 from wechat_backend.diagnosis_report_repository import DiagnosisReportRepository
                 repo = DiagnosisReportRepository()
                 report = repo.get_by_execution_id(execution_id)
-                
+
                 if report:
                     db_status = report.get('status')
                     db_is_completed = report.get('is_completed')
-                    
+
                     if db_status != 'completed' or db_is_completed != 1:
                         # 数据库状态不一致，强制重新写入
                         api_logger.error(
                             f"[StateManager] ⚠️ 数据库状态不一致：{execution_id}, "
-                            f"status={db_status}, is_completed={db_is_completed}"
+                            f"status={db_status}, db_is_completed={db_is_completed}"
                         )
-                        
+
                         # 强制重新写入数据库
                         repo.update_status(
                             execution_id=execution_id,
@@ -251,9 +252,23 @@ class DiagnosisStateManager:
                         api_logger.info(f"[StateManager] ✅ 数据库状态验证通过：{execution_id}")
                 else:
                     api_logger.error(f"[StateManager] ❌ 数据库记录不存在：{execution_id}")
-                    
+
             except Exception as verify_err:
                 api_logger.error(f"[StateManager] ⚠️ 状态验证失败：{execution_id}, 错误：{verify_err}")
+
+            # 【P0-前端同步修复】同时更新 task_statuses 表，确保前端轮询能获取到最新状态
+            try:
+                from wechat_backend.repositories.task_status_repository import save_task_status
+                save_task_status(
+                    task_id=execution_id,
+                    stage='completed',
+                    progress=100,
+                    status_text='诊断完成',
+                    is_completed=True
+                )
+                api_logger.info(f"[StateManager] ✅ task_statuses 表已同步更新：{execution_id}")
+            except Exception as task_err:
+                api_logger.error(f"[StateManager] ⚠️ task_statuses 表更新失败：{execution_id}, 错误：{task_err}")
         else:
             api_logger.error(f"[StateManager] ❌ 执行完成失败：{execution_id}")
 

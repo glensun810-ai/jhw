@@ -174,18 +174,18 @@ class DiagnosisStateMachine:
     ) -> bool:
         """
         执行状态流转
-        
+
         Args:
             event: 触发事件（如 'succeed', 'fail', 'timeout' 等）
             progress: 新进度值 (0-100)，可选
             **kwargs: 其他元数据（如 error_message, results_count 等）
-        
+
         Returns:
             bool: True 表示流转成功，False 表示流转失败（非法事件）
-        
+
         Raises:
             DiagnosisStateError: 状态流转异常（如终态尝试流转）
-        
+
         Example:
             >>> state_machine = DiagnosisStateMachine('exec-123')
             >>> state_machine.transition('succeed', progress=10)
@@ -193,7 +193,36 @@ class DiagnosisStateMachine:
             >>> state_machine.transition('invalid_event')  # 非法事件
             False
         """
-        # 1. 检查是否为终态
+        # 1. 检查终态
+        if self._is_terminal_state():
+            return False
+
+        # 2. 检查事件合法性
+        allowed_transitions = self._get_allowed_transitions()
+        if not self._is_valid_event(event, allowed_transitions):
+            return False
+
+        # 3. 执行状态流转
+        old_state = self._current_state
+        next_state = allowed_transitions[event]
+        self._current_state = next_state
+
+        # 4. 更新进度和元数据
+        self._update_progress_if_provided(progress)
+        self._update_metadata(event, kwargs)
+
+        # 5. 持久化状态
+        self.persist_state()
+
+        return True
+
+    def _is_terminal_state(self) -> bool:
+        """
+        检查是否为终态
+
+        Returns:
+            bool: True 表示终态
+        """
         if self._current_state.is_terminal:
             api_logger.warning(
                 "state_machine_terminal_state_transition_attempt",
@@ -201,15 +230,38 @@ class DiagnosisStateMachine:
                     'event': 'state_machine_terminal_state_transition_attempt',
                     'execution_id': self._execution_id,
                     'current_state': self._current_state.value,
-                    'attempted_event': event,
+                    'attempted_event': 'transition',
                 }
             )
-            # 终态不允许流转，但返回 False 而不是抛异常（兼容旧逻辑）
-            return False
-        
-        # 2. 获取允许的流转
-        allowed_transitions = self.TRANSITIONS.get(self._current_state, {})
-        
+            return True
+        return False
+
+    def _get_allowed_transitions(
+        self,
+    ) -> Dict[str, 'DiagnosisState']:
+        """
+        获取当前状态允许的流转
+
+        Returns:
+            Dict[str, DiagnosisState]: 允许的流转字典
+        """
+        return self.TRANSITIONS.get(self._current_state, {})
+
+    def _is_valid_event(
+        self,
+        event: str,
+        allowed_transitions: Dict[str, 'DiagnosisState'],
+    ) -> bool:
+        """
+        检查事件是否合法
+
+        Args:
+            event: 触发事件
+            allowed_transitions: 允许的流转字典
+
+        Returns:
+            bool: True 表示事件合法
+        """
         if event not in allowed_transitions:
             api_logger.warning(
                 "state_machine_invalid_transition",
@@ -222,43 +274,52 @@ class DiagnosisStateMachine:
                 }
             )
             return False
-        
-        # 3. 执行状态流转
-        old_state = self._current_state
-        next_state = allowed_transitions[event]
-        
-        self._current_state = next_state
-        
-        # 4. 更新进度（如果提供）
+        return True
+
+    def _update_progress_if_provided(
+        self,
+        progress: Optional[int],
+    ) -> None:
+        """
+        更新进度（如果提供）
+
+        Args:
+            progress: 新进度值
+        """
         if progress is not None:
             self._progress = self._validate_progress(progress)
-        
-        # 5. 终态自动设置进度为 100（如果是 COMPLETED）
+
         if self._current_state == DiagnosisState.COMPLETED:
             self._progress = 100
-        
-        # 6. 更新元数据
+
+    def _update_metadata(
+        self,
+        event: str,
+        kwargs: Dict[str, Any],
+    ) -> None:
+        """
+        更新元数据
+
+        Args:
+            event: 触发事件
+            kwargs: 其他元数据
+        """
         self._metadata.update(kwargs)
         self._metadata['last_event'] = event
         self._metadata['last_transition_time'] = datetime.now().isoformat()
-        
+
         api_logger.info(
             "state_machine_transitioned",
             extra={
                 'event': 'state_machine_transitioned',
                 'execution_id': self._execution_id,
-                'old_state': old_state.value,
+                'old_state': self._current_state.value,
                 'new_state': self._current_state.value,
-                'event': event,
+                'trigger_event': event,
                 'progress': self._progress,
                 'is_terminal': self._current_state.is_terminal,
             }
         )
-        
-        # 7. 持久化状态
-        self.persist_state()
-        
-        return True
     
     def _validate_progress(self, progress: int) -> int:
         """

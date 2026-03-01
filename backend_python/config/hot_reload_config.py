@@ -32,46 +32,62 @@ ConfigChangeCallback = Callable[[str, str, str], None]  # (key, old_value, new_v
 class HotReloadConfig:
     """
     支持热更新的配置管理器
-    
+
     使用方式：
     1. 自动启动：创建实例时自动开始监控
     2. 手动重载：调用 reload() 方法
     3. 获取配置：调用 get() 方法
     """
-    
+
+    # 系统环境变量列表（不监控这些变量）
+    SYSTEM_ENV_KEYS = {
+        'SSH_AUTH_SOCK', 'TMPDIR', 'TMP', 'TEMP', 'USER', 'HOME', 'PATH',
+        'PWD', 'SHELL', 'TERM', 'LANG', 'LC_ALL', 'LC_CTYPE',
+        'XPC_FLAGS', 'XPC_SERVICE_NAME', 'TERM_PROGRAM', 'TERM_PROGRAM_VERSION',
+        'COLORTERM', 'TERM_SESSION_ID', 'COMMAND_MODE', 'LOGNAME',
+        'XDG_', 'DISPLAY', 'WAYLAND_DISPLAY', 'SSH_CONNECTION',
+        'PYTHON', 'PYTHONPATH', 'PYENV', 'VIRTUAL_ENV',
+        'GIT_', 'EDITOR', 'VISUAL', 'LESS', 'PAGER',
+        'MANPATH', 'HOSTNAME', 'HOST', 'COMPUTERNAME',
+        'APP_', 'FLASK_', 'WERKZEUG_',
+    }
+
     def __init__(self, env_file_path: str, check_interval: int = 30):
         """
         初始化配置热更新管理器
-        
+
         Args:
             env_file_path: .env 文件路径
             check_interval: 检查间隔（秒）
         """
         self.env_file_path = Path(env_file_path)
         self.check_interval = check_interval
-        
+
         # 配置缓存
         self._config_cache: Dict[str, str] = {}
         self._last_modified: Optional[float] = None
         self._last_check: Optional[float] = None
-        
+
+        # 初始加载标记 - 修复：首次加载不触发变更通知
+        self._initial_load = True
+
         # 回调函数
         self._callbacks: List[ConfigChangeCallback] = []
-        
+
         # 锁
         self._lock = threading.RLock()
-        
+
         # 监控线程
         self._monitor_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
-        
+
         # 统计
         self._reload_count = 0
         self._last_reload_time: Optional[datetime] = None
-        
+
         # 启动监控
         self._start_monitoring()
-        
+
         api_logger.info(f"[HotReloadConfig] 初始化完成，监控文件：{self.env_file_path}")
     
     def _start_monitoring(self):
@@ -101,17 +117,23 @@ class HotReloadConfig:
         if not self.env_file_path.exists():
             api_logger.warning(f"[HotReloadConfig] 配置文件不存在：{self.env_file_path}")
             return
-        
+
         try:
             current_modified = self.env_file_path.stat().st_mtime
-            
+
             # 首次检查或文件已修改
             if self._last_modified is None or current_modified > self._last_modified:
                 with self._lock:
+                    is_first_load = self._last_modified is None
                     api_logger.info(f"[HotReloadConfig] 检测到配置文件变更，重新加载...")
                     self._load_config()
                     self._last_modified = current_modified
                     self._last_check = time.time()
+                    
+                    # 首次加载后标记为非初始加载
+                    if is_first_load:
+                        self._initial_load = False
+                        api_logger.info(f"[HotReloadConfig] 初始加载完成，跳过变更通知")
         except Exception as e:
             api_logger.error(f"[HotReloadConfig] 检查配置变更失败：{e}")
     
@@ -143,23 +165,40 @@ class HotReloadConfig:
             api_logger.error(f"[HotReloadConfig] 加载配置失败：{e}")
     
     def _notify_changes(self, old_config: Dict[str, str], new_config: Dict[str, str]):
-        """通知配置变更"""
+        """通知配置变更 - 修复：过滤系统环境变量，初始加载不触发通知"""
+        # 初始加载不触发变更通知
+        if self._initial_load:
+            api_logger.debug("[HotReloadConfig] 初始加载，跳过变更通知")
+            return
+            
         all_keys = set(old_config.keys()) | set(new_config.keys())
-        
+
         for key in all_keys:
+            # 过滤系统环境变量
+            if self._is_system_env_key(key):
+                continue
+                
             old_value = old_config.get(key, '')
             new_value = new_config.get(key, '')
-            
+
             if old_value != new_value:
                 # 配置已变更
                 api_logger.info(f"[HotReloadConfig] 配置变更：{key} = {self._mask_value(new_value)}")
-                
+
                 # 通知回调
                 for callback in self._callbacks:
                     try:
                         callback(key, old_value, new_value)
                     except Exception as e:
                         api_logger.error(f"[HotReloadConfig] 回调执行失败：{e}")
+    
+    def _is_system_env_key(self, key: str) -> bool:
+        """检查是否为系统环境变量（不需要监控的变量）"""
+        # 检查前缀匹配
+        for prefix in self.SYSTEM_ENV_KEYS:
+            if key.startswith(prefix):
+                return True
+        return key in self.SYSTEM_ENV_KEYS
     
     def _mask_value(self, value: str) -> str:
         """脱敏敏感配置值"""

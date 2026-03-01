@@ -30,8 +30,18 @@ setup_logging(
 # Import logger after setting up logging
 from wechat_backend.logging_config import app_logger
 
+# P0-DB-INIT-004: 诊断数据库路径
+from pathlib import Path
+app_logger.info("=== 数据库路径诊断 ===")
+app_logger.info(f"当前工作目录：{Path.cwd()}")
+app_logger.info(f"__file__ 路径：{__file__}")
+app_logger.info(f"__file__ 解析：{Path(__file__).resolve()}")
+
 # Initialize database
-from wechat_backend.database import init_db
+from wechat_backend.database import init_db, DB_PATH
+app_logger.info(f"数据库路径 (DB_PATH): {DB_PATH}")
+app_logger.info(f"数据库路径解析：{DB_PATH.resolve()}")
+app_logger.info(f"数据库文件存在：{DB_PATH.exists()}")
 init_db()
 
 # Initialize task status database
@@ -58,17 +68,26 @@ except Exception as e:
 # AI Platform Health Check - 防止平台消失问题复发
 try:
     from wechat_backend.ai_adapters.platform_health_monitor import run_startup_health_check
-    
+
     app_logger.info("=== AI Platform Health Check ===")
     health_results = run_startup_health_check()
-    
+
     if health_results:
-        if health_results['status'] == 'unhealthy':
-            app_logger.error("⚠️  AI Platform health check FAILED! Check logs for details.")
-        elif health_results['status'] == 'degraded':
-            app_logger.warning("⚠️  AI Platform health check completed with warnings.")
+        # Use safe access with .get() to avoid KeyError
+        status = health_results.get('status', 'unknown')
+        unhealthy = health_results.get('unhealthy_platforms', [])
+        
+        # 仅在不健康平台时记录错误
+        if status == 'unhealthy' and unhealthy:
+            app_logger.error(f"⚠️  AI Platform health check FAILED! Unhealthy: {', '.join(unhealthy)}")
+        elif status == 'degraded':
+            unconfigured = health_results.get('unconfigured_platforms', [])
+            if unconfigured:
+                app_logger.info(f"ℹ️  AI Platform health check: {len(unconfigured)} platform(s) not configured")
+            else:
+                app_logger.info("✅ AI Platform health check passed with minor warnings")
         else:
-            app_logger.info("✅ AI Platform health check passed!")
+            app_logger.info(f"✅ AI Platform health check passed! (status={status})")
 except Exception as e:
     app_logger.error(f"AI Platform health check failed: {e}")
     import traceback
@@ -319,14 +338,21 @@ def warm_up_adapters():
 import threading
 threading.Thread(target=warm_up_adapters, daemon=True).start()
 
-# P2-1 优化：启动 SSE 清理线程并注册路由
+# P2-1 优化：启动 SSE 服务并注册路由（使用统一后台服务管理器）
 try:
-    from wechat_backend.services.sse_service_v2 import start_cleanup_thread as sse_start_cleanup, register_sse_routes
-    sse_start_cleanup(interval=60)  # 每 60 秒清理一次过期连接
+    from wechat_backend.services.sse_service_v2 import register_sse_routes
     register_sse_routes(app)  # 注册 SSE 路由
+    
+    # 使用统一后台服务管理器启动清理任务
+    from wechat_backend.services.background_service_manager import initialize_background_services
+    initialize_background_services()
+    
     app_logger.info("✅ SSE 服务已启动")
+    app_logger.info("✅ 统一后台服务管理器已启动")
 except Exception as e:
     app_logger.warning(f"⚠️  SSE 服务启动失败：{e}")
+    import traceback
+    app_logger.error(f"[SSE] 错误详情：{traceback.format_exc()}")
 
 # P3-2 优化：启动配置热更新
 try:
@@ -643,7 +669,15 @@ def initialize_wal_recovery():
 if __name__ == '__main__':
     # P1-015 新增：在服务启动时初始化 WAL 恢复机制
     initialize_wal_recovery()
-    
+
     # Explicitly specify host and port to align with frontend contract
     # Using standard Flask port 5000 for consistency
-    app.run(debug=Config.DEBUG, host='0.0.0.0', port=5000)
+    # P0-DB-INIT-001: 禁用 reloader 避免双进程竞争导致数据库初始化异常
+    # debug=True 保留调试功能，但 use_reloader=False 防止双进程
+    app.run(
+        debug=Config.DEBUG,
+        host='0.0.0.0',
+        port=5000,
+        use_reloader=False,  # 禁用 reloader 避免双进程竞争
+        threaded=True        # 启用多线程处理请求
+    )

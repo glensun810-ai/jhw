@@ -163,7 +163,7 @@ def retry_dimension():
         from wechat_backend.nxm_result_aggregator import parse_geo_with_validation
         
         geo_data, parse_error = parse_geo_with_validation(
-            ai_result.data,
+            ai_result.content,
             execution_id,
             0,  # q_idx
             source

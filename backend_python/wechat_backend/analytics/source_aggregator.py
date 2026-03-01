@@ -660,5 +660,75 @@ if __name__ == "__main__":
     
     # 建立证据链关联
     evidence_chain = aggregator.associate_negative_fragments(sample_response, sample_citations, negative_fragments)
-    
+
     print("证据链:", evidence_chain)
+
+
+def get_brand_distribution() -> Dict[str, Any]:
+    """
+    获取品牌分布数据
+
+    从数据库中查询所有品牌的分布情况，用于缓存预热和 API 响应
+
+    Returns:
+        品牌分布数据，格式：
+        {
+            'brands': [
+                {'brand_name': '品牌名', 'count': 数量，'percentage': 百分比},
+                ...
+            ],
+            'total_count': 总数量，
+            'cached_at': 缓存时间戳
+        }
+    """
+    import sqlite3
+    import time
+    from pathlib import Path
+
+    # 数据库路径
+    DB_PATH = Path(__file__).parent.parent.parent / 'database.db'
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # 查询品牌分布
+        cursor.execute('''
+            SELECT 
+                brand,
+                COUNT(*) as count
+            FROM diagnosis_results
+            WHERE brand IS NOT NULL AND brand != ''
+            GROUP BY brand
+            ORDER BY count DESC
+        ''')
+
+        rows = cursor.fetchall()
+        total_count = sum(row['count'] for row in rows)
+
+        brands = []
+        for row in rows:
+            percentage = round((row['count'] / total_count * 100), 2) if total_count > 0 else 0
+            brands.append({
+                'brand_name': row['brand'],
+                'count': row['count'],
+                'percentage': percentage
+            })
+
+        conn.close()
+
+        return {
+            'brands': brands,
+            'total_count': total_count,
+            'cached_at': time.time()
+        }
+
+    except Exception as e:
+        # 如果查询失败，返回空结果
+        return {
+            'brands': [],
+            'total_count': 0,
+            'cached_at': time.time(),
+            'error': str(e)
+        }

@@ -759,26 +759,26 @@ def warm_up_cache(key: str, value: Any, ttl: int = CacheConfig.DEFAULT_TTL):
 
 # ==================== 后台任务 ====================
 
+# 缓存维护函数（由 BackgroundServiceManager 统一调度）
+def _cleanup_expired_entries():
+    """清理过期缓存条目（供后台服务管理器调用）"""
+    try:
+        expired_count = _api_cache.cleanup_expired()
+        if expired_count > 0:
+            api_logger.info(f'清理 {expired_count} 条过期缓存')
+    except Exception as e:
+        api_logger.error(f'缓存清理失败：{e}')
+
+
 def start_cache_maintenance():
-    """启动缓存维护任务"""
-    import threading
+    """
+    启动缓存维护任务
     
-    def maintenance_loop():
-        while True:
-            try:
-                # 清理过期条目
-                expired_count = _api_cache.cleanup_expired()
-                if expired_count > 0:
-                    api_logger.info(f'清理 {expired_count} 条过期缓存')
-                
-                # 每 5 分钟执行一次
-                time.sleep(300)
-            except Exception as e:
-                api_logger.error(f'缓存维护失败：{e}')
-    
-    thread = threading.Thread(target=maintenance_loop, daemon=True)
-    thread.start()
-    api_logger.info('缓存维护任务已启动')
+    注意：此函数现在仅用于向后兼容。
+    实际维护工作由 BackgroundServiceManager 统一调度。
+    """
+    api_logger.info('缓存维护任务已注册到统一后台服务管理器')
+    # 不再创建独立线程，由 background_service_manager 统一调度
 
 
 # ==================== API 端点 ====================
