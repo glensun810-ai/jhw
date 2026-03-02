@@ -296,13 +296,44 @@ def execute_nxm_test(
 
             # P0 修复：只遍历问题和模型，不遍历品牌（获取客观回答）
             # 请求次数 = 问题数 × AI 平台数
-            api_logger.info(f"[NxM] 执行问题数：{len(raw_questions)}, AI 平台数：{len(selected_models)}")
+            api_logger.info(f"[NxM] 执行开始 - execution_id={execution_id}, 问题数={len(raw_questions)}, AI 平台数={len(selected_models)}")
+            
+            # 【P0 修复 - 2026-03-02】添加执行进度日志
+            total_iterations = len(raw_questions) * len(selected_models)
+            api_logger.info(f"[NxM] 预计总迭代次数：{total_iterations}")
+            
+            # 【P0 颠覆性修复】立即更新 stage 为 ai_fetching，避免前端一直看到 init
+            # 借鉴 Google Cloud Run：任务启动后立即报告"运行中"状态
+            try:
+                scheduler.update_progress(0, total_tasks, 'ai_fetching')
+                api_logger.info(f"[NxM] ✅ 状态已更新为 ai_fetching")
+
+                # 【P0 增强 - 2026-03-02】同时写入数据库，确保状态立即持久化
+                from wechat_backend.repositories.task_status_repository import save_task_status
+                save_task_status(
+                    task_id=execution_id,
+                    stage='ai_fetching',
+                    progress=0,
+                    status_text='正在初始化 AI 连接',
+                    completed_count=0,
+                    total_count=total_tasks,
+                    is_completed=False
+                )
+                api_logger.info(f"[NxM] ✅ 数据库状态已同步：execution_id={execution_id}, stage=ai_fetching")
+            except Exception as e:
+                api_logger.warning(f"[NxM] ⚠️ 初始状态更新失败：{e}")
 
             # 外层循环：遍历问题
             for q_idx, question in enumerate(raw_questions):
+                # 【P0 修复 - 2026-03-02】添加问题进度日志
+                api_logger.info(f"[NxM] 开始处理问题 {q_idx + 1}/{len(raw_questions)}: {question[:50]}...")
+
                 # 内层循环：遍历模型
                 for model_info in selected_models:
                     model_name = model_info.get('name', '')
+
+                    # 【P0 修复 - 2026-03-02】添加模型进度日志
+                    api_logger.info(f"[NxM] 开始处理模型 {model_name}, Q{q_idx + 1}")
 
                     # 检查模型是否可用（熔断器）
                     if not scheduler.is_model_available(model_name):
@@ -758,6 +789,7 @@ def execute_nxm_test(
         
         # P3 修复：确保 run_execution 总是返回结果
         # 如果上面的代码都没有返回（理论上不应该），返回一个空结果
+        api_logger.warning(f"[NxM] 执行流程异常 - execution_id={execution_id}, 未返回结果")
         return {
             'success': False,
             'execution_id': execution_id,
@@ -767,7 +799,21 @@ def execute_nxm_test(
 
     # 启动执行（同步方式，由上层调度器管理超时）
     # P3 修复：捕获 run_execution 的返回值，确保实际结果被返回
-    execution_result = run_execution()
+    # 【P0 修复 - 2026-03-02】添加执行日志
+    api_logger.info(f"[NxM] 开始执行 run_execution - execution_id={execution_id}")
+    try:
+        execution_result = run_execution()
+        api_logger.info(f"[NxM] 执行完成 - execution_id={execution_id}, success={execution_result.get('success', False)}")
+    except Exception as e:
+        # 【P0 修复】捕获 run_execution 的异常
+        api_logger.error(f"[NxM] 执行异常 - execution_id={execution_id}, error={e}")
+        import traceback
+        execution_result = {
+            'success': False,
+            'execution_id': execution_id,
+            'error': f'执行异常：{str(e)}',
+            'traceback': traceback.format_exc()
+        }
 
     # 返回执行结果（不是初始结果）
     return execution_result if execution_result else {

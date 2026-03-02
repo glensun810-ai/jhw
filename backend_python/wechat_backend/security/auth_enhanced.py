@@ -81,16 +81,23 @@ def is_strict_auth_endpoint(path: str) -> bool:
     """
     判断端点是否需要严格认证（不允许匿名）
 
+    【P0 修复 - 2026-03-02】架构师决策：
+    - /test/status/* 从严格认证列表中移除
+    - 原因：该端点仅返回任务进度，不包含敏感用户数据
+    - 允许匿名访问符合业务需求（用户无需登录即可查看诊断进度）
+    - 减少认证开销，提高轮询性能，避免 401/403 级联错误
+
     严格认证的端点：
-    - 用户数据查询：/test/status/*, /api/test-history, /api/user/*
+    - 用户数据查询：/api/test-history, /api/user/*
     - 管理接口：/api/admin/*, /admin/*
 
     可选认证的端点：
+    - /test/status/* (任务进度查询，允许匿名)
     - /api/perform-brand-test (允许匿名用户使用)
     """
     # 严格认证的端点列表
     strict_endpoints = [
-        '/test/status/',
+        # '/test/status/',  # 【P0 修复】移除，允许匿名访问任务进度
         '/api/test-history',
         '/api/user/',
         '/api/user_info',
@@ -102,11 +109,11 @@ def is_strict_auth_endpoint(path: str) -> bool:
         '/api/admin/',
         '/admin/',
     ]
-    
+
     for endpoint in strict_endpoints:
         if path.startswith(endpoint):
             return True
-    
+
     return False
 
 
@@ -301,12 +308,13 @@ def log_audit_access(endpoint_name: str):
         logger.error(f"[Audit] 记录审计日志失败：{e}")
 
 
-# 需要严格认证的 API 端点列表（差距 1 修复）
-# 注意：此列表用于 check_endpoint_requires_auth() 函数
-# 实际强制认证由 is_strict_auth_endpoint() 控制
+# 需要严格认证的 API 端点列表
+# 【P0 修复 - 2026-03-02】/test/status/从严格认证列表中移除
+# 原因：该端点仅返回任务进度，不包含敏感用户数据
+# 允许匿名访问符合业务需求，减少认证开销，避免 401/403 级联错误
 STRICT_AUTH_ENDPOINTS = [
     # 测试相关 - 包含用户测试数据
-    '/test/status/',
+    # '/test/status/',  # 【P0 修复】移除，允许匿名访问
     '/test/submit',
     # 注意：/api/perform-brand-test 使用可选认证，不在严格认证列表中
 

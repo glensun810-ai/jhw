@@ -25,6 +25,7 @@ parse_geo_json = parse_geo_json_enhanced
 # GEO Analysis Prompt Template with self-audit instructions
 # P1-4 修复：增强 JSON 格式要求，添加自检指令和验证规则
 # 2026-03-01 修复：强化纯 JSON 输出指令，明确禁止 Markdown 代码块
+# 【P1 修复 - 2026-03-02 架构师优化】进一步优化 Prompt，强制 JSON 输出
 GEO_PROMPT_TEMPLATE = """
 用户品牌：{brand_name}
 竞争对手：{competitors}
@@ -63,6 +64,7 @@ GEO_PROMPT_TEMPLATE = """
    - ⚠️ **不要有任何额外说明文字在 JSON 之后**
    - 必须是合法的可解析 JSON（使用双引号，不是单引号）
    - 所有字段都必须存在，不能省略
+   - ⚠️ **JSON 必须是最后一行，后面不要有任何内容**
 
 5. **信源要求**（cited_sources 字段）：
    - 必须包含至少 2 个信源
@@ -82,12 +84,18 @@ GEO_PROMPT_TEMPLATE = """
    - ✓ cited_sources 是否包含至少 2 个信源？
    - ✓ JSON 格式是否合法（可以用 JSON.parse 解析）？
    - ✓ **是否没有使用 Markdown 代码块包裹？**
+   - ✓ **JSON 是否是最后一行？**
 
 7. **输出示例（请严格按照此格式，不要添加 ```json 标记）**：
 
 [这里是您的详细回答内容...]
 
 {{"geo_analysis": {{"brand_mentioned": true, "rank": 2, "sentiment": 0.7, "cited_sources": [{{"url": "https://www.zhihu.com/question/xxx", "site_name": "知乎", "attitude": "positive"}}, {{"url": "https://www.xiaohongshu.com/discovery/item/xxx", "site_name": "小红书", "attitude": "neutral"}}], "interception": ""}}}}
+
+8. **重要提醒**：
+   - 您的回答将被程序自动解析，格式错误会导致系统故障
+   - 只输出 JSON 对象本身，不要有任何包装或解释
+   - 确保 JSON 是完整且可解析的
 """
 
 # ==================== P0 修复：客观问题提示词模板 ====================

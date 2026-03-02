@@ -666,9 +666,55 @@ def initialize_wal_recovery():
         app_logger.error(f"[WAL 恢复] 初始化失败：{e}\n{traceback.format_exc()}")
 
 
+def start_websocket_server():
+    """
+    启动 WebSocket 服务器（后台线程）
+    
+    功能：
+    1. 在后台线程中启动 WebSocket 服务器
+    2. 监听端口 8765
+    3. 处理小程序 WebSocket 连接
+    
+    @author: 系统架构组
+    @date: 2026-03-02
+    """
+    import asyncio
+    import threading
+    try:
+        from websockets import serve
+        from wechat_backend.websocket_route import handle_websocket_connection
+        
+        def run_server():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            server = serve(
+                handle_websocket_connection,
+                "0.0.0.0",
+                8765,
+                ping_interval=20,
+                ping_timeout=10
+            )
+            loop.run_until_complete(server)
+            loop.run_forever()
+        
+        thread = threading.Thread(target=run_server, daemon=True)
+        thread.start()
+        app_logger.info("✅ [WebSocket] 服务器已启动在端口 8765")
+        return True
+    except Exception as e:
+        app_logger.error(f"❌ [WebSocket] 服务器启动失败：{e}")
+        app_logger.debug(f"[WebSocket] 错误详情：{traceback.format_exc()}")
+        return False
+
+
 if __name__ == '__main__':
     # P1-015 新增：在服务启动时初始化 WAL 恢复机制
     initialize_wal_recovery()
+    
+    # 【P0-WebSocket 修复】启动 WebSocket 服务器
+    websocket_started = start_websocket_server()
+    if not websocket_started:
+        app_logger.warning("[WebSocket] 服务器启动失败，继续启动 Flask 服务（降级模式）")
 
     # Explicitly specify host and port to align with frontend contract
     # Using standard Flask port 5000 for consistency

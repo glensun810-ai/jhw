@@ -142,7 +142,20 @@ def parse_geo_json_enhanced(
                 return result
         
         # ========== 策略 5: 语义分析降级（P0-2 新增） ==========
+        # P0-3 优化：记录原始响应前 500 字符用于调试
         api_logger.warning(f"[GeoParser] JSON 解析失败，启用语义分析降级：{log_context}")
+        api_logger.info(f"[GeoParser] 原始响应前 500 字符：{text[:500]}...")
+        
+        # P0-3 优化：尝试提取可能的 JSON 块
+        json_blocks = _extract_all_json_blocks(text)
+        if json_blocks:
+            api_logger.info(f"[GeoParser] 发现 {len(json_blocks)} 个可能的 JSON 块，尝试解析...")
+            for i, block in enumerate(json_blocks):
+                api_logger.info(f"[GeoParser] JSON 块 {i+1} 大小：{len(block)} 字符")
+                result = _try_parse_json(block, log_context)
+                if result:
+                    api_logger.info(f"[GeoParser] ✅ 从 JSON 块 {i+1} 解析成功")
+                    return result
 
         semantic_result = _semantic_analysis_fallback(text, log_context)
         if semantic_result:
@@ -170,44 +183,108 @@ def parse_geo_json_enhanced(
 def _try_parse_json(json_str: str, log_context: str) -> Optional[Dict[str, Any]]:
     """
     尝试解析 JSON 字符串并提取 geo_analysis
-    
+
+    【P1 修复 - 2026-03-02】增强 JSON 修复功能
+
     Args:
         json_str: JSON 字符串
         log_context: 日志上下文
-    
+
     Returns:
         解析成功的 geo_analysis 数据，失败返回 None
     """
     try:
         # 清理 JSON 字符串
         json_str = json_str.strip()
-        
+
+        # 【P1 新增】JSON 修复
+        json_str = _repair_json_string(json_str)
+
         # 尝试解析
         data = json.loads(json_str)
-        
+
         if not isinstance(data, dict):
             return None
-        
+
         # 检查是否包含 geo_analysis
         if "geo_analysis" in data:
             geo_data = data["geo_analysis"]
             if isinstance(geo_data, dict):
                 api_logger.info(f"[GeoParser] 解析成功：rank={geo_data.get('rank', -1)}, sentiment={geo_data.get('sentiment', 0)}")
                 return {**DEFAULT_GEO_DATA, **geo_data}
-        
+
         # 检查 data 本身就是 geo_analysis
         if _is_geo_analysis_structure(data):
             api_logger.info(f"[GeoParser] 数据本身就是 geo_analysis 格式")
             return {**DEFAULT_GEO_DATA, **data}
-        
+
         return None
-    
+
     except json.JSONDecodeError as e:
         api_logger.debug(f"[GeoParser] JSON 解析失败：{e}")
         return None
     except Exception as e:
         api_logger.debug(f"[GeoParser] 解析异常：{e}")
         return None
+
+
+def _repair_json_string(json_str: str) -> str:
+    """
+    【P1 新增】JSON 字符串修复功能
+
+    修复常见问题：
+    1. 未闭合的括号
+    2. 转义字符问题
+    3. 引号不匹配
+    4. Markdown 残留
+    5.  trailing commas
+
+    Args:
+        json_str: 待修复的 JSON 字符串
+
+    Returns:
+        修复后的 JSON 字符串
+    """
+    if not json_str:
+        return json_str
+
+    # 1. 移除 Markdown 代码块标记
+    json_str = re.sub(r'^```(?:json)?\s*', '', json_str, flags=re.IGNORECASE)
+    json_str = re.sub(r'\s*```$', '', json_str)
+
+    # 2. 修复转义字符 - 将 \\n 转换为 \n，但保留 JSON 转义
+    # 注意：不要过度修复，保留合法的 JSON 转义
+    json_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', json_str)
+
+    # 3. 修复 trailing commas (JSON 不允许末尾逗号)
+    json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
+
+    # 4. 修复未闭合的括号
+    open_braces = json_str.count('{')
+    close_braces = json_str.count('}')
+    open_brackets = json_str.count('[')
+    close_brackets = json_str.count(']')
+
+    # 补充缺失的闭合括号
+    if open_braces > close_braces:
+        json_str += '}' * (open_braces - close_braces)
+    if open_brackets > close_brackets:
+        json_str += ']' * (open_brackets - close_brackets)
+
+    # 5. 修复引号不匹配（简单处理：移除末尾未闭合的引号）
+    if json_str.count('"') % 2 != 0:
+        # 尝试找到最后一个未闭合的键值对并修复
+        last_quote = json_str.rfind('"', 0, -1)
+        if last_quote > 0:
+            # 检查是否是键的引号
+            if json_str[last_quote:].strip() == '"':
+                json_str = json_str[:last_quote] + '": null}'
+
+    # 6. 移除可能的 BOM 或不可见字符
+    json_str = json_str.replace('\ufeff', '')
+    json_str = re.sub(r'[\x00-\x1f]', '', json_str)
+
+    return json_str
 
 
 def _is_geo_analysis_structure(data: Dict) -> bool:
@@ -384,6 +461,45 @@ def _semantic_analysis_fallback(text: str, log_context: str) -> Optional[Dict[st
     except Exception as e:
         api_logger.warning(f"[GeoParser] 语义分析失败：{e}")
         return None
+
+
+def _extract_all_json_blocks(text: str) -> List[str]:
+    """
+    P0-3 新增：提取文本中所有可能的 JSON 块
+    
+    参数:
+        text: 输入文本
+        
+    返回:
+        JSON 字符串列表
+    """
+    if not text:
+        return []
+    
+    json_blocks = []
+    start_indices = []
+    
+    # 查找所有 { 的位置
+    for i, char in enumerate(text):
+        if char == '{':
+            start_indices.append(i)
+        elif char == '}' and start_indices:
+            # 找到一个完整的块
+            start = start_indices.pop()
+            if not start_indices:  # 只有最外层的块
+                json_block = text[start:i+1]
+                if len(json_block) > 10:  # 忽略太小的块
+                    json_blocks.append(json_block)
+    
+    # 如果没找到平衡的块，尝试简单提取
+    if not json_blocks:
+        # 查找包含 "geo_analysis" 或 "brand_mentioned" 的块
+        import re
+        pattern = r'\{[^{}]*(?:geo_analysis|brand_mentioned|rank|sentiment)[^{}]*\}'
+        matches = re.findall(pattern, text, re.DOTALL)
+        json_blocks.extend(matches)
+    
+    return json_blocks
 
 
 def _extract_site_name(url: str) -> str:

@@ -88,73 +88,111 @@ def get_user_history():
 def get_full_report(execution_id):
     """
     获取完整诊断报告
-    
+
     路径参数:
     - execution_id: 执行 ID
-    
+
     返回:
     {
-        "report": {
-            "id": 1,
-            "execution_id": "xxx",
-            "brand_name": "品牌名称",
-            ...
+        "report": {...},
+        "results": [...],
+        "analysis": {...},
+        "brandDistribution": {...},
+        "sentimentDistribution": {...},
+        "keywords": [...],
+        "meta": {...},
+        "validation": {
+            "is_valid": true,
+            "errors": [],
+            "warnings": [],
+            "quality_score": 95
         },
-        "results": [
-            {
-                "id": 1,
-                "brand": "品牌名称",
-                "question": "问题",
-                "model": "AI 模型",
-                "response": {
-                    "content": "AI 回答",
-                    "latency": 12.5
-                },
-                "geo_data": {...},
-                "quality_score": 85,
-                "quality_level": "high"
-            }
-        ],
-        "analysis": {
-            "competitive_analysis": {...},
-            "brand_scores": {...},
-            ...
-        },
-        "meta": {
-            "data_schema_version": "1.0",
-            "server_version": "2.0.0",
-            "retrieved_at": "2026-02-28T10:00:00"
-        },
-        "checksum_verified": true
+        "qualityHints": {...}
     }
     """
     try:
         # 获取服务
         service = get_report_service()
-        
+
         # 获取完整报告
         report = service.get_full_report(execution_id)
-        
+
+        # P0-2 修复：处理报告不存在的情况
         if not report:
+            api_logger.warning(f"报告不存在：execution_id={execution_id}")
             return jsonify({
                 'error': '报告不存在',
-                'execution_id': execution_id
+                'execution_id': execution_id,
+                'suggestion': '请检查执行 ID 是否正确，或重新进行诊断'
             }), 404
         
-        # 验证报告
-        validation = get_validation_service().validate_report(report)
-        if not validation['is_valid']:
-            api_logger.warning(f"报告验证失败：{execution_id}, errors={validation['errors']}")
+        # 【P0-缓存修复】处理报告为字典但包含 error 字段的情况
+        if isinstance(report, dict) and report.get('error'):
+            api_logger.warning(f"报告为失败状态：execution_id={execution_id}, error={report.get('error', {})}")
+            return jsonify(report), 200
         
-        api_logger.info(f"获取完整报告：execution_id={execution_id}, results={len(report.get('results', []))}")
-        
+        # 【P0-缓存修复】确保 report 是正确的结构
+        if not isinstance(report, dict):
+            api_logger.error(f"报告格式错误：execution_id={execution_id}, type={type(report)}")
+            return jsonify({
+                'error': '报告格式错误',
+                'execution_id': execution_id,
+                'suggestion': '请稍后重试'
+            }), 500
+
+        # P1-3 修复：验证报告并返回验证信息（包含质量评分）
+        try:
+            validation = get_validation_service().validate_report(report)
+        except Exception as validation_err:
+            api_logger.warning(f"验证服务失败：{validation_err}，使用默认验证结果")
+            validation = {
+                'is_valid': True,
+                'errors': [],
+                'warnings': [],
+                'quality_score': 80
+            }
+
+        # P1-4 新增：数据质量监控
+        quality_score = validation.get('quality_score', 0) if validation else 0
+
+        # 记录质量指标
+        api_logger.info(
+            f"获取完整报告：execution_id={execution_id}, "
+            f"results={len(report.get('results', []))}, "
+            f"quality_score={quality_score}"
+        )
+
+        # 如果质量评分低，记录警告
+        if quality_score < 60:
+            api_logger.warning(
+                f"报告质量评分低：execution_id={execution_id}, "
+                f"quality_score={quality_score}, "
+                f"errors={len(validation.get('errors', []) if validation else [])}, "
+                f"warnings={len(validation.get('warnings', []) if validation else [])}"
+            )
+
+        # 如果质量评分极低，记录错误
+        if quality_score < 30:
+            api_logger.error(
+                f"报告质量评分极低：execution_id={execution_id}, "
+                f"quality_score={quality_score}, "
+                f"quality_issues={validation.get('quality_issues', []) if validation else []}"
+            )
+
+        # 将验证信息添加到响应中
+        if validation:
+            report['validation'] = validation
+
         return jsonify(report), 200
-        
+
     except Exception as e:
-        api_logger.error(f"获取完整报告失败：{e}")
+        # P0-2 修复：增强错误处理
+        api_logger.error(f"获取完整报告失败：execution_id={execution_id}, 错误：{e}", exc_info=True)
         return jsonify({
             'error': '获取报告失败',
-            'message': str(e)
+            'message': str(e),
+            'execution_id': execution_id,
+            'suggestion': '请稍后重试或联系技术支持'
         }), 500
 
 

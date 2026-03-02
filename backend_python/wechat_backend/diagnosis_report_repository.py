@@ -344,24 +344,24 @@ class DiagnosisResultRepository:
     
     def add(self, report_id: int, execution_id: str, result: Dict[str, Any]) -> int:
         """添加单个诊断结果（完整版 - Migration 004）
-        
+
         存储完整的 API 响应数据，包括：
         - 原始响应（raw_response）
         - Token 统计（tokens_used, prompt_tokens, completion_tokens, cached_tokens）
         - 响应详情（finish_reason, request_id, model_version, reasoning_content）
         - API 信息（api_endpoint, service_tier）
         - 重试信息（retry_count, is_fallback）
-        
+
         Args:
             report_id: 报告 ID
             execution_id: 执行 ID
             result: 诊断结果字典
-            
+
         Returns:
             result_id: 插入的记录 ID
         """
         now = datetime.now().isoformat()
-        
+
         # 提取完整响应数据
         response = result.get('response', {})
         metadata = response.get('metadata', {})
@@ -369,6 +369,18 @@ class DiagnosisResultRepository:
         choices = metadata.get('choices', [{}])
         first_choice = choices[0] if choices else {}
         message = first_choice.get('message', {})
+
+        # 【P0 修复】处理 AI 返回内容为空的情况
+        # 如果 AI 响应为空或 None，使用占位符文本，避免 NOT NULL 约束冲突
+        response_content = response.get('content', '') if isinstance(response, dict) else ''
+        if not response_content or not response_content.strip():
+            # 检查是否有错误信息
+            error_msg = result.get('error', '')
+            if error_msg:
+                response_content = f"AI 响应失败：{error_msg}"
+            else:
+                response_content = "生成失败，请重试"
+            db_logger.warning(f"[P0 修复] AI 返回空内容，使用占位符：execution_id={execution_id}, brand={result.get('brand', '')}, question={result.get('question', '')}")
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -393,7 +405,7 @@ class DiagnosisResultRepository:
                 result.get('brand', ''),
                 result.get('question', ''),
                 result.get('model', ''),
-                response.get('content', '') if isinstance(response, dict) else '',
+                response_content,  # 使用处理后的内容
                 response.get('latency') if isinstance(response, dict) else None,
                 json.dumps(result.get('geo_data', {}), ensure_ascii=False),
                 result.get('quality_score', 0),

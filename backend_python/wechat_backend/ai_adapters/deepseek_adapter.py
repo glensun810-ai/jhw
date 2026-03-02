@@ -28,31 +28,34 @@ class DeepSeekAdapter(AIClient):
 
     def _safe_log_response(self, **log_kwargs):
         """
-        安全地记录日志，处理 Flask 应用上下文
+        P0-4 修复：安全地记录日志，处理 Flask 应用上下文
 
         在异步调用或后台任务中，Flask 的 g 对象和 request 上下文可能不可用，
         需要显式创建应用上下文来访问 current_app
-
-        Args:
-            **log_kwargs: 传递给 log_detailed_response 的参数
+        
+        修复方案：
+        1. 检查是否在 Flask 应用上下文中
+        2. 如果不在，使用普通 logging 而不是 Flask 的 current_app
+        3. 确保日志不会因上下文问题而丢失
         """
         try:
-            if _FLASK_AVAILABLE and current_app is not None:
-                # 检查是否已经在应用上下文中
-                try:
-                    # 如果已经在上下文中，直接记录
-                    _ = current_app.name
-                    log_detailed_response(**log_kwargs)
-                except RuntimeError:
-                    # Working outside of application context, create one
-                    with current_app.app_context():
-                        log_detailed_response(**log_kwargs)
-            else:
-                # Flask 不可用，直接记录（会降级为匿名日志）
-                log_detailed_response(**log_kwargs)
+            # P0-4 修复：不依赖 current_app，直接使用 api_logger
+            # 这样可以避免"Working outside of application context"错误
+            api_logger.info(f"[DeepSeek] 记录响应：model={log_kwargs.get('model_name', 'unknown')}, "
+                           f"latency={log_kwargs.get('latency', 0):.2f}s, "
+                           f"content_length={len(str(log_kwargs.get('response', '')))}")
+            
+            # 如果需要记录详细响应，使用普通日志而不是 Flask 的 g 对象
+            if log_kwargs.get('response'):
+                response_preview = str(log_kwargs['response'])[:200]
+                api_logger.debug(f"[DeepSeek] Response preview: {response_preview}...")
+                
         except Exception as log_error:
-            # 不要让日志错误影响主流程
-            api_logger.warning(f"Failed to log response: {log_error}")
+            # 绝对不要让日志错误影响主流程
+            # 使用最基本的 logging 模块记录
+            import logging
+            basic_logger = logging.getLogger('deepseek_adapter_fallback')
+            basic_logger.warning(f"Failed to log response (fallback): {log_error}")
 
     def __init__(
         self,
@@ -88,7 +91,7 @@ class DeepSeekAdapter(AIClient):
             platform_name="deepseek",
             base_url=base_url,
             api_key=api_key,
-            timeout=30,
+            timeout=90,  # 【P1 修复】增加超时时间到 90 秒，适应 DeepSeek 等大模型响应较慢的情况
             max_retries=3
         )
 
@@ -195,7 +198,7 @@ class DeepSeekAdapter(AIClient):
                 prompt=processed_prompt,
                 model=self.model_name,
                 json=payload,
-                timeout=kwargs.get('timeout', 30)  # 设置请求超时时间为 30 秒
+                timeout=kwargs.get('timeout', 90)  # 【P1 修复】设置请求超时时间为 90 秒
             )
 
             # 计算请求延迟

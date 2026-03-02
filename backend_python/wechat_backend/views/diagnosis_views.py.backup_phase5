@@ -100,233 +100,171 @@ from . import wechat_bp
 execution_store = {}
 
 # 诊断相关辅助函数
-# 【P0 重构 - 阶段五】使用 DiagnosisOrchestrator 统一编排诊断流程
-# 核心原则：
-# 1. 顺序执行 - API 响应保存 → 统计分析 → 结果聚合 → 报告生成
-# 2. 状态一致 - 内存和数据库原子性更新
-# 3. 完整持久化 - 所有结果必须完整保存后才能进入下一环节
-# 4. 统一调度 - 由诊断编排器协调所有子流程
 @wechat_bp.route('/api/perform-brand-test', methods=['POST', 'OPTIONS'])
-@handle_api_exceptions
-@require_auth_optional
-@rate_limit(limit=5, window=60, per='endpoint')
+@handle_api_exceptions  # P0-010 新增：统一异常处理
+@require_auth_optional  # 恢复认证装饰器
+@rate_limit(limit=5, window=60, per='endpoint')  # 限制每个端点每分钟最多5个请求
 @monitored_endpoint('/api/perform-brand-test', require_auth=False, validate_inputs=True)
 def perform_brand_test():
-    """
-    执行品牌认知诊断测试（重构版）
+    """Perform brand cognition test across multiple AI platforms (Async) with Multi-Brand Support"""
+    # 【调试】记录请求信息
+    api_logger.info(f"[DEBUG] perform_brand_test called with method: {request.method}")
+    api_logger.info(f"[DEBUG] Headers: {dict(request.headers)}")
+    api_logger.info(f"[DEBUG] Headers: {dict(request.headers)}")
     
-    【P0 重构 - 阶段五】使用 DiagnosisOrchestrator 统一编排诊断流程
-    
-    诊断流程：
-    1. 初始化阶段 - 设置初始状态，创建数据库记录
-    2. AI 调用阶段 - 并行调用多个 AI 平台获取诊断结果
-    3. 结果保存阶段 - 将所有结果保存到数据库
-    4. 结果验证阶段 - 验证结果数量和质量
-    5. 后台分析阶段 - 异步执行品牌分析和竞争分析
-    6. 报告聚合阶段 - 聚合所有结果为最终报告
-    7. 完成阶段 - 更新状态并发送通知
-    
-    Returns:
-        JSON 响应：
-        - success: 启动是否成功
-        - execution_id: 执行 ID（用于轮询进度）
-        - message: 启动消息
-    """
-    # 处理 CORS 预检请求
+    # 【修复】处理CORS预检请求(OPTIONS)
     if request.method == 'OPTIONS':
         api_logger.info("[DEBUG] Handling OPTIONS preflight request")
         response = jsonify({'status': 'ok'})
         response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add(
-            'Access-Control-Allow-Headers',
-            'Content-Type,Authorization,X-WX-OpenID,X-OpenID,X-Wechat-OpenID'
-        )
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-WX-OpenID,X-OpenID,X-Wechat-OpenID')
         response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
         return response, 200
-
-    # 获取当前用户 ID
+    
+    # 获取当前用户ID（如果没有装饰器，手动设置默认值）
     try:
         user_id = get_current_user_id()
-    except Exception:
+    except:
         user_id = 'anonymous'
 
-    # 解析请求数据
+    # 要求：使用 request.get_json(force=True)
     data = request.get_json(force=True)
-    if data is None:
-        return jsonify({
-            "status": "error",
-            "error": "Empty or invalid JSON",
-            "code": 400
-        }), 400
 
-    # ========== 输入验证和净化 ==========
+    # 添加调试日志：在获取 data 后，立即添加打印
+    if data is None:
+        return jsonify({"status": "error", "error": "Empty or invalid JSON", "code": 400}), 400
+
+    # 输入验证和净化
     try:
-        # 验证品牌列表
+        # 重构校验逻辑 (InputValidator)：确保它不再寻找 customQuestions
+        # 验证品牌列表是否存在且为 list 类型
         if 'brand_list' not in data:
-            return jsonify({
-                "status": "error",
-                "error": 'Missing brand_list in request data',
-                "code": 400,
-                'received_fields': list(data.keys())
-            }), 400
-        
+            return jsonify({"status": "error", "error": 'Missing brand_list in request data', "code": 400, 'received_fields': list(data.keys())}), 400
         if not isinstance(data['brand_list'], list):
-            return jsonify({
-                "status": "error",
-                "error": 'brand_list must be a list',
-                "code": 400,
-                'received': type(data['brand_list']).__name__,
-                'received_value': data['brand_list']
-            }), 400
-        
+            return jsonify({"status": "error", "error": 'brand_list must be a list', "code": 400, 'received': type(data['brand_list']).__name__, 'received_value': data['brand_list']}), 400
         brand_list = data['brand_list']
         if not brand_list:
-            return jsonify({
-                "status": "error",
-                "error": 'brand_list cannot be empty',
-                "code": 400,
-                'received': brand_list
-            }), 400
+            return jsonify({"status": "error", "error": 'brand_list cannot be empty', "code": 400, 'received': brand_list}), 400
 
-        # 验证品牌名称安全性
+        # 验证品牌名称的安全性
         for brand in brand_list:
             if not isinstance(brand, str):
-                return jsonify({
-                    "status": "error",
-                    "error": f'Each brand in brand_list must be a string, got {type(brand)}',
-                    "code": 400,
-                    'problematic_value': brand
-                }), 400
+                return jsonify({"status": "error", "error": f'Each brand in brand_list must be a string, got {type(brand)}', "code": 400, 'problematic_value': brand}), 400
             if not validate_safe_text(brand, max_length=100):
-                return jsonify({
-                    "status": "error",
-                    "error": f'Invalid brand name: {brand}',
-                    "code": 400
-                }), 400
+                return jsonify({"status": "error", "error": f'Invalid brand name: {brand}', "code": 400}), 400
 
-        api_logger.info(f"[Sprint 1] 接收到品牌列表：{brand_list}")
+        # 审计要求：在后端打印关键调试日志
+        api_logger.info(f"[Sprint 1] 接收到品牌列表: {brand_list}")
 
-        # 验证模型列表
+        main_brand = brand_list[0]
+
+        # 验证其他参数 - 确保 selectedModels 只要是 list 类型即通过
         if 'selectedModels' not in data:
-            return jsonify({
-                "status": "error",
-                "error": 'Missing selectedModels in request data',
-                "code": 400,
-                'received_fields': list(data.keys())
-            }), 400
-        
+            return jsonify({"status": "error", "error": 'Missing selectedModels in request data', "code": 400, 'received_fields': list(data.keys())}), 400
         if not isinstance(data['selectedModels'], list):
-            return jsonify({
-                "status": "error",
-                "error": 'selectedModels must be a list',
-                "code": 400,
-                'received': type(data['selectedModels']).__name__,
-                'received_value': data['selectedModels']
-            }), 400
-        
+            return jsonify({"status": "error", "error": 'selectedModels must be a list', "code": 400, 'received': type(data['selectedModels']).__name__, 'received_value': data['selectedModels']}), 400
         selected_models = data['selectedModels']
         if not selected_models:
-            return jsonify({
-                "status": "error",
-                "error": 'At least one AI model must be selected',
-                "code": 400,
-                'received': selected_models
-            }), 400
+            return jsonify({"status": "error", "error": 'At least one AI model must be selected', "code": 400, 'received': selected_models}), 400
 
-        # 解析模型列表（支持字典和字符串格式）
+        # 要求：如果 selectedModels 传入的是字典列表，代码需具备自动提取 id 字段的健壮性
+        # 解析器加固：从 selectedModels 对象数组中提取 id 或 value，转化为纯字符串列表
         parsed_selected_models = []
         for model in selected_models:
             if isinstance(model, dict):
+                # 如果是对象，提取其核心标识符
                 model_name = model.get('name') or model.get('id') or model.get('value') or model.get('label')
                 if model_name:
-                    parsed_selected_models.append({
-                        'name': model_name,
-                        'checked': model.get('checked', True)
-                    })
+                    parsed_selected_models.append({'name': model_name, 'checked': model.get('checked', True)})
                 else:
-                    # 尝试使用第一个可用的键值
+                    # 如果对象中没有合适的标识符，尝试使用第一个可用的键值
                     for key, value in model.items():
                         if key in ['name', 'id', 'value', 'label'] and isinstance(value, str):
-                            parsed_selected_models.append({
-                                'name': value,
-                                'checked': model.get('checked', True)
-                            })
+                            parsed_selected_models.append({'name': value, 'checked': model.get('checked', True)})
                             break
             elif isinstance(model, str):
+                # 如果是字符串，直接使用
                 parsed_selected_models.append({'name': model, 'checked': True})
             else:
+                # 其他类型，跳过或报错
                 api_logger.warning(f"Unsupported model format: {model}, type: {type(model)}")
 
+        # 更新 selected_models 为解析后的格式
         selected_models = parsed_selected_models
 
-        original_model_names = [
-            model.get('name', model) if isinstance(model, dict) else model
-            for model in data['selectedModels']
-        ]
+        # 审计要求：在后端打印关键调试日志
+        original_model_names = [model.get('name', model) if isinstance(model, dict) else model for model in data['selectedModels']]
         converted_model_names = [model['name'] for model in selected_models]
-        api_logger.info(
-            f"[Sprint 1] 转换后的模型列表：{converted_model_names} "
-            f"(原始：{original_model_names})"
-        )
+        api_logger.info(f"[Sprint 1] 转换后的模型列表: {converted_model_names} (原始: {original_model_names})")
 
         if not selected_models:
-            return jsonify({
-                "status": "error",
-                "error": 'No valid AI models found after parsing',
-                "code": 400
-            }), 400
+            return jsonify({"status": "error", "error": 'No valid AI models found after parsing', "code": 400}), 400
 
-        # 验证和解析问题列表
+        # 重构校验逻辑：custom_question 只要是 string 类型即通过
         custom_questions = []
         if 'custom_question' in data:
             # 优先处理新的 custom_question 字段（字符串）
             if not isinstance(data['custom_question'], str):
-                return jsonify({
-                    "status": "error",
-                    "error": 'custom_question must be a string',
-                    "code": 400,
-                    'received': type(data['custom_question']).__name__,
-                    'received_value': data['custom_question']
-                }), 400
-
-            # 智能分割多个问题
+                return jsonify({"status": "error", "error": 'custom_question must be a string', "code": 400, 'received': type(data['custom_question']).__name__, 'received_value': data['custom_question']}), 400
+            
+            # 智能分割多个问题（按问号、句号、换行或空格分割）
             question_text = data['custom_question'].strip()
             if question_text:
+                # 使用正则表达式分割多个问题
+                import re
+                # 按中文问号、英文问号、句号、换行或空格分割
                 raw_questions = re.split(r'[？?.\n\s]+', question_text)
-                custom_questions = [
-                    q.strip() + ('?' if not q.strip().endswith('?') else '')
-                    for q in raw_questions if q.strip()
-                ]
-                api_logger.info(
-                    f"[QuestionSplit] 分割后问题数：{len(custom_questions)}"
-                )
+                # 过滤空字符串并添加问号
+                custom_questions = [q.strip() + ('?' if not q.strip().endswith('?') else '') for q in raw_questions if q.strip()]
+                
+                # 记录分割后的问题
+                api_logger.info(f"[QuestionSplit] 原始问题：{question_text}")
+                api_logger.info(f"[QuestionSplit] 分割后问题数：{len(custom_questions)}")
+                for i, q in enumerate(custom_questions):
+                    api_logger.info(f"[QuestionSplit] 问题{i+1}: {q}")
+            else:
+                custom_questions = []
         elif 'customQuestions' in data:
             # 保持对旧格式的兼容（数组格式）
             if not isinstance(data['customQuestions'], list):
-                return jsonify({
-                    "status": "error",
-                    "error": 'customQuestions must be a list',
-                    "code": 400,
-                    'received': type(data['customQuestions']).__name__,
-                    'received_value': data['customQuestions']
-                }), 400
+                return jsonify({"status": "error", "error": 'customQuestions must be a list', "code": 400, 'received': type(data['customQuestions']).__name__, 'received_value': data['customQuestions']}), 400
             custom_questions = data['customQuestions']
+        else:
+            # 如果两个字段都没有提供，使用空数组
+            custom_questions = []
 
-        # 获取用户信息
+        # 使用认证的用户ID，如果未认证则使用anonymous
         user_openid = data.get('userOpenid') or (user_id if user_id != 'anonymous' else 'anonymous')
+        api_key = data.get('apiKey', '')  # 在实际应用中，不应通过前端传递API密钥
+
         user_level = UserLevel(data.get('userLevel', 'Free'))
 
-        # 验证模型可用性
+        # 提取AI评判参数
+        judge_platform = data.get('judgePlatform')  # 前端传入的评判平台
+        judge_model = data.get('judgeModel')  # 前端传入的评判模型
+        judge_api_key = data.get('judgeApiKey')  # 前端传入的评判API密钥
+
+        # Provider可用性检查：验证所选模型是否已配置API Key并在AIAdapterFactory中注册
+        from wechat_backend.ai_adapters.factory import AIAdapterFactory
+        from wechat_backend.ai_adapters.base_adapter import AIPlatformType
+
+        # 添加运行时调试信息
+        api_logger.info(f"=== Runtime Adapter Status Check ===")
+        api_logger.info(f"Selected models: {selected_models}")
+        api_logger.info(f"All registered adapters: {[pt.value for pt in AIAdapterFactory._adapters.keys()]}")
+        api_logger.info(f"MODEL_NAME_MAP: {AIAdapterFactory.MODEL_NAME_MAP}")
+        api_logger.info(f"=== End Runtime Adapter Status Check ===")
+        
         for model in selected_models:
             model_name = model['name'] if isinstance(model, dict) else model
+            # 使用AIAdapterFactory的标准化方法
             normalized_model_name = AIAdapterFactory.get_normalized_model_name(model_name)
 
+            # 检查平台是否可用（已注册且API密钥已配置）
             if not AIAdapterFactory.is_platform_available(normalized_model_name):
+                # 打印出当前所有已注册的 Keys 并在报错中返回给前端
                 registered_keys = [pt.value for pt in AIAdapterFactory._adapters.keys()]
-                api_logger.error(
-                    f"Model {model_name} (normalized to {normalized_model_name}) "
-                    f"not registered or not configured. Available models: {registered_keys}"
-                )
+                api_logger.error(f"Model {model_name} (normalized to {normalized_model_name}) not registered or not configured. Available models: {registered_keys}")
                 return jsonify({
                     "status": "error",
                     "error": f'Model {model_name} not registered or not configured in AIAdapterFactory',
@@ -336,26 +274,15 @@ def perform_brand_test():
                     "normalized_to": normalized_model_name
                 }), 400
 
-            # 验证 API Key 配置
+            # 检查API Key是否已配置
             from wechat_backend.config_manager import config_manager
             api_key = config_manager.get_api_key(normalized_model_name)
             if not api_key:
-                return jsonify({
-                    "status": "error",
-                    "error": f'Model {model_name} not configured - missing API key',
-                    "code": 400,
-                    'message': 'API Key 缺失'
-                }), 400
+                return jsonify({"status": "error", "error": f'Model {model_name} not configured - missing API key', "code": 400, 'message': 'API Key 缺失'}), 400
 
-        # 验证模型区域一致性
-        model_names = [
-            model["name"] if isinstance(model, dict) else model
-            for model in selected_models
-        ]
-        normalized_model_names = [
-            AIAdapterFactory.get_normalized_model_name(name)
-            for name in model_names
-        ]
+        # P0- 新增：验证所选模型是否来自同一区域（国内或海外）
+        model_names = [model["name"] if isinstance(model, dict) else model for model in selected_models]
+        normalized_model_names = [AIAdapterFactory.get_normalized_model_name(name) for name in model_names]
 
         is_valid, error_msg = validate_model_region_consistency(normalized_model_names)
         if not is_valid:
@@ -366,155 +293,173 @@ def perform_brand_test():
                 "code": 400
             }), 400
 
-        # 验证问题安全性
+        # 验证自定义问题的安全性
         for question in custom_questions:
             if not isinstance(question, str):
-                return jsonify({
-                    'error': f'Each question in customQuestions must be a string, got {type(question)}'
-                }), 400
+                return jsonify({'error': f'Each question in customQuestions must be a string, got {type(question)}'}), 400
             if not validate_safe_text(question, max_length=500):
-                return jsonify({
-                    'error': f'Unsafe question content: {question}'
-                }), 400
+                return jsonify({'error': f'Unsafe question content: {question}'}), 400
 
     except Exception as e:
         api_logger.error(f"Input validation failed: {str(e)}")
-        return jsonify({
-            'error': f'Invalid input data: {str(e)}'
-        }), 400
+        return jsonify({'error': f'Invalid input data: {str(e)}'}), 400
 
-    # ========== 启动诊断编排器 ==========
+    # 立即生成执行ID和基础存储，不等待测试用例生成
     execution_id = str(uuid.uuid4())
 
+    # 【P1-T2 新增】启动全局超时计时器（10 分钟）
+    timeout_manager = TimeoutManager()
+    
+    def on_timeout(eid: str):
+        """超时回调：记录日志并标记任务超时"""
+        api_logger.error(
+            "global_timeout_triggered",
+            extra={
+                'event': 'global_timeout_triggered',
+                'execution_id': eid,
+                'timeout_seconds': TimeoutManager.MAX_EXECUTION_TIME,
+            }
+        )
+        # 更新内存状态
+        if eid in execution_store:
+            execution_store[eid].update({
+                'status': 'timeout',
+                'stage': 'timeout',
+                'progress': 100,
+                'is_completed': True,
+                'should_stop_polling': True,
+                'error': f'诊断任务执行超时（>{TimeoutManager.MAX_EXECUTION_TIME}秒）'
+            })
+        # 尝试更新数据库状态
+        try:
+            from wechat_backend.state_manager import get_state_manager
+            state_manager = get_state_manager(execution_store)
+            state_manager.update_state(
+                execution_id=eid,
+                status='timeout',
+                stage='timeout',
+                progress=100,
+                is_completed=True,
+                error_message=f'诊断任务执行超时（>{TimeoutManager.MAX_EXECUTION_TIME}秒）',
+                write_to_db=True,
+                user_id=user_id or "anonymous",
+                brand_name=main_brand,
+                competitor_brands=competitor_brands if 'competitor_brands' in locals() else [],
+                selected_models=selected_models,
+                custom_questions=raw_questions if 'raw_questions' in locals() else []
+            )
+        except Exception as timeout_db_err:
+            api_logger.error(f"[超时处理] 数据库状态更新失败：{timeout_db_err}")
+
+    # 启动 10 分钟全局超时计时器
+    timeout_manager.start_timer(
+        execution_id=execution_id,
+        on_timeout=on_timeout,
+        timeout_seconds=TimeoutManager.MAX_EXECUTION_TIME
+    )
     api_logger.info(
-        f"[Orchestrator] 启动诊断 - execution_id={execution_id}, "
-        f"brand={brand_list[0]}, models={len(selected_models)}, "
-        f"questions={len(custom_questions)}"
+        "global_timeout_timer_started",
+        extra={
+            'event': 'global_timeout_timer_started',
+            'execution_id': execution_id,
+            'timeout_seconds': TimeoutManager.MAX_EXECUTION_TIME,
+        }
     )
 
-    # 初始化 execution_store
+
+    # 【P0 关键修复】立即创建数据库初始记录，避免前端轮询时数据库无记录
+    report_id = None
+    try:
+        service = get_report_service()
+        config = {
+            'brand_name': main_brand,
+            'competitor_brands': competitor_brands if 'competitor_brands' in locals() else [],
+            'selected_models': selected_models,
+            'custom_questions': raw_questions if 'raw_questions' in locals() else []
+        }
+        report_id = service.create_report(execution_id, user_id or 'anonymous', config)
+        service.report_repo.update_status(
+            execution_id=execution_id,
+            status='initializing',
+            progress=0,
+            stage='init',
+            is_completed=False
+        )
+        api_logger.info(f"[P0 修复] ✅ 初始数据库记录已创建：{execution_id}, report_id={report_id}")
+    except Exception as db_init_err:
+        api_logger.error(f"[P0 修复] ⚠️ 创建初始记录失败：{db_init_err}")    # 先设置一个初始状态，稍后再更新总数
     execution_store[execution_id] = {
         'progress': 0,
         'completed': 0,
-        'total': 0,
+        'total': 0,  # 会在异步线程中更新
         'status': 'initializing',
-        'stage': 'init',
+        'stage': 'init',  # 设置初始阶段为 'init' 以匹配前端期望
         'results': [],
         'start_time': datetime.now().isoformat()
     }
 
-    def run_orchestrated_diagnosis():
+    def run_async_test():
         """
-        使用诊断编排器执行诊断流程
+        重构后的 NxM 执行逻辑
+        外层循环遍历问题，内层循环遍历模型
+
+        请求次数 = 问题数 × 模型数（只针对用户自己的品牌）
+        竞品品牌仅用于对比分析，不参与 API 请求
         
-        【P0 重构 - 阶段五】
-        所有子流程由 DiagnosisOrchestrator 统一协调：
-        1. 初始化阶段
-        2. AI 调用阶段 (并行)
-        3. 结果保存阶段
-        4. 结果验证阶段
-        5. 后台分析阶段 (异步)
-        6. 报告聚合阶段
-        7. 完成阶段
+        【P0 修复 - 2026-03-02】增强异常处理和状态更新
         """
         thread_id = None
-        timeout_manager = None
-        
         try:
+            # 【P0 修复】获取线程 ID 用于调试
             import threading
             thread_id = threading.current_thread().ident
-            api_logger.info(
-                f"[Orchestrator] 异步线程启动 - execution_id={execution_id}, "
-                f"thread_id={thread_id}"
-            )
+            api_logger.info(f"[AsyncTest] 异步线程启动 - execution_id={execution_id}, thread_id={thread_id}")
+            
+            # 在异步线程中进行所有耗时的操作
+            api_logger.info(f"[AsyncTest] Initializing QuestionManager for execution_id: {execution_id}")
+            question_manager = QuestionManager()
+            api_logger.info(f"[AsyncTest] Successfully initialized managers for execution_id: {execution_id}")
 
-            # 启动全局超时计时器（10 分钟）
-            timeout_manager = TimeoutManager()
+            cleaned_custom_questions_for_validation = [q.strip() for q in custom_questions if q.strip()]
 
-            def on_timeout(eid: str):
-                """超时回调：记录日志并标记任务超时"""
-                api_logger.error(
-                    "global_timeout_triggered",
-                    extra={
-                        'event': 'global_timeout_triggered',
-                        'execution_id': eid,
-                        'timeout_seconds': TimeoutManager.MAX_EXECUTION_TIME,
-                    }
-                )
-                # 更新内存状态
-                if eid in execution_store:
-                    execution_store[eid].update({
-                        'status': 'timeout',
-                        'stage': 'timeout',
-                        'progress': 100,
-                        'is_completed': True,
-                        'should_stop_polling': True,
-                        'error': f'诊断任务执行超时（>{TimeoutManager.MAX_EXECUTION_TIME}秒）'
-                    })
-                # 尝试更新数据库状态
-                try:
-                    from wechat_backend.state_manager import get_state_manager
-                    state_manager = get_state_manager(execution_store)
-                    state_manager.update_state(
-                        execution_id=eid,
-                        status='timeout',
-                        stage='timeout',
-                        progress=100,
-                        is_completed=True,
-                        error_message=f'诊断任务执行超时（>{TimeoutManager.MAX_EXECUTION_TIME}秒）',
-                        write_to_db=True,
-                        user_id=user_id or "anonymous",
-                        brand_name=brand_list[0],
-                        competitor_brands=brand_list[1:] if len(brand_list) > 1 else [],
-                        selected_models=selected_models,
-                        custom_questions=custom_questions
-                    )
-                except Exception as timeout_db_err:
-                    api_logger.error(f"[超时处理] 数据库状态更新失败：{timeout_db_err}")
+            if cleaned_custom_questions_for_validation:
+                api_logger.info(f"[AsyncTest] Validating custom questions for execution_id: {execution_id}, questions: {cleaned_custom_questions_for_validation}")
+                validation_result = question_manager.validate_custom_questions(cleaned_custom_questions_for_validation)
+                api_logger.info(f"[AsyncTest] Question validation result for execution_id: {execution_id}, result: {validation_result}")
 
-            # 启动 10 分钟全局超时计时器
-            timeout_manager.start_timer(
-                execution_id=execution_id,
-                on_timeout=on_timeout,
-                timeout_seconds=TimeoutManager.MAX_EXECUTION_TIME
-            )
-            api_logger.info(
-                "global_timeout_timer_started",
-                extra={
-                    'event': 'global_timeout_timer_started',
-                    'execution_id': execution_id,
-                    'timeout_seconds': TimeoutManager.MAX_EXECUTION_TIME,
-                }
-            )
+                if not validation_result['valid']:
+                    api_logger.error(f"[AsyncTest] Question validation failed for execution_id: {execution_id}, errors: {validation_result['errors']}")
+                    if execution_id in execution_store:
+                        execution_store[execution_id].update({
+                            'status': 'failed',
+                            'stage': 'failed',  # 【修复 P0-002】同步 stage 与 status
+                            'error': f"Invalid questions: {'; '.join(validation_result['errors'])}"
+                        })
+                    return
+                raw_questions = validation_result['cleaned_questions']
+                api_logger.info(f"[AsyncTest] Successfully validated questions for execution_id: {execution_id}, raw_questions: {raw_questions}")
+            else:
+                raw_questions = [
+                    "介绍一下{brandName}",
+                    "{brandName}的主要产品是什么",
+                    "{brandName}和竞品有什么区别"
+                ]
+                api_logger.info(f"[AsyncTest] Using default questions for execution_id: {execution_id}")
 
-            # 创建数据库初始记录
-            try:
-                from wechat_backend.diagnosis_report_service import get_report_service
-                service = get_report_service()
-                config = {
-                    'brand_name': brand_list[0],
-                    'competitor_brands': brand_list[1:] if len(brand_list) > 1 else [],
-                    'selected_models': selected_models,
-                    'custom_questions': custom_questions
-                }
-                report_id = service.create_report(execution_id, user_id or 'anonymous', config)
-                service.report_repo.update_status(
-                    execution_id=execution_id,
-                    status='initializing',
-                    progress=0,
-                    stage='init',
-                    is_completed=False
-                )
-                api_logger.info(
-                    f"[Orchestrator] ✅ 初始数据库记录已创建：{execution_id}, "
-                    f"report_id={report_id}"
-                )
-            except Exception as db_init_err:
-                api_logger.error(f"[Orchestrator] ⚠️ 创建初始记录失败：{db_init_err}")
+            # 分离主品牌和竞品品牌
+            # brand_list[0] 是用户自己的品牌，其余是竞品品牌
+            main_brand = brand_list[0] if brand_list else ""
+            competitor_brands = brand_list[1:] if len(brand_list) > 1 else []
+            
+            api_logger.info(f"Main brand: {main_brand}, Competitor brands: {competitor_brands}")
 
-            # 使用诊断编排器执行完整诊断流程
+            # 【P0-WebSocket 修复】使用并行执行引擎替代串行执行
+            # 性能提升：从串行 35 秒降低到并行 15 秒（提升 57%）
+            api_logger.info(f"[并行引擎] 开始并行执行 NxM - execution_id={execution_id}")
+            
+            # 使用并行执行引擎（异步）
             import asyncio
-
+            
             def run_async_in_thread(coro):
                 """在线程中安全运行异步代码"""
                 loop = asyncio.new_event_loop()
@@ -522,58 +467,393 @@ def perform_brand_test():
                     return loop.run_until_complete(coro)
                 finally:
                     loop.close()
-
-            # 创建并执行诊断编排器
-            orchestrator = DiagnosisOrchestrator(execution_id, execution_store)
             
+            # 执行并行诊断
             result = run_async_in_thread(
-                orchestrator.execute_diagnosis(
-                    user_id=user_id or 'anonymous',
-                    brand_list=brand_list,
+                execute_parallel_nxm(
+                    execution_id=execution_id,
+                    main_brand=main_brand,
+                    competitor_brands=competitor_brands,
                     selected_models=selected_models,
-                    custom_questions=custom_questions,
-                    user_openid=user_openid,
-                    user_level=user_level.value
+                    raw_questions=raw_questions,
+                    user_id=user_id or "anonymous",
+                    user_level=user_level.value,
+                    max_concurrent=6  # 最大 6 个并发任务，避免 API 限流
                 )
             )
+            
+            api_logger.info(f"[并行引擎] 执行完成 - execution_id={execution_id}, success={result.get('success')}")
 
-            # 处理编排器返回结果
             if result.get('success'):
-                api_logger.info(
-                    f"[Orchestrator] ✅ 诊断执行完成 - execution_id={execution_id}, "
-                    f"总耗时={result.get('total_time', 'N/A')}秒"
-                )
-                
-                # 取消超时计时器
+                api_logger.info(f"NxM execution completed successfully for '{execution_id}', formula: {result.get('formula')}")
+
+                # 【P0 修复 - 架构师决策】使用统一状态管理器
+                # 原则：只有一个地方负责更新数据库状态
+                # 流程：1.获取结果 → 2.保存结果明细 → 3.统一更新状态 → 4.发送 SSE 通知
+
                 try:
-                    timeout_manager.cancel_timer(execution_id)
-                    api_logger.info(f"[超时管理] ✅ 计时器已取消：{execution_id}")
-                except Exception as timer_err:
-                    api_logger.warning(f"[超时管理] 计时器取消失败：{timer_err}")
+                    from wechat_backend.repositories import save_report_snapshot
+                    from wechat_backend.diagnosis_report_repository import save_diagnosis_report
+                    from wechat_backend.diagnosis_report_service import get_report_service
+                    from wechat_backend.state_manager import get_state_manager
+
+                    # ==================== 步骤 1: 获取结果明细 ====================
+                    results = result.get('results', [])
+                    api_logger.info(f"[状态同步 -1/4] execution_id={execution_id}, 结果数={len(results)}")
+
+                    # 如果 result 中没有结果，尝试从 execution_store 获取
+                    if not results and execution_id in execution_store:
+                        fallback_results = execution_store[execution_id].get('results', [])
+                        if fallback_results:
+                            results = fallback_results
+                            api_logger.info(f"[状态同步 -1/4] 从 execution_store 恢复 {len(results)} 个结果")
+
+                    # 【P4 修复】验证结果有效性 - 检查是否有空响应或无效响应
+                    invalid_results = []
+                    for idx, res in enumerate(results):
+                        response = res.get('response', {})
+                        content = response.get('content', '') if isinstance(response, dict) else ''
+                        
+                        # 检查响应内容是否为空或无效
+                        if not content or not content.strip():
+                            error_msg = res.get('error', 'AI 响应超时')
+                            invalid_results.append({
+                                'index': idx,
+                                'brand': res.get('brand', ''),
+                                'question': res.get('question', ''),
+                                'error': error_msg
+                            })
+                            api_logger.warning(
+                                f"[P4 修复] 发现无效响应：execution_id={execution_id}, "
+                                f"brand={res.get('brand', '')}, question={res.get('question', '')}, "
+                                f"error={error_msg}"
+                            )
                     
+                    # 如果所有结果都无效，标记为失败
+                    if results and len(invalid_results) == len(results):
+                        error_message = "AI 响应超时，所有结果均无效，请重新诊断"
+                        api_logger.error(f"[P4 修复] 所有结果无效：{execution_id}, 无效数={len(invalid_results)}")
+                        
+                        # 更新内存状态
+                        if execution_id in execution_store:
+                            execution_store[execution_id].update({
+                                'status': 'failed',
+                                'stage': 'failed',
+                                'progress': 100,
+                                'is_completed': True,
+                                'should_stop_polling': True,
+                                'error': error_message
+                            })
+                        
+                        # 更新数据库状态
+                        try:
+                            state_manager = get_state_manager(execution_store)
+                            state_manager.update_state(
+                                execution_id=execution_id,
+                                status='failed',
+                                stage='failed',
+                                progress=100,
+                                is_completed=True,
+                                error_message=error_message,
+                                write_to_db=True,
+                                user_id=user_id or "anonymous",
+                                brand_name=main_brand,
+                                competitor_brands=competitor_brands,
+                                selected_models=selected_models,
+                                custom_questions=raw_questions
+                            )
+                            api_logger.info(f"[P4 修复] ✅ 状态已更新为失败：{execution_id}")
+                        except Exception as state_err:
+                            api_logger.error(f"[P4 修复] ⚠️ 状态更新失败：{state_err}")
+                        
+                        # 返回，不继续执行完成逻辑
+                        return
+                    elif invalid_results:
+                        api_logger.warning(
+                            f"[P4 修复] 部分结果无效：{execution_id}, "
+                            f"无效数={len(invalid_results)}/{len(results)}"
+                        )
+
+                    # ==================== 步骤 2: 保存结果明细 ====================
+                    try:
+                        service = get_report_service()
+
+                        # 创建/获取报告
+                        config = {
+                            'brand_name': main_brand,
+                            'competitor_brands': competitor_brands if 'competitor_brands' in locals() else [],
+                            'selected_models': selected_models,
+                            'custom_questions': raw_questions if 'raw_questions' in locals() else []
+                        }
+                        report_id = service.create_report(execution_id, user_id or 'anonymous', config)
+
+                        # 添加结果明细
+                        if results:
+                            service.add_results_batch(report_id, execution_id, results)
+                            api_logger.info(f"[状态同步 -2/4] ✅ 结果明细已保存：{execution_id}, 数量：{len(results)}")
+                            
+                            # 【P0 关键修复】验证结果数量是否匹配
+                            from wechat_backend.diagnosis_report_repository import DiagnosisResultRepository
+                            result_repo = DiagnosisResultRepository()
+                            saved_results = result_repo.get_by_execution_id(execution_id)
+                            
+                            expected_count = len(results)
+                            actual_count = len(saved_results)
+                            
+                            if actual_count != expected_count:
+                                api_logger.error(
+                                    f"[状态同步 -2/4] ⚠️ 结果数量不匹配：{execution_id}, "
+                                    f"期望={expected_count}, 实际={actual_count}"
+                                )
+                        else:
+                            api_logger.error(f"[状态同步 -2/4] ❌ 无结果明细可保存：{execution_id}")
+
+                    except Exception as storage_err:
+                        api_logger.error(f"[状态同步 -2/4] ⚠️ 存储层保存失败：{storage_err}")
+
+                    # ==================== 步骤 3: 统一更新状态 ====================
+                    # 关键：使用状态管理器，确保内存和数据库原子性更新
+                    state_manager = get_state_manager(execution_store)
+                    state_manager.complete_execution(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        brand_name=main_brand,
+                        competitor_brands=competitor_brands,
+                        selected_models=selected_models,
+                        custom_questions=raw_questions
+                    )
+                    api_logger.info(f"[状态同步 -3/4] ✅ 状态已统一更新：{execution_id}")
+
+                    # ==================== 步骤 4: 保存快照并发送 SSE 通知 ====================
+                    # 构建完整报告数据并保存快照
+                    # 防御性编程：安全获取嵌套字典值，避免 None.get() 错误
+                    quality_score = result.get('quality_score') or {}
+                    brand_analysis = result.get('brand_analysis') or {}
+                    
+                    report_data = {
+                        "reportId": execution_id,
+                        "userId": user_id or "anonymous",
+                        "brandName": main_brand,
+                        "competitorBrands": competitor_brands,
+                        "generateTime": datetime.now().isoformat(),
+                        "reportVersion": "v2.0",
+                        "requestParams": {
+                            "selectedModels": selected_models,
+                            "customQuestions": raw_questions,
+                            "userLevel": user_level.value
+                        },
+                        "reportData": {
+                            "overallScore": quality_score.get('overall_score') if quality_score else None,
+                            "overallStatus": "completed",
+                            "dimensions": results,
+                            "aggregated": result.get('aggregated', []),
+                            "qualityScore": quality_score,
+                            # 【P0 关键修复】添加品牌分析数据
+                            "brandAnalysis": brand_analysis,
+                            "userBrandAnalysis": brand_analysis.get('user_brand_analysis') if brand_analysis else None,
+                            "competitorAnalysis": brand_analysis.get('competitor_analysis', []) if brand_analysis else [],
+                            "comparison": brand_analysis.get('comparison') if brand_analysis else None,
+                            "top3Brands": brand_analysis.get('top3_brands', []) if brand_analysis else []
+                        },
+                        "executionInfo": {
+                            "formula": result.get('formula'),
+                            "totalTasks": result.get('total_tasks'),
+                            "completedTasks": result.get('completed_tasks')
+                        }
+                    }
+
+                    # 保存快照到 report_snapshots 表
+                    save_report_snapshot(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        report_data=report_data,
+                        report_version="v2.0"
+                    )
+                    api_logger.info(f"[状态同步 -4/4] ✅ 报告快照已保存：{execution_id}")
+
+                    # 【P0-WebSocket 修复】使用实时推送服务发送完成通知
+                    # 同时支持：WebSocket（小程序）、SSE（Web 后台）、微信模板消息
+                    try:
+                        send_complete_sync(
+                            execution_id=execution_id,
+                            result={
+                                'results_count': len(results),
+                                'total_tasks': result.get('total_tasks', 0),
+                                'formula': result.get('formula', '')
+                            },
+                            user_openid=None  # TODO: 从用户信息中获取 openid
+                        )
+                        api_logger.info(f"[RealtimePush] ✅ 完成通知已发送：{execution_id}")
+                    except Exception as push_err:
+                        api_logger.debug(f"[RealtimePush] ⚠️ 通知发送失败：{push_err}")
+
+                    # 【P1-T2 新增】任务完成，取消超时计时器
+                    try:
+                        timeout_manager.cancel_timer(execution_id)
+                        api_logger.info(f"[超时管理] ✅ 计时器已取消：{execution_id}")
+                    except Exception as timer_err:
+                        api_logger.warning(f"[超时管理] 计时器取消失败：{timer_err}")
+
+                except Exception as snapshot_err:
+                    # 快照保存失败不影响主流程，仅记录错误
+                    api_logger.error(f"[M004] ⚠️ 报告快照保存失败：{execution_id}, 错误：{snapshot_err}")
             else:
-                error_message = result.get('error', '诊断执行失败')
-                api_logger.error(
-                    f"[Orchestrator] ❌ 诊断执行失败 - execution_id={execution_id}, "
-                    f"错误={error_message}"
-                )
-                
-                # 取消超时计时器
+                error_message = result.get('error', '执行失败')
+                api_logger.error(f"NxM execution failed for '{execution_id}': {error_message}")
+
+                # 【P0-WebSocket 修复】使用实时推送服务发送错误通知
                 try:
-                    timeout_manager.cancel_timer(execution_id)
-                except Exception:
-                    pass
+                    send_error_sync(
+                        execution_id=execution_id,
+                        error=error_message or '诊断执行失败',
+                        error_type='execution_error',
+                        error_details={
+                            'stage': 'diagnosis_execution',
+                            'main_brand': main_brand
+                        },
+                        user_openid=None  # TODO: 从用户信息中获取 openid
+                    )
+                    api_logger.info(f"[RealtimePush] ✅ 错误通知已发送：{execution_id}")
+                except Exception as push_err:
+                    api_logger.debug(f"[RealtimePush] ⚠️ 错误通知发送失败：{push_err}")
+
+                # 步骤 2: 使用状态管理器统一更新数据库
+                try:
+                    from wechat_backend.state_manager import get_state_manager
+                    state_manager = get_state_manager(execution_store)
+                    state_manager.update_state(
+                        execution_id=execution_id,
+                        status='failed',
+                        stage='failed',
+                        progress=100,
+                        is_completed=True,
+                        error_message=error_message,
+                        write_to_db=True,
+                        user_id=user_id or "anonymous",
+                        brand_name=main_brand,
+                        competitor_brands=competitor_brands,
+                        selected_models=selected_models,
+                        custom_questions=raw_questions
+                    )
+                    api_logger.info(f"[状态同步 - 失败处理 1/3] ✅ 数据库状态已更新：{execution_id}")
+                except Exception as state_err:
+                    api_logger.error(f"[状态同步 - 失败处理 1/3] ⚠️ 状态管理器更新失败：{state_err}")
+
+                # 【P0-前端同步修复】同时更新 task_statuses 表，确保前端轮询能获取到失败状态
+                try:
+                    from wechat_backend.repositories.task_status_repository import save_task_status
+                    save_task_status(
+                        task_id=execution_id,
+                        stage='failed',
+                        progress=100,
+                        status_text='诊断失败：' + (error_message or '未知错误'),
+                        is_completed=True
+                    )
+                    api_logger.info(f"[状态同步 - 失败处理 2.5/3] ✅ task_statuses 表已同步更新：{execution_id}")
+                except Exception as task_err:
+                    api_logger.error(f"[状态同步 - 失败处理 2.5/3] ⚠️ task_statuses 表更新失败：{execution_id}, 错误：{task_err}")
+
+                # M004 改造：即使失败也保存错误报告
+                try:
+                    from wechat_backend.repositories import save_report_snapshot
+                    from wechat_backend.diagnosis_report_repository import save_diagnosis_report
+
+                    error_report = {
+                        "reportId": execution_id,
+                        "userId": user_id or "anonymous",
+                        "brandName": main_brand,
+                        "generateTime": datetime.now().isoformat(),
+                        "reportVersion": "v2.0",
+                        "status": "failed",
+                        "error": error_message,
+                        "reportData": {
+                            "overallStatus": "failed",
+                            "dimensions": result.get('results', [])
+                        }
+                    }
+
+                    # 保存错误报告快照
+                    save_report_snapshot(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        report_data=error_report,
+                        report_version="v2.0"
+                    )
+
+                    # 【关键修复】同时更新 diagnosis_reports 表，确保前端能够查询到
+                    save_diagnosis_report(
+                        execution_id=execution_id,
+                        user_id=user_id or "anonymous",
+                        brand_name=main_brand,
+                        competitor_brands=competitor_brands,
+                        selected_models=selected_models,
+                        custom_questions=raw_questions,
+                        status="failed",
+                        progress=100,  # 进度设为 100%，因为执行已完成（虽然是失败）
+                        stage="failed",
+                        is_completed=True
+                    )
+
+                    api_logger.info(f"[状态同步 - 失败处理 3/3] ✅ 错误报告已保存：{execution_id}")
+
+                except Exception as snapshot_err:
+                    api_logger.error(f"[M004] ⚠️ 错误报告保存失败：{execution_id}, 错误：{snapshot_err}")
 
         except Exception as e:
             import traceback
             error_traceback = traceback.format_exc()
             error_message = f"{str(e)}"
-            api_logger.error(
-                f"[Orchestrator] ❌ 未预期异常 - execution_id={execution_id}, "
-                f"thread_id={thread_id}: {error_message}\nTraceback: {error_traceback}"
-            )
-
-            # 更新内存状态
+            api_logger.error(f"Async test execution failed for execution_id {execution_id}: {error_message}\nTraceback: {error_traceback}")
+            
+            # 【P0 关键修复】异常时也要更新内存状态和数据库状态
+            if execution_id in execution_store:
+                execution_store[execution_id].update({
+                    'status': 'failed',
+                    'stage': 'failed',
+                    'progress': 100,
+                    'is_completed': True,
+                    'should_stop_polling': True,  # 强制停止轮询
+                    'error': f"{error_message}\nTraceback: {error_traceback}"
+                })
+                api_logger.info(f"[异常处理] ✅ 内存状态已更新：{execution_id}")
+            
+            # 尝试更新数据库
+            try:
+                from wechat_backend.state_manager import get_state_manager
+                state_manager = get_state_manager(execution_store)
+                state_manager.update_state(
+                    execution_id=execution_id,
+                    status='failed',
+                    stage='failed',
+                    progress=100,
+                    is_completed=True,
+                    error_message=error_message,
+                    write_to_db=True,
+                    user_id=user_id or "anonymous",
+                    brand_name=main_brand,
+                    competitor_brands=competitor_brands,
+                    selected_models=selected_models,
+                    custom_questions=raw_questions
+                )
+                api_logger.info(f"[异常处理] ✅ 数据库状态已更新：{execution_id}")
+            except Exception as state_err:
+                api_logger.error(f"[异常处理] ⚠️ 数据库更新失败：{state_err}")
+            
+            # 【P1-T2 新增】异常处理完成，取消超时计时器
+            try:
+                timeout_manager.cancel_timer(execution_id)
+                api_logger.info(f"[超时管理] ✅ 计时器已取消（异常处理）：{execution_id}")
+            except Exception as timer_err:
+                api_logger.warning(f"[超时管理] 计时器取消失败：{timer_err}")
+        
+        except Exception as e:
+            # 【P0 修复 - 2026-03-02】捕获所有未预期的异常，防止线程卡死
+            import traceback
+            error_traceback = traceback.format_exc()
+            api_logger.error(f"[AsyncTest] 未预期异常 - execution_id={execution_id}, thread_id={thread_id}: {e}")
+            api_logger.error(f"[AsyncTest] 堆栈跟踪：{error_traceback}")
+            
+            # 更新状态为失败
             if execution_id in execution_store:
                 execution_store[execution_id].update({
                     'status': 'failed',
@@ -581,9 +861,11 @@ def perform_brand_test():
                     'progress': 100,
                     'is_completed': True,
                     'should_stop_polling': True,
-                    'error': f"异步任务执行失败：{error_message}"
+                    'error': f'异步任务执行失败：{str(e)}',
+                    'traceback': error_traceback
                 })
-
+                api_logger.info(f"[AsyncTest] ✅ 异常状态已更新：{execution_id}")
+            
             # 更新数据库状态
             try:
                 from wechat_backend.state_manager import get_state_manager
@@ -594,44 +876,28 @@ def perform_brand_test():
                     stage='failed',
                     progress=100,
                     is_completed=True,
-                    error_message=f"异步任务执行失败：{error_message}",
+                    error_message=f'异步任务执行失败：{str(e)}',
                     write_to_db=True,
                     user_id=user_id or "anonymous",
-                    brand_name=brand_list[0],
-                    competitor_brands=brand_list[1:] if len(brand_list) > 1 else [],
+                    brand_name=main_brand,
+                    competitor_brands=competitor_brands if 'competitor_brands' in locals() else [],
                     selected_models=selected_models,
-                    custom_questions=custom_questions
+                    custom_questions=raw_questions if 'raw_questions' in locals() else []
                 )
-                api_logger.info(f"[Orchestrator] ✅ 数据库异常状态已更新：{execution_id}")
+                api_logger.info(f"[AsyncTest] ✅ 数据库异常状态已更新：{execution_id}")
             except Exception as state_err:
-                api_logger.error(f"[Orchestrator] ⚠️ 数据库状态更新失败：{state_err}")
+                api_logger.error(f"[AsyncTest] ⚠️ 数据库状态更新失败：{state_err}")
 
-            # 取消超时计时器
-            try:
-                if timeout_manager:
-                    timeout_manager.cancel_timer(execution_id)
-            except Exception:
-                pass
-
-    # 启动异步线程
-    thread = Thread(target=run_orchestrated_diagnosis, daemon=True)
-    thread.name = f"OrchestratorThread-{execution_id[:8]}"
+    # 【P0 修复 - 2026-03-02】设置线程为守护线程，确保主程序退出时线程也退出
+    thread = Thread(target=run_async_test, daemon=True)
+    thread.name = f"DiagnosisThread-{execution_id[:8]}"
     thread.start()
+    
+    api_logger.info(f"[P0 修复] ✅ 异步线程已启动 - execution_id={execution_id}, thread_name={thread.name}")
 
-    api_logger.info(
-        f"[Orchestrator] ✅ 异步线程已启动 - execution_id={execution_id}, "
-        f"thread_name={thread.name}"
-    )
-
-    return jsonify({
-        'status': 'success',
-        'execution_id': execution_id,
-        'message': 'Test started successfully'
-    })
-
+    return jsonify({'status': 'success', 'execution_id': execution_id, 'message': 'Test started successfully'})
 
 import signal
-
 
 
 
