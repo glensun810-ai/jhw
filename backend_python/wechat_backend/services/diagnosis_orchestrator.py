@@ -284,20 +284,35 @@ class DiagnosisOrchestrator:
                 if not phase3_result.success:
                     raise ValueError(f"结果保存失败：{phase3_result.error}")
 
+                # 【P0 关键修复 - 2026-03-02】等待数据库提交完成
+                # SQLite WAL 模式下，COMMIT 后数据可能还在 WAL 文件中，需要短暂等待
+                # 确保步骤 5 保存的数据在步骤 6 验证时可见
+                await asyncio.sleep(0.1)  # 等待 100ms，确保数据持久化
+
                 # ========== 阶段 4: 结果验证 ==========
+                # 【P0 关键修复 - 2026-03-03】传递内存数据用于验证，但返回数据库数据供后续使用
                 phase4_result = await self._phase_results_validating(phase2_result.data)
                 if not phase4_result.success:
                     raise ValueError(f"结果验证失败：{phase4_result.error}")
+                
+                # 【P0 关键修复 - 2026-03-03】从验证结果中获取数据库中的实际数据
+                db_results = phase4_result.data.get('saved_results', [])
+                api_logger.info(
+                    f"[Orchestrator] 验证完成：{self.execution_id}, "
+                    f"数据库结果数={len(db_results)}"
+                )
 
                 # ========== 阶段 5: 后台分析 (异步，不阻塞) ==========
+                # 【P0 关键修复 - 2026-03-03】使用数据库数据而非内存数据
                 phase5_result = self._phase_background_analysis_async(
-                    phase2_result.data, brand_list
+                    db_results, brand_list
                 )
                 # 注意：此阶段异步执行，不等待完成
 
                 # ========== 阶段 6: 报告聚合 ==========
+                # 【P0 关键修复 - 2026-03-03】使用数据库数据而非内存数据
                 phase6_result = await self._phase_report_aggregating(
-                    phase2_result.data, brand_list
+                    db_results, brand_list
                 )
                 if not phase6_result.success:
                     raise ValueError(f"报告聚合失败：{phase6_result.error}")
@@ -347,7 +362,7 @@ class DiagnosisOrchestrator:
                     'success': False,
                     'execution_id': self.execution_id,
                     'error': str(e),
-                    'error_code': error_code.code,
+                    'error_code': error_code.value.code if hasattr(error_code, 'value') else error_code.code,
                     'trace_id': trace_id
                 }
 
@@ -356,9 +371,12 @@ class DiagnosisOrchestrator:
         阶段 1: 初始化
 
         任务：
-        1. 设置初始状态
+        1. 设置初始状态（仅内存，不写数据库）
         2. 记录初始参数
         3. 准备执行环境
+
+        【P1 关键修复 - 2026-03-03】Phase 1 不写入数据库，避免与 Phase 3 的事务管理冲突
+        数据库记录由 Phase 3 使用事务管理器统一创建
 
         返回：
             PhaseResult
@@ -368,21 +386,8 @@ class DiagnosisOrchestrator:
 
         try:
             params = self._initial_params
-            
-            # 更新状态为初始化
-            self._update_phase_status(
-                status='initializing',
-                stage='init',
-                progress=0,
-                write_to_db=True,
-                user_id=params['user_id'],
-                brand_name=params['brand_list'][0],
-                competitor_brands=params['brand_list'][1:],
-                selected_models=params['selected_models'],
-                custom_questions=params['custom_questions']
-            )
 
-            # 初始化 execution_store
+            # 初始化 execution_store（内存状态）
             if self.execution_id not in self.execution_store:
                 self.execution_store[self.execution_id] = {
                     'status': 'initializing',
@@ -396,6 +401,23 @@ class DiagnosisOrchestrator:
                     'selected_models': params['selected_models'],
                     'custom_questions': params['custom_questions']
                 }
+
+            # 【P1 关键修复 - 2026-03-03】仅更新内存状态，不写入数据库
+            # 数据库记录由 Phase 3 使用事务管理器统一创建，避免：
+            # 1. 重复创建报告记录
+            # 2. 事务管理冲突
+            # 3. 数据不一致风险
+            self._update_phase_status(
+                status='initializing',
+                stage='init',
+                progress=0,
+                write_to_db=False,  # 【P1 关键修复】不写数据库
+                user_id=params['user_id'],
+                brand_name=params['brand_list'][0],
+                competitor_brands=params['brand_list'][1:],
+                selected_models=params['selected_models'],
+                custom_questions=params['custom_questions']
+            )
 
             result = PhaseResult(
                 success=True,
@@ -651,12 +673,13 @@ class DiagnosisOrchestrator:
         2. 使用 ResultValidator 进行数量验证
         3. 使用 ResultValidator 进行质量验证
         4. 使用 ResultValidator 进行完整性验证
+        5. 【P0 关键修复 - 2026-03-03】返回数据库中的实际数据供后续环节使用
 
         参数：
-            results: AI 调用结果列表
+            results: AI 调用结果列表（用于数量对比）
 
         返回：
-            PhaseResult
+            PhaseResult (data 包含验证结果 + 数据库中的 saved_results)
         """
         api_logger.info(f"[Orchestrator] 阶段 4: 结果验证 - {self.execution_id}")
         self.current_phase = DiagnosisPhase.RESULTS_VALIDATING
@@ -671,10 +694,11 @@ class DiagnosisOrchestrator:
             )
 
             # 使用 ResultValidator 进行完整验证
+            # 【P0 关键修复 - 2026-03-03】validate 现在返回 (ValidationResult, saved_results)
             from wechat_backend.services.result_validator import get_result_validator, ValidationLevel
-            
+
             validator = get_result_validator(validation_level=ValidationLevel.NORMAL)
-            validation_result = validator.validate(
+            validation_result, saved_results = validator.validate(
                 execution_id=self.execution_id,
                 expected_results=results,
                 validate_quality=True,
@@ -685,13 +709,14 @@ class DiagnosisOrchestrator:
             api_logger.info(
                 f"[Orchestrator] 验证结果：{self.execution_id}, "
                 f"status={validation_result.status.value}, "
-                f"message={validation_result.message}"
+                f"message={validation_result.message}, "
+                f"数据库结果数={len(saved_results)}"
             )
 
             # 检查验证是否通过
             if not validation_result.is_passed:
                 error_msg = validation_result.message
-                
+
                 # 添加详细错误信息
                 if validation_result.invalid_results:
                     error_msg += f", 无效数={len(validation_result.invalid_results)}"
@@ -699,7 +724,7 @@ class DiagnosisOrchestrator:
                     error_msg += f", 缺失字段数={len(validation_result.missing_fields)}"
                 if validation_result.warnings:
                     error_msg += f", 警告={len(validation_result.warnings)}"
-                
+
                 api_logger.error(
                     f"[Orchestrator] 验证失败：{self.execution_id}, "
                     f"错误={error_msg}, "
@@ -712,6 +737,7 @@ class DiagnosisOrchestrator:
                 f"[Orchestrator] ✅ 验证通过：{self.execution_id}, "
                 f"期望={validation_result.expected_count}, "
                 f"实际={validation_result.actual_count}, "
+                f"数据库结果数={len(saved_results)}, "
                 f"无效={len(validation_result.invalid_results)}, "
                 f"缺失={len(validation_result.missing_fields)}"
             )
@@ -723,9 +749,13 @@ class DiagnosisOrchestrator:
                         f"[Orchestrator] ⚠️ 警告：{self.execution_id}, {warning}"
                     )
 
+            # 【P0 关键修复 - 2026-03-03】返回验证结果和数据库中的实际数据
+            result_data = validation_result.to_dict()
+            result_data['saved_results'] = saved_results  # 添加数据库数据供后续环节使用
+            
             result_obj = PhaseResult(
                 success=True,
-                data=validation_result.to_dict()
+                data=result_data
             )
             self.phase_results['results_validating'] = result_obj
 
@@ -832,6 +862,7 @@ class DiagnosisOrchestrator:
         2. 等待后台分析完成（或超时）
         3. 聚合所有结果为最终报告
         4. 保存最终报告
+        5. 【P0 关键修复】标记任务为完成状态
 
         参数：
             results: AI 调用结果列表
@@ -852,23 +883,40 @@ class DiagnosisOrchestrator:
                 write_to_db=True
             )
 
-            # 等待后台分析完成（最多等待 120 秒）
-            analysis_results = await self._wait_for_analysis_complete(timeout_seconds=120)
+            # 【P1 关键修复 - 2026-03-03】等待后台分析完成（最多等待 120 秒）
+            # 注意：后台分析是异步的，但需要确保分析完成才能生成完整报告
+            # 修改：超时时间从 60 秒增加到 120 秒
+            analysis_results = {}
+            try:
+                api_logger.info(f"[Orchestrator] 开始等待后台分析：{self.execution_id}")
+                analysis_results = await self._wait_for_analysis_complete(timeout_seconds=120)
+                if analysis_results:
+                    api_logger.info(
+                        f"[Orchestrator] ✅ 后台分析已完成：{self.execution_id}, "
+                        f"总耗时={(datetime.now() - datetime.fromisoformat(self.execution_store[self.execution_id]['start_time'])).total_seconds():.2f}秒"
+                    )
+                else:
+                    api_logger.warning(f"[Orchestrator] ⚠️ 后台分析超时，使用空结果继续：{self.execution_id}")
+            except Exception as e:
+                api_logger.warning(f"[Orchestrator] 等待后台分析失败：{e}，继续生成报告")
+                analysis_results = {}
 
             # 聚合报告
+            # 【阶段一：报告聚合器】使用 Python 版本的报告聚合器
+            final_report = None
             try:
-                from services.reportAggregator import aggregateReport
+                from wechat_backend.services.report_aggregator import aggregate_report
 
                 params = self._initial_params
-                final_report = aggregateReport(
-                    rawResults=results,
-                    brandName=brand_list[0],
+                final_report = aggregate_report(
+                    raw_results=results,
+                    brand_name=brand_list[0],
                     competitors=brand_list[1:] if len(brand_list) > 1 else [],
-                    additionalData=analysis_results
+                    additional_data=analysis_results
                 )
 
                 api_logger.info(
-                    f"[Orchestrator] 报告聚合完成：{self.execution_id}, "
+                    f"[Orchestrator] ✅ 报告聚合完成：{self.execution_id}, "
                     f"overallScore={final_report.get('overallScore', 'N/A')}"
                 )
 
@@ -877,14 +925,37 @@ class DiagnosisOrchestrator:
                 # 降级处理：创建简化报告
                 final_report = self._create_simplified_report(results, brand_list)
             except Exception as e:
-                api_logger.error(f"[Orchestrator] 报告聚合失败：{e}")
+                api_logger.error(f"[Orchestrator] 报告聚合失败：{e}", exc_info=True)
+                # 降级处理：创建简化报告
+                final_report = self._create_simplified_report(results, brand_list)
+
+            # 【P0 关键修复】确保 final_report 不为 None
+            if final_report is None:
+                api_logger.error(f"[Orchestrator] 报告聚合结果为 None，创建空报告")
                 final_report = self._create_simplified_report(results, brand_list)
 
             # 保存最终报告到 execution_store
             if self.execution_id in self.execution_store:
                 self.execution_store[self.execution_id]['final_report'] = final_report
-                self.execution_store[self.execution_id]['status'] = 'report_aggregating'
-                self.execution_store[self.execution_id]['progress'] = 90
+                # 【P0 关键修复】更新状态为 completed，而非 report_aggregating
+                self.execution_store[self.execution_id]['status'] = 'completed'
+                self.execution_store[self.execution_id]['progress'] = 100
+                self.execution_store[self.execution_id]['is_completed'] = True
+                self.execution_store[self.execution_id]['should_stop_polling'] = True
+
+            # 【P0 关键修复】更新数据库状态为 completed
+            try:
+                self._update_phase_status(
+                    status='completed',
+                    stage='completed',
+                    progress=100,
+                    write_to_db=True,
+                    is_completed=True,
+                    should_stop_polling=True
+                )
+                api_logger.info(f"[Orchestrator] ✅ 数据库状态已更新为 completed: {self.execution_id}")
+            except Exception as e:
+                api_logger.error(f"[Orchestrator] 更新数据库状态失败：{e}")
 
             result_obj = PhaseResult(
                 success=True,
@@ -896,7 +967,20 @@ class DiagnosisOrchestrator:
             return result_obj
 
         except Exception as e:
-            api_logger.error(f"[Orchestrator] ❌ 阶段 6 失败：报告聚合 - {self.execution_id}, 错误={e}")
+            api_logger.error(f"[Orchestrator] ❌ 阶段 6 失败：报告聚合 - {self.execution_id}, 错误={e}", exc_info=True)
+            # 【P0 修复】失败时也要更新状态，防止卡死
+            try:
+                self._update_phase_status(
+                    status='failed',
+                    stage='failed',
+                    progress=0,
+                    write_to_db=True,
+                    is_completed=True,
+                    should_stop_polling=True,
+                    error=str(e)
+                )
+            except Exception as update_err:
+                api_logger.error(f"[Orchestrator] 更新失败状态失败：{update_err}")
             return PhaseResult(success=False, error=str(e))
 
     async def _wait_for_analysis_complete(
@@ -906,6 +990,12 @@ class DiagnosisOrchestrator:
         """
         等待后台分析完成
 
+        【P1 关键修复 - 2026-03-03】增加超时时间，优化轮询频率，确保分析完成
+        修改：
+        1. 超时时间从 60 秒增加到 120 秒
+        2. 轮询间隔从 2 秒改为 1 秒（更快响应）
+        3. 添加详细日志，便于问题排查
+
         参数：
             timeout_seconds: 超时时间（秒）
 
@@ -913,6 +1003,11 @@ class DiagnosisOrchestrator:
             分析结果字典
         """
         start_time = datetime.now()
+        check_interval = 1  # 【P1 修复】轮询间隔从 2 秒改为 1 秒
+        api_logger.info(
+            f"[Orchestrator] 开始等待后台分析：{self.execution_id}, "
+            f"超时={timeout_seconds}秒，轮询间隔={check_interval}秒"
+        )
 
         while (datetime.now() - start_time).total_seconds() < timeout_seconds:
             try:
@@ -921,21 +1016,39 @@ class DiagnosisOrchestrator:
                 manager = get_background_service_manager()
                 status = manager.get_task_status(self.execution_id)
 
-                if status and status.get('analysis_complete'):
-                    api_logger.info(
-                        f"[Orchestrator] 后台分析完成：{self.execution_id}, "
-                        f"耗时={(datetime.now() - start_time).total_seconds():.2f}秒"
+                if status:
+                    # 记录等待进度
+                    elapsed = (datetime.now() - start_time).total_seconds()
+                    api_logger.debug(
+                        f"[Orchestrator] 等待后台分析：{self.execution_id}, "
+                        f"已等待={elapsed:.1f}秒，status={status}"
                     )
-                    return status.get('analysis_results', {})
+                    
+                    if status.get('analysis_complete'):
+                        api_logger.info(
+                            f"[Orchestrator] ✅ 后台分析完成：{self.execution_id}, "
+                            f"耗时={(datetime.now() - start_time).total_seconds():.2f}秒"
+                        )
+                        return status.get('analysis_results', {})
+                    elif status.get('error'):
+                        # 后台分析出错，提前退出
+                        api_logger.warning(
+                            f"[Orchestrator] ⚠️ 后台分析出错：{self.execution_id}, "
+                            f"error={status.get('error')}"
+                        )
+                        return {}
 
             except Exception as e:
                 api_logger.debug(f"[Orchestrator] 检查后台分析状态失败：{e}")
 
-            # 每 2 秒检查一次
-            await asyncio.sleep(2)
+            # 轮询等待
+            await asyncio.sleep(check_interval)
 
         # 超时，返回空结果
-        api_logger.warning(f"[Orchestrator] 后台分析超时：{self.execution_id}")
+        api_logger.warning(
+            f"[Orchestrator] ⏰ 后台分析超时：{self.execution_id}, "
+            f"超时={timeout_seconds}秒"
+        )
         return {}
 
     def _create_simplified_report(

@@ -240,6 +240,73 @@ class DiagnosisStateManager:
             self.state_snapshots[execution_id] = copy.deepcopy(self.execution_store[execution_id])
             api_logger.debug(f"[StateManager] 已保存状态快照：{execution_id}")
 
+    def _force_sync_to_database(
+        self,
+        execution_id: str,
+        user_id: str = 'anonymous',
+        brand_name: str = '',
+        competitor_brands: list = None,
+        selected_models: list = None,
+        custom_questions: list = None
+    ):
+        """
+        强制同步内存状态到数据库
+
+        【P0 关键修复 - 2026-03-04】确保内存和数据库状态一致
+
+        参数：
+            execution_id: 执行 ID
+            user_id: 用户 ID
+            brand_name: 品牌名称
+            competitor_brands: 竞品列表
+            selected_models: 模型列表
+            custom_questions: 问题列表
+        """
+        try:
+            state = self.execution_store[execution_id]
+
+            # 准备数据库更新数据
+            update_data = {
+                'status': state.get('status'),
+                'stage': state.get('stage'),
+                'progress': state.get('progress'),
+                'is_completed': state.get('is_completed', False),
+                'should_stop_polling': state.get('should_stop_polling', False),
+                'error_message': state.get('error'),
+                'updated_at': datetime.now().isoformat()
+            }
+
+            # 添加额外字段
+            if brand_name:
+                update_data['brand_name'] = brand_name
+            if competitor_brands:
+                update_data['competitor_brands'] = json.dumps(competitor_brands)
+            if selected_models:
+                update_data['selected_models'] = json.dumps(selected_models)
+            if custom_questions:
+                update_data['custom_questions'] = json.dumps(custom_questions)
+
+            # 执行数据库更新
+            save_diagnosis_report(
+                execution_id=execution_id,
+                user_id=user_id,
+                brand_name=brand_name,
+                competitor_brands=competitor_brands or [],
+                selected_models=selected_models or [],
+                custom_questions=custom_questions or [],
+                status=state.get('status') or 'processing',
+                progress=state.get('progress') or 0,
+                stage=state.get('stage') or 'processing',
+                is_completed=state.get('is_completed', False)
+            )
+
+            db_logger.debug(f"[StateManager] 强制同步到数据库：{execution_id}")
+
+        except Exception as e:
+            db_logger.error(f"[StateManager] 强制同步失败：{execution_id}, error={e}")
+            # 数据库失败不影响内存状态更新
+            api_logger.warning(f"[StateManager] 数据库同步失败，但内存状态已更新：{execution_id}")
+
     def update_state(
         self,
         execution_id: str,
@@ -353,23 +420,14 @@ class DiagnosisStateManager:
 
                 # ==================== 步骤 2: 更新数据库（可选） ====================
                 if write_to_db:
-                    try:
-                        save_diagnosis_report(
-                            execution_id=execution_id,
-                            user_id=user_id,
-                            brand_name=brand_name,
-                            competitor_brands=competitor_brands or [],
-                            selected_models=selected_models or [],
-                            custom_questions=custom_questions or [],
-                            status=status or 'processing',
-                            progress=progress or 0,
-                            stage=stage or 'processing',
-                            is_completed=is_completed or False
-                        )
-                        db_logger.info(f"[StateManager] 数据库状态已更新：{execution_id}")
-                    except Exception as db_err:
-                        api_logger.error(f"[StateManager] 数据库更新失败：{execution_id}, 错误：{db_err}")
-                        return False
+                    self._force_sync_to_database(
+                        execution_id=execution_id,
+                        user_id=user_id,
+                        brand_name=brand_name,
+                        competitor_brands=competitor_brands,
+                        selected_models=selected_models,
+                        custom_questions=custom_questions
+                    )
 
                 return True
 

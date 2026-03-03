@@ -416,6 +416,7 @@ class BackgroundServiceManager:
         Returns:
             品牌分析结果
         """
+        # 【P0 关键修复 - 2026-03-02】添加详细日志和错误处理
         try:
             from .brand_analysis_service import BrandAnalysisService
 
@@ -423,17 +424,33 @@ class BackgroundServiceManager:
             user_brand = payload.get('user_brand', '')
             competitor_brands = payload.get('competitor_brands', [])
 
+            api_logger.info(
+                f"[BackgroundService] 开始品牌分析任务：user_brand={user_brand}, "
+                f"results_count={len(results)}, competitor_count={len(competitor_brands)}"
+            )
+
             if not results or not user_brand:
-                raise ValueError("品牌分析缺少必要参数：results 或 user_brand")
+                raise ValueError(
+                    f"品牌分析缺少必要参数：results={len(results) if results else 0}, "
+                    f"user_brand='{user_brand}'"
+                )
 
             service = BrandAnalysisService()
+            api_logger.info(f"[BackgroundService] 调用 BrandAnalysisService.analyze_brand_mentions")
+            
             analysis_result = service.analyze_brand_mentions(
                 results=results,
                 user_brand=user_brand,
                 competitor_brands=competitor_brands
             )
 
-            api_logger.info(f"[BackgroundService] 品牌分析完成：user_brand={user_brand}")
+            # 检查是否有错误
+            if '_analysis_error' in analysis_result:
+                api_logger.warning(
+                    f"[BackgroundService] 品牌分析返回错误：{analysis_result['_analysis_error']}"
+                )
+
+            api_logger.info(f"[BackgroundService] ✅ 品牌分析完成：user_brand={user_brand}")
 
             return {
                 'success': True,
@@ -442,7 +459,10 @@ class BackgroundServiceManager:
             }
 
         except Exception as e:
-            api_logger.error(f"[BackgroundService] 品牌分析失败：{e}", exc_info=True)
+            api_logger.error(
+                f"[BackgroundService] ❌ 品牌分析失败：{e}",
+                exc_info=True
+            )
             return {'success': False, 'error': str(e)}
 
     def _execute_competitive_analysis(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -648,10 +668,11 @@ class BackgroundServiceManager:
 
 _service_manager: Optional[BackgroundServiceManager] = None
 _manager_lock = threading.Lock()
+_services_initialized = False  # P0-20260302: 防止重复初始化
 
 
 def get_background_service_manager(max_workers: int = 4) -> BackgroundServiceManager:
-    """获取全局后台服务管理器"""
+    """获取全局后台服务管理器（单例模式）"""
     global _service_manager
     if _service_manager is None:
         with _manager_lock:
@@ -662,11 +683,17 @@ def get_background_service_manager(max_workers: int = 4) -> BackgroundServiceMan
 
 def reset_background_service_manager():
     """重置全局后台服务管理器（用于测试）"""
-    global _service_manager
+    global _service_manager, _services_initialized
     with _manager_lock:
         if _service_manager:
             _service_manager.stop()
         _service_manager = None
+        _services_initialized = False
+
+
+def is_services_initialized() -> bool:
+    """检查后台服务是否已初始化"""
+    return _services_initialized
 
 
 # =============================================================================
@@ -747,21 +774,32 @@ def initialize_background_services():
     初始化所有后台服务
 
     应该在 app.py 启动时调用，替代各个独立的清理线程
+    
+    P0-20260302: 添加重复初始化防护
     """
+    global _services_initialized
+    
+    # 防止重复初始化（Flask Debug 模式可能导致）
+    if _services_initialized:
+        api_logger.warning("[BackgroundService] 服务已初始化，跳过重复初始化")
+        return
+    
+    _services_initialized = True
     manager = get_background_service_manager()
-    
-    # 注册 SSE 清理任务（每 60 秒）
-    try:
-        from wechat_backend.services.sse_service_v2 import get_sse_manager
-        manager.register_task(
-            name="sse_cleanup",
-            func=create_sse_cleanup_task(get_sse_manager),
-            interval_seconds=60,
-            enabled=True
-        )
-    except Exception as e:
-        api_logger.warning(f"[BackgroundService] 注册 SSE 清理任务失败：{e}")
-    
+
+    # 【P0 关键修复 - 2026-03-02】删除 SSE 清理任务（微信小程序不支持 SSE）
+    # 注册 SSE 清理任务（每 60 秒） - 已删除
+    # try:
+    #     from wechat_backend.services.sse_service_v2 import get_sse_manager
+    #     manager.register_task(
+    #         name="sse_cleanup",
+    #         func=create_sse_cleanup_task(get_sse_manager),
+    #         interval_seconds=60,
+    #         enabled=True
+    #     )
+    # except Exception as e:
+    #     api_logger.warning(f"[BackgroundService] 注册 SSE 清理任务失败：{e}")
+
     # 注册导出文件清理任务（每小时）
     try:
         from wechat_backend.services.async_export_service import get_async_export_service

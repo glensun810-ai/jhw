@@ -129,59 +129,101 @@ class ResultValidator:
         expected_results: List[Dict[str, Any]],
         validate_quality: bool = True,
         validate_completeness: bool = True
-    ) -> ValidationResult:
+    ) -> Tuple[ValidationResult, List[Dict[str, Any]]]:
         """
         执行完整验证流程
-        
+
         参数：
             execution_id: 执行 ID
             expected_results: 预期的结果列表（用于数量验证）
             validate_quality: 是否验证质量
             validate_completeness: 是否验证完整性
-        
+
         返回：
-            ValidationResult: 验证结果
+            Tuple[ValidationResult, List[Dict[str, Any]]]: 验证结果 + 数据库中的实际结果列表
+            【P0 关键修复 - 2026-03-03】返回数据库数据，确保后续环节使用统一数据源
         """
         api_logger.info(f"[ResultValidator] 开始验证：{execution_id}")
-        
+
         # 从数据库读取已保存的结果
         from wechat_backend.diagnosis_report_repository import DiagnosisResultRepository
-        
+
         result_repo = DiagnosisResultRepository()
-        saved_results = result_repo.get_by_execution_id(execution_id)
-        
+
+        # 【P0 关键修复 - 2026-03-02】添加重试机制，处理连接池可见性延迟
+        # SQLite WAL 模式下，COMMIT 后数据可能短暂不可见，需要重试读取
+        saved_results = []
+        max_retries = 3
+        expected_count = len(expected_results)
+
+        for attempt in range(max_retries):
+            saved_results = result_repo.get_by_execution_id(execution_id)
+            actual_count = len(saved_results)
+
+            # 检查数量是否匹配
+            if actual_count >= expected_count:
+                api_logger.info(
+                    f"[ResultValidator] ✅ 数据可见性检查通过：{execution_id}, "
+                    f"attempt={attempt + 1}/{max_retries}, count={actual_count}"
+                )
+                break
+
+            # 不匹配，等待后重试
+            if attempt < max_retries - 1:
+                wait_time = 0.1 * (attempt + 1)  # 递增等待时间：100ms, 200ms, 300ms
+                api_logger.warning(
+                    f"[ResultValidator] ⚠️ 数据可见性延迟：{execution_id}, "
+                    f"attempt={attempt + 1}/{max_retries}, "
+                    f"expected={expected_count}, actual={actual_count}, "
+                    f"等待 {wait_time}s 后重试"
+                )
+                import time
+                time.sleep(wait_time)
+            else:
+                # 最后一次重试仍然失败，记录错误
+                api_logger.error(
+                    f"[ResultValidator] ❌ 数据可见性检查失败：{execution_id}, "
+                    f"expected={expected_count}, actual={actual_count}, "
+                    f"已重试 {max_retries} 次"
+                )
+
         # 1. 数量验证
         quantity_result = self._validate_quantity(
             execution_id,
-            expected_count=len(expected_results),
+            expected_count=expected_count,
             actual_count=len(saved_results)
         )
-        
+
         if quantity_result.status == ValidationStatus.CRITICAL:
-            return quantity_result
-        
+            # 【P0 关键修复 - 2026-03-03】返回空列表
+            return quantity_result, []
+
         # 2. 质量验证
         quality_result = None
         if validate_quality:
             quality_result = self._validate_quality(execution_id, saved_results)
             if quality_result.status == ValidationStatus.CRITICAL:
-                return quality_result
-        
+                # 【P0 关键修复 - 2026-03-03】返回空列表
+                return quality_result, []
+
         # 3. 完整性验证
         completeness_result = None
         if validate_completeness:
             completeness_result = self._validate_completeness(execution_id, saved_results)
             if completeness_result.status == ValidationStatus.CRITICAL:
-                return completeness_result
-        
+                # 【P0 关键修复 - 2026-03-03】返回空列表
+                return completeness_result, []
+
         # 综合评估
-        return self._aggregate_results(
+        # 【P0 关键修复 - 2026-03-03】返回验证结果和数据库中的实际数据
+        validation_result = self._aggregate_results(
             execution_id=execution_id,
             quantity_result=quantity_result,
             quality_result=quality_result,
             completeness_result=completeness_result,
             saved_results=saved_results
         )
+        return validation_result, saved_results
     
     def _validate_quantity(
         self,
