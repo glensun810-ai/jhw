@@ -34,7 +34,9 @@ class PollingManager {
     };
 
     // P1-1 新增：各阶段的轮询间隔（毫秒）
+    // 【P0 修复 - 2026-03-02】init 阶段从 250ms 增加到 2000ms，避免过于频繁请求
     this.stageIntervals = {
+      init: 2000,     // init 阶段：2 秒轮询一次（修复：从 250ms 增加）
       fast: 1000,     // 0-30%: 1 秒轮询一次
       medium: 2000,   // 30-60%: 2 秒轮询一次
       slow: 3000,     // 60-80%: 3 秒轮询一次
@@ -45,15 +47,20 @@ class PollingManager {
     this.retryCounts = new Map();                             // 重试次数记录
     this.startTimes = new Map();                               // 开始时间记录
     this.lastStatusMap = new Map();                            // 最后一次状态记录
+    this.lastProgressUpdateTimes = new Map();                  // 【P0 新增】最后进度更新时间记录
+    this.progressUpdateTimeout = 30000;                        // 【P0 新增】进度更新超时（30 秒）
+    // 【P0 修复 - 2026-03-04】添加请求锁，防止并发请求
+    this.pendingRequests = new Map();                          // 正在进行的请求
 
     // 日志
     if (isFeatureEnabled('diagnosis.debug.enableLogging')) {
-      console.log('[PollingManager] Initialized with optimized config:', {
+      console.log('[PollingManager] Initialized with config:', {
         baseInterval: this.baseInterval,
         maxInterval: this.maxInterval,
         maxRetries: this.maxRetries,
         timeout: this.timeout,
-        stageIntervals: this.stageIntervals
+        stageIntervals: this.stageIntervals,
+        pendingRequests: 'enabled'
       });
     }
   }
@@ -89,6 +96,9 @@ class PollingManager {
     // 记录开始时间
     this.startTimes.set(executionId, Date.now());
 
+    // 【P0 新增】记录最后进度更新时间
+    this.lastProgressUpdateTimes.set(executionId, Date.now());
+
     // 初始化重试次数
     this.retryCounts.set(executionId, 0);
 
@@ -120,19 +130,23 @@ class PollingManager {
 
   /**
    * 停止轮询任务
-   * @param {string} executionId 
+   * @param {string} executionId
    */
   stopPolling(executionId) {
     const task = this.pollingTasks.get(executionId);
+
+    // P0 修复：确保清除定时器
     if (task && task.timerId) {
       clearTimeout(task.timerId);
+      task.timerId = null;
     }
-    
+
     this.pollingTasks.delete(executionId);
     this.retryCounts.delete(executionId);
     this.startTimes.delete(executionId);
     this.lastStatusMap.delete(executionId);
-    
+    this.lastProgressUpdateTimes.delete(executionId);  // 【P0 新增】清理进度更新时间记录
+
     console.log(`[PollingManager] Stopped polling for task: ${executionId}`);
   }
 
@@ -185,6 +199,18 @@ class PollingManager {
       return;
     }
 
+    // 【P0 修复 - 2026-03-04】检查是否有正在进行的请求
+    if (this.pendingRequests.has(executionId)) {
+      console.warn(`[PollingManager] ⚠️ 请求进行中，跳过轮询：${executionId}`);
+      return;
+    }
+
+    // 【P0 新增】检查是否 30 秒无进度更新
+    if (this._isProgressUpdateTimeout(executionId)) {
+      this._handleProgressUpdateTimeout(executionId);
+      return;
+    }
+
     // 检查是否超时
     if (this._isTimeout(executionId)) {
       this._handleTimeout(executionId);
@@ -192,9 +218,12 @@ class PollingManager {
     }
 
     try {
+      // 【P0 修复 - 2026-03-04】设置请求锁
+      this.pendingRequests.set(executionId, true);
+
       // P0-FRONTEND-2 修复：支持 HTTP 直连和云函数两种模式
       let statusData;
-      
+
       // 检查是否启用 HTTP 直连模式
       if (isFeatureEnabled('diagnosis.useHttpDirect')) {
         // HTTP 直连模式
@@ -206,6 +235,12 @@ class PollingManager {
 
       // 保存最后一次状态
       this.lastStatusMap.set(executionId, statusData);
+
+      // 【P0 新增】如果进度有更新，记录更新时间
+      const lastStatus = this.lastStatusMap.get(executionId);
+      if (lastStatus && lastStatus.progress > 0) {
+        this.lastProgressUpdateTimes.set(executionId, Date.now());
+      }
 
       // 重置重试计数（成功）
       this.retryCounts.set(executionId, 0);
@@ -249,6 +284,9 @@ class PollingManager {
 
       // 处理轮询错误（使用指数退避）
       this._handlePollingError(executionId, error);
+    } finally {
+      // 【P0 修复 - 2026-03-04】释放请求锁
+      this.pendingRequests.delete(executionId);
     }
   }
 
@@ -269,11 +307,19 @@ class PollingManager {
     });
 
     return new Promise((resolve, reject) => {
-      wx.request({
+      // P0 修复：添加定时器引用，确保可以清除
+      let timerId = null;
+      
+      const requestTask = wx.request({
         url: `${API_BASE_URL}/test/status/${executionId}`,
         method: 'GET',
         timeout: 10000,
         success: (res) => {
+          // P0 修复：成功响应时清除定时器
+          if (timerId) {
+            clearTimeout(timerId);
+          }
+          
           console.log('[PollingManager] HTTP 轮询响应:', {
             executionId,
             statusCode: res.statusCode,
@@ -286,6 +332,11 @@ class PollingManager {
           }
         },
         fail: (err) => {
+          // P0 修复：失败时也清除定时器
+          if (timerId) {
+            clearTimeout(timerId);
+          }
+          
           console.error('[PollingManager] HTTP 轮询失败:', {
             executionId,
             error: err
@@ -293,6 +344,15 @@ class PollingManager {
           reject(err);
         }
       });
+      
+      // P0 修复：设置超时定时器，防止请求挂起
+      timerId = setTimeout(() => {
+        console.warn('[PollingManager] HTTP 轮询超时，终止请求:', executionId);
+        if (requestTask && typeof requestTask.abort === 'function') {
+          requestTask.abort();
+        }
+        reject(new Error('轮询请求超时'));
+      }, 15000); // 15 秒超时
     });
   }
 
@@ -404,6 +464,11 @@ class PollingManager {
    * @returns {number} 轮询间隔（毫秒）
    */
   _calculateProgressBasedInterval(progress) {
+    // 【P0 修复 - 2026-03-02】init 阶段（进度=0）使用 2 秒间隔
+    if (progress === 0) {
+      return this.stageIntervals.init;
+    }
+
     // P1-1 核心优化：进度越低，轮询越频繁；进度越高，轮询越慢
     if (progress < this.progressThresholds.low) {
       // 0-30%: 快速轮询阶段，1 秒一次
@@ -427,27 +492,42 @@ class PollingManager {
   /**
    * 处理轮询错误（指数退避）
    * @private
-   * @param {string} executionId 
-   * @param {Object} error 
+   * @param {string} executionId
+   * @param {Object} error
    */
   _handlePollingError(executionId, error) {
     const task = this.pollingTasks.get(executionId);
     if (!task || !task.isActive) return;
 
     const retryCount = this.retryCounts.get(executionId) || 0;
-    
+
+    // P0 新增：检测连接错误
+    const isConnectionError = this._isConnectionError(error);
+
     if (retryCount >= this.maxRetries) {
       // 超过最大重试次数
       console.error(`[PollingManager] Max retries exceeded for ${executionId}`);
-      
-      if (task.callbacks.onError) {
-        task.callbacks.onError({
-          message: '无法获取诊断状态，请检查网络后重试',
-          error: error,
-          retryCount: retryCount
+
+      // P0 新增：连接错误时给出明确提示
+      if (isConnectionError) {
+        wx.showModal({
+          title: '连接失败',
+          content: '无法连接到服务器，请检查后端服务是否启动或网络环境',
+          showCancel: false,
+          confirmText: '确定'
         });
       }
-      
+
+      if (task.callbacks.onError) {
+        task.callbacks.onError({
+          message: isConnectionError ? '网络连接失败，请检查后端服务是否启动' : '无法获取诊断状态，请检查网络后重试',
+          error: error,
+          retryCount: retryCount,
+          isConnectionError: isConnectionError
+        });
+      }
+
+      // P0 修复：确保清理定时器
       this.stopPolling(executionId);
       return;
     }
@@ -465,6 +545,12 @@ class PollingManager {
     this.retryCounts.set(executionId, retryCount + 1);
     task.attempt = retryCount + 1;
 
+    // P0 修复：先清除旧的定时器，再设置新的定时器
+    if (task.timerId) {
+      clearTimeout(task.timerId);
+      task.timerId = null;
+    }
+
     // 延迟后重试
     task.timerId = setTimeout(() => {
       this._poll(executionId);
@@ -472,11 +558,84 @@ class PollingManager {
   }
 
   /**
+   * P0 新增：判断是否为连接错误
+   * @private
+   * @param {Object} error
+   * @returns {boolean}
+   */
+  _isConnectionError(error) {
+    if (!error) return false;
+
+    const errorMsg = String(error.errMsg || error.message || '').toLowerCase();
+    const connectionErrorPatterns = [
+      'err_connection_refused',
+      'request:fail',
+      'network',
+      'connection refused',
+      'enotfound',
+      'econnrefused',
+      'timeout'
+    ];
+
+    return connectionErrorPatterns.some(pattern => errorMsg.includes(pattern));
+  }
+
+  /**
+   * 【P0 新增】检查是否进度更新超时（30 秒无进度更新）
+   * @private
+   * @param {string} executionId
+   * @returns {boolean}
+   */
+  _isProgressUpdateTimeout(executionId) {
+    const lastUpdateTime = this.lastProgressUpdateTimes.get(executionId);
+    if (!lastUpdateTime) return false;
+
+    const elapsed = Date.now() - lastUpdateTime;
+    return elapsed > this.progressUpdateTimeout;
+  }
+
+  /**
+   * 【P0 新增】处理进度更新超时
+   * @private
+   * @param {string} executionId
+   */
+  _handleProgressUpdateTimeout(executionId) {
+    const task = this.pollingTasks.get(executionId);
+    if (!task) return;
+
+    const elapsedSeconds = Math.floor((Date.now() - this.lastProgressUpdateTimes.get(executionId)) / 1000);
+
+    console.warn(`[PollingManager] ⚠️ 进度更新超时：${executionId}, 已 ${elapsedSeconds}秒无进度更新`);
+
+    // 显示用户提示
+    wx.showModal({
+      title: '诊断进度缓慢',
+      content: `诊断任务已 ${elapsedSeconds}秒 没有进度更新，可能是 AI 平台响应较慢，建议耐心等待或稍后重试。`,
+      showCancel: false,
+      confirmText: '继续等待'
+    });
+
+    // 通知回调（如果有）
+    if (task.callbacks.onTimeout) {
+      task.callbacks.onTimeout({
+        message: `诊断任务已 ${elapsedSeconds}秒 没有进度更新，可能是 AI 平台响应较慢`,
+        executionId: executionId,
+        elapsedSeconds: elapsedSeconds,
+        type: 'progress_update_timeout'
+      });
+    }
+
+    // 注意：不停止轮询，继续等待后端响应
+    // 重置最后更新时间，避免重复提示
+    this.lastProgressUpdateTimes.set(executionId, Date.now());
+  }
+
+  /**
    * 处理超时
    * @private
-   * @param {string} executionId 
+   * @param {string} executionId
    */
-  _handleTimeout(executionId) {
+   _handleTimeout(executionId) {
     const task = this.pollingTasks.get(executionId);
     if (!task) return;
 

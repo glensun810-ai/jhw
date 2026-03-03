@@ -416,7 +416,8 @@ class BackgroundServiceManager:
         Returns:
             品牌分析结果
         """
-        # 【P0 关键修复 - 2026-03-02】添加详细日志和错误处理
+        # 【P0 关键修复 - 2026-03-04】增强日志埋点，便于排查问题
+        start_time = datetime.now()
         try:
             from .brand_analysis_service import BrandAnalysisService
 
@@ -425,7 +426,7 @@ class BackgroundServiceManager:
             competitor_brands = payload.get('competitor_brands', [])
 
             api_logger.info(
-                f"[BackgroundService] 开始品牌分析任务：user_brand={user_brand}, "
+                f"[BackgroundService] 🚀 品牌分析任务开始：user_brand={user_brand}, "
                 f"results_count={len(results)}, competitor_count={len(competitor_brands)}"
             )
 
@@ -437,11 +438,18 @@ class BackgroundServiceManager:
 
             service = BrandAnalysisService()
             api_logger.info(f"[BackgroundService] 调用 BrandAnalysisService.analyze_brand_mentions")
-            
+
+            # 【P0 新增】记录分析开始时间
+            analysis_start = datetime.now()
             analysis_result = service.analyze_brand_mentions(
                 results=results,
                 user_brand=user_brand,
                 competitor_brands=competitor_brands
+            )
+            analysis_duration = (datetime.now() - analysis_start).total_seconds()
+
+            api_logger.info(
+                f"[BackgroundService] ⏱️ 品牌分析耗时：{analysis_duration:.2f}秒"
             )
 
             # 检查是否有错误
@@ -450,17 +458,24 @@ class BackgroundServiceManager:
                     f"[BackgroundService] 品牌分析返回错误：{analysis_result['_analysis_error']}"
                 )
 
-            api_logger.info(f"[BackgroundService] ✅ 品牌分析完成：user_brand={user_brand}")
+            total_duration = (datetime.now() - start_time).total_seconds()
+            api_logger.info(
+                f"[BackgroundService] ✅ 品牌分析完成：user_brand={user_brand}, "
+                f"总耗时={total_duration:.2f}秒"
+            )
 
             return {
                 'success': True,
                 'data': analysis_result,
-                'brand': user_brand
+                'brand': user_brand,
+                'duration_seconds': total_duration
             }
 
         except Exception as e:
+            total_duration = (datetime.now() - start_time).total_seconds()
             api_logger.error(
-                f"[BackgroundService] ❌ 品牌分析失败：{e}",
+                f"[BackgroundService] ❌ 品牌分析失败：user_brand={user_brand}, "
+                f"耗时={total_duration:.2f}秒，错误={e}",
                 exc_info=True
             )
             return {'success': False, 'error': str(e)}
@@ -478,6 +493,8 @@ class BackgroundServiceManager:
         Returns:
             竞争分析结果
         """
+        # 【P0 关键修复 - 2026-03-04】增强日志埋点，便于排查问题
+        start_time = datetime.now()
         try:
             from .competitive_analysis_service import CompetitiveAnalysisService
 
@@ -485,25 +502,47 @@ class BackgroundServiceManager:
             main_brand = payload.get('main_brand', '')
             competitor_brands = payload.get('competitor_brands', [])
 
+            api_logger.info(
+                f"[BackgroundService] 🚀 竞争分析任务开始：main_brand={main_brand}, "
+                f"results_count={len(results)}, competitor_count={len(competitor_brands)}"
+            )
+
             if not results or not main_brand:
                 raise ValueError("竞争分析缺少必要参数：results 或 main_brand")
 
+            # 【P0 新增】记录分析开始时间
+            analysis_start = datetime.now()
             analysis_result = CompetitiveAnalysisService.analyze_competition(
                 results=results,
                 main_brand=main_brand,
                 competitor_brands=competitor_brands
             )
+            analysis_duration = (datetime.now() - analysis_start).total_seconds()
 
-            api_logger.info(f"[BackgroundService] 竞争分析完成：main_brand={main_brand}")
+            api_logger.info(
+                f"[BackgroundService] ⏱️ 竞争分析耗时：{analysis_duration:.2f}秒"
+            )
+
+            total_duration = (datetime.now() - start_time).total_seconds()
+            api_logger.info(
+                f"[BackgroundService] ✅ 竞争分析完成：main_brand={main_brand}, "
+                f"总耗时={total_duration:.2f}秒"
+            )
 
             return {
                 'success': True,
                 'data': analysis_result,
-                'main_brand': main_brand
+                'main_brand': main_brand,
+                'duration_seconds': total_duration
             }
 
         except Exception as e:
-            api_logger.error(f"[BackgroundService] 竞争分析失败：{e}", exc_info=True)
+            total_duration = (datetime.now() - start_time).total_seconds()
+            api_logger.error(
+                f"[BackgroundService] ❌ 竞争分析失败：main_brand={main_brand}, "
+                f"耗时={total_duration:.2f}秒，错误={e}",
+                exc_info=True
+            )
             return {'success': False, 'error': str(e)}
 
     def _execute_statistics(self, payload: Dict[str, Any]) -> Dict[str, Any]:
