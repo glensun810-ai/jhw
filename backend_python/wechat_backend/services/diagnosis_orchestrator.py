@@ -527,6 +527,25 @@ class DiagnosisOrchestrator:
                 f"结果数={len(ai_results)}, 重试次数={len(retry_result.attempts) - 1}"
             )
 
+            # 【P0 修复 - 2026-03-04】检查 AI 调用结果是否为空
+            if not ai_results or len(ai_results) == 0:
+                error_msg = f"AI 调用返回空结果：{self.execution_id}"
+                api_logger.error(f"[Orchestrator] ❌ {error_msg}")
+                self._error_logger.log_error(
+                    error=Exception(error_msg),
+                    error_code=AIPlatformErrorCode.AI_PLATFORM_UNAVAILABLE.value,
+                    execution_id=self.execution_id,
+                    user_id=user_id,
+                    additional_info={
+                        'ai_response': result,
+                        'retry_attempts': len(retry_result.attempts),
+                    }
+                )
+                return PhaseResult(
+                    success=False,
+                    error=error_msg
+                )
+
             # 更新 execution_store
             if self.execution_id in self.execution_store:
                 self.execution_store[self.execution_id]['results'] = ai_results

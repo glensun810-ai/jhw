@@ -21,8 +21,37 @@
  * @version: 2.1.0
  */
 
-// WebSocket 服务器地址（从配置读取）
-const WS_SERVER_URL = 'wxs://your-app-id.cloud.tencent.com/ws';
+// WebSocket 服务器地址（从云环境获取）
+// 格式：wss://<env-id>.ws.tencentcloudapi.com/ws/diagnosis/<execution-id>
+// 实际地址在运行时通过云函数获取
+let WS_SERVER_BASE = null;
+
+// 获取 WebSocket 服务器地址
+function getWebSocketBaseUrl() {
+  if (WS_SERVER_BASE) {
+    return WS_SERVER_BASE;
+  }
+
+  // 从云环境获取
+  const envVersion = __wxConfig?.envVersion || 'release';
+  const envId = __wxConfig?.envId || 'your-env-id';
+
+  // 【P0 修复 - 2026-03-03】使用正确的 WebSocket 协议
+  // 微信小程序必须使用 wss:// 协议（加密），开发环境可使用 ws://
+  if (envVersion === 'release') {
+    // 生产环境：使用腾讯云 WebSocket
+    WS_SERVER_BASE = `wss://${envId}.ws.tencentcloudapi.com`;
+  } else if (envVersion === 'trial') {
+    // 体验版：使用腾讯云 WebSocket
+    WS_SERVER_BASE = `wss://${envId}.ws.tencentcloudapi.com`;
+  } else {
+    // 开发版：使用本地 WebSocket 服务器
+    // 【配置说明】请根据实际后端服务地址修改
+    WS_SERVER_BASE = 'ws://127.0.0.1:8765';  // 本地开发地址
+  }
+
+  return WS_SERVER_BASE;
+}
 
 // 配置常量（优化版）
 const CONFIG = {
@@ -74,6 +103,8 @@ class WebSocketClient {
     this.healthCheckTimer = null;
     this.lastMessageTime = null;
     this.state = ConnectionState.DISCONNECTED;
+    // 【P0 修复 - 2026-03-04】添加连接锁标志
+    this.isConnecting = false;
     this.callbacks = {
       onProgress: null,
       onResult: null,
@@ -100,6 +131,12 @@ class WebSocketClient {
    * @param {Object} callbacks - 回调函数
    */
   connect(executionId, callbacks = {}) {
+    // 【P0 修复 - 2026-03-04】添加状态锁，防止重复连接
+    if (this.isConnecting) {
+      console.log('[WebSocket] ⚠️ 正在连接中，拒绝重复连接请求');
+      return true;
+    }
+
     // 保存参数
     this.executionId = executionId;
     this.callbacks = { ...this.callbacks, ...callbacks };
@@ -127,9 +164,14 @@ class WebSocketClient {
     }
 
     try {
+      // 【P0 修复 - 2026-03-04】设置连接锁
+      this.isConnecting = true;
+      console.log('[WebSocket] 🔒 设置连接锁，开始连接');
+
       // 构建 WebSocket URL（添加时间戳避免缓存）
+      const baseUrl = getWebSocketBaseUrl();
       const timestamp = new Date().getTime();
-      const url = `${WS_SERVER_URL}/diagnosis/${executionId}?t=${timestamp}`;
+      const url = `${baseUrl}/ws/diagnosis/${executionId}?t=${timestamp}`;
 
       console.log(`[WebSocket] 开始连接：${url}`);
       this._setState(ConnectionState.CONNECTING);
@@ -143,6 +185,8 @@ class WebSocketClient {
         },
         fail: (error) => {
           console.error('[WebSocket] 连接失败:', error);
+          // 【P0 修复】释放连接锁
+          this.isConnecting = false;
           this._handleConnectionFailed(error);
         }
       });
@@ -151,6 +195,8 @@ class WebSocketClient {
       this.connectionTimeout = setTimeout(() => {
         if (this.state !== ConnectionState.CONNECTED) {
           console.error('[WebSocket] 连接超时（' + CONFIG.CONNECTION_TIMEOUT + 'ms）');
+          // 【P0 修复】释放连接锁
+          this.isConnecting = false;
           this._handleConnectionFailed({ code: 'TIMEOUT', message: '连接超时' });
         }
       }, CONFIG.CONNECTION_TIMEOUT);
@@ -161,6 +207,8 @@ class WebSocketClient {
       return true;
     } catch (error) {
       console.error('[WebSocket] 创建连接失败:', error);
+      // 【P0 修复】释放连接锁
+      this.isConnecting = false;
       this._handleConnectionFailed(error);
       return false;
     }
@@ -177,6 +225,8 @@ class WebSocketClient {
     this.socket.onOpen(() => {
       console.log('[WebSocket] 连接已建立');
       clearTimeout(this.connectionTimeout);
+      // 【P0 修复 - 2026-03-04】连接成功，释放连接锁
+      this.isConnecting = false;
       this._setState(ConnectionState.CONNECTED);
       this.reconnectAttempts = 0;
       this.lastMessageTime = Date.now();
