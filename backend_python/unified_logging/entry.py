@@ -69,10 +69,17 @@ def init(
     console_level: str = 'INFO',
     file_level: str = 'DEBUG',
     enable_ai_handler: bool = True,
+    enable_error_handler: bool = True,
+    error_max_bytes: int = 50 * 1024 * 1024,
+    error_backup_count: int = 10,
+    retention_days: int = 30,
+    max_total_size_mb: int = 1000,
+    compress_after_days: int = 7,
+    enable_retention_cleanup: bool = True,
 ) -> UnifiedLoggerFactory:
     """
     快速初始化日志系统
-    
+
     Args:
         log_level: 日志级别 (默认从环境变量或 INFO)
         log_dir: 日志目录 (默认 backend_python/logs)
@@ -82,7 +89,14 @@ def init(
         console_level: 控制台日志级别 (默认 INFO)
         file_level: 文件日志级别 (默认 DEBUG)
         enable_ai_handler: 是否启用 AI 专用处理器 (默认 True)
-    
+        enable_error_handler: 是否启用错误日志专用处理器 (默认 True)
+        error_max_bytes: 错误日志文件最大大小 (默认 50MB)
+        error_backup_count: 错误日志备份数量 (默认 10)
+        retention_days: 日志保留天数 (默认 30 天)
+        max_total_size_mb: 日志总大小上限 (默认 1000MB)
+        compress_after_days: 多少天后压缩日志 (默认 7 天)
+        enable_retention_cleanup: 是否启用后台清理任务 (默认 True)
+
     Returns:
         UnifiedLoggerFactory 实例
     """
@@ -99,7 +113,17 @@ def init(
         file_level = os.environ.get('LOG_FILE_LEVEL', 'DEBUG')
     if enable_ai_handler:
         enable_ai_handler = os.environ.get('LOG_ENABLE_AI_HANDLER', 'true').lower() == 'true'
-    
+    if enable_error_handler:
+        enable_error_handler = os.environ.get('LOG_ENABLE_ERROR_HANDLER', 'true').lower() == 'true'
+    if retention_days == 30:
+        retention_days = int(os.environ.get('LOG_RETENTION_DAYS', '30'))
+    if max_total_size_mb == 1000:
+        max_total_size_mb = int(os.environ.get('LOG_MAX_TOTAL_SIZE_MB', '1000'))
+    if compress_after_days == 7:
+        compress_after_days = int(os.environ.get('LOG_COMPRESS_AFTER_DAYS', '7'))
+    if enable_retention_cleanup:
+        enable_retention_cleanup = os.environ.get('LOG_ENABLE_RETENTION_CLEANUP', 'true').lower() == 'true'
+
     factory = _init_logging(
         log_level=log_level,
         log_dir=log_dir,
@@ -109,8 +133,15 @@ def init(
         console_level=console_level,
         file_level=file_level,
         enable_ai_handler=enable_ai_handler,
+        enable_error_handler=enable_error_handler,
+        error_max_bytes=error_max_bytes,
+        error_backup_count=error_backup_count,
+        retention_days=retention_days,
+        max_total_size_mb=max_total_size_mb,
+        compress_after_days=compress_after_days,
+        enable_retention_cleanup=enable_retention_cleanup,
     )
-    
+
     return factory
 
 

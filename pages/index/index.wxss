@@ -517,17 +517,67 @@
 .model-chip-pro { background-color: #262626; border: 1rpx solid #3a3a3a; border-radius: 12rpx; padding: 20rpx; transition: all 0.3s ease; position: relative; overflow: hidden; }
 .model-chip-pro.checked { border-color: #00A9FF; background-color: rgba(0, 169, 255, 0.1); }
 .model-chip-pro.disabled { opacity: 0.4; pointer-events: none; }
+/* 【新增】未配置平台的样式 */
+.model-chip-pro.unconfigured { 
+  opacity: 0.5; 
+  border-color: #FF9500; 
+  border-style: dashed;
+  background-color: rgba(255, 149, 0, 0.05);
+}
 .logo-placeholder { width: 48rpx; height: 48rpx; line-height: 48rpx; text-align: center; background-color: #3a3a3a; color: #fff; font-size: 24rpx; font-weight: bold; border-radius: 8rpx; margin-bottom: 15rpx; }
 .model-name { font-size: 28rpx; font-weight: bold; color: #e8e8e8; margin-bottom: 10rpx; }
 .tag-list { display: flex; gap: 8rpx; flex-wrap: wrap; }
 .tag { font-size: 20rpx; background-color: #3a3a3a; color: #a6a6a6; padding: 4rpx 10rpx; border-radius: 6rpx; }
 .check-icon { position: absolute; top: 10rpx; right: 10rpx; font-size: 24rpx; color: #00A9FF; opacity: 0; transform: scale(0.5); transition: all 0.3s ease; }
 .model-chip-pro.checked .check-icon { opacity: 1; transform: scale(1); }
+/* 【新增】未配置警告图标 */
+.config-warning-icon { 
+  position: absolute; 
+  top: 10rpx; 
+  right: 10rpx; 
+  font-size: 28rpx; 
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
 
 /* 主操作按钮 */
-.main-action-section { width: 100%; }
-.scan-button { width: 100%; height: 96rpx; background-image: linear-gradient(to top, #00F5A0, #00D18C); color: #141414; font-size: 32rpx; font-weight: bold; border-radius: 48rpx; box-shadow: 0 4rpx 15rpx rgba(0, 245, 160, 0.2); border: none; display: flex; align-items: center; justify-content: center; padding: 0; }
-.scan-button:active { transform: scale(0.98); box-shadow: 0 2rpx 10rpx rgba(0, 245, 160, 0.3); }
+.main-action-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.scan-button {
+  width: 600rpx;
+  height: 96rpx;
+  background-image: linear-gradient(to top, #00F5A0, #00D18C);
+  color: #141414;
+  font-size: 32rpx;
+  font-weight: bold;
+  border-radius: 48rpx;
+  box-shadow: 0 4rpx 15rpx rgba(0, 245, 160, 0.2);
+  border: none !important;
+  padding: 0 !important;   /* 必须为 0，防止原生按钮默认边距挤压内容 */
+  margin: 0 auto !important;
+  display: flex !important;
+  align-items: center !important;   /* 垂直居中 */
+  justify-content: center !important;  /* 水平居中 */
+  box-sizing: border-box;
+}
+
+.scan-button::after {
+  content: none !important;
+  display: none !important;
+  border: none !important;
+}
+
+.scan-button:active {
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 10rpx rgba(0, 245, 160, 0.3);
+}
 
 /* 进度条 */
 .progress-section { width: 100%; margin-top: 60rpx; text-align: center; }
@@ -735,16 +785,22 @@
   font-size: 28rpx;
 }
 
-/* 按钮内容布局优化 */
+/* 按钮内容布局优化 - 首席前端测试工程师修复版 */
+/* 确保按钮内容在按钮内完全居中（上下居中 + 左右居中） */
 .button-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  align-items: center !important;      /* 垂直居中 */
+  justify-content: center !important;  /* 水平居中 */
   gap: 12rpx;
+  width: 100%;
+  height: 100%;
 }
 
-.button-icon {
-  font-size: 32rpx;
+.button-text {
+  display: inline-block !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  text-align: center !important;
 }
 
 /* 加载动画 */

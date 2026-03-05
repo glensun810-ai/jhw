@@ -457,8 +457,428 @@ class TestDiagnosisStateManager:
     def test_get_state_not_found(self, state_manager):
         """测试获取不存在状态"""
         state = state_manager.get_state(execution_id='non-existent')
-        
+
         assert state is None
+
+
+class TestStateDerivationLogic:
+    """
+    状态推导逻辑专项测试
+    
+    【P0 关键修复 - 2026-03-05】完整状态推导逻辑测试
+    
+    测试场景:
+    1. 阶段推导：根据进度推断实际阶段
+    2. 状态推导：根据阶段和进度推断实际状态
+    3. 完成状态推导：进度 100% 时自动标记完成
+    4. 失败状态推导：有错误信息时自动标记失败
+    5. 后台分析超时推导：后台分析超时自动推移到报告聚合
+    6. 报告聚合超时推导：报告聚合超时自动标记完成
+    """
+
+    @pytest.fixture
+    def execution_store(self):
+        """创建测试用的执行状态存储"""
+        return {}
+
+    @pytest.fixture
+    def state_manager(self, execution_store):
+        """创建状态管理器实例"""
+        reset_state_manager()
+        return get_state_manager(execution_store)
+
+    # ==================== 阶段推导测试 ====================
+
+    def test_derive_stage_init_to_ai_fetching_early(self, state_manager):
+        """测试阶段推导：init -> ai_fetching (进度 1-29%)"""
+        execution_id = 'derive-test-1'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 15,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'ai_fetching'
+        assert state['progress'] == 15
+
+    def test_derive_stage_init_to_ai_fetching_mid(self, state_manager):
+        """测试阶段推导：init -> ai_fetching (进度 30-59%)"""
+        execution_id = 'derive-test-2'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 45,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'ai_fetching'
+        assert state['progress'] == 45
+
+    def test_derive_stage_init_to_results_saving(self, state_manager):
+        """测试阶段推导：init -> results_saving (进度 60-69%)"""
+        execution_id = 'derive-test-3'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 65,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'results_saving'
+
+    def test_derive_stage_init_to_results_validating(self, state_manager):
+        """测试阶段推导：init -> results_validating (进度 70-79%)"""
+        execution_id = 'derive-test-4'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 75,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'results_validating'
+
+    def test_derive_stage_init_to_background_analysis(self, state_manager):
+        """测试阶段推导：init -> background_analysis (进度 80-89%)"""
+        execution_id = 'derive-test-5'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 85,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'background_analysis'
+
+    def test_derive_stage_init_to_report_aggregating(self, state_manager):
+        """测试阶段推导：init -> report_aggregating (进度 90-99%)"""
+        execution_id = 'derive-test-6'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 95,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'report_aggregating'
+
+    # ==================== 状态推导测试 ====================
+
+    def test_derive_status_init_to_ai_fetching(self, state_manager):
+        """测试状态推导：init -> ai_fetching (有进度时)"""
+        execution_id = 'derive-test-7'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 20,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['status'] == 'ai_fetching'
+
+    def test_derive_status_processing_stages(self, state_manager):
+        """测试状态推导：处理中阶段的状态推导"""
+        test_cases = [
+            ('ai_fetching', 30),
+            ('results_saving', 65),
+            ('results_validating', 75),
+            ('background_analysis', 85),
+            ('report_aggregating', 95)
+        ]
+
+        for expected_stage, progress in test_cases:
+            execution_id = f'derive-test-{expected_stage}'
+            state_manager.execution_store[execution_id] = {
+                'status': 'processing',
+                'stage': expected_stage,
+                'progress': progress,
+                'is_completed': False
+            }
+
+            state = state_manager.get_state(execution_id)
+
+            assert state is not None
+            assert state['status'] == 'processing'
+            assert state['stage'] == expected_stage
+
+    # ==================== 完成状态推导测试 ====================
+
+    def test_derive_complete_status(self, state_manager):
+        """测试完成状态推导：进度 100% 自动完成"""
+        execution_id = 'derive-test-complete'
+        state_manager.execution_store[execution_id] = {
+            'status': 'processing',
+            'stage': 'report_aggregating',
+            'progress': 100,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['status'] == 'completed'
+        assert state['stage'] == 'completed'
+        assert state['isCompleted'] is True  # camelCase
+        assert state['shouldStopPolling'] is True  # camelCase
+        assert state['progress'] == 100
+
+    def test_derive_complete_status_already_completed(self, state_manager):
+        """测试完成状态推导：已完成状态不变"""
+        execution_id = 'derive-test-already-complete'
+        state_manager.execution_store[execution_id] = {
+            'status': 'completed',
+            'stage': 'completed',
+            'progress': 100,
+            'is_completed': True
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['status'] == 'completed'
+        assert state['stage'] == 'completed'
+        assert state['isCompleted'] is True  # camelCase
+
+    # ==================== 失败状态推导测试 ====================
+
+    def test_derive_failed_status(self, state_manager):
+        """测试失败状态推导：有错误信息时自动标记失败"""
+        execution_id = 'derive-test-fail'
+        state_manager.execution_store[execution_id] = {
+            'status': 'processing',
+            'stage': 'ai_fetching',
+            'progress': 30,
+            'is_completed': False,
+            'error': 'AI 调用超时'
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['status'] == 'failed'
+        assert state['stage'] == 'failed'
+        assert state['isCompleted'] is True  # camelCase
+        assert state['shouldStopPolling'] is True  # camelCase
+        assert state['error'] == 'AI 调用超时'
+
+    def test_derive_failed_status_already_failed(self, state_manager):
+        """测试失败状态推导：已失败状态不变"""
+        execution_id = 'derive-test-already-fail'
+        state_manager.execution_store[execution_id] = {
+            'status': 'failed',
+            'stage': 'failed',
+            'progress': 30,
+            'is_completed': True,
+            'error': 'AI 调用失败'
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['status'] == 'failed'
+        assert state['stage'] == 'failed'
+
+    # ==================== 后台分析超时推导测试 ====================
+
+    def test_derive_background_analysis_timeout(self, state_manager):
+        """测试后台分析超时推导：超过 120 秒未更新自动推移到报告聚合"""
+        from datetime import timedelta
+        
+        execution_id = 'derive-test-bg-timeout'
+        # 设置 121 秒前的时间
+        old_time = (datetime.now() - timedelta(seconds=121)).isoformat()
+        
+        state_manager.execution_store[execution_id] = {
+            'status': 'processing',
+            'stage': 'background_analysis',
+            'progress': 85,
+            'is_completed': False,
+            'updated_at': old_time
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        # 应该推导到报告聚合阶段
+        assert state['stage'] == 'report_aggregating'
+        assert state['progress'] == 90
+        assert state['status'] == 'processing'
+
+    def test_derive_background_analysis_no_timeout(self, state_manager):
+        """测试后台分析未超时：正常保持后台分析阶段"""
+        from datetime import timedelta
+        
+        execution_id = 'derive-test-bg-no-timeout'
+        # 设置 60 秒前的时间（未超时）
+        recent_time = (datetime.now() - timedelta(seconds=60)).isoformat()
+        
+        state_manager.execution_store[execution_id] = {
+            'status': 'processing',
+            'stage': 'background_analysis',
+            'progress': 85,
+            'is_completed': False,
+            'updated_at': recent_time
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        # 应该保持后台分析阶段
+        assert state['stage'] == 'background_analysis'
+        assert state['progress'] == 85
+
+    # ==================== 报告聚合超时推导测试 ====================
+
+    def test_derive_report_aggregating_timeout(self, state_manager):
+        """测试报告聚合超时推导：超过 180 秒未更新自动标记完成"""
+        from datetime import timedelta
+        
+        execution_id = 'derive-test-report-timeout'
+        # 设置 181 秒前的时间
+        old_time = (datetime.now() - timedelta(seconds=181)).isoformat()
+        
+        state_manager.execution_store[execution_id] = {
+            'status': 'processing',
+            'stage': 'report_aggregating',
+            'progress': 95,
+            'is_completed': False,
+            'updated_at': old_time
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        # 应该自动标记完成
+        assert state['progress'] == 100
+        assert state['isCompleted'] is True  # camelCase
+        assert state['shouldStopPolling'] is True  # camelCase
+        assert state['status'] == 'completed'
+        assert state['stage'] == 'completed'
+
+    def test_derive_report_aggregating_no_timeout(self, state_manager):
+        """测试报告聚合未超时：正常保持报告聚合阶段"""
+        from datetime import timedelta
+
+        execution_id = 'derive-test-report-no-timeout'
+        # 设置 100 秒前的时间（未超时）
+        recent_time = (datetime.now() - timedelta(seconds=100)).isoformat()
+
+        state_manager.execution_store[execution_id] = {
+            'status': 'processing',
+            'stage': 'report_aggregating',
+            'progress': 95,
+            'is_completed': False,
+            'updated_at': recent_time
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        # 应该保持报告聚合阶段
+        assert state['stage'] == 'report_aggregating'
+        assert state['progress'] == 95
+        assert state['isCompleted'] is False  # camelCase
+
+    # ==================== 边界条件测试 ====================
+
+    def test_derive_stage_boundary_0_progress(self, state_manager):
+        """测试边界条件：进度 0% 保持 init"""
+        execution_id = 'derive-boundary-0'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 0,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'init'
+        assert state['progress'] == 0
+
+    def test_derive_stage_boundary_29_progress(self, state_manager):
+        """测试边界条件：进度 29% 推导为 ai_fetching"""
+        execution_id = 'derive-boundary-29'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 29,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'ai_fetching'
+
+    def test_derive_stage_boundary_30_progress(self, state_manager):
+        """测试边界条件：进度 30% 推导为 ai_fetching"""
+        execution_id = 'derive-boundary-30'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 30,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'ai_fetching'
+
+    def test_derive_stage_boundary_99_progress(self, state_manager):
+        """测试边界条件：进度 99% 推导为 report_aggregating"""
+        execution_id = 'derive-boundary-99'
+        state_manager.execution_store[execution_id] = {
+            'status': 'init',
+            'stage': 'init',
+            'progress': 99,
+            'is_completed': False
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['stage'] == 'report_aggregating'
+
+    def test_derive_no_derivation_needed(self, state_manager):
+        """测试无需推导：状态已经是正确的"""
+        execution_id = 'derive-no-op'
+        state_manager.execution_store[execution_id] = {
+            'status': 'completed',
+            'stage': 'completed',
+            'progress': 100,
+            'is_completed': True
+        }
+
+        state = state_manager.get_state(execution_id)
+
+        assert state is not None
+        assert state['status'] == 'completed'
+        assert state['stage'] == 'completed'
 
 
 class TestStateChangeType:

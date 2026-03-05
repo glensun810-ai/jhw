@@ -1,0 +1,23 @@
+<!-- 品牌对比雷达图组件 -->
+<view class="brand-radar-container">
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">图表加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!comparisonData || comparisonData.length === 0}}" class="empty-state">
+    <text class="empty-icon">📊</text>
+    <text class="empty-text">暂无对比数据</text>
+  </view>
+
+  <!-- 图表 -->
+  <ec-canvas
+    wx:else
+    id="brand-radar-chart"
+    canvas-id="brand-radar-chart"
+    ec="{{radarEc}}"
+    style="height: {{height}}px"
+  />
+</view>

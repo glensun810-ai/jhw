@@ -1,64 +1,116 @@
 /**
- * 历史记录页面 - 存储架构优化版本
+ * 历史记录页面 - 专业版
  * 
- * 优化：
- * 1. 使用新 API 获取历史报告
- * 2. 支持分页加载
- * 3. 支持按品牌筛选
- * 4. 支持按时间排序
+ * 功能特性：
+ * 1. 历史报告列表展示（支持分页）
+ * 2. 搜索和筛选（品牌、状态、时间）
+ * 3. 多种排序方式（时间、分数）
+ * 4. 单个删除和批量删除
+ * 5. 本地缓存管理
+ * 6. 空状态和加载状态
+ * 7. 统计信息展示
  * 
- * 作者：前端工程师
- * 日期：2026-03-01
- * 版本：1.0
+ * 设计理念：
+ * - 麦肯锡式专业分析风格
+ * - 清晰的信息层级
+ * - 高效的操作流程
+ * 
+ * 作者：前端工程师 & UI 设计大师
+ * 日期：2026-03-04
+ * 版本：2.0
  */
 
-const { getDiagnosisHistory } = require('../../services/diagnosisApi');
+const { getTestHistory, deleteHistoryReport, batchDeleteHistoryReports } = require('../../api/history');
+const { clearDiagnosisResult, batchClearDiagnosisResults } = require('../../utils/storage-manager');
 
 Page({
   data: {
     // 列表数据
     historyList: [],
+    filteredList: [],
     
     // 分页
     currentPage: 1,
-    totalPages: 1,
+    pageSize: 20,
+    totalCount: 0,
     hasMore: false,
     loading: false,
+    refreshing: false,
     
-    // 筛选
+    // 筛选条件
+    searchKeyword: '',
     filterBrand: '',
-    filterStatus: 'all', // all, completed, processing, failed
+    filterStatus: 'all', // all, completed, failed, processing
+    filterScore: 'all', // all, excellent(>=80), good(60-79), poor(<60)
     
     // 排序
-    sortBy: 'created_at', // created_at, brand_name
+    sortBy: 'time', // time, score
+    sortOrder: 'desc', // asc, desc
+    
+    // 批量操作模式
+    batchMode: false,
+    selectedIds: [],
+    selectAll: false,
+    
+    // 统计信息
+    stats: {
+      total: 0,
+      completed: 0,
+      failed: 0,
+      averageScore: 0
+    },
     
     // 空状态
-    isEmpty: false
+    isEmpty: false,
+    emptyType: 'no_data', // no_data, no_search_result, network_error
+    
+    // UI 状态
+    showFilterPanel: false,
+    showSortMenu: false,
+    toast: {
+      show: false,
+      message: '',
+      type: 'info' // info, success, error
+    }
   },
 
   onLoad: function(options) {
     console.log('📋 历史记录页面加载');
-    
-    // 初始化
-    this.loadHistory();
+    this.initPage();
   },
 
   onShow: function() {
-    // 页面显示时刷新数据
-    this.refreshHistory();
+    // 页面显示时检查是否需要刷新
+    if (this.data.historyList.length === 0) {
+      this.refreshHistory();
+    }
   },
 
   onPullDownRefresh: function() {
-    // 下拉刷新
     this.refreshHistory().then(() => {
       wx.stopPullDownRefresh();
     });
   },
 
   onReachBottom: function() {
-    // 上拉加载更多
     if (this.data.hasMore && !this.data.loading) {
       this.loadMore();
+    }
+  },
+
+  /**
+   * 初始化页面
+   */
+  async initPage() {
+    try {
+      await this.loadHistory();
+      this.calculateStats();
+    } catch (error) {
+      console.error('初始化页面失败:', error);
+      this.setData({
+        isEmpty: true,
+        emptyType: 'network_error'
+      });
     }
   },
 
@@ -71,49 +123,57 @@ Page({
     this.setData({ loading: true });
 
     try {
-      const { currentPage, filterBrand, filterStatus, sortBy } = this.data;
-      
-      // 调用新 API
-      const result = await getDiagnosisHistory({
-        page: currentPage,
-        limit: 20
-      });
+      const { currentPage, pageSize, filterBrand, filterStatus, sortBy, sortOrder } = this.data;
 
-      const reports = result.reports || [];
-      
-      // 筛选
-      let filteredReports = reports;
+      // 构建 API 请求参数
+      const params = {
+        page: currentPage,
+        limit: pageSize,
+        sortBy: sortBy === 'time' ? 'created_at' : 'overall_score',
+        sortOrder
+      };
+
       if (filterBrand) {
-        filteredReports = reports.filter(r => 
-          r.brand_name.includes(filterBrand)
-        );
+        params.brand = filterBrand;
       }
       if (filterStatus !== 'all') {
-        filteredReports = reports.filter(r => 
-          r.status === filterStatus
-        );
+        params.status = filterStatus;
       }
 
-      // 排序
-      filteredReports.sort((a, b) => {
-        if (sortBy === 'created_at') {
-          return new Date(b.created_at) - new Date(a.created_at);
-        } else if (sortBy === 'brand_name') {
-          return a.brand_name.localeCompare(b.brand_name);
-        }
-        return 0;
-      });
+      // 调用 API
+      const result = await getTestHistory(params);
+      const reports = result.reports || result.data || [];
+
+      // 处理数据
+      const processedReports = reports.map(report => ({
+        ...report,
+        // 确保字段一致性
+        id: report.id || report.reportId,
+        executionId: report.execution_id || report.executionId,
+        brandName: report.brand_name || report.brandName,
+        createdAt: report.created_at || report.createdAt,
+        overallScore: report.overall_score || report.overallScore || 0,
+        status: report.status || 'completed',
+        // 计算得分等级
+        scoreLevel: this.calculateScoreLevel(report.overall_score || report.overallScore || 0),
+        // 格式化时间
+        formattedTime: this.formatTime(report.created_at || report.createdAt),
+        // 短日期显示
+        shortDate: this.formatShortDate(report.created_at || report.createdAt)
+      }));
 
       // 更新数据
-      const historyList = currentPage === 1 
-        ? filteredReports 
-        : [...this.data.historyList, ...filteredReports];
+      const historyList = currentPage === 1
+        ? processedReports
+        : [...this.data.historyList, ...processedReports];
 
       this.setData({
         historyList,
-        totalPages: result.pagination?.total || 0,
-        hasMore: result.pagination?.has_more || false,
+        filteredList: historyList,
+        totalCount: result.total || result.pagination?.total || historyList.length,
+        hasMore: result.has_more !== false && processedReports.length === pageSize,
         isEmpty: historyList.length === 0,
+        emptyType: historyList.length === 0 ? 'no_data' : 'no_search_result',
         loading: false
       });
 
@@ -121,16 +181,14 @@ Page({
 
     } catch (error) {
       console.error('❌ 加载历史记录失败:', error);
-      
+
       this.setData({
         loading: false,
-        isEmpty: true
+        isEmpty: true,
+        emptyType: 'network_error'
       });
 
-      wx.showToast({
-        title: '加载失败，请重试',
-        icon: 'none'
-      });
+      this.showToast('加载失败，请重试', 'error');
     }
   },
 
@@ -138,44 +196,296 @@ Page({
    * 刷新历史记录
    */
   async refreshHistory() {
-    this.setData({ currentPage: 1, historyList: [] });
-    return this.loadHistory();
+    this.setData({ 
+      currentPage: 1, 
+      historyList: [],
+      filteredList: [],
+      refreshing: true 
+    });
+    
+    try {
+      await this.loadHistory();
+      await this.calculateStats();
+    } finally {
+      this.setData({ refreshing: false });
+    }
   },
 
   /**
    * 加载更多
    */
   async loadMore() {
-    this.setData({ 
-      currentPage: this.data.currentPage + 1 
+    this.setData({
+      currentPage: this.data.currentPage + 1
     });
     return this.loadHistory();
   },
 
   /**
-   * 搜索品牌
+   * 计算统计信息
    */
-  onSearchBrand: function(e) {
-    const value = e.detail.value.trim();
-    this.setData({
-      filterBrand: value,
-      currentPage: 1,
-      historyList: []
-    });
-    this.loadHistory();
+  async calculateStats() {
+    try {
+      const { historyList } = this.data;
+      
+      if (historyList.length === 0) {
+        this.setData({
+          stats: {
+            total: 0,
+            completed: 0,
+            failed: 0,
+            averageScore: 0
+          }
+        });
+        return;
+      }
+
+      const stats = {
+        total: historyList.length,
+        completed: historyList.filter(r => r.status === 'completed').length,
+        failed: historyList.filter(r => r.status === 'failed').length,
+        averageScore: Math.round(
+          historyList.reduce((sum, r) => sum + (r.overallScore || 0), 0) / historyList.length
+        )
+      };
+
+      this.setData({ stats });
+    } catch (error) {
+      console.error('计算统计信息失败:', error);
+    }
   },
 
   /**
-   * 筛选状态
+   * 计算得分等级
    */
-  onFilterStatus: function(e) {
-    const status = e.detail.value;
-    this.setData({
-      filterStatus: status,
-      currentPage: 1,
-      historyList: []
+  calculateScoreLevel(score) {
+    if (score >= 80) return 'excellent';
+    if (score >= 60) return 'good';
+    return 'poor';
+  },
+
+  /**
+   * 格式化时间
+   */
+  formatTime(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+    
+    // 少于 1 分钟
+    if (diff < 60000) return '刚刚';
+    // 少于 1 小时
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+    // 少于 24 小时
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+    // 少于 7 天
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
+    
+    // 超过 7 天显示具体日期
+    return this.formatShortDate(dateStr);
+  },
+
+  /**
+   * 格式化短日期
+   */
+  formatShortDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    
+    return `${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  },
+
+  /**
+   * 搜索关键词变化
+   */
+  onSearchChange: function(e) {
+    const value = e.detail.value.trim();
+    this.setData({ searchKeyword: value });
+    this.applyFilters();
+  },
+
+  /**
+   * 筛选品牌变化
+   */
+  onFilterBrandChange: function(e) {
+    const value = e.detail.value;
+    this.setData({ filterBrand: value });
+    this.applyFilters();
+  },
+
+  /**
+   * 筛选状态变化
+   */
+  onFilterStatusChange: function(e) {
+    const value = e.detail.value;
+    this.setData({ filterStatus: value });
+    this.applyFilters();
+  },
+
+  /**
+   * 筛选分数段变化
+   */
+  onFilterScoreChange: function(e) {
+    const value = e.detail.value;
+    this.setData({ filterScore: value });
+    this.applyFilters();
+  },
+
+  /**
+   * 排序方式变化
+   */
+  onSortByChange: function(e) {
+    const value = e.detail.value;
+    const [sortBy, sortOrder] = value.split('-');
+    
+    this.setData({ sortBy, sortOrder });
+    this.applyFilters();
+  },
+
+  /**
+   * 应用筛选和排序
+   */
+  applyFilters() {
+    const { historyList, searchKeyword, filterBrand, filterStatus, filterScore, sortBy, sortOrder } = this.data;
+    
+    let filtered = [...historyList];
+    
+    // 关键词搜索
+    if (searchKeyword) {
+      filtered = filtered.filter(item => 
+        item.brandName.toLowerCase().includes(searchKeyword.toLowerCase())
+      );
+    }
+    
+    // 品牌筛选
+    if (filterBrand) {
+      filtered = filtered.filter(item => 
+        item.brandName.toLowerCase().includes(filterBrand.toLowerCase())
+      );
+    }
+    
+    // 状态筛选
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(item => item.status === filterStatus);
+    }
+    
+    // 分数段筛选
+    if (filterScore !== 'all') {
+      filtered = filtered.filter(item => {
+        const score = item.overallScore || 0;
+        if (filterScore === 'excellent') return score >= 80;
+        if (filterScore === 'good') return score >= 60 && score < 80;
+        if (filterScore === 'poor') return score < 60;
+        return true;
+      });
+    }
+    
+    // 排序
+    filtered.sort((a, b) => {
+      let compareValue = 0;
+      
+      if (sortBy === 'time') {
+        const timeA = new Date(a.createdAt || 0).getTime();
+        const timeB = new Date(b.createdAt || 0).getTime();
+        compareValue = timeA - timeB;
+      } else if (sortBy === 'score') {
+        compareValue = (a.overallScore || 0) - (b.overallScore || 0);
+      }
+      
+      return sortOrder === 'desc' ? -compareValue : compareValue;
     });
-    this.loadHistory();
+    
+    this.setData({
+      filteredList: filtered,
+      isEmpty: filtered.length === 0,
+      emptyType: filtered.length === 0 ? (historyList.length === 0 ? 'no_data' : 'no_search_result') : 'no_data'
+    });
+  },
+
+  /**
+   * 切换筛选面板
+   */
+  toggleFilterPanel() {
+    this.setData({
+      showFilterPanel: !this.data.showFilterPanel,
+      showSortMenu: false
+    });
+  },
+
+  /**
+   * 切换排序菜单
+   */
+  toggleSortMenu() {
+    this.setData({
+      showSortMenu: !this.data.showSortMenu,
+      showFilterPanel: false
+    });
+  },
+
+  /**
+   * 进入批量操作模式
+   */
+  enterBatchMode() {
+    this.setData({
+      batchMode: true,
+      selectedIds: [],
+      selectAll: false
+    });
+  },
+
+  /**
+   * 退出批量操作模式
+   */
+  exitBatchMode() {
+    this.setData({
+      batchMode: false,
+      selectedIds: [],
+      selectAll: false
+    });
+  },
+
+  /**
+   * 选择/取消选择单个项目
+   */
+  onItemSelect(e) {
+    const { id } = e.currentTarget.dataset;
+    let { selectedIds } = this.data;
+    
+    const index = selectedIds.indexOf(id);
+    if (index > -1) {
+      selectedIds.splice(index, 1);
+    } else {
+      selectedIds.push(id);
+    }
+    
+    this.setData({
+      selectedIds,
+      selectAll: selectedIds.length === this.data.filteredList.length && this.data.filteredList.length > 0
+    });
+  },
+
+  /**
+   * 全选/取消全选
+   */
+  onSelectAll() {
+    const { selectAll, filteredList } = this.data;
+    
+    if (selectAll) {
+      this.setData({
+        selectedIds: [],
+        selectAll: false
+      });
+    } else {
+      this.setData({
+        selectedIds: filteredList.map(item => item.id),
+        selectAll: true
+      });
+    }
   },
 
   /**
@@ -183,141 +493,212 @@ Page({
    */
   onReportTap: function(e) {
     const { executionId, brandName } = e.currentTarget.dataset;
-    
+
     wx.navigateTo({
-      url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(brandName)}`
+      url: `/pages/history-detail/history-detail?executionId=${executionId}&brandName=${encodeURIComponent(brandName)}`
     });
   },
 
   /**
-   * 删除历史记录
+   * 删除单个报告
    */
-  onDeleteReport: function(e) {
-    const { executionId, index } = e.currentTarget.dataset;
+  async onDeleteReport(e) {
+    const { executionId, reportId, index } = e.currentTarget.dataset;
 
     wx.showModal({
       title: '确认删除',
-      content: '确定要删除这条诊断记录吗？',
-      success: (res) => {
+      content: '确定要删除这条诊断记录吗？此操作不可恢复。',
+      confirmText: '删除',
+      confirmColor: '#e74c3c',
+      success: async (res) => {
         if (res.confirm) {
-          // TODO: 调用删除 API
-          const historyList = this.data.historyList;
-          historyList.splice(index, 1);
-          this.setData({ historyList });
-
-          wx.showToast({
-            title: '删除成功',
-            icon: 'success'
-          });
+          wx.showLoading({ title: '删除中...' });
+          
+          try {
+            // 调用删除 API
+            await deleteHistoryReport(executionId, reportId);
+            
+            // 清除本地缓存
+            clearDiagnosisResult(executionId);
+            
+            // 从列表中移除
+            const { historyList, filteredList } = this.data;
+            historyList.splice(index, 1);
+            filteredList.splice(index, 1);
+            
+            this.setData({ historyList, filteredList });
+            
+            // 更新统计
+            await this.calculateStats();
+            
+            wx.hideLoading();
+            this.showToast('删除成功', 'success');
+            
+          } catch (error) {
+            console.error('删除失败:', error);
+            wx.hideLoading();
+            this.showToast('删除失败，请重试', 'error');
+          }
         }
       }
     });
   },
 
   /**
-   * 查看最新结果
+   * 批量删除
    */
-  viewLatestResult: function() {
-    if (this.data.historyList && this.data.historyList.length > 0) {
-      // 获取最新的记录（列表第一项）
-      const latestReport = this.data.historyList[0];
-      wx.navigateTo({
-        url: `/pages/results/results?executionId=${latestReport.execution_id}&brandName=${encodeURIComponent(latestReport.brand_name)}`
-      });
-    } else {
-      wx.showToast({
-        title: '暂无历史结果',
-        icon: 'none'
-      });
+  async onBatchDelete() {
+    const { selectedIds, historyList, filteredList } = this.data;
+    
+    if (selectedIds.length === 0) {
+      this.showToast('请先选择要删除的报告', 'info');
+      return;
     }
-  },
 
-  /**
-   * 查看已保存结果
-   */
-  viewSavedResults: function() {
-    // 尝试从本地存储加载已保存的结果
-    try {
-      const savedResults = wx.getStorageSync('savedDiagnosisResults') || [];
-      if (savedResults.length > 0) {
-        // 跳转到已保存结果页面或使用弹窗展示
-        wx.showActionSheet({
-          itemList: savedResults.map(r => r.brand_name || r.execution_id),
-          success: (res) => {
-            const selected = savedResults[res.tapIndex];
-            wx.navigateTo({
-              url: `/pages/results/results?executionId=${selected.execution_id}&brandName=${encodeURIComponent(selected.brand_name || 'Unknown')}`
+    wx.showModal({
+      title: '批量删除确认',
+      content: `确定要删除选中的 ${selectedIds.length} 条诊断记录吗？此操作不可恢复。`,
+      confirmText: '删除',
+      confirmColor: '#e74c3c',
+      success: async (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中...' });
+          
+          try {
+            // 调用批量删除 API
+            await batchDeleteHistoryReports(selectedIds);
+            
+            // 清除本地缓存
+            const executionIds = filteredList
+              .filter(item => selectedIds.includes(item.id))
+              .map(item => item.executionId);
+            
+            batchClearDiagnosisResults(executionIds);
+            
+            // 从列表中移除
+            const newHistoryList = historyList.filter(item => !selectedIds.includes(item.id));
+            const newFilteredList = filteredList.filter(item => !selectedIds.includes(item.id));
+            
+            this.setData({
+              historyList: newHistoryList,
+              filteredList: newFilteredList,
+              batchMode: false,
+              selectedIds: [],
+              selectAll: false
             });
+            
+            // 更新统计
+            await this.calculateStats();
+            
+            wx.hideLoading();
+            this.showToast(`成功删除 ${selectedIds.length} 条记录`, 'success');
+            
+          } catch (error) {
+            console.error('批量删除失败:', error);
+            wx.hideLoading();
+            this.showToast('删除失败，请重试', 'error');
           }
-        });
-      } else {
-        wx.showToast({
-          title: '暂无已保存结果',
-          icon: 'none'
-        });
+        }
       }
-    } catch (e) {
-      console.error('获取已保存结果失败:', e);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
+    });
+  },
+
+  /**
+   * 查看报告详情
+   */
+  viewDetail(e) {
+    const { executionId, brandName } = e.currentTarget.dataset;
+    
+    wx.navigateTo({
+      url: `/pages/history-detail/history-detail?executionId=${executionId}&brandName=${encodeURIComponent(brandName)}`
+    });
+  },
+
+  /**
+   * 分享报告
+   */
+  onShareReport(e) {
+    const { brandName, score } = e.currentTarget.dataset;
+    
+    wx.showActionSheet({
+      itemList: ['分享给微信好友', '分享到朋友圈', '生成海报'],
+      success: (res) => {
+        this.showToast('分享功能开发中', 'info');
+      }
+    });
+  },
+
+  /**
+   * 导出报告
+   */
+  onExportReport(e) {
+    const { executionId, brandName } = e.currentTarget.dataset;
+    
+    wx.showActionSheet({
+      itemList: ['导出为 PDF', '导出为图片', '导出为 Excel'],
+      success: (res) => {
+        wx.showLoading({ title: '导出中...' });
+        setTimeout(() => {
+          wx.hideLoading();
+          this.showToast('导出功能开发中', 'info');
+        }, 1000);
+      }
+    });
+  },
+
+  /**
+   * 显示 Toast 提示
+   */
+  showToast(message, type = 'info') {
+    this.setData({
+      toast: {
+        show: true,
+        message,
+        type
+      }
+    });
+    
+    setTimeout(() => {
+      this.setData({
+        toast: {
+          show: false,
+          message: '',
+          type: 'info'
+        }
       });
-    }
+    }, 2000);
   },
 
   /**
-   * 查看公共历史
+   * 清空筛选条件
    */
-  viewPublicHistory: function() {
-    wx.showToast({
-      title: '公共历史功能开发中',
-      icon: 'none'
+  clearFilters() {
+    this.setData({
+      searchKeyword: '',
+      filterBrand: '',
+      filterStatus: 'all',
+      filterScore: 'all',
+      sortBy: 'time',
+      sortOrder: 'desc'
     });
-    // TODO: 实现公共历史查看功能
-    // wx.navigateTo({
-    //   url: '/pages/history/public-history'
-    // });
-  },
-
-  /**
-   * 查看个人历史
-   */
-  viewPersonalHistory: function() {
-    // 当前页面就是个人历史，刷新即可
-    this.refreshHistory();
-    wx.showToast({
-      title: '已刷新个人历史',
-      icon: 'success'
-    });
+    this.applyFilters();
   },
 
   /**
    * 返回首页
    */
-  goHome: function() {
+  goHome() {
     wx.switchTab({
       url: '/pages/index/index'
     });
   },
 
   /**
-   * 查看详情（兼容 WXML 中的绑定）
+   * 新建诊断
    */
-  viewDetail: function(e) {
-    const { id } = e.currentTarget.dataset;
-    
-    // 从列表中查找对应的报告
-    const report = this.data.historyList.find(r => r.id === id || r.execution_id === id);
-    
-    if (report) {
-      wx.navigateTo({
-        url: `/pages/results/results?executionId=${report.execution_id}&brandName=${encodeURIComponent(report.brand_name)}`
-      });
-    } else {
-      wx.showToast({
-        title: '报告未找到',
-        icon: 'none'
-      });
-    }
+  createNewDiagnosis() {
+    wx.navigateTo({
+      url: '/pages/index/index'
+    });
   }
 });

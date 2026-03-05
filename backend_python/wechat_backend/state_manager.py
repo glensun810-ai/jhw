@@ -27,6 +27,9 @@ from dataclasses import dataclass, asdict
 from wechat_backend.logging_config import api_logger, db_logger
 from wechat_backend.diagnosis_report_repository import save_diagnosis_report, DiagnosisReportRepository
 
+# P0 修复：导入字段转换器
+from utils.field_converter import convert_response_to_camel
+
 
 class StateChangeType(Enum):
     """状态变更类型枚举"""
@@ -75,14 +78,35 @@ class DiagnosisStateManager:
     def __init__(self, execution_store: Dict[str, Any]):
         self.execution_store = execution_store
         self.state_lock = {}  # 每个 execution_id 一个锁
-        
+
         # 【阶段二新增】状态变更历史
         self.state_change_history: Dict[str, List[StateChangeRecord]] = {}
-        
+
         # 【阶段二新增】状态快照（用于回滚）
         self.state_snapshots: Dict[str, Dict[str, Any]] = {}
+
+        # 【P0 关键修复 - 2026-03-05】优化清理配置，防止内存泄漏
+        # 修复前：30 分钟清理一次，完成后保留 30 分钟 -> 内存积累严重
+        # 修复后：5 分钟清理一次，完成后保留 10 分钟 -> 内存稳定
+        self.cleanup_interval_seconds = 300  # 5 分钟清理一次（从 1800 秒降低）
+        self.completed_state_ttl_seconds = 600  # 完成后保留 10 分钟（从 1800 秒降低）
+        self.last_cleanup_time = datetime.now()
         
-        api_logger.info("[StateManager] 增强版状态管理器已初始化")
+        # 【P0 新增】内存限制和监控
+        self.max_memory_items = 1000  # 最大内存项目数，超过时触发紧急清理
+        self.cleanup_count = 0  # 累计清理次数
+        self.total_cleaned_count = 0  # 累计清理项目数
+        self.emergency_cleanup_count = 0  # 紧急清理次数
+
+        # 启动定时清理任务
+        self._start_cleanup_timer()
+
+        api_logger.info(
+            f"[StateManager] 增强版状态管理器已初始化，"
+            f"清理间隔={self.cleanup_interval_seconds}s, "
+            f"TTL={self.completed_state_ttl_seconds}s, "
+            f"max_memory_items={self.max_memory_items}"
+        )
 
     def _init_execution_state(self, execution_id: str):
         """初始化执行状态（如果不存在）"""
@@ -799,14 +823,134 @@ class DiagnosisStateManager:
         """
         获取状态（优先从 execution_store 读取）
 
+        【P0 关键修复 - 2026-03-05】完整状态推导逻辑，确保前端获取正确状态
+
         参数:
             execution_id: 执行 ID
 
         返回:
-            状态字典或 None
+            状态字典或 None (camelCase)
         """
         if execution_id in self.execution_store:
-            return self.execution_store[execution_id].copy()
+            state = self.execution_store[execution_id].copy()
+
+            # 【P0 关键修复】完整状态推导逻辑
+            stage = state.get('stage', 'init')
+            progress = state.get('progress', 0)
+            status = state.get('status', 'processing')
+            is_completed = state.get('is_completed', False)
+            
+            # 保存原始状态用于推导
+            original_stage = stage
+            original_status = status
+
+            # ==================== 阶段推导：根据进度推断实际阶段 ====================
+            # 进度阶段映射：
+            # 0%: init
+            # 1-29%: ai_fetching (AI 数据获取)
+            # 30-59%: ai_fetching (继续 AI 数据获取)
+            # 60-69%: results_saving (结果保存)
+            # 70-79%: results_validating (结果验证)
+            # 80-89%: background_analysis (背景分析)
+            # 90-99%: report_aggregating (报告聚合)
+            # 100%: completed
+            if stage == 'init' and progress > 0 and progress < 30:
+                state['stage'] = 'ai_fetching'
+            elif stage == 'init' and progress >= 30 and progress < 60:
+                state['stage'] = 'ai_fetching'
+            elif stage == 'init' and progress >= 60 and progress < 70:
+                state['stage'] = 'results_saving'
+            elif stage == 'init' and progress >= 70 and progress < 80:
+                state['stage'] = 'results_validating'
+            elif stage == 'init' and progress >= 80 and progress < 90:
+                state['stage'] = 'background_analysis'
+            elif stage == 'init' and progress >= 90 and progress < 100:
+                state['stage'] = 'report_aggregating'
+            
+            # 状态推导：根据阶段和进度推断实际状态
+            if stage == 'init' and progress > 0:
+                state['status'] = 'ai_fetching'
+            elif stage in ['ai_fetching', 'results_saving', 'results_validating', 
+                          'background_analysis', 'report_aggregating']:
+                state['status'] = 'processing'
+            
+            # ==================== 完成状态推导 ====================
+            if progress >= 100:
+                state['progress'] = 100
+                state['is_completed'] = True
+                state['should_stop_polling'] = True
+                if status not in ['completed', 'failed']:
+                    state['status'] = 'completed'
+                    state['stage'] = 'completed'
+            
+            # ==================== 失败状态推导 ====================
+            error = state.get('error')
+            if error and status not in ['failed']:
+                state['status'] = 'failed'
+                state['stage'] = 'failed'
+                state['is_completed'] = True
+                state['should_stop_polling'] = True
+            
+            # ==================== 后台分析阶段特殊处理 ====================
+            if original_stage == 'background_analysis' and progress >= 80 and progress < 90:
+                # 后台分析可能正在进行，但进度未更新
+                # 检查是否已经超过合理时间
+                start_time_str = state.get('start_time', '')
+                updated_at_str = state.get('updated_at', '')
+                
+                # 优先使用 updated_at 判断（更准确）
+                reference_time_str = updated_at_str if updated_at_str else start_time_str
+                
+                if reference_time_str:
+                    try:
+                        reference_time = datetime.fromisoformat(reference_time_str)
+                        elapsed = (datetime.now() - reference_time).total_seconds()
+                        
+                        # 如果后台分析超过 120 秒未更新，推导到报告聚合阶段
+                        if elapsed > 120:
+                            api_logger.info(
+                                f"[StateManager] 后台分析超时推导：{execution_id}, "
+                                f"elapsed={elapsed:.1f}s, progress={progress}"
+                            )
+                            state['stage'] = 'report_aggregating'
+                            state['status'] = 'processing'
+                            state['progress'] = 90  # 推移到报告聚合阶段的进度
+                    except Exception as e:
+                        api_logger.debug(f"[StateManager] 时间解析失败：{e}")
+            
+            # ==================== 报告聚合阶段超时处理 ====================
+            if original_stage == 'report_aggregating' and progress >= 90 and progress < 100:
+                updated_at_str = state.get('updated_at', '')
+                if updated_at_str:
+                    try:
+                        updated_at = datetime.fromisoformat(updated_at_str)
+                        elapsed = (datetime.now() - updated_at).total_seconds()
+                        
+                        # 如果报告聚合超过 180 秒未更新，直接标记完成
+                        if elapsed > 180:
+                            api_logger.info(
+                                f"[StateManager] 报告聚合超时推导：{execution_id}, "
+                                f"elapsed={elapsed:.1f}s"
+                            )
+                            state['progress'] = 100
+                            state['is_completed'] = True
+                            state['should_stop_polling'] = True
+                            state['status'] = 'completed'
+                            state['stage'] = 'completed'
+                    except Exception as e:
+                        api_logger.debug(f"[StateManager] 时间解析失败：{e}")
+            
+            # ==================== 状态推导日志 ====================
+            if original_stage != state.get('stage') or original_status != state.get('status'):
+                api_logger.info(
+                    f"[StateManager] 状态推导：{execution_id}, "
+                    f"stage: {original_stage} -> {state.get('stage')}, "
+                    f"status: {original_status} -> {state.get('status')}, "
+                    f"progress={progress}"
+                )
+
+            # P0 修复：转换为 camelCase
+            return convert_response_to_camel(state)
         return None
 
     # ==================== 【阶段二新增】查询方法 ====================
@@ -851,9 +995,9 @@ class DiagnosisStateManager:
                 'last_change': None,
                 'current_status': None
             }
-        
+
         history = self.state_change_history[execution_id]
-        
+
         return {
             'execution_id': execution_id,
             'total_changes': len(history),
@@ -861,6 +1005,184 @@ class DiagnosisStateManager:
             'last_change': history[-1].to_dict() if history else None,
             'current_status': self.execution_store.get(execution_id, {}).get('status')
         }
+
+    # ==================== 【P0 修复 - 2026-03-05】自动清理机制 ====================
+
+    def _start_cleanup_timer(self):
+        """启动定时清理任务"""
+        import threading
+
+        def cleanup_loop():
+            while True:
+                try:
+                    # 等待清理间隔
+                    import time
+                    time.sleep(self.cleanup_interval_seconds)
+
+                    # 执行清理
+                    self._cleanup_completed_states()
+
+                except Exception as e:
+                    api_logger.error(f"[StateManager] 清理任务异常：{e}")
+
+        # 后台线程运行
+        cleanup_thread = threading.Thread(target=cleanup_loop, daemon=True)
+        cleanup_thread.start()
+        api_logger.info(f"[StateManager] 清理任务已启动，间隔={self.cleanup_interval_seconds}s")
+
+    def _cleanup_completed_states(self):
+        """
+        清理已完成的状态（防止内存泄漏 - P0 增强版）
+
+        【P0 关键修复 - 2026-03-05】
+        清理策略：
+        1. 已完成或失败的任务
+        2. 完成时间超过 TTL（默认 10 分钟）
+        3. 内存超限时触发紧急清理（TTL 减半）
+        4. 保留状态历史用于调试
+
+        Returns:
+            int: 清理的项目数量
+        """
+        cleaned_count = 0
+        current_time = datetime.now()
+        execution_ids_to_clean = []
+
+        # 【P0 新增】紧急清理检查
+        current_size = len(self.execution_store)
+        is_emergency = current_size > self.max_memory_items
+        
+        if is_emergency:
+            self.emergency_cleanup_count += 1
+            effective_ttl = self.completed_state_ttl_seconds / 2  # 紧急时 TTL 减半
+            api_logger.warning(
+                f"[StateManager] 🚨 内存超限触发紧急清理："
+                f"current_size={current_size}, max_size={self.max_memory_items}, "
+                f"effective_ttl={effective_ttl}s (原 TTL={self.completed_state_ttl_seconds}s)"
+            )
+        else:
+            effective_ttl = self.completed_state_ttl_seconds
+
+        # 扫描所有 execution_id
+        for execution_id, state in list(self.execution_store.items()):
+            try:
+                # 检查是否已完成
+                is_completed = state.get('is_completed', False) or state.get('status') in ['completed', 'failed']
+
+                if is_completed:
+                    # 检查完成时间
+                    updated_at_str = state.get('updated_at', '')
+                    if updated_at_str:
+                        try:
+                            updated_at = datetime.fromisoformat(updated_at_str)
+                            age_seconds = (current_time - updated_at).total_seconds()
+
+                            if age_seconds > effective_ttl:
+                                execution_ids_to_clean.append(execution_id)
+                        except (ValueError, TypeError) as parse_error:
+                            # 时间解析失败，保留数据但记录警告
+                            api_logger.warning(
+                                f"[StateManager] ⚠️ 时间解析失败，保留数据：{execution_id}, "
+                                f"updated_at={updated_at_str}, error={parse_error}"
+                            )
+            except Exception as e:
+                api_logger.error(
+                    f"[StateManager] ❌ 检查清理失败 {execution_id}: {e}",
+                    exc_info=True
+                )
+
+        # 执行清理
+        for execution_id in execution_ids_to_clean:
+            try:
+                # 清理 execution_store
+                if execution_id in self.execution_store:
+                    del self.execution_store[execution_id]
+
+                # 清理状态快照
+                if execution_id in self.state_snapshots:
+                    del self.state_snapshots[execution_id]
+
+                # 清理状态历史（保留最近 10 条用于调试）
+                if execution_id in self.state_change_history:
+                    history = self.state_change_history[execution_id]
+                    if len(history) > 10:
+                        self.state_change_history[execution_id] = history[-10:]
+
+                cleaned_count += 1
+
+            except Exception as e:
+                api_logger.error(
+                    f"[StateManager] ❌ 清理失败 {execution_id}: {e}",
+                    exc_info=True
+                )
+
+        # 记录清理结果
+        if cleaned_count > 0:
+            self.cleanup_count += 1
+            self.total_cleaned_count += cleaned_count
+            
+            api_logger.info(
+                f"[StateManager] ✅ 清理完成：清理了 {cleaned_count} 个已完成任务，"
+                f"当前内存任务数={len(self.execution_store)}, "
+                f"累计清理次数={self.cleanup_count}, "
+                f"累计清理总数={self.total_cleaned_count}"
+            )
+        else:
+            api_logger.debug(
+                f"[StateManager] 无需清理：当前内存任务数={len(self.execution_store)}"
+            )
+
+        self.last_cleanup_time = current_time
+        
+        return cleaned_count
+
+    def get_cleanup_status(self) -> Dict[str, Any]:
+        """
+        获取清理状态信息（P0 增强版）
+
+        返回：
+            清理状态字典，包含：
+            - total_tasks_in_memory: 当前内存任务数
+            - memory_utilization: 内存利用率
+            - cleanup_interval_seconds: 清理间隔
+            - completed_state_ttl_seconds: 完成状态 TTL
+            - max_memory_items: 最大内存项目数
+            - last_cleanup_time: 上次清理时间
+            - cleanup_count: 累计清理次数
+            - total_cleaned_count: 累计清理总数
+            - emergency_cleanup_count: 紧急清理次数
+        """
+        current_size = len(self.execution_store)
+        
+        return {
+            'total_tasks_in_memory': current_size,
+            'memory_utilization': current_size / self.max_memory_items if self.max_memory_items > 0 else 0,
+            'cleanup_interval_seconds': self.cleanup_interval_seconds,
+            'completed_state_ttl_seconds': self.completed_state_ttl_seconds,
+            'max_memory_items': self.max_memory_items,
+            'last_cleanup_time': self.last_cleanup_time.isoformat() if self.last_cleanup_time else None,
+            'cleanup_count': self.cleanup_count,
+            'total_cleaned_count': self.total_cleaned_count,
+            'emergency_cleanup_count': self.emergency_cleanup_count,
+            'health_status': self._get_memory_health_status()
+        }
+    
+    def _get_memory_health_status(self) -> str:
+        """
+        获取内存健康状态
+        
+        返回：
+            'healthy' | 'warning' | 'critical'
+        """
+        current_size = len(self.execution_store)
+        utilization = current_size / self.max_memory_items if self.max_memory_items > 0 else 0
+        
+        if utilization >= 0.9:  # >= 90% 为 critical
+            return 'critical'
+        elif utilization >= 0.7:  # >= 70% 为 warning
+            return 'warning'
+        else:
+            return 'healthy'
 
 
 # 全局状态管理器实例

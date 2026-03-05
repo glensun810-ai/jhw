@@ -228,24 +228,33 @@ const formatDraftQuestions = (customQuestions) => {
 
 /**
  * 格式化草稿 AI 模型数据
- * @param {Array} currentModels - 当前模型数组
- * @param {Object} savedModels - 保存的模型选择
- * @returns {Array} 格式化后的模型
+ * @param {Array} allModels - 所有模型数组（国内 + 海外合并）
+ * @param {Object} savedModels - 保存的模型选择 { domestic: [], overseas: [] }
+ * @returns {Object} 格式化后的模型 { domestic: [], overseas: [] }
  */
-const formatDraftModels = (currentModels, savedModels) => {
-  if (!Array.isArray(currentModels)) {
-    return [];
+const formatDraftModels = (allModels, savedModels) => {
+  if (!Array.isArray(allModels)) {
+    return { domestic: [], overseas: [] };
   }
 
   const selectedDomestic = savedModels?.domestic || [];
   const selectedOverseas = savedModels?.overseas || [];
 
+  // 分离国内和海外模型
+  const domesticModels = allModels.filter(model => 
+    ['deepseek', 'doubao', 'qwen', 'yuanbao', 'kimi', 'wenxin', 'xinghuo', 'zhipu'].includes(model.id)
+  );
+  
+  const overseasModels = allModels.filter(model => 
+    ['chatgpt', 'gemini', 'claude', 'perplexity', 'grok'].includes(model.id)
+  );
+
   return {
-    domestic: currentModels.map(model => ({
+    domestic: domesticModels.map(model => ({
       ...model,
       checked: selectedDomestic.includes(model.name) && !model.disabled
     })),
-    overseas: currentModels.map(model => ({
+    overseas: overseasModels.map(model => ({
       ...model,
       checked: selectedOverseas.includes(model.name)
     }))

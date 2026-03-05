@@ -124,7 +124,10 @@ class DeepIntelligenceResult:
 def init_task_status_db():
     """初始化任务状态相关的数据库表"""
     db_logger.info(f"Initializing task status database at {DB_PATH}")
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA synchronous=NORMAL')
+    conn.execute('PRAGMA busy_timeout=5000')
     cursor = conn.cursor()
 
     # 创建任务状态表
@@ -185,7 +188,25 @@ def init_task_status_db():
 
 
 def save_task_status(task_status):
-    """保存任务状态"""
+    """
+    保存任务状态（P0 修复：委托给 repository 层，避免双重数据库记录创建）
+    
+    【P0 问题根因】:
+    - 之前 models.py 和 repositories 层都有独立的 save_task_status 实现
+    - 使用不同的数据库连接（SafeDatabaseQuery vs 连接池）
+    - 导致同一任务被创建两条记录，造成数据冗余和性能浪费
+    
+    【修复方案】:
+    - models.py 的 save_task_status 委托给 repositories 层
+    - 统一使用连接池管理数据库连接
+    - 确保单一事实源
+    
+    参数:
+        task_status: TaskStatus 对象
+    
+    返回:
+        记录 ID
+    """
     db_logger.info(f"Saving task status for task: {task_status.task_id}")
 
     # Import DEBUG_AI_CODE logger
@@ -203,57 +224,43 @@ def save_task_status(task_status):
     if not sql_protector.validate_input(task_status.task_id):
         raise ValueError("Invalid task_id")
 
-    safe_query = SafeDatabaseQuery(DB_PATH)
+    # 【P0 修复】委托给 repository 层，避免双重数据库记录创建
+    from wechat_backend.repositories.task_status_repository import save_task_status as repo_save_task_status
+    
+    record_id = repo_save_task_status(
+        task_id=task_status.task_id,
+        stage=task_status.stage.value,
+        progress=task_status.progress,
+        status_text=task_status.status_text,
+        is_completed=task_status.is_completed
+    )
 
-    # 检查任务是否存在
-    existing_task = safe_query.execute_query('SELECT task_id FROM task_statuses WHERE task_id = ?', (task_status.task_id,))
-
-    if existing_task:
-        # 更新现有任务状态
-        safe_query.execute_query('''
-            UPDATE task_statuses
-            SET progress = ?, stage = ?, status_text = ?, is_completed = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE task_id = ?
-        ''', (
-            task_status.progress,
-            task_status.stage.value,
-            task_status.status_text,
-            task_status.is_completed,
-            task_status.task_id
-        ))
-    else:
-        # 插入新任务状态
-        safe_query.execute_query('''
-            INSERT INTO task_statuses
-            (task_id, progress, stage, status_text, is_completed)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            task_status.task_id,
-            task_status.progress,
-            task_status.stage.value,
-            task_status.status_text,
-            task_status.is_completed
-        ))
-
-    db_logger.info(f"Task status saved successfully for task: {task_status.task_id}")
+    db_logger.info(f"Task status saved successfully for task: {task_status.task_id}, record_id: {record_id}")
 
     # Log with DEBUG_AI_CODE system
     if ENABLE_DEBUG_AI_CODE:
         debug_log_results("DATABASE_SAVE", execution_id, 1, f"Task status saved: {task_status.stage.value}, progress: {task_status.progress}%") # #DEBUG_CLEAN
+    
+    return record_id
 
 
 def get_task_status(task_id):
     """
     获取任务状态（P2-2 优化：带 Redis 缓存）
     
+    【P0 修复说明】:
+    - save_task_status 已委托给 repository 层，避免双重数据库记录
+    - get_task_status 保留原有实现，因为包含 Redis 缓存优化 (P2-2)
+    - 两者可以共存，因为读取操作不会导致数据冗余
+
     优化策略：
     1. 先查 Redis 缓存（5 分钟 TTL）
     2. 缓存未命中时查数据库
     3. 写入缓存
-    
+
     参数：
         task_id: 任务 ID
-        
+
     返回：
         TaskStatus 对象，不存在返回 None
     """
@@ -263,11 +270,11 @@ def get_task_status(task_id):
     # P2-2 优化：先尝试从 Redis 缓存获取
     try:
         from wechat_backend.cache import get_cached_task_status
-        
+
         cached_data = get_cached_task_status(task_id)
         if cached_data and not cached_data.get('_empty'):
             db_logger.info(f"[P2-2] Cache HIT for task: {task_id}")
-            
+
             # 从缓存重建 TaskStatus 对象
             return TaskStatus(
                 task_id=cached_data['task_id'],
@@ -277,12 +284,12 @@ def get_task_status(task_id):
                 is_completed=bool(cached_data['is_completed']),
                 created_at=cached_data['created_at']
             )
-        
+
         db_logger.info(f"[P2-2] Cache MISS for task: {task_id}")
-        
+
     except Exception as cache_error:
         db_logger.warning(f"[P2-2] 缓存查询失败：{cache_error}，降级到数据库查询")
-    
+
     # 缓存未命中或出错，查询数据库
     db_logger.info(f"Retrieving task status for task: {task_id}")
 
@@ -304,11 +311,11 @@ def get_task_status(task_id):
             is_completed=bool(row[4]),
             created_at=row[5]
         )
-        
+
         # P2-2 优化：写入 Redis 缓存
         try:
             from wechat_backend.cache import set_cached_task_status
-            
+
             set_cached_task_status(task_id, {
                 'task_id': task_status.task_id,
                 'progress': task_status.progress,
@@ -317,12 +324,12 @@ def get_task_status(task_id):
                 'is_completed': task_status.is_completed,
                 'created_at': task_status.created_at
             })
-            
+
             db_logger.debug(f"[P2-2] 缓存已写入：{task_id}")
-            
+
         except Exception as cache_error:
             db_logger.debug(f"[P2-2] 缓存写入失败：{cache_error}")
-        
+
         db_logger.info(f"Successfully retrieved task status for task: {task_id}")
         return task_status
     else:

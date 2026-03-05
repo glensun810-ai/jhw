@@ -15,14 +15,17 @@
 
 @author: 系统架构组
 @date: 2026-03-02
-@version: 1.0.0
+@version: 2.0.0  # 2026-03-05: 优化重试机制
 """
 
 import re
+import time
+import random
 from enum import Enum
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import wraps
 from wechat_backend.logging_config import api_logger, db_logger
 
 
@@ -41,11 +44,82 @@ class ValidationStatus(Enum):
     CRITICAL = "critical"       # 严重失败（所有数据无效）
 
 
+class VisibilityDelayError(Exception):
+    """
+    数据可见性延迟异常
+    
+    当数据库 COMMIT 后数据短暂不可见时抛出此异常
+    触发重试机制
+    """
+    pass
+
+
+@dataclass
+class RetryConfig:
+    """
+    重试配置数据类
+
+    Attributes:
+        max_retries: 最大重试次数
+        base_delay: 基础延迟时间（秒）
+        max_delay: 最大延迟时间（秒）
+        exponential_base: 指数退避底数
+        jitter: 是否添加抖动 (0-1 之间的值，表示抖动幅度)
+        timeout: 总超时时间（秒）
+        retryable_errors: 可重试的错误类型列表
+    """
+    max_retries: int = 3
+    base_delay: float = 0.1  # 100ms
+    max_delay: float = 2.0   # 2s
+    exponential_base: float = 2.0
+    jitter: float = 0.1      # 10% 抖动
+    timeout: float = 10.0    # 10 秒总超时
+    retryable_errors: List[str] = field(default_factory=lambda: [
+        'database_locked',
+        'timeout',
+        'connection_error',
+        'visibility_delay',
+    ])
+
+
+@dataclass
+class RetryMetrics:
+    """
+    重试指标数据类
+
+    Attributes:
+        total_attempts: 总尝试次数
+        successful: 是否成功
+        total_time: 总耗时（秒）
+        delays: 每次重试的延迟列表
+        error_messages: 错误消息列表
+        final_error: 最终错误消息
+    """
+    total_attempts: int = 0
+    successful: bool = False
+    total_time: float = 0.0
+    delays: List[float] = field(default_factory=list)
+    error_messages: List[str] = field(default_factory=list)
+    final_error: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典格式"""
+        return {
+            'total_attempts': self.total_attempts,
+            'successful': self.successful,
+            'total_time': round(self.total_time, 3),
+            'delays': [round(d, 3) for d in self.delays],
+            'error_messages': self.error_messages,
+            'final_error': self.final_error,
+            'avg_delay': round(sum(self.delays) / len(self.delays), 3) if self.delays else 0,
+        }
+
+
 @dataclass
 class ValidationResult:
     """
     验证结果数据类
-    
+
     Attributes:
         status: 验证状态
         message: 验证结果描述
@@ -56,6 +130,7 @@ class ValidationResult:
         warnings: 警告列表
         details: 详细验证信息
         timestamp: 验证时间戳
+        retry_metrics: 重试指标（可选）
     """
     status: ValidationStatus
     message: str
@@ -66,10 +141,11 @@ class ValidationResult:
     warnings: List[str] = field(default_factory=list)
     details: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
-    
+    retry_metrics: Optional[RetryMetrics] = None
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典格式"""
-        return {
+        result = {
             'status': self.status.value,
             'message': self.message,
             'expected_count': self.expected_count,
@@ -82,7 +158,13 @@ class ValidationResult:
             'details': self.details,
             'timestamp': self.timestamp.isoformat()
         }
-    
+        
+        # 添加重试指标（如果存在）
+        if self.retry_metrics:
+            result['retry_metrics'] = self.retry_metrics.to_dict()
+        
+        return result
+
     @property
     def is_passed(self) -> bool:
         """验证是否通过"""
@@ -113,15 +195,189 @@ class ResultValidator:
         '错误', '失败', '超时', '异常'
     ]
     
-    def __init__(self, validation_level: ValidationLevel = ValidationLevel.NORMAL):
+    def __init__(self, validation_level: ValidationLevel = ValidationLevel.NORMAL, retry_config: Optional[RetryConfig] = None):
         """
         初始化验证器
-        
+
         参数：
             validation_level: 验证严格程度
+            retry_config: 重试配置（可选，默认使用标准配置）
         """
         self.validation_level = validation_level
-        api_logger.debug(f"[ResultValidator] 初始化完成，验证级别={validation_level.value}")
+        self.retry_config = retry_config or RetryConfig()
+        self._retry_metrics: Dict[str, RetryMetrics] = {}  # 存储每次验证的重试指标
+        api_logger.debug(f"[ResultValidator] 初始化完成，验证级别={validation_level.value}, 重试配置=max_retries={self.retry_config.max_retries}")
+
+    def _retry_with_exponential_backoff(
+        self,
+        operation: Callable[[], Any],
+        operation_name: str,
+        execution_id: str,
+        is_retryable_error: Optional[Callable[[Exception], bool]] = None
+    ) -> Tuple[Any, RetryMetrics]:
+        """
+        使用指数退避策略执行带重试的操作
+
+        参数：
+            operation: 要执行的操作
+            operation_name: 操作名称（用于日志）
+            execution_id: 执行 ID
+            is_retryable_error: 判断错误是否可重试的函数
+
+        返回：
+            (result, metrics): 操作结果和重试指标
+        """
+        metrics = RetryMetrics()
+        start_time = time.time()
+
+        for attempt in range(self.retry_config.max_retries + 1):
+            metrics.total_attempts = attempt + 1
+
+            try:
+                # 检查总超时
+                elapsed = time.time() - start_time
+                if elapsed > self.retry_config.timeout:
+                    metrics.final_error = f"总超时：{elapsed:.2f}s > {self.retry_config.timeout}s"
+                    api_logger.error(
+                        f"[ResultValidator] ❌ {operation_name} 总超时：{execution_id}, "
+                        f"{elapsed:.2f}s > {self.retry_config.timeout}s"
+                    )
+                    break
+
+                # 执行操作
+                result = operation()
+
+                # 成功
+                metrics.successful = True
+                metrics.total_time = time.time() - start_time
+
+                if attempt > 0:
+                    api_logger.info(
+                        f"[ResultValidator] ✅ {operation_name} 重试成功：{execution_id}, "
+                        f"attempt={attempt + 1}/{self.retry_config.max_retries + 1}, "
+                        f"time={metrics.total_time:.3f}s"
+                    )
+
+                return result, metrics
+
+            except Exception as e:
+                error_msg = str(e)
+                metrics.error_messages.append(error_msg)
+
+                # 判断是否可重试
+                retryable = self._is_retryable_error(e, is_retryable_error)
+
+                if attempt < self.retry_config.max_retries and retryable:
+                    # 计算延迟时间（指数退避 + 抖动）
+                    delay = self._calculate_delay(attempt)
+                    metrics.delays.append(delay)
+
+                    api_logger.warning(
+                        f"[ResultValidator] ⚠️ {operation_name} 失败，{delay:.3f}s 后重试：{execution_id}, "
+                        f"attempt={attempt + 1}/{self.retry_config.max_retries + 1}, "
+                        f"error={error_msg}"
+                    )
+
+                    time.sleep(delay)
+                else:
+                    # 不重试
+                    api_logger.error(
+                        f"[ResultValidator] ❌ {operation_name} 失败：{execution_id}, "
+                        f"已重试 {attempt + 1} 次，最终错误：{error_msg}"
+                    )
+                    metrics.final_error = error_msg
+                    break
+
+        # 所有重试失败
+        metrics.total_time = time.time() - start_time
+        return None, metrics
+
+    def _calculate_delay(self, attempt: int) -> float:
+        """
+        计算重试延迟时间（指数退避 + 抖动）
+
+        参数：
+            attempt: 当前尝试次数（从 0 开始）
+
+        返回：
+            delay: 延迟时间（秒）
+        """
+        # 指数退避
+        delay = self.retry_config.base_delay * (self.retry_config.exponential_base ** attempt)
+
+        # 限制最大延迟
+        delay = min(delay, self.retry_config.max_delay)
+
+        # 添加抖动（确保不超过最大延迟）
+        if self.retry_config.jitter > 0:
+            jitter_range = delay * self.retry_config.jitter
+            delay += random.uniform(-jitter_range, jitter_range)
+            delay = max(0.01, min(delay, self.retry_config.max_delay))  # 确保在合理范围内
+
+        return delay
+
+    def _is_retryable_error(
+        self,
+        error: Exception,
+        custom_checker: Optional[Callable[[Exception], bool]] = None
+    ) -> bool:
+        """
+        判断错误是否可重试
+
+        参数：
+            error: 异常对象
+            custom_checker: 自定义判断函数
+
+        返回：
+            是否可重试
+        """
+        # 使用自定义检查器
+        if custom_checker:
+            return custom_checker(error)
+
+        # VisibilityDelayError 总是可重试
+        if isinstance(error, VisibilityDelayError):
+            return True
+
+        # 默认检查逻辑
+        error_str = str(error).lower()
+
+        # 可重试的错误模式
+        retryable_patterns = [
+            'database is locked',
+            'locked',
+            'timeout',
+            'timed out',
+            'connection reset',
+            'connection refused',
+            'network',
+            'busy',
+            'temporary',
+            'visibility',
+            '数据可见性',
+        ]
+
+        for pattern in retryable_patterns:
+            if pattern in error_str:
+                return True
+
+        return False
+
+    def get_retry_metrics(self, execution_id: str) -> Optional[RetryMetrics]:
+        """
+        获取指定执行 ID 的重试指标
+
+        参数：
+            execution_id: 执行 ID
+
+        返回：
+            RetryMetrics 或 None
+        """
+        return self._retry_metrics.get(execution_id)
+
+    def clear_retry_metrics(self):
+        """清除所有重试指标"""
+        self._retry_metrics.clear()
     
     def validate(
         self,
@@ -131,7 +387,7 @@ class ResultValidator:
         validate_completeness: bool = True
     ) -> Tuple[ValidationResult, List[Dict[str, Any]]]:
         """
-        执行完整验证流程
+        执行完整验证流程（优化重试机制版本）
 
         参数：
             execution_id: 执行 ID
@@ -150,42 +406,60 @@ class ResultValidator:
 
         result_repo = DiagnosisResultRepository()
 
-        # 【P0 关键修复 - 2026-03-02】添加重试机制，处理连接池可见性延迟
+        # 【P0 关键修复 - 2026-03-05】使用优化的重试机制，处理连接池可见性延迟
         # SQLite WAL 模式下，COMMIT 后数据可能短暂不可见，需要重试读取
-        saved_results = []
-        max_retries = 3
         expected_count = len(expected_results)
-
-        for attempt in range(max_retries):
+        
+        def fetch_results():
+            """获取结果的闭包函数"""
             saved_results = result_repo.get_by_execution_id(execution_id)
             actual_count = len(saved_results)
-
-            # 检查数量是否匹配
-            if actual_count >= expected_count:
-                api_logger.info(
-                    f"[ResultValidator] ✅ 数据可见性检查通过：{execution_id}, "
-                    f"attempt={attempt + 1}/{max_retries}, count={actual_count}"
+            
+            if actual_count < expected_count:
+                raise VisibilityDelayError(
+                    f"数据可见性延迟：expected={expected_count}, actual={actual_count}"
                 )
-                break
-
-            # 不匹配，等待后重试
-            if attempt < max_retries - 1:
-                wait_time = 0.1 * (attempt + 1)  # 递增等待时间：100ms, 200ms, 300ms
-                api_logger.warning(
-                    f"[ResultValidator] ⚠️ 数据可见性延迟：{execution_id}, "
-                    f"attempt={attempt + 1}/{max_retries}, "
-                    f"expected={expected_count}, actual={actual_count}, "
-                    f"等待 {wait_time}s 后重试"
-                )
-                import time
-                time.sleep(wait_time)
-            else:
-                # 最后一次重试仍然失败，记录错误
-                api_logger.error(
-                    f"[ResultValidator] ❌ 数据可见性检查失败：{execution_id}, "
-                    f"expected={expected_count}, actual={actual_count}, "
-                    f"已重试 {max_retries} 次"
-                )
+            
+            return saved_results
+        
+        # 执行带重试的获取操作
+        saved_results, retry_metrics = self._retry_with_exponential_backoff(
+            operation=fetch_results,
+            operation_name="数据可见性检查",
+            execution_id=execution_id
+        )
+        
+        # 存储重试指标
+        self._retry_metrics[execution_id] = retry_metrics
+        
+        # 重试失败处理
+        if saved_results is None:
+            api_logger.error(
+                f"[ResultValidator] ❌ 数据可见性检查失败：{execution_id}, "
+                f"expected={expected_count}, actual=0, "
+                f"已重试 {retry_metrics.total_attempts} 次，"
+                f"总耗时={retry_metrics.total_time:.3f}s"
+            )
+            return ValidationResult(
+                status=ValidationStatus.CRITICAL,
+                message=f"数据可见性检查失败：{retry_metrics.final_error}",
+                expected_count=expected_count,
+                actual_count=0,
+                retry_metrics=retry_metrics,
+                details={
+                    'error_type': 'visibility_check_failed',
+                    'retry_metrics': retry_metrics.to_dict()
+                }
+            ), []
+        
+        # 记录成功结果
+        actual_count = len(saved_results)
+        if retry_metrics.successful and retry_metrics.total_attempts > 1:
+            api_logger.info(
+                f"[ResultValidator] ✅ 数据可见性检查通过：{execution_id}, "
+                f"attempt={retry_metrics.total_attempts}/{self.retry_config.max_retries + 1}, "
+                f"count={actual_count}, time={retry_metrics.total_time:.3f}s"
+            )
 
         # 1. 数量验证
         quantity_result = self._validate_quantity(
@@ -221,7 +495,8 @@ class ResultValidator:
             quantity_result=quantity_result,
             quality_result=quality_result,
             completeness_result=completeness_result,
-            saved_results=saved_results
+            saved_results=saved_results,
+            retry_metrics=retry_metrics
         )
         return validation_result, saved_results
     
@@ -488,38 +763,46 @@ class ResultValidator:
         quantity_result: ValidationResult,
         quality_result: Optional[ValidationResult],
         completeness_result: Optional[ValidationResult],
-        saved_results: List[Dict[str, Any]]
+        saved_results: List[Dict[str, Any]],
+        retry_metrics: Optional[RetryMetrics] = None
     ) -> ValidationResult:
         """
         聚合所有验证结果
-        
+
         参数：
             execution_id: 执行 ID
             quantity_result: 数量验证结果
             quality_result: 质量验证结果（可选）
             completeness_result: 完整性验证结果（可选）
             saved_results: 已保存的结果列表
-        
+            retry_metrics: 重试指标（可选）
+
         返回：
             ValidationResult: 综合验证结果
         """
         # 检查是否有严重错误
         for result in [quantity_result, quality_result, completeness_result]:
             if result and result.status == ValidationStatus.CRITICAL:
+                # 添加重试指标
+                if retry_metrics:
+                    result.retry_metrics = retry_metrics
                 return result
-        
+
         # 检查是否有失败
         for result in [quantity_result, quality_result, completeness_result]:
             if result and result.status == ValidationStatus.FAILED:
+                # 添加重试指标
+                if retry_metrics:
+                    result.retry_metrics = retry_metrics
                 return result
-        
+
         # 收集所有警告
         all_warnings = []
         if quality_result and quality_result.warnings:
             all_warnings.extend(quality_result.warnings)
         if completeness_result and completeness_result.warnings:
             all_warnings.extend(completeness_result.warnings)
-        
+
         # 综合评估
         if all_warnings:
             return ValidationResult(
@@ -530,13 +813,14 @@ class ResultValidator:
                 invalid_results=quality_result.invalid_results if quality_result else [],
                 missing_fields=completeness_result.missing_fields if completeness_result else [],
                 warnings=all_warnings,
+                retry_metrics=retry_metrics,
                 details={
                     'quantity': quantity_result.to_dict(),
                     'quality': quality_result.to_dict() if quality_result else None,
                     'completeness': completeness_result.to_dict() if completeness_result else None
                 }
             )
-        
+
         # 全部通过
         return ValidationResult(
             status=ValidationStatus.PASSED,
@@ -545,6 +829,7 @@ class ResultValidator:
             actual_count=quantity_result.actual_count,
             invalid_results=quality_result.invalid_results if quality_result else [],
             missing_fields=completeness_result.missing_fields if completeness_result else [],
+            retry_metrics=retry_metrics,
             details={
                 'quantity': quantity_result.to_dict(),
                 'quality': quality_result.to_dict() if quality_result else None,

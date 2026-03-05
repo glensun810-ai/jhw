@@ -6,6 +6,7 @@ NxM 并发执行引擎 v3 - 并行优化版
 2. 使用信号量控制并发度，避免 API 限流
 3. 实时进度推送（WebSocket）
 4. 智能熔断和重试
+5. 【P0 优化 - 2026-03-05】令牌桶速率限制，避免死等
 
 性能提升：
 - 串行：1 问题×1 模型 = 21 秒 → 总耗时 35 秒
@@ -31,6 +32,7 @@ from wechat_backend.ai_adapters.base_adapter import OBJECTIVE_QUESTION_TEMPLATE
 from wechat_backend.fault_tolerant_executor import FaultTolerantExecutor
 from wechat_backend.ai_timeout import get_timeout_manager
 from wechat_backend.multi_model_executor import get_single_model_executor
+from wechat_backend.rate_limiter import acquire_rate_limit  # 【P0 新增】速率限制
 from legacy_config import Config
 
 
@@ -179,55 +181,83 @@ class NxMParallelExecutor:
         model_idx: int
     ) -> Dict[str, Any]:
         """
-        执行单个任务（问题×模型）
-        
+        执行单个任务（问题×模型，带超时保护）
+
         参数：
             question: 问题
             model_name: 模型名称
             q_idx: 问题索引
             model_idx: 模型索引
-            
+
         返回：
             任务结果
         """
         # 获取信号量（控制并发度）
         async with self._semaphore:
             task_start = time.time()
-            
+
             try:
                 api_logger.debug(
                     f"[NxM-Parallel] 🔧 开始任务 Q{q_idx + 1}×{model_name}"
                 )
-                
+
+                # 【P0 优化 - 2026-03-05】速率限制（令牌桶算法）
+                # 如果距离上次请求已超过，则无等待；否则智能等待
+                wait_time = await acquire_rate_limit(model_name)
+                if wait_time > 0.01:  # 超过 10ms 才记录
+                    api_logger.info(
+                        f"[NxM-Parallel] ⏳ 频率控制等待：Q{q_idx + 1}×{model_name}, "
+                        f"wait={wait_time:.3f}s"
+                    )
+
                 # 1. 构建提示词
                 prompt = OBJECTIVE_QUESTION_TEMPLATE.format(question=question)
-                
-                # 2. 获取超时配置
+
+                # 2. 获取超时配置（默认 60 秒）
                 timeout_manager = get_timeout_manager()
-                timeout = timeout_manager.get_timeout(model_name)
-                
+                timeout = timeout_manager.get_timeout(model_name) or 60  # 默认 60 秒
+
                 # 3. 创建 AI 客户端
                 client = AIAdapterFactory.create(model_name)
                 api_key = Config.get_api_key(model_name)
-                
+
                 if not api_key:
                     raise ValueError(f"模型 {model_name} API Key 未配置")
-                
-                # 4. 执行 AI 调用（使用单模型执行器）
-                executor = get_single_model_executor(timeout=timeout)
-                
-                ai_result, actual_model = await executor.execute(
-                    prompt=prompt,
-                    model_name=model_name,
-                    execution_id=self.execution_id,
-                    q_idx=q_idx
-                )
-                
+
+                # 4. 执行 AI 调用（使用单模型执行器，带超时保护）
+                # 【P0 关键修复 - 2026-03-02】使用 asyncio.wait_for 添加超时保护
+                try:
+                    ai_result, actual_model = await asyncio.wait_for(
+                        get_single_model_executor(timeout=timeout).execute(
+                            prompt=prompt,
+                            model_name=model_name,
+                            execution_id=self.execution_id,
+                            q_idx=q_idx
+                        ),
+                        timeout=timeout
+                    )
+                except asyncio.TimeoutError:
+                    # 【P0 关键修复】AI 调用超时，返回错误结果但不阻塞其他任务
+                    task_elapsed = time.time() - task_start
+                    api_logger.error(
+                        f"[NxM-Parallel] ⏰ 任务超时：Q{q_idx + 1}×{model_name} "
+                        f"({task_elapsed:.2f}秒 > {timeout}秒)"
+                    )
+                    
+                    return {
+                        'success': False,
+                        'error': f'AI 调用超时（{timeout}秒）',
+                        'question': question,
+                        'model': model_name,
+                        'timeout': True,
+                        'latency': task_elapsed
+                    }
+
                 # 5. 处理结果
                 if ai_result.success:
                     # AI 调用成功
                     task_elapsed = time.time() - task_start
-                    
+
                     api_logger.info(
                         f"[NxM-Parallel] ✅ Q{q_idx + 1}×{model_name} 成功 "
                         f"({task_elapsed:.2f}秒)"

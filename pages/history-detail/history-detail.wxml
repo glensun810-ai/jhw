@@ -1,4 +1,9 @@
-<view class="page-container container">
+<!--
+  历史记录详情页 - 专业版
+  与项目整体风格统一
+-->
+
+<view class="page-container">
   <!-- 加载状态 -->
   <view wx:if="{{loading}}" class="loading-container">
     <view class="loading-spinner"></view>
@@ -9,8 +14,37 @@
   <view wx:else class="content-wrapper">
     <!-- 页面头部 -->
     <view class="page-header">
-      <text class="page-title">历史记录详情</text>
-      <text class="page-subtitle">{{brandName}} · {{formatDate(timestamp)}}</text>
+      <view class="header-content">
+        <view class="header-left">
+          <text class="page-title">报告详情</text>
+          <text class="page-subtitle">{{brandName}} · {{formattedTime}}</text>
+        </view>
+        <view class="header-right">
+          <view class="more-btn" bindtap="toggleActions">
+            <text class="more-icon">⋮</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作菜单 -->
+    <view class="action-menu" wx:if="{{showActions}}">
+      <view class="menu-item" bindtap="onReDiagnose">
+        <text class="menu-icon">🔄</text>
+        <text class="menu-text">重新诊断</text>
+      </view>
+      <view class="menu-item" bindtap="onExportReport">
+        <text class="menu-icon">📥</text>
+        <text class="menu-text">导出报告</text>
+      </view>
+      <view class="menu-item" bindtap="onShareAppMessage">
+        <text class="menu-icon">📤</text>
+        <text class="menu-text">分享报告</text>
+      </view>
+      <view class="menu-item" bindtap="onDeleteReport">
+        <text class="menu-icon">🗑️</text>
+        <text class="menu-text delete">删除报告</text>
+      </view>
     </view>
 
     <!-- 总体评分 -->
@@ -62,24 +96,24 @@
     <!-- 测试信息 -->
     <view class="info-section">
       <view class="section-title-wrap">
-        <text class="section-title">测试信息</text>
+        <text class="section-title">测试概览</text>
       </view>
       <view class="info-grid">
         <view class="info-item">
           <text class="info-label">AI 模型</text>
-          <text class="info-value">{{aiModels.length}} 个</text>
+          <text class="info-value">{{aiModels.length}}</text>
         </view>
         <view class="info-item">
           <text class="info-label">问题数</text>
-          <text class="info-value">{{questions.length}} 个</text>
+          <text class="info-value">{{questions.length}}</text>
         </view>
         <view class="info-item">
           <text class="info-label">竞品数</text>
-          <text class="info-value">{{competitors.length}} 个</text>
+          <text class="info-value">{{competitors.length}}</text>
         </view>
         <view class="info-item">
           <text class="info-label">总测试</text>
-          <text class="info-value">{{detailedResults.length}} 次</text>
+          <text class="info-value">{{detailedResults.length}}</text>
         </view>
       </view>
     </view>
@@ -90,46 +124,48 @@
         <text class="section-title">详细测试结果</text>
         <text class="section-subtitle">{{detailedResults.length}} 条记录</text>
       </view>
-      
-      <view class="result-list">
-        <view class="result-item" wx:for="{{detailedResults}}" wx:key="index" wx:for-item="result">
-          <view class="result-header">
-            <view class="result-brand">{{result.brand || result.brandName}}</view>
-            <view class="result-model">{{result.aiModel || result.ai_model}}</view>
-          </view>
-          <view class="result-question">{{result.question}}</view>
-          <view class="result-response">{{result.response || result.answer}}</view>
-          <view class="result-scores">
-            <view class="result-score-item">
-              <text class="score-label">权威</text>
-              <text class="score-value">{{result.authority_score || result.authority}}</text>
+
+      <scroll-view class="result-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="result-list">
+          <view class="result-item" wx:for="{{detailedResults}}" wx:key="index" wx:for-item="result">
+            <view class="result-header">
+              <view class="result-brand">{{result.brand || result.brandName}}</view>
+              <view class="result-model">{{result.aiModel || result.ai_model}}</view>
             </view>
-            <view class="result-score-item">
-              <text class="score-label">可见</text>
-              <text class="score-value">{{result.visibility_score || result.visibility}}</text>
+            <view class="result-question">{{result.question}}</view>
+            <view class="result-response">{{result.response || result.answer}}</view>
+            <view class="result-scores">
+              <view class="result-score-item">
+                <text class="score-label">权威</text>
+                <text class="score-value">{{result.authority_score || result.authority}}</text>
+              </view>
+              <view class="result-score-item">
+                <text class="score-label">可见</text>
+                <text class="score-value">{{result.visibility_score || result.visibility}}</text>
+              </view>
+              <view class="result-score-item">
+                <text class="score-label">纯净</text>
+                <text class="score-value">{{result.purity_score || result.purity}}</text>
+              </view>
+              <view class="result-score-item">
+                <text class="score-label">一致</text>
+                <text class="score-value">{{result.consistency_score || result.consistency}}</text>
+              </view>
             </view>
-            <view class="result-score-item">
-              <text class="score-label">纯净</text>
-              <text class="score-value">{{result.purity_score || result.purity}}</text>
+            <view class="result-total">
+              <text class="total-label">总分</text>
+              <text class="total-value">{{result.score}}</text>
             </view>
-            <view class="result-score-item">
-              <text class="score-label">一致</text>
-              <text class="score-value">{{result.consistency_score || result.consistency}}</text>
-            </view>
-          </view>
-          <view class="result-total">
-            <text class="total-label">总分</text>
-            <text class="total-value">{{result.score}}</text>
           </view>
         </view>
-      </view>
+      </scroll-view>
     </view>
 
     <!-- 底部操作栏 -->
     <view class="bottom-actions">
       <button class="action-btn home-btn" bindtap="goHome">返回首页</button>
-      <button class="action-btn history-btn" bindtap="viewHistory">查看历史</button>
-      <button class="action-btn report-btn" bindtap="generateReport">导出报告</button>
+      <button class="action-btn history-btn" bindtap="viewHistory">返回</button>
+      <button class="action-btn report-btn" bindtap="onExportReport">导出报告</button>
     </view>
   </view>
 </view>

@@ -89,6 +89,92 @@ def get_test_record_by_id(record_id: int) -> Optional[Dict[str, Any]]:
         return dict(row) if row else None
 
 
+def delete_test_record_by_id(record_id: int) -> bool:
+    """
+    根据 ID 删除测试记录
+    
+    参数:
+        record_id: 记录 ID
+    
+    返回:
+        bool: 是否删除成功
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM test_records WHERE id = ?', (record_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except Exception as e:
+        db_logger.error(f'删除测试记录失败：record_id={record_id}, error: {e}')
+        return False
+
+
+def get_user_test_history_stats(user_openid: str) -> Dict[str, Any]:
+    """
+    获取用户测试历史统计信息
+    
+    参数:
+        user_openid: 用户 OpenID
+    
+    返回:
+        dict: 统计信息
+    """
+    try:
+        with get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # 总记录数
+            cursor.execute('''
+                SELECT COUNT(*) as total
+                FROM test_records
+                WHERE user_openid = ?
+            ''', (user_openid,))
+            total = cursor.fetchone()['total']
+            
+            # 按状态统计
+            cursor.execute('''
+                SELECT 
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+                    SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing
+                FROM test_records
+                WHERE user_openid = ?
+            ''', (user_openid,))
+            status_row = cursor.fetchone()
+            
+            # 平均分数（从 results 中提取）
+            cursor.execute('''
+                SELECT AVG(
+                    CAST(
+                        json_extract(results, '$.overallScore') AS REAL
+                    )
+                ) as average_score
+                FROM test_records
+                WHERE user_openid = ? AND json_extract(results, '$.overallScore') IS NOT NULL
+            ''', (user_openid,))
+            score_row = cursor.fetchone()
+            average_score = score_row['average_score'] if score_row['average_score'] else 0
+            
+            return {
+                'total': total,
+                'completed': status_row['completed'] or 0,
+                'failed': status_row['failed'] or 0,
+                'processing': status_row['processing'] or 0,
+                'averageScore': round(average_score, 1) if average_score else 0
+            }
+    except Exception as e:
+        db_logger.error(f'获取用户测试历史统计失败：user_openid={user_openid}, error: {e}')
+        return {
+            'total': 0,
+            'completed': 0,
+            'failed': 0,
+            'processing': 0,
+            'averageScore': 0
+        }
+
+
 # ==================== 用户数据仓库 ====================
 
 def save_user_data(user_id: int, data: Dict[str, Any]) -> str:

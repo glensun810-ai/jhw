@@ -320,21 +320,30 @@ class TaskScheduler:
 
 # 全局调度器实例
 _scheduler: Optional[TaskScheduler] = None
+_scheduler_started = False  # P0-20260302: 防止重复启动
 
 
 def get_scheduler() -> TaskScheduler:
-    """获取调度器实例"""
+    """获取调度器实例（单例模式）"""
     global _scheduler
-    
+
     if _scheduler is None:
         _scheduler = TaskScheduler()
-    
+
     return _scheduler
 
 
 def start_scheduler():
-    """启动调度器"""
+    """启动调度器（防止重复启动）"""
+    global _scheduler_started
+    
+    if _scheduler_started:
+        api_logger.warning("[调度器] 已启动，跳过重复启动")
+        return
+    
+    _scheduler_started = True
     get_scheduler().start()
+    api_logger.info("[调度器] 首次启动完成")
 
 
 def stop_scheduler():

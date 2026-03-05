@@ -35,6 +35,9 @@ from wechat_backend.monitoring.monitoring_decorator import monitored_endpoint
 
 from . import wechat_bp
 
+# P0 修复：导入字段转换器
+from utils.field_converter import convert_response_to_camel
+
 # Global store for execution progress
 execution_store = {}
 
@@ -444,6 +447,7 @@ def perform_brand_test():
                 )
             except Exception as db_init_err:
                 api_logger.error(f"[Orchestrator] ⚠️ 创建初始记录失败：{db_init_err}")
+                report_id = None
 
             # 使用诊断编排器执行完整诊断流程
             import asyncio
@@ -556,8 +560,11 @@ def perform_brand_test():
         f"thread_name={thread.name}"
     )
 
-    return jsonify({
+    # P0 修复：转换为 camelCase 并返回 report_id
+    response_data = {
         'status': 'success',
         'execution_id': execution_id,
+        'report_id': report_id,
         'message': 'Test started successfully'
-    })
+    }
+    return jsonify(convert_response_to_camel(response_data))

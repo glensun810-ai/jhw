@@ -1,4 +1,5 @@
 const { debug, info, warn, error } = require('../utils/logger');
+const { get } = require('../utils/request');
 
 /**
  * 结果数据服务
@@ -80,61 +81,69 @@ const loadResultFromStorage = (executionId, brandName) => {
  * @param {Function} onSuccess - 成功回调
  * @param {Function} onError - 错误回调
  */
-const fetchResultsFromServer = (executionId, brandName, onSuccess, onError) => {
+const fetchResultsFromServer = async (executionId, brandName, onSuccess, onError) => {
   const app = getApp();
   const baseUrl = app.globalData?.apiUrl || 'http://127.0.0.1:5001';
   const accessToken = wx.getStorageSync('access_token') || '';
 
   console.log('📡 从后端 API 拉取结果，executionId:', executionId);
 
-  wx.request({
-    url: `${baseUrl}/api/test-progress?executionId=${executionId}`,
-    method: 'GET',
-    header: {
-      'Authorization': accessToken ? 'Bearer ' + accessToken : ''
-    },
-    success: (res) => {
-      // 处理 403 错误
-      if (res.statusCode === 403) {
-        console.warn('⚠️ Token 已过期 (403)');
-        if (onError) onError({ type: 'auth', message: '登录已过期' });
-        return;
+  try {
+    const res = await get(`/test/status/${executionId}`, {}, {
+      loading: true,
+      header: {
+        'Authorization': accessToken ? 'Bearer ' + accessToken : ''
       }
+    });
 
-      if (res.statusCode === 200 && res.data && (res.data.detailed_results || res.data.results)) {
-        const resultsToUse = res.data.detailed_results || res.data.results || [];
-        const competitiveAnalysisToUse = res.data.competitive_analysis || {};
+    // 处理成功响应
+    if (res && (res.detailed_results || res.results)) {
+      const resultsToUse = res.detailed_results || res.results || [];
+      const competitiveAnalysisToUse = res.competitive_analysis || {};
+      const brandScoresToUse = res.brand_scores || competitiveAnalysisToUse.brandScores || {};
 
-        // 保存到 Storage
-        wx.setStorageSync('last_diagnostic_results', {
-          results: resultsToUse,
-          competitiveAnalysis: competitiveAnalysisToUse,
-          brandScores: res.data.brand_scores || competitiveAnalysisToUse.brandScores || {},
-          targetBrand: brandName,
-          executionId: executionId,
-          timestamp: Date.now()
-        });
+      // 保存到 Storage
+      wx.setStorageSync('last_diagnostic_results', {
+        results: resultsToUse,
+        competitiveAnalysis: competitiveAnalysisToUse,
+        brandScores: brandScoresToUse,
+        targetBrand: brandName,
+        executionId: executionId,
+        timestamp: Date.now()
+      });
 
-        console.log('✅ 从后端 API 加载成功，结果数量:', resultsToUse.length);
+      console.log('✅ 从后端 API 加载成功，结果数量:', resultsToUse.length);
 
-        if (onSuccess) onSuccess({
-          results: resultsToUse,
-          competitiveAnalysis: competitiveAnalysisToUse,
-          targetBrand: brandName
-        });
-      } else if (res.statusCode === 404) {
-        console.error('❌ 后端 API 返回 404，结果不存在');
-        if (onError) onError({ type: 'not_found', message: '未找到诊断结果' });
-      } else {
-        console.error('❌ 后端 API 返回数据为空或状态码异常:', res.statusCode);
-        if (onError) onError({ type: 'error', message: '数据加载失败' });
-      }
-    },
-    fail: (err) => {
-      console.error('❌ 后端 API 请求失败:', err);
-      if (onError) onError({ type: 'network', message: '网络连接失败' });
+      if (onSuccess) onSuccess({
+        results: resultsToUse,
+        competitiveAnalysis: competitiveAnalysisToUse,
+        targetBrand: brandName
+      });
+    } else if (res && res.statusCode === 404) {
+      console.error('❌ 后端 API 返回 404，结果不存在');
+      if (onError) onError({ type: 'not_found', message: '未找到诊断结果' });
+    } else {
+      console.error('❌ 后端 API 返回数据为空');
+      if (onError) onError({ type: 'error', message: '数据加载失败' });
     }
-  });
+  } catch (err) {
+    console.error('❌ 后端 API 请求失败:', err);
+    
+    // P0 增强：根据错误类型给出明确提示
+    const isConnectionError = err.errMsg && (
+      err.errMsg.includes('fail') ||
+      err.errMsg.includes('network') ||
+      err.errMsg.includes('timeout')
+    );
+    
+    if (onError) {
+      onError({
+        type: isConnectionError ? 'network' : 'error',
+        message: isConnectionError ? '网络连接失败，请检查后端服务是否启动' : '数据加载失败',
+        error: err
+      });
+    }
+  }
 };
 
 /**

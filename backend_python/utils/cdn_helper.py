@@ -56,6 +56,8 @@ def get_static_url(path: str, cdn_domain: str = None) -> str:
     return f"https://{cdn_domain}/static/{path.lstrip('/')}"
 
 
+# ========== CDN 管理功能（占位实现） ==========
+
 def upload_to_oss(file_path: str, object_key: str, bucket: str = None) -> bool:
     """
     上传文件到 OSS（占位实现）
@@ -87,6 +89,42 @@ def get_oss_url(object_key: str, bucket: str = None, expires: int = 3600) -> str
     """
     # 占位实现，返回空字符串
     return ""
+
+
+def prefetch_cdn_urls(urls: list = None) -> dict:
+    """
+    预加载 CDN URL（占位实现）
+    
+    Args:
+        urls: URL 列表
+    
+    Returns:
+        预加载结果
+    """
+    api_logger.debug(f"[CDN] 预加载 URL: {urls}")
+    return {
+        'success': True,
+        'message': '预加载成功（占位实现）',
+        'prefetched_count': len(urls) if urls else 0
+    }
+
+
+def refresh_cdn_cache(paths: list = None) -> dict:
+    """
+    刷新 CDN 缓存（占位实现）
+    
+    Args:
+        paths: 路径列表
+    
+    Returns:
+        刷新结果
+    """
+    api_logger.debug(f"[CDN] 刷新缓存：{paths}")
+    return {
+        'success': True,
+        'message': '缓存刷新成功（占位实现）',
+        'refreshed_count': len(paths) if paths else 0
+    }
 
 
 # 默认配置

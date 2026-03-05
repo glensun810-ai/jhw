@@ -42,8 +42,7 @@ const API_ENDPOINTS = {
   },
   BRAND: {
     TEST: '/api/perform-brand-test',
-    PROGRESS: '/api/test-progress',
-    STATUS: '/test/status'
+    STATUS: '/test/status'  // 统一使用 /test/status/{id} 接口
   },
   COMPETITIVE: {
     ANALYSIS: '/action/recommendations'

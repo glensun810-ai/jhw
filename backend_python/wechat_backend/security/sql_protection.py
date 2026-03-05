@@ -104,7 +104,10 @@ class SafeDatabaseQuery:
     def _ensure_connection(self):
         """确保数据库连接已建立"""
         if self.conn is None or self._closed:
-            self.conn = sqlite3.connect(self.db_path)
+            self.conn = sqlite3.connect(self.db_path, timeout=30.0)
+            self.conn.execute('PRAGMA journal_mode=WAL')
+            self.conn.execute('PRAGMA synchronous=NORMAL')
+            self.conn.execute('PRAGMA busy_timeout=5000')
             self.cursor = self.conn.cursor()
             self._closed = False
 

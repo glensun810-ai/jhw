@@ -24,7 +24,7 @@ class ProgressPoller {
         if (this.completed) return;
 
         try {
-            const response = await fetch(`/api/test-progress?executionId=${this.executionId}`);
+            const response = await fetch(`/test/status/${this.executionId}`);
             const data = await response.json();
             
             // Dynamic interval adjustment based on progress

@@ -555,3 +555,386 @@ page {
   font-size: 28rpx;
   border: none;
 }
+
+/* ====================
+   【P1 新增】品牌对比分析组件样式
+   ==================== */
+
+.brand-analysis-card {
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--shadow);
+}
+
+.brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx solid var(--bg-color);
+}
+
+.brand-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.brand-badge {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+}
+
+.brand-badge.top3 {
+  background: linear-gradient(135deg, #f1c40f, #f39c12);
+  color: #fff;
+}
+
+.brand-badge.normal {
+  background: var(--bg-color);
+  color: var(--text-secondary);
+}
+
+.badge-icon {
+  margin-right: 8rpx;
+  font-size: 28rpx;
+}
+
+.badge-text {
+  font-weight: 500;
+}
+
+.brand-metrics {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 24rpx;
+}
+
+.brand-metrics .metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.brand-metrics .metric-label {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  margin-bottom: 8rpx;
+}
+
+.brand-metrics .metric-value {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4rpx;
+}
+
+.brand-metrics .metric-value.high {
+  color: #27ae60;
+}
+
+.brand-metrics .metric-value.medium {
+  color: #f39c12;
+}
+
+.brand-metrics .metric-value.low {
+  color: #e74c3c;
+}
+
+.brand-metrics .metric-value.good {
+  color: #27ae60;
+}
+
+.brand-metrics .metric-value.normal {
+  color: var(--text-primary);
+}
+
+.brand-metrics .metric-value.unranked {
+  color: #95a5a6;
+}
+
+.brand-metrics .metric-value.positive {
+  color: #27ae60;
+}
+
+.brand-metrics .metric-value.negative {
+  color: #e74c3c;
+}
+
+.brand-metrics .metric-value.neutral {
+  color: var(--text-secondary);
+}
+
+.brand-metrics .metric-sub {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+}
+
+.comparison-section {
+  background: var(--bg-color);
+  border-radius: var(--border-radius);
+  padding: 20rpx;
+  margin-top: 20rpx;
+}
+
+.comparison-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.comparison-title .icon {
+  margin-right: 12rpx;
+  font-size: 32rpx;
+}
+
+.comparison-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.advantage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  padding: 12rpx;
+  background: #fff;
+  border-radius: 8rpx;
+}
+
+.advantage-label {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #27ae60;
+  flex-shrink: 0;
+}
+
+.advantage-text {
+  font-size: 26rpx;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.disadvantage-label {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #e74c3c;
+  flex-shrink: 0;
+}
+
+.disadvantage-text {
+  font-size: 26rpx;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* 竞品分析列表 */
+.competitor-list {
+  margin-top: 24rpx;
+}
+
+.competitor-list .list-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.competitor-list .list-title .icon {
+  margin-right: 12rpx;
+  font-size: 32rpx;
+}
+
+.competitor-card {
+  background: #fff;
+  border: 1rpx solid var(--bg-color);
+  border-radius: var(--border-radius);
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.competitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.competitor-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.competitor-badge {
+  display: flex;
+  align-items: center;
+  padding: 6rpx 12rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+}
+
+.competitor-badge.top3 {
+  background: linear-gradient(135deg, #f1c40f, #f39c12);
+  color: #fff;
+}
+
+.competitor-badge.normal {
+  background: var(--bg-color);
+  color: var(--text-secondary);
+}
+
+.competitor-metrics {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 12rpx;
+  border-top: 1rpx solid var(--bg-color);
+}
+
+.competitor-metrics .metric-small {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.competitor-metrics .metric-small .metric-label {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  margin-bottom: 4rpx;
+}
+
+.competitor-metrics .metric-small .metric-value {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.competitor-metrics .metric-small .metric-value.positive {
+  color: #27ae60;
+}
+
+.competitor-metrics .metric-small .metric-value.negative {
+  color: #e74c3c;
+}
+
+.competitor-metrics .metric-small .metric-value.neutral {
+  color: var(--text-secondary);
+}
+
+/* ====================
+   【P1 新增】TOP3 竞品榜单样式
+   ==================== */
+
+.top3-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.top3-item {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: var(--border-radius);
+  padding: 24rpx;
+  box-shadow: var(--shadow);
+}
+
+.top3-item.rank-1 {
+  background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+  color: #fff;
+}
+
+.top3-item.rank-2 {
+  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+  color: #fff;
+}
+
+.top3-item.rank-3 {
+  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+  color: #fff;
+}
+
+.rank-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 24rpx;
+}
+
+.rank-number {
+  font-size: 48rpx;
+  font-weight: 700;
+}
+
+.rank-icon {
+  font-size: 40rpx;
+  margin-top: 4rpx;
+}
+
+.brand-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-info .brand-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.brand-info .brand-rank {
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+.rank-trend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rank-trend .trend-icon {
+  font-size: 36rpx;
+  margin-bottom: 4rpx;
+}
+
+.rank-trend .trend-text {
+  font-size: 22rpx;
+  opacity: 0.9;
+}
+
+/* ====================
+   【P2 新增】品牌对比图表样式
+   ==================== */
+
+.chart-section {
+  margin-bottom: 24rpx;
+}
+
+.chart-card {
+  margin-bottom: 24rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+
+.chart-card:last-child {
+  margin-bottom: 0;
+}

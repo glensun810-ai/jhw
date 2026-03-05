@@ -117,8 +117,8 @@ Page({
       // 尝试恢复未完成的任务
       else {
         console.log('[DiagnosisPage] Trying to restore pending task');
-        const pending = await diagnosisService.restorePendingTask();
-        if (pending) {
+        const pending = diagnosisService.restoreFromStorage();
+        if (pending && pending.executionId) {
           console.log('[DiagnosisPage] Restored pending task:', pending);
           this.setData({
             executionId: pending.executionId,
@@ -146,17 +146,17 @@ Page({
     this.setData({ isPolling: true });
 
     try {
-      // 启动轮询
+      // 启动轮询，传入 executionId
       diagnosisService.startPolling({
         onStatus: this.handleStatusUpdate.bind(this),
         onComplete: this.handleComplete.bind(this),
         onError: this.handlePollingError.bind(this),
         onTimeout: this.handleTimeout.bind(this)
-      });
+      }, this.data.executionId);
 
       // 启动计时器
       this.startElapsedTimer();
-      
+
       console.log('[DiagnosisPage] Polling started successfully');
     } catch (error) {
       console.error('[DiagnosisPage] Failed to start polling:', error);
@@ -179,9 +179,7 @@ Page({
    */
   pausePolling() {
     console.log('[DiagnosisPage] Pausing polling...');
-    diagnosisService.pausePolling();
-    this.setData({ isPolling: false });
-    this.stopElapsedTimer();
+    this.stopPolling();
   },
 
   /**
@@ -190,9 +188,7 @@ Page({
   resumePolling() {
     console.log('[DiagnosisPage] Resuming polling...');
     if (this.data.executionId && !this.data.isPolling) {
-      diagnosisService.resumePolling();
-      this.setData({ isPolling: true });
-      this.startElapsedTimer();
+      this.startPolling();
     }
   },
 
@@ -202,8 +198,14 @@ Page({
   async refreshStatus() {
     console.log('[DiagnosisPage] Refreshing status...');
     try {
-      const status = await diagnosisService.getStatus(this.data.executionId);
-      this.handleStatusUpdate(status);
+      // 重新连接 WebSocket 或轮询
+      diagnosisService.startPolling({
+        onStatus: this.handleStatusUpdate.bind(this),
+        onComplete: this.handleComplete.bind(this),
+        onError: this.handlePollingError.bind(this),
+        onTimeout: this.handleTimeout.bind(this)
+      }, this.data.executionId);
+
       showToast({
         title: '刷新成功',
         icon: 'success'

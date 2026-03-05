@@ -7,7 +7,7 @@
   <!-- 吸顶效果：当滚动时显示的总分栏 -->
   <view class="sticky-header {{isSticky ? 'sticky' : ''}}">
     <view class="score-summary">
-      <text class="score-label">总分</text>
+      <text class="score-label">AI搜索品牌影响力监测</text>
       <text class="score-value number-font">{{calculateTotalScore()}}</text>
       <text class="score-trend">{{getTrendIndicator()}}</text>
     </view>
@@ -35,12 +35,12 @@
           </view>
           <view class="summary-content">
             <view class="platform-group" wx:if="{{selectedMarketTab == 'domestic' && domesticSelectedNames.length > 0}}">
-              <text class="group-label">已选国内<text class="platform-count">{{selectedModelCount}}个：</text></text>
+              <text class="group-label">已选国内<text class="platform-count">{{selectedDomesticCount}}个：</text></text>
               <text class="platform-names">{{domesticSelectedNames}}</text>
 
             </view>
             <view class="platform-group" wx:if="{{selectedMarketTab == 'overseas' && overseasSelectedNames.length > 0}}">
-              <text class="group-label">已选海外<text class="platform-count">{{selectedModelCount}}个：</text></text>
+              <text class="group-label">已选海外<text class="platform-count">{{selectedOverseasCount}}个：</text></text>
               <text class="platform-names">{{overseasSelectedNames}}</text>
 
             </view>
@@ -117,7 +117,7 @@
       <view class="setting-block">
         <view class="setting-title">
           <text>AI平台矩阵</text>
-          <text class="setting-subtitle">请选择目标分析市场，系统将自动匹配该区域最具代表性的 AI 搜索引擎</text>
+          <text class="setting-subtitle">请选择需要分析的AI搜索引擎</text>
         </view>
         <view class="ai-model-selection">
         <!-- 市场分段选择器 -->
@@ -141,13 +141,21 @@
               <button class="select-all-btn" bindtap="selectAllModels" data-type="domestic">全选</button>
             </view>
             <view class="model-grid">
-              <view class="model-chip-pro {{item.checked ? 'checked' : ''}} {{item.disabled ? 'disabled' : ''}}" wx:for="{{domesticAiModels}}" wx:key="id" bindtap="toggleModelSelection" data-type="domestic" data-index="{{index}}">
+              <view class="model-chip-pro {{item.checked ? 'checked' : ''}} {{item.disabled ? 'disabled' : ''}} {{item.isConfigured === false ? 'unconfigured' : ''}}" 
+                    wx:for="{{domesticAiModels}}" 
+                    wx:key="id" 
+                    bindtap="{{item.isConfigured === false ? 'showMissingConfigTip' : 'toggleModelSelection'}}" 
+                    data-type="domestic" 
+                    data-index="{{index}}"
+                    data-model="{{item}}">
                 <view class="logo-placeholder">{{item.logo || item.name.substring(0,2)}}</view>
                 <text class="model-name">{{item.name}}</text>
                 <view class="tag-list">
                   <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
                 </view>
-                <view class="check-icon">✓</view>
+                <!-- 【新增】未配置警告图标 -->
+                <view class="config-warning-icon" wx:if="{{item.isConfigured === false}}">⚠️</view>
+                <view class="check-icon" wx:else>✓</view>
               </view>
             </view>
           </view>
@@ -158,23 +166,23 @@
               <button class="select-all-btn" bindtap="selectAllModels" data-type="overseas">全选</button>
             </view>
             <view class="model-grid">
-              <view class="model-chip-pro {{item.checked ? 'checked' : ''}}" wx:for="{{overseasAiModels}}" wx:key="id" bindtap="toggleModelSelection" data-type="overseas" data-index="{{index}}">
+              <view class="model-chip-pro {{item.checked ? 'checked' : ''}} {{item.disabled ? 'disabled' : ''}} {{item.isConfigured === false ? 'unconfigured' : ''}}" 
+                    wx:for="{{overseasAiModels}}" 
+                    wx:key="id" 
+                    bindtap="{{item.isConfigured === false ? 'showMissingConfigTip' : 'toggleModelSelection'}}" 
+                    data-type="overseas" 
+                    data-index="{{index}}"
+                    data-model="{{item}}">
                 <view class="logo-placeholder">{{item.logo || item.name.substring(0,2)}}</view>
                 <text class="model-name">{{item.name}}</text>
                 <view class="tag-list">
                   <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
                 </view>
-                <view class="check-icon">✓</view>
+                <!-- 【新增】未配置警告图标 -->
+                <view class="config-warning-icon" wx:if="{{item.isConfigured === false}}">⚠️</view>
+                <view class="check-icon" wx:else>✓</view>
               </view>
             </view>
-          </view>
-        </view>
-
-        <!-- 已选平台提示 -->
-        <view class="selected-models-hint" wx:if="{{selectedModelCount > 0}}">
-          <view class="hint-content">
-            <text class="hint-text">当前市场已选择 <text class="highlight">{{selectedModelCount}}</text> 个 AI 平台</text>
-            <text class="hint-sub" wx:if="{{totalSelectedCount > selectedModelCount}}">（另一个市场还选择了 {{totalSelectedCount - selectedModelCount}} 个，切换后可见）</text>
           </view>
         </view>
       </view>
@@ -199,32 +207,11 @@
 
     <!-- 主操作按钮 - Step 6: 完全使用 appState -->
     <view class="main-action-section">
-      <!-- 状态 1: 有上次诊断报告（保留，这是独立状态） -->
-      <view class="completed-actions {{hasLastReport && appState !== 'testing' ? '' : 'hidden'}}">
-        <view class="completed-badge">
-          <text class="badge-icon">✅</text>
-          <text class="badge-text">已有诊断报告</text>
-          <text class="badge-time" wx:if="{{completedTime}}">{{completedTime}}</text>
-        </view>
-
-        <view class="completed-buttons">
-          <button class="btn-primary-view" bindtap="viewReport">
-            <text class="btn-icon">📊</text>
-            <text class="btn-text">查看上次诊断报告</text>
-          </button>
-
-          <button class="btn-secondary-retry" bindtap="retryDiagnosis">
-            <text class="btn-icon">🔄</text>
-            <text class="btn-text">重新诊断</text>
-          </button>
-        </view>
-      </view>
-
       <!-- 状态 2: 诊断按钮（完全使用 appState） -->
       <button class="scan-button {{hasLastReport ? 'hidden' : ''}}"
               bindtap="startBrandTest"
               disabled="{{appState === 'testing'}}">
-        <text class="button-content">
+        <view class="button-content">
           <text class="loading-spinner" wx:if="{{appState === 'testing'}}"></text>
           <text class="button-text">
             <block wx:if="{{appState === 'testing'}}">
@@ -234,17 +221,17 @@
               重新诊断
             </block>
             <block wx:elif="{{appState === 'error'}}">
-              AI 品牌战略诊断
+              AI品牌战略诊断
             </block>
             <block wx:else>
-              AI 品牌战略诊断
+              AI品牌战略诊断
             </block>
           </text>
-        </text>
+        </view>
       </button>
 
       <!-- 状态 3: 诊断完成（当次）- 完全使用 appState -->
-      <view class="completed-actions {{appState === 'completed' ? '' : 'hidden'}}">
+      <view class="completed-actions {{appState === 'completed' && !hasLatestDiagnosis ? '' : 'hidden'}}">
         <view class="completed-badge">
           <text class="badge-icon">✅</text>
           <text class="badge-text">诊断已完成</text>
@@ -254,7 +241,7 @@
         <view class="completed-buttons">
           <button class="btn-primary-view" bindtap="viewReport">
             <text class="btn-icon">📊</text>
-            <text class="btn-text">查看诊断报告</text>
+            <text class="btn-text">查看本次报告</text>
           </button>
 
           <button class="btn-secondary-retry" bindtap="retryDiagnosis">
@@ -287,50 +274,7 @@
       wx:if="{{reportData}}">
     </analysis-charts>
 
-    <!-- 评分雷达图：展示多维度评分 (备用) -->
-    <score-radar
-      title="品牌认知评分雷达图"
-      scores="{{scoreData}}"
-      loading="{{appState === 'testing'}}"
-      wx:if="{{reportData && !analysisChartsEnabled}}">
-    </score-radar>
 
-    <!-- 趋势图表：展示品牌认知趋势 (备用) -->
-    <trend-chart
-      title="品牌认知趋势分析"
-      chart-data="{{trendChartData}}"
-      prediction-data="{{predictionData}}"
-      loading="{{appState === 'testing'}}"
-      wx:if="{{reportData && !analysisChartsEnabled}}">
-    </trend-chart>
-
-    <!-- Zone C: 战场态势 (The Battlefield) -->
-    <!-- 竞品攻防矩阵：展示品牌占位情况 -->
-    <competitor-matrix
-      competition-data="{{competitionData}}"
-      loading="{{appState === 'testing'}}"
-      wx:if="{{reportData}}">
-    </competitor-matrix>
-
-    <!-- Zone D: 证据链 (The Evidence) -->
-    <!-- 信源卡片：展示数据来源 -->
-    <source-card
-      title="证据链 (Source of Truth)"
-      sources="{{sourceListData}}"
-      loading="{{appState === 'testing'}}"
-      wx:if="{{reportData}}">
-    </source-card>
-
-    <!-- 内容区域入场动画包装 -->
-    <view class="content-animation-wrapper {{contentVisible ? 'visible' : ''}}" wx:if="{{reportData}}">
-      <!-- 战略战局中心入口 -->
-      <view class="strategic-war-room-entry">
-        <button class="war-room-btn" bindtap="navigateToDetail">
-          <text>战略战局中心</text>
-          <text class="btn-arrow">›</text>
-        </button>
-      </view>
-    </view>
 
     <!-- Debug 区域：显示后端返回的原始 JSON -->
     <view class="debug-section" wx:if="{{debugJson && isTesting}}">
@@ -374,12 +318,13 @@
       </view>
     </view>
 
-    <!-- 【新增】最新诊断结果入口 -->
-    <view class="latest-diagnosis-section" wx:if="{{!isTesting && hasLatestDiagnosis && latestDiagnosisInfo}}">
+    <!-- 【新增】最新诊断结果入口（历史最新） -->
+    <!-- 【修复】添加互斥逻辑：当 appState === 'completed' 时不显示 -->
+    <view class="latest-diagnosis-section" wx:if="{{!isTesting && hasLatestDiagnosis && latestDiagnosisInfo && appState !== 'completed'}}">
       <view class="latest-diagnosis-banner" bindtap="viewLatestDiagnosis">
         <view class="banner-header">
           <text class="banner-icon">📊</text>
-          <text class="banner-title">最新诊断报告</text>
+          <text class="banner-title">历史最新报告</text>
         </view>
         <view class="banner-content">
           <text class="brand-name">{{latestDiagnosisInfo.brand}}</text>

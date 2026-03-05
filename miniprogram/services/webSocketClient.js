@@ -105,6 +105,8 @@ class WebSocketClient {
     this.state = ConnectionState.DISCONNECTED;
     // 【P0 修复 - 2026-03-04】添加连接锁标志
     this.isConnecting = false;
+    // 【P0 修复 - 2026-03-05】添加永久失败标志，防止无限重连
+    this._isPermanentFailure = false;
     this.callbacks = {
       onProgress: null,
       onResult: null,
@@ -135,6 +137,13 @@ class WebSocketClient {
     if (this.isConnecting) {
       console.log('[WebSocket] ⚠️ 正在连接中，拒绝重复连接请求');
       return true;
+    }
+
+    // 【P0 修复 - 2026-03-05】检查是否已标记为永久失败
+    if (this._isPermanentFailure) {
+      console.log('[WebSocket] ⚠️ 检测到永久失败标志，重置后重新连接');
+      this._isPermanentFailure = false;
+      this.reconnectAttempts = 0;
     }
 
     // 保存参数
@@ -301,6 +310,29 @@ class WebSocketClient {
     try {
       const message = JSON.parse(data);
 
+      // 【P0 修复 - 2026-03-05】检查后端是否返回失败状态
+      if (message.data?.status === 'failed' || message.event === 'failed') {
+        console.error('[WebSocket] ❌ 后端返回失败状态，停止重连:', message.data);
+        this._isPermanentFailure = true;  // 标记为永久失败
+        
+        // 调用错误回调
+        if (this.callbacks.onError) {
+          this.callbacks.onError({
+            type: 'BACKEND_FAILED',
+            message: '诊断任务失败',
+            data: message.data
+          });
+        }
+        
+        // 直接降级到轮询，不再重连
+        this._setState(ConnectionState.FALLBACK);
+        this._cleanupForFallback();
+        if (this.callbacks.onFallback) {
+          this.callbacks.onFallback();
+        }
+        return;
+      }
+
       // 根据消息类型调用相应回调
       switch (message.event) {
         case 'progress':
@@ -382,13 +414,76 @@ class WebSocketClient {
   }
 
   /**
+   * 降级前清理（新增方法）
+   * @private
+   */
+  _cleanupForFallback() {
+    console.log('[WebSocket] 执行降级前清理...');
+    
+    // 1. 停止所有计时器
+    this._stopHeartbeat();
+    this._stopHealthCheck();
+    
+    // 2. 关闭 WebSocket 连接
+    if (this.socket) {
+      console.log('[WebSocket] 移除事件监听器...');
+      // 移除所有事件监听器
+      this.socket.onOpen = null;
+      this.socket.onMessage = null;
+      this.socket.onClose = null;
+      this.socket.onError = null;
+      
+      // 关闭连接
+      console.log('[WebSocket] 关闭 WebSocket 连接...');
+      try {
+        this.socket.close();
+      } catch (err) {
+        console.warn('[WebSocket] 关闭连接时出错:', err);
+      }
+      this.socket = null;
+    }
+    
+    // 3. 清空回调，防止继续触发（保留 onFallback）
+    console.log('[WebSocket] 清空回调函数...');
+    const onFallback = this.callbacks.onFallback;  // 保留 onFallback
+    this.callbacks = {
+      onConnected: null,
+      onDisconnected: null,
+      onMessage: null,
+      onError: null,
+      onStateChange: null,
+      onFallback: onFallback  // 保留，因为它即将被调用
+    };
+    
+    // 4. 重置连接状态
+    this.state = ConnectionState.FALLBACK;
+    
+    console.log('[WebSocket] ✅ 降级前清理完成');
+  }
+
+  /**
    * 尝试重连（指数退避 + 随机抖动）
    * @private
    */
   _attemptReconnect() {
+    // 【P0 修复 - 2026-03-05】检查是否已标记为永久失败，防止无限重连
+    if (this._isPermanentFailure) {
+      console.log('[WebSocket] ⚠️ 检测到永久失败标志，跳过重连');
+      this._setState(ConnectionState.FALLBACK);
+      this._cleanupForFallback();
+      if (this.callbacks.onFallback) {
+        this.callbacks.onFallback();
+      }
+      return;
+    }
+
     if (this.reconnectAttempts >= CONFIG.MAX_RECONNECT_ATTEMPTS) {
       console.error('[WebSocket] 重连次数已达上限（' + CONFIG.MAX_RECONNECT_ATTEMPTS + '次），使用轮询降级方案');
       this._setState(ConnectionState.FALLBACK);
+
+      // 【P0 关键修复 - 2026-03-05】降级前彻底清理 WebSocket，防止回调继续触发
+      this._cleanupForFallback();
+
       if (this.callbacks.onFallback) {
         this.callbacks.onFallback();
       }
@@ -414,6 +509,12 @@ class WebSocketClient {
     this._setState(ConnectionState.RECONNECTING);
 
     setTimeout(() => {
+      // 【P0 修复 - 2026-03-05】重连前再次检查是否已永久失败
+      if (this._isPermanentFailure) {
+        console.log('[WebSocket] ⚠️ 重连前检测到永久失败标志，取消重连');
+        return;
+      }
+      
       if (this.executionId) {
         console.log('[WebSocket] 开始重连...');
         const success = this.connect(this.executionId, this.callbacks);
@@ -614,6 +715,8 @@ class WebSocketClient {
     this._setState(ConnectionState.DISCONNECTED);
     this._stopHeartbeat();
     this._stopHealthCheck();
+    // 【P0 修复 - 2026-03-05】重置永久失败标志，允许下次正常连接
+    this._isPermanentFailure = false;
     console.log('[WebSocket] 连接已关闭');
   }
 
@@ -622,6 +725,7 @@ class WebSocketClient {
    */
   disconnect() {
     this.reconnectAttempts = CONFIG.MAX_RECONNECT_ATTEMPTS; // 阻止重连
+    this._isPermanentFailure = true;  // 标记为永久失败，防止重连
     this.close();
   }
 
@@ -677,6 +781,24 @@ class WebSocketClient {
       lastDisconnectedAt: null,
       totalDowntime: 0
     };
+  }
+
+  /**
+   * 【P0 修复 - 2026-03-05】重置永久失败标志
+   * 允许在用户主动重试时清除失败状态
+   */
+  resetPermanentFailure() {
+    console.log('[WebSocket] 重置永久失败标志');
+    this._isPermanentFailure = false;
+    this.reconnectAttempts = 0;
+  }
+
+  /**
+   * 【P0 修复 - 2026-03-05】检查是否处于永久失败状态
+   * @returns {boolean} 是否永久失败
+   */
+  isPermanentFailure() {
+    return this._isPermanentFailure;
   }
 }
 

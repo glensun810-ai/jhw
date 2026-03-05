@@ -1,0 +1,44 @@
+{
+  "channels": {
+    "log": {
+      "enabled": true
+    },
+    "webhook": {
+      "enabled": true,
+      "url": "",
+      "headers": {}
+    },
+    "email": {
+      "enabled": false,
+      "smtp_server": "smtp.example.com",
+      "smtp_port": 587,
+      "username": "",
+      "password": "",
+      "from_addr": "alerts@example.com",
+      "to_addrs": [
+        "admin@example.com"
+      ],
+      "use_tls": true
+    },
+    "sms": {
+      "enabled": false,
+      "provider": "aliyun",
+      "api_key": "",
+      "phone_numbers": []
+    }
+  },
+  "suppression": {
+    "enabled": true,
+    "duration_seconds": 300
+  },
+  "escalation": {
+    "enabled": true,
+    "warning_to_error_minutes": 15,
+    "error_to_critical_minutes": 30
+  },
+  "connection_pool": {
+    "utilization_warning": 0.8,
+    "utilization_critical": 0.9,
+    "leak_detection_enabled": true
+  }
+}

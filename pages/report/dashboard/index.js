@@ -53,7 +53,14 @@ Page({
     competitors: [],
 
     // P1 新增：工作流分析展开状态
-    expandedWorkflowStage: ''
+    expandedWorkflowStage: '',
+    
+    // 【P1 新增】品牌分析数据
+    brandAnalysis: null,
+    userBrandAnalysis: null,
+    competitorAnalysis: [],
+    comparison: null,
+    top3Brands: []
   },
 
   /**
@@ -205,6 +212,13 @@ Page({
       const toxicSources = this.processToxicSources(dashboard.toxicSources || []);
       const interceptedTopics = dashboard.interceptedTopics || [];
       const workflowResults = dashboard.workflow_results || null;
+      
+      // 【P1 新增】接收品牌分析数据
+      const brandAnalysis = dashboard.brandAnalysis || null;
+      const userBrandAnalysis = dashboard.userBrandAnalysis || null;
+      const competitorAnalysis = dashboard.competitorAnalysis || [];
+      const comparison = dashboard.comparison || null;
+      const top3Brands = dashboard.top3Brands || [];
 
       // 检查是否已收藏
       const favorites = wx.getStorageSync('favorites') || [];
@@ -220,7 +234,13 @@ Page({
         workflowResults: workflowResults,
         rawResults: dashboard.rawResults || [],
         competitors: dashboard.competitors || [],
-        isFavorite: isFavorite
+        isFavorite: isFavorite,
+        // 【P1 新增】品牌分析数据
+        brandAnalysis: brandAnalysis,
+        userBrandAnalysis: userBrandAnalysis,
+        competitorAnalysis: competitorAnalysis,
+        comparison: comparison,
+        top3Brands: top3Brands
       });
 
       // 保存到全局存储 (缓存)
@@ -228,7 +248,12 @@ Page({
         executionId: this.data.executionId,
         dashboard: dashboard,
         raw: dashboard.rawResults || [],
-        competitors: dashboard.competitors || []
+        competitors: dashboard.competitors || [],
+        brandAnalysis: brandAnalysis,
+        userBrandAnalysis: userBrandAnalysis,
+        competitorAnalysis: competitorAnalysis,
+        comparison: comparison,
+        top3Brands: top3Brands
       };
 
       // 保存到本地历史记录

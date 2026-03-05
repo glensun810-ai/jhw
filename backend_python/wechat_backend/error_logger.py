@@ -115,7 +115,7 @@ class ErrorLogger:
     def log_error(
         self,
         error: Exception,
-        error_code: ErrorCodeDefinition,
+        error_code,  # 可以是 ErrorCodeDefinition 或 Enum（如 DiagnosisErrorCode）
         execution_id: Optional[str] = None,
         user_id: Optional[str] = None,
         request_params: Optional[Dict] = None,
@@ -126,10 +126,10 @@ class ErrorLogger:
     ) -> str:
         """
         记录错误日志（带完整上下文）
-        
+
         Args:
             error: 异常对象
-            error_code: 错误码定义
+            error_code: 错误码定义（可以是 ErrorCodeDefinition 或 Enum 成员）
             execution_id: 执行 ID
             user_id: 用户 ID
             request_params: 请求参数
@@ -137,22 +137,28 @@ class ErrorLogger:
             system_context: 系统上下文
             additional_info: 附加信息
             log_level: 日志级别
-            
+
         Returns:
             str: 追踪 ID（用于日志关联查询）
         """
+        from enum import Enum
+        
         # 生成追踪 ID
         trace_id = self._generate_trace_id()
         request_id = self._generate_request_id()
-        
+
         # 提取堆栈信息
         stack_info = self._extract_stack_info()
-        
+
+        # 【修复 - 2026-03-03】支持 Enum 类型的错误码（如 DiagnosisErrorCode）
+        # 如果是 Enum，通过 .value 获取 ErrorCodeDefinition
+        error_code_def = error_code.value if isinstance(error_code, Enum) else error_code
+
         # 构建错误上下文
         context = ErrorContext(
-            error_code=error_code.code,
+            error_code=error_code_def.code,
             error_message=str(error),
-            severity=error_code.severity.value,
+            severity=error_code_def.severity.value,
             timestamp=datetime.now().isoformat(),
             execution_id=execution_id,
             user_id=user_id,
@@ -164,20 +170,20 @@ class ErrorLogger:
             system_context=system_context,
             additional_info=additional_info
         )
-        
+
         # 根据严重程度选择日志级别
-        if error_code.severity == ErrorSeverity.CRITICAL:
+        if error_code_def.severity == ErrorSeverity.CRITICAL:
             log_level = logging.CRITICAL
-        elif error_code.severity == ErrorSeverity.ERROR:
+        elif error_code_def.severity == ErrorSeverity.ERROR:
             log_level = logging.ERROR
-        elif error_code.severity == ErrorSeverity.WARNING:
+        elif error_code_def.severity == ErrorSeverity.WARNING:
             log_level = logging.WARNING
         else:
             log_level = logging.INFO
 
         # 记录结构化日志
         log_message = (
-            f"[{error_code.code}] {context.error_message}\n"
+            f"[{error_code_def.code}] {context.error_message}\n"
             f"TraceID: {trace_id} | RequestID: {request_id}"
         )
 
@@ -197,7 +203,7 @@ class ErrorLogger:
             self.logger.debug(log_message, extra={'error_context': context.to_dict()})
 
         # 对于严重错误，额外记录完整 JSON
-        if error_code.severity in [ErrorSeverity.CRITICAL, ErrorSeverity.ERROR]:
+        if error_code_def.severity in [ErrorSeverity.CRITICAL, ErrorSeverity.ERROR]:
             self.logger.debug(f"Error Context JSON: {context.to_json()}")
 
         return trace_id

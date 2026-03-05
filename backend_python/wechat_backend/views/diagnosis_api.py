@@ -19,6 +19,7 @@ from wechat_backend.diagnosis_report_service import get_report_service, get_vali
 from wechat_backend.logging_config import api_logger
 from wechat_backend.security.auth_enhanced import enforce_auth_middleware
 from wechat_backend.security.rate_limiting import rate_limit
+from utils.field_converter import convert_response_to_camel
 
 # 创建 Blueprint
 diagnosis_bp = Blueprint('diagnosis_api', __name__, url_prefix='/api/diagnosis')
@@ -70,10 +71,11 @@ def get_user_history():
         
         # 获取历史
         result = service.get_user_history(user_id, page, limit)
-        
+
         api_logger.info(f"获取用户历史：user_id={user_id}, page={page}, limit={limit}, count={len(result['reports'])}")
-        
-        return jsonify(result), 200
+
+        # P0 修复：转换为 camelCase
+        return jsonify(convert_response_to_camel(result)), 200
         
     except Exception as e:
         api_logger.error(f"获取用户历史失败：{e}")
@@ -183,7 +185,8 @@ def get_full_report(execution_id):
         if validation:
             report['validation'] = validation
 
-        return jsonify(report), 200
+        # P0 修复：转换为 camelCase
+        return jsonify(convert_response_to_camel(report)), 200
 
     except Exception as e:
         # P0-2 修复：增强错误处理
@@ -230,8 +233,9 @@ def validate_report(execution_id):
         
         # 添加校验和验证
         validation['checksum_verified'] = report.get('checksum_verified', False)
-        
-        return jsonify(validation), 200
+
+        # P0 修复：转换为 camelCase
+        return jsonify(convert_response_to_camel(validation)), 200
         
     except Exception as e:
         api_logger.error(f"验证报告失败：{e}")

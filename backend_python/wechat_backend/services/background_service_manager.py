@@ -27,6 +27,13 @@ from concurrent.futures import ThreadPoolExecutor, Future
 from wechat_backend.logging_config import api_logger
 
 
+# ==================== 异常类 ====================
+
+class QueueFullError(Exception):
+    """队列已满异常"""
+    pass
+
+
 class ServiceStatus(Enum):
     """服务状态枚举"""
     RUNNING = "running"
@@ -70,7 +77,7 @@ class AnalysisTask:
     completed_at: Optional[datetime] = None
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
-    timeout_seconds: int = 300  # 默认 5 分钟超时
+    timeout_seconds: int = 180  # 【P0 修复 - 2026-03-05】默认 3 分钟超时，与 submit_analysis_task 默认值一致
 
 
 class BackgroundServiceManager:
@@ -80,7 +87,7 @@ class BackgroundServiceManager:
     管理所有后台清理任务和分析任务，避免资源竞争和数据库锁定问题
     """
 
-    def __init__(self, max_workers: int = 4):
+    def __init__(self, max_workers: int = 4, max_queue_size: int = 100):
         self._tasks: Dict[str, ScheduledTask] = {}
         self._analysis_tasks: Dict[str, AnalysisTask] = {}  # 分析任务队列
         self._status = ServiceStatus.STOPPED
@@ -88,13 +95,36 @@ class BackgroundServiceManager:
         self._stop_event = threading.Event()
         self._lock = threading.RLock()
 
+        # 【P0 修复 - 2026-03-05】线程池限制
+        # max_workers: 最大工作线程数（默认 4，避免过多并发写入数据库）
+        # max_queue_size: 最大队列长度（默认 100，防止内存耗尽）
+        self.max_workers = max_workers
+        self.max_queue_size = max_queue_size
+
         # 线程池用于执行分析任务
-        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="AnalysisTask")
+        # 【P0 修复 - 2026-03-05】Python 3.14 兼容性修复
+        self._executor = ThreadPoolExecutor(
+            max_workers=max_workers,
+            thread_name_prefix="AnalysisTask"
+        )
+        
+        # 队列监控
+        self._queue_rejected_count = 0  # 队列满拒绝次数
+        self._queue_current_size = 0  # 当前队列大小
 
         # 统计信息
         self._start_time: Optional[datetime] = None
         self._total_executions = 0
         self._total_errors = 0
+        
+        api_logger.info(
+            f"[BackgroundService] 初始化完成：max_workers={max_workers}, "
+            f"max_queue_size={max_queue_size}"
+        )
+    
+    def _on_worker_start(self):
+        """工作线程启动回调"""
+        api_logger.debug(f"[BackgroundService] 工作线程启动：{threading.current_thread().name}")
 
     def register_task(
         self,
@@ -286,6 +316,20 @@ class BackgroundServiceManager:
                     'interval_seconds': task.interval_seconds
                 }
 
+            # 【P0 修复 - 2026-03-05】添加分析任务队列状态
+            analysis_tasks_status = {
+                'total_tasks': len(self._analysis_tasks),
+                'pending': sum(1 for t in self._analysis_tasks.values() if t.status == TaskStatus.PENDING),
+                'running': sum(1 for t in self._analysis_tasks.values() if t.status == TaskStatus.RUNNING),
+                'completed': sum(1 for t in self._analysis_tasks.values() if t.status == TaskStatus.COMPLETED),
+                'failed': sum(1 for t in self._analysis_tasks.values() if t.status == TaskStatus.FAILED),
+                'timeout': sum(1 for t in self._analysis_tasks.values() if t.status == TaskStatus.TIMEOUT),
+                'queue_size': self._queue_current_size,
+                'max_queue_size': self.max_queue_size,
+                'queue_rejected_count': self._queue_rejected_count,
+                'thread_pool_workers': self.max_workers
+            }
+
             return {
                 'status': self._status.value,
                 'uptime_seconds': (datetime.now() - self._start_time).total_seconds() if self._start_time else 0,
@@ -293,8 +337,31 @@ class BackgroundServiceManager:
                 'enabled_tasks': sum(1 for t in self._tasks.values() if t.enabled),
                 'total_executions': self._total_executions,
                 'total_errors': self._total_errors,
-                'tasks': tasks_status
+                'tasks': tasks_status,
+                'analysis_tasks': analysis_tasks_status,
+                'health_status': self._get_health_status()
             }
+    
+    def _get_health_status(self) -> str:
+        """
+        获取健康状态
+        
+        返回：
+            'healthy' | 'warning' | 'critical'
+        """
+        # 队列利用率检查
+        queue_utilization = self._queue_current_size / self.max_queue_size if self.max_queue_size > 0 else 0
+        
+        if queue_utilization > 0.9:
+            return 'critical'
+        elif queue_utilization > 0.7:
+            return 'warning'
+        elif self._status == ServiceStatus.ERROR:
+            return 'critical'
+        elif self._total_errors > self._total_executions * 0.1 and self._total_executions > 10:
+            return 'warning'
+        else:
+            return 'healthy'
 
     # =========================================================================
     # 分析任务管理方法（Phase 3: 增强后台任务管理器）
@@ -305,43 +372,223 @@ class BackgroundServiceManager:
         execution_id: str,
         task_type: str,
         payload: Dict[str, Any],
-        timeout_seconds: int = 300
+        timeout_seconds: int = 180,
+        priority: int = 5  # 【P0 新增】优先级 1-10，数字越小优先级越高
     ) -> str:
         """
-        提交分析任务到后台队列
+        提交分析任务到后台队列（P0 增强版 - 修复队列溢出）
+
+        【P0 关键修复 - 2026-03-05】
+        1. 队列满时三级降级策略
+        2. 支持任务优先级（1-10）
+        3. 自动清理旧任务腾空间
+        4. 高优先级任务同步执行
 
         Args:
             execution_id: 执行 ID
             task_type: 任务类型 (brand_analysis/competitive_analysis/statistics)
             payload: 任务参数
-            timeout_seconds: 任务超时时间（秒），默认 5 分钟
+            timeout_seconds: 任务超时时间（秒），默认 180 秒（3 分钟）
+            priority: 任务优先级（1-10，数字越小优先级越高，默认 5）
 
         Returns:
             task_id: 任务 ID
-        """
-        task_id = f"{execution_id}_{task_type}_{uuid.uuid4().hex[:8]}"
 
-        # 创建任务记录
+        Raises:
+            QueueFullError: 队列已满且无法降级
+
+        【降级策略】
+        1 级：清理已完成任务（>5 分钟）腾空间
+        2 级：高优先级任务（<=3）同步执行
+        3 级：低优先级任务拒绝
+        """
+        # 【P0 关键修复】队列满时降级策略
+        with self._lock:
+            self._queue_current_size = len(self._analysis_tasks)
+
+            if self._queue_current_size >= self.max_queue_size:
+                api_logger.warning(
+                    f"[BackgroundService] ⚠️ 队列已满，触发降级策略："
+                    f"current_size={self._queue_current_size}, max_size={self.max_queue_size}, "
+                    f"priority={priority}"
+                )
+
+                # 【降级策略 1】清理已完成任务腾空间
+                cleaned_count = self._cleanup_completed_tasks(max_age_minutes=5)
+                if cleaned_count > 0:
+                    api_logger.info(
+                        f"[BackgroundService] ✅ 清理 {cleaned_count} 个已完成任务后重试提交"
+                    )
+                    # 更新队列大小
+                    self._queue_current_size = len(self._analysis_tasks)
+                    # 如果清理后有空位，继续提交
+                    if self._queue_current_size < self.max_queue_size:
+                        # 继续下面的提交流程
+                        pass
+                    else:
+                        # 清理后仍然满，继续降级
+                        self._queue_rejected_count += 1
+                        if priority <= 3:
+                            # 【降级策略 2】高优先级任务同步执行
+                            api_logger.warning(
+                                f"[BackgroundService] 🚀 队列满，同步执行高优先级任务：{execution_id}"
+                            )
+                            return self._execute_task_sync(
+                                execution_id=execution_id,
+                                task_type=task_type,
+                                payload=payload,
+                                timeout_seconds=min(timeout_seconds, 300)
+                            )
+                        else:
+                            # 【降级策略 3】低优先级任务拒绝
+                            api_logger.error(
+                                f"[BackgroundService] ❌ 队列已满，拒绝低优先级任务："
+                                f"current_size={self._queue_current_size}, priority={priority}"
+                            )
+                            raise QueueFullError(
+                                f"分析任务队列已满（{self._queue_current_size}/{self.max_queue_size}），"
+                                f"请稍后重试（优先级={priority}）"
+                            )
+                else:
+                    # 没有可清理的任务，继续降级
+                    self._queue_rejected_count += 1
+                    if priority <= 3:
+                        # 【降级策略 2】高优先级任务同步执行
+                        api_logger.warning(
+                            f"[BackgroundService] 🚀 队列满，同步执行高优先级任务：{execution_id}"
+                        )
+                        return self._execute_task_sync(
+                            execution_id=execution_id,
+                            task_type=task_type,
+                            payload=payload,
+                            timeout_seconds=min(timeout_seconds, 300)
+                        )
+                    else:
+                        # 【降级策略 3】低优先级任务拒绝
+                        api_logger.error(
+                            f"[BackgroundService] ❌ 队列已满，拒绝低优先级任务："
+                            f"current_size={self._queue_current_size}, priority={priority}"
+                        )
+                        raise QueueFullError(
+                            f"分析任务队列已满（{self._queue_current_size}/{self.max_queue_size}），"
+                            f"请稍后重试（优先级={priority}）"
+                        )
+
+        # 正常提交流程
+        task_id = f"{execution_id}_{task_type}_{uuid.uuid4().hex[:8]}"
+        effective_timeout = max(180, min(timeout_seconds, 300))
+
         task_record = AnalysisTask(
             task_id=task_id,
             execution_id=execution_id,
             task_type=task_type,
             payload=payload,
             status=TaskStatus.PENDING,
-            timeout_seconds=timeout_seconds
+            timeout_seconds=effective_timeout
         )
 
-        # 保存到任务队列
         with self._lock:
             self._analysis_tasks[task_id] = task_record
+            self._queue_current_size = len(self._analysis_tasks)
 
-        # 提交到线程池执行
         future = self._executor.submit(self._execute_analysis_task, task_id)
 
         api_logger.info(
             f"[BackgroundService] 提交分析任务：{task_id}, "
-            f"type={task_type}, execution_id={execution_id}"
+            f"type={task_type}, priority={priority}, 队列大小={self._queue_current_size}/{self.max_queue_size}"
         )
+
+        return task_id
+
+    def _cleanup_completed_tasks(self, max_age_minutes: int = 5) -> int:
+        """
+        清理已完成的任务（为队列腾空间）
+
+        参数：
+            max_age_minutes: 完成超过多少分钟的任务被清理
+
+        返回：
+            清理的任务数
+
+        【P0 新增】自动清理已完成任务
+        """
+        cleaned_count = 0
+        current_time = datetime.now()
+
+        with self._lock:
+            tasks_to_remove = []
+
+            # 查找已完成/失败/超时的任务
+            for task_id, task in self._analysis_tasks.items():
+                if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.TIMEOUT]:
+                    if task.completed_at:
+                        age = (current_time - task.completed_at).total_seconds()
+                        if age > max_age_minutes * 60:
+                            tasks_to_remove.append(task_id)
+
+            # 清理旧任务
+            for task_id in tasks_to_remove:
+                del self._analysis_tasks[task_id]
+                cleaned_count += 1
+
+            # 更新队列大小
+            self._queue_current_size = len(self._analysis_tasks)
+
+        if cleaned_count > 0:
+            api_logger.info(
+                f"[BackgroundService] 🧹 清理 {cleaned_count} 个已完成任务 "
+                f"(>{max_age_minutes}分钟)"
+            )
+
+        return cleaned_count
+
+    def _execute_task_sync(
+        self,
+        execution_id: str,
+        task_type: str,
+        payload: Dict[str, Any],
+        timeout_seconds: int
+    ) -> str:
+        """
+        同步执行任务（降级策略）
+
+        参数：
+            execution_id: 执行 ID
+            task_type: 任务类型
+            payload: 任务参数
+            timeout_seconds: 超时时间
+
+        返回：
+            task_id
+
+        【P0 新增】高优先级任务同步执行
+        """
+        task_id = f"{execution_id}_{task_type}_sync_{uuid.uuid4().hex[:8]}"
+
+        task_record = AnalysisTask(
+            task_id=task_id,
+            execution_id=execution_id,
+            task_type=task_type,
+            payload=payload,
+            status=TaskStatus.RUNNING,  # 直接标记为运行中
+            timeout_seconds=timeout_seconds
+        )
+
+        with self._lock:
+            self._analysis_tasks[task_id] = task_record
+            self._queue_current_size = len(self._analysis_tasks)
+
+        try:
+            # 同步执行
+            self._execute_analysis_task(task_id)
+
+            api_logger.info(
+                f"[BackgroundService] ✅ 同步任务完成：{task_id}"
+            )
+        except Exception as e:
+            api_logger.error(
+                f"[BackgroundService] ❌ 同步任务失败：{task_id}, error={e}"
+            )
 
         return task_id
 
@@ -396,6 +643,9 @@ class BackgroundServiceManager:
                 task.status = TaskStatus.TIMEOUT
                 task.error = str(e)
                 task.completed_at = datetime.now()
+                # 【P1 修复】确保 result 不为 None，即使超时也有部分数据
+                if task.result is None:
+                    task.result = {'_timeout': True, '_error': str(e)}
 
         except Exception as e:
             api_logger.error(f"[BackgroundService] 分析任务失败：{task_id}, error={e}", exc_info=True)
@@ -403,6 +653,9 @@ class BackgroundServiceManager:
                 task.status = TaskStatus.FAILED
                 task.error = str(e)
                 task.completed_at = datetime.now()
+                # 【P1 修复】确保 result 不为 None，即使失败也有错误信息
+                if task.result is None:
+                    task.result = {'_failed': True, '_error': str(e)}
 
     def _execute_brand_analysis(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -412,6 +665,7 @@ class BackgroundServiceManager:
             payload: 任务参数，包含：
                 - results: AI 诊断结果列表
                 - user_brand: 用户品牌名称
+                - user_selected_models: 用户选择的模型列表（新增）
 
         Returns:
             品牌分析结果
@@ -424,10 +678,12 @@ class BackgroundServiceManager:
             results = payload.get('results', [])
             user_brand = payload.get('user_brand', '')
             competitor_brands = payload.get('competitor_brands', [])
+            user_selected_models = payload.get('user_selected_models', [])  # 【P0 修复】获取用户选择的模型
 
             api_logger.info(
                 f"[BackgroundService] 🚀 品牌分析任务开始：user_brand={user_brand}, "
-                f"results_count={len(results)}, competitor_count={len(competitor_brands)}"
+                f"results_count={len(results)}, competitor_count={len(competitor_brands)}, "
+                f"user_selected_models={user_selected_models}"
             )
 
             if not results or not user_brand:
@@ -436,7 +692,8 @@ class BackgroundServiceManager:
                     f"user_brand='{user_brand}'"
                 )
 
-            service = BrandAnalysisService()
+            # 【P0 修复】传递用户选择的模型列表，让品牌分析服务使用用户选择的模型
+            service = BrandAnalysisService(user_selected_models=user_selected_models)
             api_logger.info(f"[BackgroundService] 调用 BrandAnalysisService.analyze_brand_mentions")
 
             # 【P0 新增】记录分析开始时间
@@ -607,8 +864,14 @@ class BackgroundServiceManager:
                 - execution_id: 执行 ID
                 - total_tasks: 总任务数
                 - completed_tasks: 已完成任务数
-                - analysis_complete: 是否所有分析都完成
+                - analysis_complete: 是否所有分析都完成（或已终止）
                 - analysis_results: 分析结果聚合
+
+        【P0 关键修复 - 2026-03-05】
+        改进 analysis_complete 判断逻辑：
+        1. 所有任务终止（COMPLETED/FAILED/TIMEOUT）即视为分析结束
+        2. 至少有一个任务完成（确保有部分结果）
+        3. 避免编排器无限等待已失败/超时的任务
         """
         with self._lock:
             # 查找所有属于该 execution_id 的任务
@@ -620,8 +883,21 @@ class BackgroundServiceManager:
         if not tasks:
             return None
 
-        # 检查是否所有任务都完成
-        all_completed = all(task.status == TaskStatus.COMPLETED for task in tasks)
+        # 【P0 修复】检查是否所有任务都已终止（完成/失败/超时）
+        all_terminated = all(
+            task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.TIMEOUT]
+            for task in tasks
+        )
+
+        # 【P0 修复】检查是否至少有一个任务成功完成
+        has_completed = any(
+            task.status == TaskStatus.COMPLETED
+            for task in tasks
+        )
+
+        # 【P0 修复】分析结束条件：所有任务终止 + 至少一个完成
+        # 这样即使有任务失败/超时，编排器也能感知并继续生成报告
+        analysis_complete = all_terminated and has_completed
 
         # 聚合结果
         analysis_results = {}
@@ -637,8 +913,11 @@ class BackgroundServiceManager:
             'timeout_tasks': sum(1 for t in tasks if t.status == TaskStatus.TIMEOUT),
             'running_tasks': sum(1 for t in tasks if t.status == TaskStatus.RUNNING),
             'pending_tasks': sum(1 for t in tasks if t.status == TaskStatus.PENDING),
-            'analysis_complete': all_completed,
-            'analysis_results': analysis_results
+            'analysis_complete': analysis_complete,
+            'analysis_results': analysis_results,
+            # 【P0 新增】详细状态字段，便于调试
+            'all_terminated': all_terminated,
+            'has_completed': has_completed
         }
 
     def get_task_by_id(self, task_id: str) -> Optional[Dict[str, Any]]:

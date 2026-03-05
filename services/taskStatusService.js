@@ -152,6 +152,22 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
           parsed.is_completed = false;
         }
         break;
+      case 'report_aggregating':
+        // 【P0 关键修复 - 2026-03-02】新增 report_aggregating 状态处理
+        // 后端在完成 AI 调用后进入报告聚合阶段，此阶段可能耗时较长
+        parsed.progress = statusData.progress || 90;
+        parsed.statusText = '正在深度汇总分析报告...';
+        parsed.detailText = `已获取 ${parsed.resultsCount} 条诊断结果，正在生成最终报告`;
+        parsed.stage = 'report_aggregating';
+        parsed.is_completed = false;
+        
+        // 【P0 修复】如果后端明确标记为 completed，不要覆盖
+        if (backendIsCompleted) {
+          parsed.is_completed = true;
+          parsed.stage = TASK_STAGES.COMPLETED;
+          console.log('[parseTaskStatus] ⚠️ 后端标记为 completed，强制覆盖 stage');
+        }
+        break;
       case TASK_STAGES.COMPLETED:
       case TASK_STAGES.FINISHED:
       case TASK_STAGES.DONE:
@@ -211,17 +227,28 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
     parsed.progress = statusData.progress;
   }
 
-  // 如果后端提供了 is_completed 字段，优先使用
+  // 【P0 修复 - 2026-03-02】增强数据类型容错（后端可能返回数字 0/1 而非布尔值）
   if (typeof statusData.is_completed === 'boolean') {
     parsed.is_completed = statusData.is_completed;
+  } else if (typeof statusData.is_completed === 'number') {
+    // 后端返回数字 0/1，转换为布尔值
+    parsed.is_completed = statusData.is_completed !== 0;
+  }
+
+  // 【P0 修复 - 2026-03-02】should_stop_polling 容错（后端可能返回数字 0/1）
+  // 注意：不要重新赋值 backendShouldStopPolling（它是 const），直接更新 parsed.should_stop_polling
+  if (typeof statusData.should_stop_polling === 'boolean') {
+    parsed.should_stop_polling = statusData.should_stop_polling;
+  } else if (typeof statusData.should_stop_polling === 'number') {
+    parsed.should_stop_polling = statusData.should_stop_polling !== 0;
   }
 
   // 【P0 关键修复】如果后端明确标记 should_stop_polling=true，强制覆盖为完成状态
   // 这是最可靠的终止信号，优先级高于所有其他判断
-  if (backendShouldStopPolling) {
+  if (parsed.should_stop_polling) {
     console.log('[parseTaskStatus] ✅ 后端标记 should_stop_polling=true，强制设置为完成状态');
     parsed.should_stop_polling = true;
-    
+
     // 如果后端返回 status='completed' 或 status='failed'，直接使用
     if (statusData.status === 'completed' || statusData.status === 'failed') {
       parsed.stage = statusData.status;

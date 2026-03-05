@@ -976,17 +976,49 @@ def mvp_brand_test():
         })
         
         api_logger.info(f"[MVP] Test completed for {main_brand}, {len([r for r in results if r.get('success')])}/{len(results)} successful")
-        
+
         return jsonify({
             'status': 'success',
             'execution_id': execution_id,
             'message': 'Test completed',
             'results': results
         })
-        
+
     except Exception as e:
         api_logger.error(f"[MVP] Test failed: {str(e)}")
-        return jsonify({'error': f'Test failed: {str(e)}'}), 500
+        # 【P3 增强 - 2026-03-05】返回带建议的结构化错误响应
+        from wechat_backend.error_handler import create_error_response, handle_ai_platform_error
+        error_msg = str(e).lower()
+        
+        # 判断错误类型并返回相应的响应
+        if 'timeout' in error_msg or 'timed out' in error_msg:
+            return create_error_response(
+                error_code='AI_TIMEOUT',
+                message='AI 平台响应超时',
+                suggestion=['请稍后重试', '尝试使用其他 AI 模型', '检查网络连接'],
+                details={'error': str(e)}
+            )[0], 504
+        elif 'api key' in error_msg or 'authentication' in error_msg:
+            return create_error_response(
+                error_code='AI_API_KEY_INVALID',
+                message='AI API 密钥无效',
+                suggestion=['请联系管理员更新 API 密钥', '检查密钥是否过期'],
+                details={'error': str(e)}
+            )[0], 401
+        elif 'rate limit' in error_msg or 'too many requests' in error_msg:
+            return create_error_response(
+                error_code='AI_RATE_LIMIT_EXCEEDED',
+                message='AI 平台请求过于频繁',
+                suggestion=['请等待 1 分钟后重试', '减少并发请求数量'],
+                details={'error': str(e)}
+            )[0], 429
+        else:
+            return create_error_response(
+                error_code='TASK_EXECUTION_FAILED',
+                message='诊断执行失败',
+                suggestion=['查看历史记录', '重新发起诊断', '减少 AI 模型数量'],
+                details={'error': str(e)}
+            )[0], 500
 
 def process_and_aggregate_results_with_ai_judge(raw_results, all_brands, main_brand, judge_platform=None, judge_model=None, judge_api_key=None):
     """
@@ -2377,7 +2409,7 @@ def get_test_history():
     if hasattr(g, 'user_id') and g.user_id and g.user_id != 'anonymous':
         # 如果已认证，强制使用认证用户的 ID
         user_openid = g.user_id
-    
+
     limit = int(request.args.get('limit', 20))
     offset = int(request.args.get('offset', 0))
     try:
@@ -2385,6 +2417,150 @@ def get_test_history():
         return jsonify({'status': 'success', 'history': history, 'count': len(history)})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@wechat_bp.route('/api/test-history/<int:record_id>', methods=['DELETE'])
+@require_strict_auth
+@monitored_endpoint('/api/test-history/<id>', require_auth=True, validate_inputs=True)
+def delete_test_history(record_id):
+    """
+    删除单条历史记录
+    
+    路径参数:
+        record_id: 记录 ID
+    
+    返回:
+        {
+            "status": "success",
+            "message": "删除成功"
+        }
+    """
+    try:
+        from wechat_backend.database_repositories import delete_test_record_by_id
+        
+        # 获取用户 ID 进行权限验证
+        user_openid = request.args.get('userOpenid', 'anonymous')
+        if hasattr(g, 'user_id') and g.user_id and g.user_id != 'anonymous':
+            user_openid = g.user_id
+        
+        # 验证记录所有权
+        record = get_test_record_by_id(record_id)
+        if not record:
+            return jsonify({'status': 'error', 'message': '记录不存在'}), 404
+        
+        # 确保用户只能删除自己的记录
+        if record.get('user_openid') != user_openid and user_openid != 'anonymous':
+            return jsonify({'status': 'error', 'message': '无权删除此记录'}), 403
+        
+        # 执行删除
+        deleted = delete_test_record_by_id(record_id)
+        if deleted:
+            return jsonify({'status': 'success', 'message': '删除成功'})
+        else:
+            return jsonify({'status': 'error', 'message': '删除失败'}), 500
+    except Exception as e:
+        api_logger.error(f'删除历史记录失败：{record_id}, error: {e}')
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@wechat_bp.route('/api/test-history/batch-delete', methods=['POST'])
+@require_strict_auth
+@monitored_endpoint('/api/test-history/batch-delete', require_auth=True, validate_inputs=True)
+def batch_delete_test_history():
+    """
+    批量删除历史记录
+    
+    请求体:
+        {
+            "reportIds": [1, 2, 3]
+        }
+    
+    返回:
+        {
+            "status": "success",
+            "message": "删除成功",
+            "deletedCount": 3,
+            "failedCount": 0
+        }
+    """
+    try:
+        from wechat_backend.database_repositories import delete_test_record_by_id
+        
+        # 获取用户 ID 进行权限验证
+        user_openid = request.args.get('userOpenid', 'anonymous')
+        if hasattr(g, 'user_id') and g.user_id and g.user_id != 'anonymous':
+            user_openid = g.user_id
+        
+        data = request.get_json()
+        report_ids = data.get('reportIds', [])
+        
+        if not report_ids:
+            return jsonify({'status': 'error', 'message': '报告 ID 列表不能为空'}), 400
+        
+        deleted_count = 0
+        failed_count = 0
+        
+        for record_id in report_ids:
+            try:
+                # 验证记录所有权
+                record = get_test_record_by_id(record_id)
+                if not record:
+                    failed_count += 1
+                    continue
+                
+                # 确保用户只能删除自己的记录
+                if record.get('user_openid') != user_openid and user_openid != 'anonymous':
+                    failed_count += 1
+                    continue
+                
+                # 执行删除
+                if delete_test_record_by_id(record_id):
+                    deleted_count += 1
+                else:
+                    failed_count += 1
+            except Exception:
+                failed_count += 1
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'成功删除 {deleted_count} 条记录',
+            'deletedCount': deleted_count,
+            'failedCount': failed_count
+        })
+    except Exception as e:
+        api_logger.error(f'批量删除历史记录失败：error: {e}')
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@wechat_bp.route('/api/test-history/stats', methods=['GET'])
+@require_strict_auth
+@monitored_endpoint('/api/test-history/stats', require_auth=True, validate_inputs=True)
+def get_test_history_stats():
+    """
+    获取历史记录统计信息
+    
+    返回:
+        {
+            "status": "success",
+            "stats": {
+                "total": 100,
+                "completed": 90,
+                "failed": 5,
+                "processing": 5,
+                "averageScore": 75.5
+            }
+        }
+    """
+    try:
+        # 获取用户 ID
+        user_openid = request.args.get('userOpenid', 'anonymous')
+        if hasattr(g, 'user_id') and g.user_id and g.user_id != 'anonymous':
+            user_openid = g.user_id
+        
+        from wechat_backend.database_repositories import get_user_test_history_stats
+        
+        stats = get_user_test_history_stats(user_openid)
+        return jsonify({'status': 'success', 'stats': stats})
+    except Exception as e:
+        api_logger.error(f'获取历史统计失败：error: {e}')
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @wechat_bp.route('/api/dashboard/aggregate', methods=['GET'])
 @require_auth_optional
@@ -4135,5 +4311,136 @@ def health_check():
         api_logger.error(f"健康检查失败：{e}")
         return jsonify({
             'status': 'unhealthy',
+            'error': str(e)
+        }), 500
+
+
+# ==================== 【P0 关键修复 - 2026-03-05】execution_store 清理 API ====================
+
+@wechat_bp.route('/api/admin/execution-store/cleanup', methods=['POST'])
+@require_auth
+@rate_limit(limit=5, window=60, per='endpoint')
+def cleanup_execution_store():
+    """
+    手动清理 execution_store（管理员接口）
+
+    【P0 关键修复 - 2026-03-05】
+    解决 execution_store 内存泄漏问题：
+    1. 已完成/失败的任务状态永久驻留内存
+    2. 长时间运行后内存持续增长
+    3. 提供手动清理接口作为自动清理的补充
+
+    请求参数:
+    - immediate: bool - 是否立即清理（忽略 TTL）
+    - max_age_minutes: int - 最大保留时间（分钟）
+
+    返回:
+    - 清理结果统计
+    """
+    try:
+        data = request.get_json() or {}
+        immediate = data.get('immediate', False)
+        max_age_minutes = data.get('max_age_minutes', 10)
+
+        from wechat_backend.state_manager import get_state_manager
+
+        # 获取状态管理器
+        state_manager = get_state_manager(execution_store)
+
+        # 执行清理
+        if immediate:
+            # 立即清理所有已完成/失败的任务
+            cleaned_count = 0
+            current_time = datetime.now()
+
+            for execution_id in list(state_manager.execution_store.keys()):
+                state = state_manager.execution_store.get(execution_id, {})
+                is_completed = state.get('is_completed', False) or state.get('status') in ['completed', 'failed']
+
+                if is_completed:
+                    # 检查是否超过最大保留时间
+                    updated_at_str = state.get('updated_at', '')
+                    if updated_at_str:
+                        try:
+                            updated_at = datetime.fromisoformat(updated_at_str)
+                            age_minutes = (current_time - updated_at).total_seconds() / 60
+
+                            if age_minutes >= max_age_minutes:
+                                if execution_id in state_manager.execution_store:
+                                    del state_manager.execution_store[execution_id]
+                                if execution_id in state_manager.state_snapshots:
+                                    del state_manager.state_snapshots[execution_id]
+                                cleaned_count += 1
+                        except (ValueError, TypeError):
+                            pass
+
+            api_logger.info(
+                f"[API] 手动清理 execution_store: 清理了 {cleaned_count} 个项目，"
+                f"当前内存任务数={len(state_manager.execution_store)}"
+            )
+        else:
+            # 使用默认清理逻辑（遵循 TTL）
+            cleaned_count = state_manager._cleanup_completed_states()
+
+        # 获取清理后的状态
+        cleanup_status = state_manager.get_cleanup_status()
+
+        return jsonify({
+            'status': 'success',
+            'message': 'execution_store 清理完成',
+            'data': {
+                'cleaned_count': cleaned_count,
+                'remaining_tasks': cleanup_status['total_tasks_in_memory'],
+                'memory_utilization': cleanup_status['memory_utilization'],
+                'health_status': cleanup_status['health_status'],
+                'cleanup_policy': 'immediate' if immediate else 'ttl_based'
+            }
+        }), 200
+
+    except Exception as e:
+        api_logger.error(f"清理 execution_store 失败：{e}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+
+@wechat_bp.route('/api/admin/execution-store/status', methods=['GET'])
+@require_auth
+@rate_limit(limit=10, window=60, per='endpoint')
+def get_execution_store_status():
+    """
+    获取 execution_store 状态（管理员接口）
+
+    返回:
+    - 内存任务数
+    - 内存利用率
+    - 清理统计
+    """
+    try:
+        from wechat_backend.state_manager import get_state_manager
+
+        state_manager = get_state_manager(execution_store)
+        cleanup_status = state_manager.get_cleanup_status()
+
+        # 获取任务分布
+        status_distribution = {}
+        for execution_id, state in state_manager.execution_store.items():
+            status = state.get('status', 'unknown')
+            status_distribution[status] = status_distribution.get(status, 0) + 1
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                **cleanup_status,
+                'status_distribution': status_distribution,
+                'timestamp': datetime.now().isoformat()
+            }
+        }), 200
+
+    except Exception as e:
+        api_logger.error(f"获取 execution_store 状态失败：{e}", exc_info=True)
+        return jsonify({
+            'status': 'error',
             'error': str(e)
         }), 500

@@ -49,18 +49,7 @@ class RealtimePushService:
                 api_logger.warning("[RealtimePush] WebSocket 服务不可用")
                 self._ws_service = None
         return self._ws_service
-    
-    def _get_sse_manager(self):
-        """懒加载 SSE 管理器（向后兼容）"""
-        if self._sse_manager is None:
-            try:
-                from wechat_backend.services.sse_service import get_sse_manager
-                self._sse_manager = get_sse_manager()
-            except ImportError:
-                api_logger.debug("[RealtimePush] SSE 管理器不可用")
-                self._sse_manager = None
-        return self._sse_manager
-    
+
     def _get_wechat_notifier(self):
         """懒加载微信通知器"""
         if self._wechat_notifier is None:
@@ -71,7 +60,18 @@ class RealtimePushService:
                 api_logger.debug("[RealtimePush] 微信通知器不可用")
                 self._wechat_notifier = None
         return self._wechat_notifier
-    
+
+    def _get_sse_manager(self):
+        """懒加载 SSE 管理器"""
+        if self._sse_manager is None:
+            try:
+                from wechat_backend.services.sse_manager import get_sse_manager
+                self._sse_manager = get_sse_manager()
+            except ImportError:
+                api_logger.debug("[RealtimePush] SSE 管理器不可用")
+                self._sse_manager = None
+        return self._sse_manager
+
     async def send_progress(
         self,
         execution_id: str,
@@ -114,21 +114,8 @@ class RealtimePushService:
                 api_logger.debug(f"[RealtimePush] ✅ WebSocket 推送：{execution_id}, {progress}%")
             except Exception as e:
                 api_logger.warning(f"[RealtimePush] ⚠️ WebSocket 推送失败：{e}")
-        
-        # 2. SSE 推送（Web 管理后台，向后兼容）
-        sse_manager = self._get_sse_manager()
-        if sse_manager:
-            try:
-                sse_manager.broadcast(
-                    execution_id=execution_id,
-                    event_type='progress',
-                    data=message
-                )
-                api_logger.debug(f"[RealtimePush] ✅ SSE 推送：{execution_id}, {progress}%")
-            except Exception as e:
-                api_logger.debug(f"[RealtimePush] ⚠️ SSE 推送失败：{e}")
-        
-        # 3. 微信模板消息（关键阶段）
+
+        # 2. 微信模板消息（关键阶段）
         if user_openid and self._should_send_wechat_notification(stage, progress):
             wechat_notifier = self._get_wechat_notifier()
             if wechat_notifier:

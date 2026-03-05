@@ -163,19 +163,21 @@ class DiagnosisTransaction:
             self.error = str(exc_val)
             api_logger.error(
                 f"[Transaction] 事务执行失败：{self.execution_id}, "
-                f"错误：{self.error}"
+                f"错误类型：{exc_type.__name__}, 错误：{self.error}"
             )
 
             if self.auto_rollback:
-                self.rollback()
-            else:
-                db_logger.warning(
-                    f"[Transaction] 事务失败但未回滚（auto_rollback=False）: "
-                    f"{self.execution_id}"
-                )
+                try:
+                    self.rollback()
+                except Exception as rollback_error:
+                    db_logger.warning(
+                        f"[Transaction] 回滚失败：{self.execution_id}, "
+                        f"错误：{rollback_error}"
+                    )
 
             self.status = "failed"
             # 不抑制异常，返回 False
+            # 这样调用者可以捕获并处理异常
             return False
         else:
             # 执行成功
@@ -191,7 +193,10 @@ class DiagnosisTransaction:
         config: Dict[str, Any]
     ) -> int:
         """
-        创建诊断报告（事务操作）
+        创建或获取诊断报告（事务操作）
+
+        如果报告已存在（由 Phase 1 创建），则返回现有报告 ID
+        如果报告不存在，则创建新报告
 
         参数:
             user_id: 用户 ID
@@ -201,6 +206,18 @@ class DiagnosisTransaction:
             report_id: 报告 ID
         """
         self._init_dependencies()
+
+        # 检查报告是否已存在（避免与 Phase 1 创建的记录冲突）
+        existing = self._report_repo.get_by_execution_id(self.execution_id)
+        
+        if existing:
+            # 报告已存在（可能由 Phase 1 创建），直接返回
+            report_id = existing['id']
+            db_logger.info(
+                f"[Transaction] 报告已存在，使用现有记录：{self.execution_id}, "
+                f"report_id={report_id}"
+            )
+            return report_id
 
         # 执行创建
         report_id = self._report_service.create_report(
@@ -274,33 +291,52 @@ class DiagnosisTransaction:
     def add_results_batch(
         self,
         report_id: int,
-        results: List[Dict[str, Any]]
+        results: List[Dict[str, Any]],
+        batch_size: int = 10  # 【P0 新增】分批大小，默认每批 10 条
     ) -> List[int]:
         """
         批量添加诊断结果（事务操作）
 
+        【P0 修复 - 2026-03-05】支持分批提交，减少连接持有时间
+
         参数:
             report_id: 报告 ID
             results: 结果列表
+            batch_size: 每批数量（默认 10 条）
 
         返回:
             result_ids: 结果 ID 列表
         """
         self._init_dependencies()
 
-        # 执行批量添加
-        result_ids = self._report_service.add_results_batch(
-            report_id,
-            self.execution_id,
-            results
-        )
+        # 【P0 修复】分批执行
+        all_result_ids = []
+        total_batches = (len(results) + batch_size - 1) // batch_size if results else 0
+
+        for i in range(0, len(results), batch_size):
+            batch = results[i:i + batch_size]
+            batch_num = (i // batch_size) + 1
+
+            # 执行批量添加（每批独立提交）
+            batch_result_ids = self._report_service.add_results_batch(
+                report_id,
+                self.execution_id,
+                batch,
+                commit=True  # 每批都提交
+            )
+            all_result_ids.extend(batch_result_ids)
+
+            db_logger.info(
+                f"[Transaction] 批量添加结果：batch={batch_num}/{total_batches}, "
+                f"count={len(batch)}, total={len(all_result_ids)}"
+            )
 
         # 定义回滚函数（批量删除）
         def rollback_add_results_batch():
             db_logger.info(
-                f"[Transaction] 回滚：批量删除结果 count={len(result_ids)}"
+                f"[Transaction] 回滚：批量删除结果 count={len(all_result_ids)}"
             )
-            for rid in result_ids:
+            for rid in all_result_ids:
                 try:
                     self._result_repo.delete(rid)
                 except Exception as e:
@@ -313,17 +349,19 @@ class DiagnosisTransaction:
             op_type=OperationType.ADD_RESULTS_BATCH,
             data={
                 'report_id': report_id,
-                'result_ids': result_ids,
-                'count': len(results)
+                'result_ids': all_result_ids,
+                'count': len(results),
+                'batches': total_batches
             },
             rollback_func=rollback_add_results_batch,
-            description=f"批量添加结果：count={len(results)}"
+            description=f"批量添加结果：count={len(results)}, batches={total_batches}"
         )
 
         db_logger.info(
-            f"[Transaction] 操作完成：批量添加结果 count={len(results)}"
+            f"[Transaction] 操作完成：批量添加结果 count={len(results)}, "
+            f"batches={total_batches}"
         )
-        return result_ids
+        return all_result_ids
 
     def add_analysis(
         self,
@@ -632,9 +670,24 @@ def transaction_context(
     try:
         with tx:
             yield tx
-    except Exception:
-        # 异常已由 __exit__ 处理
+    except Exception as e:
+        # 异常已由 DiagnosisTransaction.__exit__ 处理（回滚等）
+        # 重新抛出异常，让调用者知道操作失败
+        api_logger.error(
+            f"[Transaction] 上下文管理器捕获异常：{execution_id}, "
+            f"错误类型：{type(e).__name__}, 错误：{e}"
+        )
         raise
+    finally:
+        # 【P0 关键修复 - 2026-03-05】确保生成器正常结束，防止 generator didn't stop
+        # 清理任何未释放的资源
+        try:
+            if hasattr(tx, '_cleanup'):
+                tx._cleanup()
+        except Exception as cleanup_error:
+            api_logger.warning(
+                f"[Transaction] 清理失败：{execution_id}, 错误：{cleanup_error}"
+            )
 
 
 # ========== 便捷函数 ==========

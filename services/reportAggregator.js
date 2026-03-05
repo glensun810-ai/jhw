@@ -185,7 +185,7 @@ const calculateFirstMentionByPlatform = (results) => {
   });
 
   return Object.values(platformStats).map(stats => ({
-    platform,
+    platform: stats.platform,
     rate: stats.total > 0 ? Math.round((stats.firstMention / stats.total) * 100) : 0,
     firstMention: stats.firstMention,
     total: stats.total

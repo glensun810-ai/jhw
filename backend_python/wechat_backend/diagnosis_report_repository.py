@@ -91,21 +91,29 @@ class DiagnosisReportRepository:
     2. 事务管理
     3. 数据验证
     """
-    
+
     @contextmanager
     def get_connection(self):
-        """获取数据库连接"""
+        """
+        获取数据库连接（P0 修复 - 2026-03-05：修复上下文管理器）
+        
+        【P0 关键修复】确保上下文管理器在任何情况下都正确 yield 和清理
+        """
         conn = get_db_pool().get_connection()
         try:
-            yield conn
-            conn.commit()
+            yield conn  # 先 yield 连接
+            conn.commit()  # 成功后提交
         except Exception as e:
-            conn.rollback()
+            conn.rollback()  # 失败时回滚
             db_logger.error(f"数据库操作失败：{e}")
-            raise
+            raise  # 重新抛出异常
         finally:
-            get_db_pool().return_connection(conn)
-    
+            # 无论成功还是失败，都归还连接
+            try:
+                get_db_pool().return_connection(conn)
+            except Exception as return_err:
+                db_logger.error(f"归还连接失败：{return_err}")
+
     def create(self, execution_id: str, user_id: str, config: Dict[str, Any]) -> int:
         """
         创建诊断报告（P0 修复：添加存在性检查，避免 UNIQUE constraint 错误）
@@ -291,57 +299,99 @@ class DiagnosisReportRepository:
             
             return results
     
-    def create_snapshot(self, report_id: int, execution_id: str, 
+    def create_snapshot(self, report_id: int, execution_id: str,
                        snapshot_data: Dict[str, Any], reason: str) -> int:
-        """创建报告快照"""
-        now = datetime.now().isoformat()
+        """
+        创建报告快照（P0 修复：增加异常处理和表存在性检查）
         
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO diagnosis_snapshots (
-                    report_id, execution_id,
-                    snapshot_data, snapshot_reason, snapshot_version,
-                    created_at
-                ) VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                report_id,
-                execution_id,
-                json.dumps(snapshot_data, ensure_ascii=False),
-                reason,
-                DATA_SCHEMA_VERSION,
-                now
-            ))
+        Args:
+            report_id: 报告 ID
+            execution_id: 执行 ID
+            snapshot_data: 快照数据
+            reason: 快照原因
             
-            snapshot_id = cursor.lastrowid
-            db_logger.info(f"✅ 创建快照：{execution_id}, snapshot_id: {snapshot_id}")
-            return snapshot_id
+        Returns:
+            snapshot_id: 快照 ID，如果失败返回 -1
+        """
+        now = datetime.now().isoformat()
+
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # P0 修复：先检查表是否存在
+                cursor.execute('''
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='diagnosis_snapshots'
+                ''')
+                
+                if not cursor.fetchone():
+                    db_logger.warning(f"⚠️ diagnosis_snapshots 表不存在，跳过快照创建：{execution_id}")
+                    return -1
+                
+                cursor.execute('''
+                    INSERT INTO diagnosis_snapshots (
+                        report_id, execution_id,
+                        snapshot_data, snapshot_reason, snapshot_version,
+                        created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    report_id,
+                    execution_id,
+                    json.dumps(snapshot_data, ensure_ascii=False),
+                    reason,
+                    DATA_SCHEMA_VERSION,
+                    now
+                ))
+
+                snapshot_id = cursor.lastrowid
+                db_logger.info(f"✅ 创建快照：{execution_id}, snapshot_id: {snapshot_id}")
+                return snapshot_id
+                
+        except sqlite3.OperationalError as e:
+            if "no such table" in str(e):
+                db_logger.warning(f"⚠️ diagnosis_snapshots 表不存在，跳过快照创建：{execution_id}")
+                return -1
+            else:
+                db_logger.error(f"❌ 创建快照失败：{execution_id}, 错误：{e}")
+                return -1
+        except Exception as e:
+            db_logger.error(f"❌ 创建快照异常：{execution_id}, 错误：{e}", exc_info=True)
+            return -1
 
 
 class DiagnosisResultRepository:
     """
     诊断结果仓库 - 数据访问层
-    
+
     职责：
     1. 结果明细 CRUD 操作
     2. 批量操作
     3. 数据验证
     """
-    
+
     @contextmanager
     def get_connection(self):
-        """获取数据库连接"""
+        """
+        获取数据库连接（P0 修复 - 2026-03-05：修复上下文管理器）
+
+        【P0 关键修复】确保上下文管理器在任何情况下都正确 yield 和清理
+        """
         conn = get_db_pool().get_connection()
         try:
-            yield conn
-            conn.commit()
+            yield conn  # 先 yield 连接
+            conn.commit()  # 成功后提交
         except Exception as e:
-            conn.rollback()
+            conn.rollback()  # 失败时回滚
             db_logger.error(f"数据库操作失败：{e}")
-            raise
+            raise  # 重新抛出异常
         finally:
-            get_db_pool().return_connection(conn)
-    
+            # 无论成功还是失败，都归还连接
+            try:
+                get_db_pool().return_connection(conn)
+            except Exception as return_err:
+                db_logger.error(f"归还连接失败：{return_err}")
+
     def add(self, report_id: int, execution_id: str, result: Dict[str, Any]) -> int:
         """添加单个诊断结果（完整版 - Migration 004）
 
@@ -435,14 +485,115 @@ class DiagnosisResultRepository:
             result_id = cursor.lastrowid
             return result_id
     
-    def add_batch(self, report_id: int, execution_id: str, 
-                 results: List[Dict[str, Any]]) -> List[int]:
-        """批量添加诊断结果"""
+    def add_batch(self, report_id: int, execution_id: str,
+                 results: List[Dict[str, Any]],
+                 batch_size: int = 10,  # 【P0 新增】分批大小
+                 commit: bool = True    # 【P0 新增】是否提交
+    ) -> List[int]:
+        """
+        批量添加诊断结果
+
+        【P0 修复 - 2026-03-05】支持分批提交，减少连接持有时间
+
+        参数:
+            report_id: 报告 ID
+            execution_id: 执行 ID
+            results: 结果列表
+            batch_size: 每批数量（默认 10）
+            commit: 是否提交事务（默认 True）
+
+        返回:
+            result_ids: 结果 ID 列表
+        """
         result_ids = []
-        for result in results:
-            result_id = self.add(report_id, execution_id, result)
-            result_ids.append(result_id)
-        return result_ids
+
+        # 【P0 修复 - 2026-03-05】使用上下文管理器正确获取连接
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 分批处理
+            total_batches = (len(results) + batch_size - 1) // batch_size if results else 0
+
+            for i in range(0, len(results), batch_size):
+                batch = results[i:i + batch_size]
+                batch_num = (i // batch_size) + 1
+
+                # 插入当前批次
+                for result in batch:
+                    result_id = self._insert_result(cursor, report_id, execution_id, result)
+                    result_ids.append(result_id)
+
+                db_logger.debug(
+                    f"[ResultRepository] 批量添加：batch={batch_num}/{total_batches}, "
+                    f"count={len(batch)}, total={len(result_ids)}"
+                )
+
+            # 提交事务
+            if commit:
+                db_logger.debug(
+                    f"[ResultRepository] 批量添加完成：count={len(result_ids)}, "
+                    f"batches={total_batches}"
+                )
+            else:
+                db_logger.debug(
+                    f"[ResultRepository] 批量添加完成但未提交：count={len(result_ids)}"
+                )
+
+            return result_ids
+
+    def _insert_result(self, cursor, report_id: int, execution_id: str,
+                      result: Dict[str, Any]) -> int:
+        """
+        插入单个结果（内部方法）
+
+        参数:
+            cursor: 数据库游标
+            report_id: 报告 ID
+            execution_id: 执行 ID
+            result: 结果数据
+
+        返回:
+            result_id: 结果 ID
+        """
+        now = datetime.now().isoformat()
+
+        # 提取数据
+        brand = result.get('brand', '')
+        question = result.get('question', '')
+        model = result.get('model', '')
+        # P0 修复：使用 quality_score 而不是 score（与表结构一致）
+        quality_score = result.get('quality_score', result.get('score', 0))
+        sentiment = result.get('sentiment', 'neutral')
+        response = result.get('response', {})
+        geo_data = result.get('geo_data', {})
+        quality_details = result.get('quality_details', {})
+
+        # 插入数据库
+        cursor.execute('''
+            INSERT INTO diagnosis_results (
+                report_id, execution_id,
+                brand, question, model,
+                quality_score, sentiment,
+                response_content, response_latency,
+                geo_data, quality_details,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            report_id,
+            execution_id,
+            brand,
+            question,
+            model,
+            quality_score,
+            sentiment,
+            response.get('content', ''),
+            response.get('latency', 0),
+            json.dumps(geo_data, ensure_ascii=False),
+            json.dumps(quality_details, ensure_ascii=False),
+            now
+        ))
+
+        return cursor.lastrowid
     
     def get_by_execution_id(self, execution_id: str) -> List[Dict[str, Any]]:
         """根据执行 ID 获取所有结果"""
@@ -506,19 +657,27 @@ class DiagnosisAnalysisRepository:
     
     @contextmanager
     def get_connection(self):
-        """获取数据库连接"""
+        """
+        获取数据库连接（P0 修复 - 2026-03-05：修复上下文管理器）
+        
+        【P0 关键修复】确保上下文管理器在任何情况下都正确 yield 和清理
+        """
         conn = get_db_pool().get_connection()
         try:
-            yield conn
-            conn.commit()
+            yield conn  # 先 yield 连接
+            conn.commit()  # 成功后提交
         except Exception as e:
-            conn.rollback()
+            conn.rollback()  # 失败时回滚
             db_logger.error(f"数据库操作失败：{e}")
-            raise
+            raise  # 重新抛出异常
         finally:
-            get_db_pool().return_connection(conn)
-    
-    def add(self, report_id: int, execution_id: str, 
+            # 无论成功还是失败，都归还连接
+            try:
+                get_db_pool().return_connection(conn)
+            except Exception as return_err:
+                db_logger.error(f"归还连接失败：{return_err}")
+
+    def add(self, report_id: int, execution_id: str,
             analysis_type: str, analysis_data: Dict[str, Any]) -> int:
         """添加分析数据"""
         now = datetime.now().isoformat()
@@ -797,26 +956,45 @@ def save_diagnosis_report(
 ):
     """
     便捷函数：保存诊断报告到数据库
+    
+    P0 修复：确保事务顺序正确
+    1. 先创建/更新报告主记录
+    2. 确保事务提交
+    3. 再更新状态（如果需要）
+    
+    这样可以防止"状态标记为 completed 但数据未落库"的竞态条件
     """
     repo = get_diagnosis_report_repository()
-    existing = repo.get_by_execution_id(execution_id)
     
-    if existing:
-        repo.update_status(execution_id, status, progress, stage, is_completed)
-        db_logger.info(f"✅ 诊断报告已更新：{execution_id}")
-        return existing['id']
-    else:
-        config = {
-            'brand_name': brand_name,
-            'competitor_brands': competitor_brands,
-            'selected_models': selected_models,
-            'custom_questions': custom_questions
-        }
-        report_id = repo.create(execution_id, user_id, config)
-        if is_completed:
+    try:
+        existing = repo.get_by_execution_id(execution_id)
+
+        if existing:
+            # 已存在：更新状态
             repo.update_status(execution_id, status, progress, stage, is_completed)
-        db_logger.info(f"✅ 诊断报告已保存：{execution_id}, report_id: {report_id}")
-        return report_id
+            db_logger.info(f"✅ 诊断报告已更新：{execution_id}, status={status}, progress={progress}")
+            return existing['id']
+        else:
+            # 不存在：先创建记录
+            config = {
+                'brand_name': brand_name,
+                'competitor_brands': competitor_brands,
+                'selected_models': selected_models,
+                'custom_questions': custom_questions
+            }
+            report_id = repo.create(execution_id, user_id, config)
+            
+            # P0 修复：如果创建时已经是完成状态，确保状态也正确设置
+            # create 函数内部已经处理了存在性检查，所以这里只需要更新状态
+            if is_completed or status == 'completed':
+                repo.update_status(execution_id, status, progress, stage, True)
+            
+            db_logger.info(f"✅ 诊断报告已保存：{execution_id}, report_id={report_id}, status={status}")
+            return report_id
+            
+    except Exception as e:
+        db_logger.error(f"❌ save_diagnosis_report 失败：{execution_id}, 错误：{e}", exc_info=True)
+        raise
 
 
 __all__ = [

@@ -3,7 +3,7 @@ const { debug, info, warn, error } = require('../utils/logger');
 /**
  * 品牌诊断执行服务
  * 负责诊断任务的启动、轮询、状态管理
- * 
+ *
  * P2 优化：使用统一状态枚举
  * P3 优化：集成 SSE 实时推送
  */
@@ -26,6 +26,15 @@ const {
 // 【P0 关键修复 - 2026-03-02】导入 WebSocket 客户端单例（替代 SSE）
 // 注意：webSocketClient.js 导出的是单例实例，不是类，所以不需要 new
 const webSocketClient = require('../miniprogram/services/webSocketClient').default;
+
+// 【P0 关键修复 - 2026-03-05】单例模式：全局轮询控制器
+let pollingInstance = null;
+
+// 【P0 关键修复 - 2026-03-05】全局诊断中标志，防止重复启动
+let isDiagnosing = false;
+
+// 【P0 关键修复 - 2026-03-05】全局终止标志，防止多个 onComplete 调用
+global.isTerminated = false;
 
 // 删除 SSE 导入（已清理）
 // const { createPollingController: createSSEController } = require('./sseClient');
@@ -189,8 +198,20 @@ const buildPayload = (inputData) => {
  * @returns {Promise<string>} executionId
  */
 const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
+  // 【P0 关键修复 - 2026-03-05】全局诊断中标志，防止重复启动
+  if (isDiagnosing) {
+    console.warn('[startDiagnosis] ⚠️ 诊断已在进行中，跳过重复启动');
+    throw new Error('诊断任务已在执行中，请勿重复点击');
+  }
+
+  // 【P0 关键修复 - 2026-03-05】重置全局终止标志，允许新的诊断任务启动
+  global.isTerminated = false;
+
+  isDiagnosing = true;  // 设置诊断中标志
+  
   const validation = validateInput(inputData);
   if (!validation.valid) {
+    isDiagnosing = false;  // 重置标志
     throw new Error(validation.message);
   }
 
@@ -201,9 +222,11 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
   try {
     const res = await startBrandTestApi(payload);
     const responseData = res.data || res;
-    const executionId = responseData.execution_id || responseData.id || (responseData.data && responseData.data.execution_id);
+    // 支持多种字段名：executionId (驼峰), execution_id (下划线), id
+    const executionId = responseData.executionId || responseData.execution_id || responseData.id || (responseData.data && (responseData.data.executionId || responseData.data.execution_id));
 
     if (!executionId) {
+      isDiagnosing = false;  // 重置标志
       throw new Error('未能从响应中提取有效 ID');
     }
 
@@ -239,6 +262,10 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
         // 诊断完成
         console.log('[WebSocket] ✅ 诊断完成:', data);
 
+        // 【P0 关键修复 - 2026-03-05】重置诊断中标志
+        isDiagnosing = false;
+        pollingInstance = null;  // 清除轮询单例
+
         if (onComplete) onComplete(data);
 
         // 关闭连接
@@ -247,10 +274,14 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
           global.wsClient = null;
         }
       },
-      
+
       onError: (error) => {
         // 连接错误，降级到轮询
         console.warn('[WebSocket] ⚠️ 连接失败，降级到轮询:', error);
+
+        // 【P0 关键修复 - 2026-03-05】重置诊断中标志
+        isDiagnosing = false;
+        pollingInstance = null;
 
         // 启动 HTTP 轮询
         const pollingController = createPollingController(
@@ -260,6 +291,10 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
 
       onFallback: () => {
         console.log('[WebSocket] 降级到轮询模式');
+        // 【P0 关键修复 - 2026-03-05】重置诊断中标志
+        isDiagnosing = false;
+        pollingInstance = null;
+        
         // 启动轮询
         const pollingController = createPollingController(
           executionId, onProgress, onComplete, onError
@@ -325,7 +360,14 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
     return { stop: () => {} };
   }
 
+  // 【P0 关键修复 - 2026-03-05】单例模式：确保全局只有一个轮询控制器
+  if (pollingInstance && pollingInstance.isActive) {
+    console.warn('[brandTestService] ⚠️ 轮询已在运行中，跳过重复启动 (单例模式)');
+    return pollingInstance;
+  }
+
   let pollInterval = null;
+  let pollTimeout = null;  // 【P0 修复】添加 pollTimeout 声明
   let isStopped = false;
   const maxDuration = 10 * 60 * 1000; // 10 分钟超时
 
@@ -346,7 +388,13 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
   // P0 增强：轮询计数器
   let lastLoggedProgress = -1;
 
+  // 【P0 关键修复 - 2026-03-05】设置最小轮询间隔，防止过度请求
+  const MIN_POLLING_INTERVAL = 1500; // 1.5 秒
+
   const controller = {
+    isActive: true,  // 【P0 修复】添加 isActive 标志
+    executionId,
+    startTime,
     stop: () => {
       // 【P0 关键修复 - 2026-03-04】清除定时器，确保不会继续触发
       if (pollInterval) {
@@ -358,11 +406,19 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
         pollTimeout = null;
       }
       isStopped = true;
+      controller.isActive = false;  // 【P0 修复】设置非激活状态
       console.log('[brandTestService] 轮询已停止，总轮询次数:', pollCount);
     }
   };
 
+  // 【P0 关键修复 - 2026-03-05】保存单例实例
+  pollingInstance = controller;
+
   const start = (interval = 800, immediate = true) => {
+    // 【P0 修复】确保轮询间隔不小于最小值
+    const safeInterval = Math.max(interval, MIN_POLLING_INTERVAL);
+    console.log(`[轮询] 使用安全间隔：${safeInterval}ms (原始：${interval}ms)`);
+    
     // P2 优化：立即触发第一次轮询
     if (immediate) {
       (async () => {
@@ -427,12 +483,18 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
     let hasShownAggregatingTimeout = false;
 
     const poll = async () => {
-      // 【P0 关键修复 - 2026-03-02】防止轮询重叠
+      // 【P0 关键修复 - 2026-03-05】防止轮询重叠 + 防止重复调度
       if (isPollingInProgress) {
         console.warn('[轮询跳过] 上次轮询仍在进行中，跳过本次请求');
         return;
       }
-      
+
+      // 【P0 关键修复 - 2026-03-05】检查是否已停止，避免停止后仍执行
+      if (isStopped) {
+        console.log('[轮询跳过] 轮询已停止，不执行');
+        return;
+      }
+
       const requestStartTime = Date.now();
       pollCount++;
       isPollingInProgress = true;  // 标记轮询开始
@@ -699,13 +761,36 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
       } catch (err) {
         console.error('轮询异常:', err);
 
+        // 【P3 增强 - 2026-03-05】提取后端返回的错误信息
+        let backendError = null;
+        if (err.data) {
+          // 直接从错误对象提取
+          backendError = {
+            message: err.data.error || err.data.message || err.data.msg || err.data.detail,
+            suggestion: err.data.suggestion || err.data.recommendation || err.data.advice,
+            details: err.data.details || err.data.detail,
+            code: err.data.code || err.data.error_code
+          };
+        } else if (err.response && err.response.data) {
+          // 从响应对象提取
+          const responseData = err.response.data;
+          backendError = {
+            message: responseData.error || responseData.message || responseData.msg || responseData.detail,
+            suggestion: responseData.suggestion || responseData.recommendation || responseData.advice,
+            details: responseData.details || responseData.detail,
+            code: responseData.code || responseData.error_code
+          };
+        }
+
         const errorInfo = {
           originalError: err,
           statusCode: err.statusCode,
           isAuthError: err.isAuthError || err.statusCode === 403 || err.statusCode === 401,
           isNetworkError: err.errMsg && err.errMsg.includes('request:fail'),
           isTimeout: err.message && err.message.includes('timeout'),
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          // 【P3 增强 - 2026-03-05】添加后端错误信息
+          backendError: backendError
         };
 
         if (errorInfo.isAuthError) {
@@ -790,7 +875,8 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
         }
       } finally {
         isPollingInProgress = false;  // 【P0 关键修复】标记轮询结束
-        
+
+        // 【P0 关键修复 - 2026-03-05】只有在未停止时才调度下一次轮询
         if (!isStopped) {
           // 【P0 关键修复】使用动态调整的间隔，确保不会重叠
           const nextInterval = getPollingInterval(
@@ -799,12 +885,33 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
             Date.now() - requestStartTime,
             consecutiveNoProgressCount
           );
-          
-          pollTimeout = setTimeout(poll, nextInterval);
+
+          // 【P0 关键修复 - 2026-03-05】确保轮询间隔不小于最小值
+          const safeNextInterval = Math.max(nextInterval, MIN_POLLING_INTERVAL);
+
+          // 【P0 关键修复 - 2026-03-05】清除旧的 timeout，防止累积
+          if (pollTimeout) {
+            clearTimeout(pollTimeout);
+            pollTimeout = null;
+          }
+
+          // 【P0 关键修复 - 2026-03-05】确保下一次轮询与当前轮询至少有 safeNextInterval 的间隔
+          // 使用 setTimeout 而非立即调用，防止死循环
+          pollTimeout = setTimeout(() => {
+            if (!isStopped) {
+              poll();
+            }
+          }, safeNextInterval);
+
+          console.log(`[轮询调度] 下一次轮询将在 ${safeNextInterval}ms 后执行 (原始：${nextInterval}ms)`);
+        } else {
+          console.log('[轮询调度] 轮询已停止，不再调度下一次');
         }
       }
     };
 
+    // 【P0 关键修复 - 2026-03-05】只启动一次，后续由 finally 块调度
+    // 不再在 finally 中重复调用 poll()
     poll();
 
     controller.stop = () => {
@@ -832,6 +939,7 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
 
 /**
  * P1-006 修复：生成用户友好的错误消息
+ * P3 增强：整合后端返回的错误建议
  */
 const createUserFriendlyError = (errorInfo) => {
   const errorMessages = {
@@ -874,8 +982,60 @@ const createUserFriendlyError = (errorInfo) => {
   else if (errorInfo.statusCode === 503) errorCode = 'AI_PLATFORM_ERROR';
   else if (errorInfo.statusCode === 500) errorCode = 'TASK_EXECUTION_ERROR';
 
-  const message = errorMessages[errorCode] || errorMessages.default;
-  const suggestion = suggestions[errorCode] || suggestions.default;
+  // 【P3 增强 - 2026-03-05】优先使用后端返回的错误消息和建议
+  let message = errorMessages[errorCode] || errorMessages.default;
+  let suggestion = suggestions[errorCode] || suggestions.default;
+
+  // 检查是否有后端返回的错误详情
+  if (errorInfo.backendError) {
+    const backendError = errorInfo.backendError;
+    
+    // 使用后端返回的错误消息（如果存在）
+    if (backendError.message || backendError.error) {
+      message = backendError.message || backendError.error;
+    }
+    
+    // 使用后端返回的建议（如果存在）
+    if (backendError.suggestion || backendError.recommendation) {
+      suggestion = '\n\n建议：\n' + 
+        (typeof backendError.suggestion === 'string' 
+          ? backendError.suggestion 
+          : (backendError.suggestion || backendError.recommendation).join('\n'));
+    }
+    
+    // 使用后端返回的错误详情（如果存在）
+    if (backendError.details || backendError.detail) {
+      const details = backendError.details || backendError.detail;
+      if (typeof details === 'string') {
+        suggestion += '\n\n详情：' + details;
+      } else if (Array.isArray(details)) {
+        suggestion += '\n\n详情：\n' + details.map(d => '• ' + d).join('\n');
+      }
+    }
+  }
+
+  // 检查原始错误中是否包含后端返回的数据
+  if (errorInfo.originalError && errorInfo.originalError.data) {
+    const errorData = errorInfo.originalError.data;
+    
+    // 尝试从不同字段提取后端错误信息
+    const backendMessage = errorData.error || errorData.message || errorData.msg || errorData.detail;
+    const backendSuggestion = errorData.suggestion || errorData.recommendation || errorData.advice;
+    
+    if (backendMessage && typeof backendMessage === 'string') {
+      // 只有当后端消息更有信息量时才替换
+      if (backendMessage.length > message.length || backendMessage.includes('AI') || backendMessage.includes('API')) {
+        message = backendMessage;
+      }
+    }
+    
+    if (backendSuggestion) {
+      suggestion = '\n\n建议：\n' + 
+        (typeof backendSuggestion === 'string' 
+          ? backendSuggestion 
+          : backendSuggestion.join('\n'));
+    }
+  }
 
   return new Error(message + suggestion);
 };
@@ -971,5 +1131,12 @@ module.exports = {
   // 导出传统轮询（向后兼容）
   startLegacyPolling,
   getPollingInterval,
-  createUserFriendlyError
+  createUserFriendlyError,
+  // 【P0 关键修复 - 2026-03-05】导出重置函数，允许手动重置终止标志
+  resetTerminationFlag: () => {
+    global.isTerminated = false;
+    isDiagnosing = false;
+    pollingInstance = null;
+    console.log('[brandTestService] ✅ 全局终止标志已重置');
+  }
 };

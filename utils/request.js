@@ -13,7 +13,10 @@
 const { debugLog, debugLogAiIo, debugLogStatusFlow, debugLogResults, debugLogException, ENABLE_DEBUG_AI_CODE } = require('./debug');
 const { API_ENDPOINTS } = require('./config');
 
+// =============================================================================
 // P1-5 优化：重试配置增强
+// =============================================================================
+
 const RETRY_CONFIG = {
   MAX_RETRIES: 3,           // 最大重试次数
   BASE_DELAY: 1000,         // 基础延迟 (ms)
@@ -33,6 +36,94 @@ const RETRY_CONFIG = {
   // P1-5 新增：超时配置
   TIMEOUT: 30000            // 请求超时 (ms)
 };
+
+// =============================================================================
+// P0 新增：全局连接失败计数器（防止无限重试弹窗）
+// =============================================================================
+
+// 全局连接失败计数（按 URL 分组）
+const CONNECTION_FAILURE_COUNTS = new Map();
+const CONNECTION_FAILURE_WINDOW = 300000; // 5 分钟时间窗口
+
+/**
+ * 记录连接失败
+ * @param {string} url - 请求 URL
+ * @returns {number} 当前失败次数
+ */
+const recordConnectionFailure = (url) => {
+  const baseUrl = extractBaseUrl(url);
+  const now = Date.now();
+  
+  if (!CONNECTION_FAILURE_COUNTS.has(baseUrl)) {
+    CONNECTION_FAILURE_COUNTS.set(baseUrl, { count: 0, lastFailTime: now });
+  }
+  
+  const record = CONNECTION_FAILURE_COUNTS.get(baseUrl);
+  
+  // 如果超过时间窗口，重置计数
+  if (now - record.lastFailTime > CONNECTION_FAILURE_WINDOW) {
+    record.count = 0;
+  }
+  
+  record.count += 1;
+  record.lastFailTime = now;
+  
+  return record.count;
+};
+
+/**
+ * 重置连接失败计数
+ * @param {string} url - 请求 URL
+ */
+const resetConnectionFailureCount = (url) => {
+  const baseUrl = extractBaseUrl(url);
+  CONNECTION_FAILURE_COUNTS.delete(baseUrl);
+};
+
+/**
+ * 从 URL 提取基础地址
+ * @param {string} url 
+ * @returns {string}
+ */
+const extractBaseUrl = (url) => {
+  try {
+    if (url.startsWith('http')) {
+      const urlObj = new URL(url);
+      return `${urlObj.protocol}//${urlObj.host}`;
+    }
+    return getBaseUrl();
+  } catch (e) {
+    return getBaseUrl();
+  }
+};
+
+/**
+ * 检查是否达到连接失败阈值
+ * @param {string} url - 请求 URL
+ * @returns {{shouldShowModal: boolean, failCount: number}}
+ */
+const checkConnectionFailureThreshold = (url) => {
+  const baseUrl = extractBaseUrl(url);
+  const record = CONNECTION_FAILURE_COUNTS.get(baseUrl);
+  
+  if (!record) {
+    return { shouldShowModal: false, failCount: 0 };
+  }
+  
+  // 如果超过时间窗口，不显示
+  if (Date.now() - record.lastFailTime > CONNECTION_FAILURE_WINDOW) {
+    return { shouldShowModal: false, failCount: 0 };
+  }
+  
+  return {
+    shouldShowModal: record.count >= 3,
+    failCount: record.count
+  };
+};
+
+// 全局弹窗标记，防止重复弹窗
+let isConnectionErrorModalShown = false;
+let connectionErrorModalTimer = null;
 
 const ENV_CONFIG = {
   develop: { baseURL: 'http://127.0.0.1:5001', timeout: 30000 },  // 开发环境默认端口（使用 5001 避免与 macOS Control Center 冲突）
@@ -82,7 +173,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  */
 const isRetryableError = (error, statusCode) => {
   if (!error) return false;
-  
+
   // P1-5 新增：根据 HTTP 状态码判断
   if (statusCode) {
     // 明确不重试的状态码
@@ -94,12 +185,36 @@ const isRetryableError = (error, statusCode) => {
       return true;
     }
   }
-  
+
   // 根据错误消息判断
   const errorMsg = String(error.errMsg || error.message || '');
   return RETRY_CONFIG.RETRYABLE_ERRORS.some(retryable =>
     errorMsg.toLowerCase().includes(retryable.toLowerCase())
   );
+};
+
+/**
+ * P0 新增：判断是否为网络连接异常
+ * @param {Error} error - 错误对象
+ * @returns {boolean}
+ */
+const isConnectionError = (error) => {
+  if (!error) return false;
+  
+  const errorMsg = String(error.errMsg || error.message || '').toLowerCase();
+  
+  // 连接拒绝、连接失败、网络错误等
+  const connectionErrorPatterns = [
+    'err_connection_refused',
+    'request:fail',
+    'network',
+    'connection refused',
+    'enotfound',
+    'econnrefused',
+    'timeout'
+  ];
+  
+  return connectionErrorPatterns.some(pattern => errorMsg.includes(pattern));
 };
 
 /**
@@ -292,25 +407,62 @@ const refreshToken = () => {
  */
 const requestWithRetry = async (options, retryCount = 0) => {
   const startTime = Date.now();
-  
+
   try {
     const result = await executeRequest(options);
-    
+
     // 记录成功请求的耗时
     const duration = Date.now() - startTime;
     if (duration > 1000) {
       console.log(`⚠️ 慢请求警告：${options.url} 耗时 ${duration}ms`);
     }
-    
+
+    // P0 新增：请求成功后重置连接失败计数
+    resetConnectionFailureCount(options.url);
+
     return result;
   } catch (error) {
     const errorType = classifyError(error, error.statusCode);
     const duration = Date.now() - startTime;
-    
+
     // Step 1: 403 错误不重试，立即返回
     if (error.statusCode === 403 || error.isAuthError) {
       console.error(`请求失败 (${error.statusCode})，不重试：${options.url}`);
       throw error;
+    }
+
+    // P0 新增：连接错误处理
+    if (isConnectionError(error)) {
+      const failCount = recordConnectionFailure(options.url);
+      const { shouldShowModal, failCount: currentCount } = checkConnectionFailureThreshold(options.url);
+
+      console.error(`[连接错误] ${options.url}, 失败次数：${currentCount}/${RETRY_CONFIG.MAX_RETRIES}`);
+
+      // P0 关键：连续 3 次连接失败，显示全局提示
+      if (shouldShowModal && !isConnectionErrorModalShown) {
+        isConnectionErrorModalShown = true;
+
+        // 清除之前的定时器（如果有）
+        if (connectionErrorModalTimer) {
+          clearTimeout(connectionErrorModalTimer);
+        }
+
+        wx.showModal({
+          title: '连接失败',
+          content: '无法连接到服务器，请检查后端服务是否启动或网络环境',
+          showCancel: false,
+          confirmText: '确定',
+          success: () => {
+            isConnectionErrorModalShown = false;
+          }
+        });
+
+        // 5 分钟后重置弹窗标记
+        connectionErrorModalTimer = setTimeout(() => {
+          isConnectionErrorModalShown = false;
+          resetConnectionFailureCount(options.url);
+        }, CONNECTION_FAILURE_WINDOW);
+      }
     }
 
     // P1-5 增强：判断是否可重试
@@ -330,12 +482,12 @@ const requestWithRetry = async (options, retryCount = 0) => {
 
     // 不可重试或已达最大重试次数，记录错误日志
     console.error(`请求最终失败 (${errorType}): ${options.url}, 耗时 ${duration}ms`);
-    
+
     // P1-5 新增：添加用户友好的错误消息
     if (!error.userMessage) {
       error.userMessage = getErrorUserMessage(errorType, retryCount);
     }
-    
+
     throw error;
   }
 };
@@ -541,5 +693,10 @@ module.exports = {
   isRetryableError,
   getRetryDelay,
   getErrorUserMessage,
-  RETRY_CONFIG
+  RETRY_CONFIG,
+  // P0 新增：导出连接错误处理函数
+  isConnectionError,
+  recordConnectionFailure,
+  resetConnectionFailureCount,
+  checkConnectionFailureThreshold
 };

@@ -4,6 +4,7 @@ from wechat_backend.logging_config import api_logger
 from wechat_backend.ai_adapters.base_adapter import AIClient, AIResponse, AIPlatformType, AIErrorType
 from wechat_backend.network.request_wrapper import get_ai_request_wrapper
 from wechat_backend.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
+from wechat_backend.ai_adapters.timeout_monitor import get_timeout_monitor
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -112,17 +113,49 @@ class DeepSeekAdapter(AIClient):
 
         Returns:
             AIResponse: 包含 DeepSeek 响应的统一数据结构
+
+        【P0 修复 - 2026-03-05】集成超时监控，实现熔断预警
         """
         # 记录请求开始时间以计算延迟
         start_time = time.time()
+        timeout_threshold = kwargs.get('timeout', 90)  # 获取超时阈值
+
+        # 【P0 修复】获取超时监控器
+        timeout_monitor = get_timeout_monitor()
 
         # 使用电路断路器保护 API 调用
         try:
             response = self.circuit_breaker.call(self._make_request_internal, prompt, **kwargs)
+
+            # 【P0 修复】记录成功请求
+            latency = time.time() - start_time
+            timeout_monitor.record_request(
+                platform='deepseek',
+                model=self.model_name,
+                duration=latency,
+                timeout_threshold=timeout_threshold,
+                success=True
+            )
+
+            # 【P0 修复】检查是否需要告警
+            if timeout_monitor.should_alert('deepseek'):
+                api_logger.warning(
+                    f"⚠️ [DeepSeek 熔断预警] 超时率过高，建议切换模型"
+                )
+
             return response
         except CircuitBreakerOpenError as e:
             error_message = f"DeepSeek 服务暂时不可用（熔断器开启）: {e}"
             api_logger.warning(error_message)
+
+            # 【P0 修复】记录熔断事件
+            timeout_monitor.record_request(
+                platform='deepseek',
+                model=self.model_name,
+                duration=0,
+                timeout_threshold=timeout_threshold,
+                success=False
+            )
 
             # Log failed response to enhanced logger with context
             execution_id = kwargs.get('execution_id', 'unknown')
@@ -147,6 +180,19 @@ class DeepSeekAdapter(AIClient):
                 platform=self.platform_type.value,
                 latency=0.0
             )
+        except Exception as e:
+            # 【P0 修复】记录失败请求
+            latency = time.time() - start_time
+            timeout_monitor.record_request(
+                platform='deepseek',
+                model=self.model_name,
+                duration=latency,
+                timeout_threshold=timeout_threshold,
+                success=False
+            )
+
+            # 重新抛出异常
+            raise
 
     def _make_request_internal(self, prompt: str, **kwargs) -> AIResponse:
         """

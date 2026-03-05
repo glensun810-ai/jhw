@@ -123,15 +123,24 @@ class DiagnosisReportRepository:
     def create_report(self, execution_id: str, user_id: str, config: Dict[str, Any]) -> int:
         """
         创建诊断报告（初始化）
-        
+
         参数:
         - execution_id: 执行 ID
         - user_id: 用户 ID
         - config: 诊断配置
-        
+
         返回:
         - report_id: 报告 ID
         """
+        # 【P2 优化 - 2026-03-04】先检查是否已存在，避免 UNIQUE constraint 错误
+        existing = self.get_report_by_execution_id(execution_id)
+        if existing:
+            db_logger.info(
+                f"⚠️ 诊断报告已存在，返回已有记录：{execution_id}, "
+                f"report_id: {existing['id']}"
+            )
+            return existing['id']
+
         now = datetime.now().isoformat()
         checksum = calculate_checksum({
             'execution_id': execution_id,

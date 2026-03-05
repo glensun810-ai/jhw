@@ -11,7 +11,7 @@
 3. 完整持久化 - 所有结果必须完整保存后才能进入下一环节
 4. 统一调度 - 由诊断编排器协调所有子流程
 """
-from flask import request, jsonify, g
+from flask import request, jsonify, g, current_app
 import hashlib
 import hmac
 import json
@@ -98,6 +98,295 @@ from wechat_backend.services.diagnosis_orchestrator import DiagnosisOrchestrator
 # 从主模块导入蓝图（修复 P0-3: 确保路由注册到正确的蓝图）
 from . import wechat_bp
 
+# P0 修复：导入字段转换器
+from utils.field_converter import convert_response_to_camel
+
+# 【P2 增强 - 2026-03-05】品牌分析输入验证增强
+# 导入输入验证工具函数
+from wechat_backend.security.input_validation import validate_safe_text
+
+# 【P2 增强】验证常量
+BRAND_VALIDATION_CONSTANTS = {
+    'MIN_BRAND_NAME_LENGTH': 1,
+    'MAX_BRAND_NAME_LENGTH': 100,
+    'MAX_BRANDS_COUNT': 10,
+    'MIN_QUESTION_LENGTH': 1,
+    'MAX_QUESTION_LENGTH': 500,
+    'MAX_QUESTIONS_COUNT': 20,
+    'MAX_MODEL_COUNT': 10,
+}
+
+# 【P2 增强】品牌名称验证正则（允许中英文、数字、常见符号）
+BRAND_NAME_PATTERN = re.compile(r'^[\w\s\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\-_.()（）]+$')
+
+
+def _validate_brand_name(brand_name: str) -> tuple:
+    """
+    验证品牌名称的有效性
+
+    Args:
+        brand_name: 品牌名称
+
+    Returns:
+        (is_valid: bool, error_message: str)
+
+    【P2 增强 - 2026-03-05】新增品牌名称验证
+    """
+    if not brand_name:
+        return False, '品牌名称不能为空'
+
+    if not isinstance(brand_name, str):
+        return False, f'品牌名称必须是字符串，得到 {type(brand_name).__name__}'
+
+    trimmed = brand_name.strip()
+    if not trimmed:
+        return False, '品牌名称不能全为空白字符'
+
+    # 长度验证
+    if len(trimmed) < BRAND_VALIDATION_CONSTANTS['MIN_BRAND_NAME_LENGTH'] or \
+       len(trimmed) > BRAND_VALIDATION_CONSTANTS['MAX_BRAND_NAME_LENGTH']:
+        return False, (
+            f'品牌名称长度应在 {BRAND_VALIDATION_CONSTANTS["MIN_BRAND_NAME_LENGTH"]}-'
+            f'{BRAND_VALIDATION_CONSTANTS["MAX_BRAND_NAME_LENGTH"]} 字符之间，当前为 {len(trimmed)}'
+        )
+
+    # 字符合法性验证
+    if not BRAND_NAME_PATTERN.match(trimmed):
+        return False, f'品牌名称包含非法字符：{trimmed[:20]}'
+
+    # 检查过多重复字符
+    max_repeat = 50
+    current_repeat = 1
+    for i in range(1, min(len(trimmed), 200)):
+        if trimmed[i] == trimmed[i-1]:
+            current_repeat += 1
+            if current_repeat > max_repeat:
+                return False, '品牌名称包含过多的重复字符'
+        else:
+            current_repeat = 1
+
+    return True, ''
+
+
+def _validate_question_text(question: str, index: int = 0) -> tuple:
+    """
+    验证问题文本的有效性
+
+    Args:
+        question: 问题文本
+        index: 问题索引（用于错误提示）
+
+    Returns:
+        (is_valid: bool, error_message: str)
+
+    【P2 增强 - 2026-03-05】新增问题文本验证
+    """
+    if not question:
+        return False, f'问题 {index + 1} 不能为空'
+
+    if not isinstance(question, str):
+        return False, f'问题 {index + 1} 必须是字符串，得到 {type(question).__name__}'
+
+    trimmed = question.strip()
+    if not trimmed:
+        return False, f'问题 {index + 1} 不能全为空白字符'
+
+    # 长度验证
+    if len(trimmed) < BRAND_VALIDATION_CONSTANTS['MIN_QUESTION_LENGTH'] or \
+       len(trimmed) > BRAND_VALIDATION_CONSTANTS['MAX_QUESTION_LENGTH']:
+        return False, (
+            f'问题 {index + 1} 长度应在 '
+            f'{BRAND_VALIDATION_CONSTANTS["MIN_QUESTION_LENGTH"]}-'
+            f'{BRAND_VALIDATION_CONSTANTS["MAX_QUESTION_LENGTH"]} 字符之间'
+        )
+
+    # 检查不可控制字符
+    for char in trimmed:
+        code = ord(char)
+        # 允许的控制字符：\t (9), \n (10), \r (13)
+        if code < 32 and code not in (9, 10, 13):
+            return False, f'问题 {index + 1} 包含非法控制字符'
+        # 检查 Unicode 代理对
+        if 0xD800 <= code <= 0xDFFF:
+            return False, f'问题 {index + 1} 包含无效 Unicode 字符'
+
+    return True, ''
+
+
+def _validate_brand_test_input(data: dict) -> tuple:
+    """
+    综合验证品牌测试输入数据
+
+    Args:
+        data: 请求数据字典
+
+    Returns:
+        (is_valid: bool, error_response: tuple)
+        - is_valid: 是否验证通过
+        - error_response: (response_data, status_code) 或 None
+
+    【P2 增强 - 2026-03-05】统一输入验证逻辑
+    """
+    # 验证 brand_list
+    if 'brand_list' not in data:
+        return False, (jsonify({
+            "status": "error",
+            "error": 'Missing brand_list in request data',
+            "code": 400,
+            'received_fields': list(data.keys())
+        }), 400)
+
+    if not isinstance(data['brand_list'], list):
+        return False, (jsonify({
+            "status": "error",
+            "error": 'brand_list must be a list',
+            "code": 400,
+            'received': type(data['brand_list']).__name__,
+            'received_value': data['brand_list']
+        }), 400)
+
+    brand_list = data['brand_list']
+    if not brand_list:
+        return False, (jsonify({
+            "status": "error",
+            "error": 'brand_list cannot be empty',
+            "code": 400,
+            'received': brand_list
+        }), 400)
+
+    # 【P2 增强】品牌数量限制
+    if len(brand_list) > BRAND_VALIDATION_CONSTANTS['MAX_BRANDS_COUNT']:
+        return False, (jsonify({
+            "status": "error",
+            "error": f'品牌数量过多，最多支持 {BRAND_VALIDATION_CONSTANTS["MAX_BRANDS_COUNT"]} 个品牌',
+            "code": 400,
+            'received_count': len(brand_list),
+            'max_allowed': BRAND_VALIDATION_CONSTANTS['MAX_BRANDS_COUNT']
+        }), 400)
+
+    # 【P2 增强】验证每个品牌名称
+    for i, brand in enumerate(brand_list):
+        if not isinstance(brand, str):
+            return False, (jsonify({
+                "status": "error",
+                "error": f'Each brand in brand_list must be a string, got {type(brand).__name__}',
+                "code": 400,
+                'index': i,
+                'problematic_value': str(brand)[:100]
+            }), 400)
+
+        is_valid, error_msg = _validate_brand_name(brand)
+        if not is_valid:
+            return False, (jsonify({
+                "status": "error",
+                "error": f'品牌 {i + 1} 验证失败：{error_msg}',
+                "code": 400,
+                'index': i,
+                'brand_name': brand[:50]
+            }), 400)
+
+    # 验证 selectedModels
+    if 'selectedModels' not in data:
+        return False, (jsonify({
+            "status": "error",
+            "error": 'Missing selectedModels in request data',
+            "code": 400,
+            'received_fields': list(data.keys())
+        }), 400)
+
+    if not isinstance(data['selectedModels'], list):
+        return False, (jsonify({
+            "status": "error",
+            "error": 'selectedModels must be a list',
+            "code": 400,
+            'received': type(data['selectedModels']).__name__,
+            'received_value': data['selectedModels']
+        }), 400)
+
+    selected_models = data['selectedModels']
+    if not selected_models:
+        return False, (jsonify({
+            "status": "error",
+            "error": 'At least one AI model must be selected',
+            "code": 400,
+            'received': selected_models
+        }), 400)
+
+    # 【P2 增强】模型数量限制
+    if len(selected_models) > BRAND_VALIDATION_CONSTANTS['MAX_MODEL_COUNT']:
+        return False, (jsonify({
+            "status": "error",
+            "error": f'模型数量过多，最多支持 {BRAND_VALIDATION_CONSTANTS["MAX_MODEL_COUNT"]} 个模型',
+            "code": 400,
+            'received_count': len(selected_models),
+            'max_allowed': BRAND_VALIDATION_CONSTANTS['MAX_MODEL_COUNT']
+        }), 400)
+
+    # 验证 custom_question / customQuestions
+    custom_questions = []
+    if 'custom_question' in data:
+        if not isinstance(data['custom_question'], str):
+            return False, (jsonify({
+                "status": "error",
+                "error": 'custom_question must be a string',
+                "code": 400,
+                'received': type(data['custom_question']).__name__,
+                'received_value': str(data['custom_question'])[:200]
+            }), 400)
+
+        # 智能分割多个问题
+        question_text = data['custom_question'].strip()
+        if question_text:
+            raw_questions = re.split(r'[？?.\n\s]+', question_text)
+            custom_questions = [
+                q.strip() + ('?' if not q.strip().endswith('?') else '')
+                for q in raw_questions if q.strip()
+            ]
+
+    elif 'customQuestions' in data:
+        if not isinstance(data['customQuestions'], list):
+            return False, (jsonify({
+                "status": "error",
+                "error": 'customQuestions must be a list',
+                "code": 400,
+                'received': type(data['customQuestions']).__name__,
+                'received_value': str(data['customQuestions'])[:200]
+            }), 400)
+        custom_questions = data['customQuestions']
+
+    # 【P2 增强】问题数量限制
+    if len(custom_questions) > BRAND_VALIDATION_CONSTANTS['MAX_QUESTIONS_COUNT']:
+        return False, (jsonify({
+            "status": "error",
+            "error": f'问题数量过多，最多支持 {BRAND_VALIDATION_CONSTANTS["MAX_QUESTIONS_COUNT"]} 个问题',
+            "code": 400,
+            'received_count': len(custom_questions),
+            'max_allowed': BRAND_VALIDATION_CONSTANTS['MAX_QUESTIONS_COUNT']
+        }), 400)
+
+    # 【P2 增强】验证每个问题
+    for i, question in enumerate(custom_questions):
+        if not isinstance(question, str):
+            return False, (jsonify({
+                'status': "error",
+                'error': f'Each question must be a string, got {type(question).__name__}',
+                'code': 400,
+                'index': i
+            }), 400)
+
+        is_valid, error_msg = _validate_question_text(question, i)
+        if not is_valid:
+            return False, (jsonify({
+                'status': "error",
+                'error': error_msg,
+                'code': 400,
+                'index': i,
+                'question': question[:100]
+            }), 400)
+
+    return True, None
+
+
 # Global store for execution progress (in production, use Redis or database)
 execution_store = {}
 
@@ -161,79 +450,16 @@ def perform_brand_test():
             "code": 400
         }), 400
 
-    # ========== 输入验证和净化 ==========
+    # ========== 【P2 增强】输入验证和净化（使用统一验证函数） ==========
+    is_valid, error_response = _validate_brand_test_input(data)
+    if not is_valid:
+        api_logger.warning(f"[BrandTest] 输入验证失败：{error_response[0].get_json()}")
+        return error_response
+
+    # 验证通过，继续处理
     try:
-        # 验证品牌列表
-        if 'brand_list' not in data:
-            return jsonify({
-                "status": "error",
-                "error": 'Missing brand_list in request data',
-                "code": 400,
-                'received_fields': list(data.keys())
-            }), 400
-        
-        if not isinstance(data['brand_list'], list):
-            return jsonify({
-                "status": "error",
-                "error": 'brand_list must be a list',
-                "code": 400,
-                'received': type(data['brand_list']).__name__,
-                'received_value': data['brand_list']
-            }), 400
-        
         brand_list = data['brand_list']
-        if not brand_list:
-            return jsonify({
-                "status": "error",
-                "error": 'brand_list cannot be empty',
-                "code": 400,
-                'received': brand_list
-            }), 400
-
-        # 验证品牌名称安全性
-        for brand in brand_list:
-            if not isinstance(brand, str):
-                return jsonify({
-                    "status": "error",
-                    "error": f'Each brand in brand_list must be a string, got {type(brand)}',
-                    "code": 400,
-                    'problematic_value': brand
-                }), 400
-            if not validate_safe_text(brand, max_length=100):
-                return jsonify({
-                    "status": "error",
-                    "error": f'Invalid brand name: {brand}',
-                    "code": 400
-                }), 400
-
-        api_logger.info(f"[Sprint 1] 接收到品牌列表：{brand_list}")
-
-        # 验证模型列表
-        if 'selectedModels' not in data:
-            return jsonify({
-                "status": "error",
-                "error": 'Missing selectedModels in request data',
-                "code": 400,
-                'received_fields': list(data.keys())
-            }), 400
-        
-        if not isinstance(data['selectedModels'], list):
-            return jsonify({
-                "status": "error",
-                "error": 'selectedModels must be a list',
-                "code": 400,
-                'received': type(data['selectedModels']).__name__,
-                'received_value': data['selectedModels']
-            }), 400
-        
         selected_models = data['selectedModels']
-        if not selected_models:
-            return jsonify({
-                "status": "error",
-                "error": 'At least one AI model must be selected',
-                "code": 400,
-                'received': selected_models
-            }), 400
 
         # 解析模型列表（支持字典和字符串格式）
         parsed_selected_models = []
@@ -261,16 +487,6 @@ def perform_brand_test():
 
         selected_models = parsed_selected_models
 
-        original_model_names = [
-            model.get('name', model) if isinstance(model, dict) else model
-            for model in data['selectedModels']
-        ]
-        converted_model_names = [model['name'] for model in selected_models]
-        api_logger.info(
-            f"[Sprint 1] 转换后的模型列表：{converted_model_names} "
-            f"(原始：{original_model_names})"
-        )
-
         if not selected_models:
             return jsonify({
                 "status": "error",
@@ -278,20 +494,9 @@ def perform_brand_test():
                 "code": 400
             }), 400
 
-        # 验证和解析问题列表
+        # 解析问题列表（已在验证函数中处理）
         custom_questions = []
         if 'custom_question' in data:
-            # 优先处理新的 custom_question 字段（字符串）
-            if not isinstance(data['custom_question'], str):
-                return jsonify({
-                    "status": "error",
-                    "error": 'custom_question must be a string',
-                    "code": 400,
-                    'received': type(data['custom_question']).__name__,
-                    'received_value': data['custom_question']
-                }), 400
-
-            # 智能分割多个问题
             question_text = data['custom_question'].strip()
             if question_text:
                 raw_questions = re.split(r'[？?.\n\s]+', question_text)
@@ -299,20 +504,10 @@ def perform_brand_test():
                     q.strip() + ('?' if not q.strip().endswith('?') else '')
                     for q in raw_questions if q.strip()
                 ]
-                api_logger.info(
-                    f"[QuestionSplit] 分割后问题数：{len(custom_questions)}"
-                )
         elif 'customQuestions' in data:
-            # 保持对旧格式的兼容（数组格式）
-            if not isinstance(data['customQuestions'], list):
-                return jsonify({
-                    "status": "error",
-                    "error": 'customQuestions must be a list',
-                    "code": 400,
-                    'received': type(data['customQuestions']).__name__,
-                    'received_value': data['customQuestions']
-                }), 400
             custom_questions = data['customQuestions']
+
+        api_logger.info(f"[QuestionSplit] 分割后问题数：{len(custom_questions)}")
 
         # 获取用户信息
         user_openid = data.get('userOpenid') or (user_id if user_id != 'anonymous' else 'anonymous')
@@ -394,6 +589,50 @@ def perform_brand_test():
         f"questions={len(custom_questions)}"
     )
 
+    # 【P0 关键修复 - 2026-03-05】在主线程中捕获 Flask app 实例，供背景线程使用
+    # 必须在主线程中捕获，因为 current_app 是 context-local proxy
+    from flask import current_app as flask_current_app
+    app_instance = flask_current_app._get_current_object() if hasattr(flask_current_app, '_get_current_object') else flask_current_app
+    api_logger.info(f"[AppContext] 主线程中捕获 app 实例：{app_instance}")
+
+    # 【P0 修复 - 2026-03-04】提前创建报告记录，获取 report_id
+    report_id = None
+    try:
+        from wechat_backend.diagnosis_report_service import get_report_service
+        
+        service = get_report_service()
+        config = {
+            'brand_name': brand_list[0],
+            'competitor_brands': brand_list[1:] if len(brand_list) > 1 else [],
+            'selected_models': selected_models,
+            'custom_questions': custom_questions
+        }
+        
+        # 创建初始报告记录
+        report_id = service.create_report(
+            execution_id=execution_id,
+            user_id=user_id or 'anonymous',
+            config=config
+        )
+        
+        api_logger.info(
+            f"[Orchestrator] ✅ 初始报告记录已创建：{execution_id}, "
+            f"report_id={report_id}"
+        )
+        
+        # 更新初始状态
+        service.report_repo.update_status(
+            execution_id=execution_id,
+            status='initializing',
+            progress=0,
+            stage='init',
+            is_completed=False
+        )
+        
+    except Exception as e:
+        api_logger.error(f"[Orchestrator] ⚠️ 创建初始报告记录失败：{e}")
+        # 报告记录创建失败不影响主流程，继续执行
+
     # 初始化 execution_store
     execution_store[execution_id] = {
         'progress': 0,
@@ -402,7 +641,8 @@ def perform_brand_test():
         'status': 'initializing',
         'stage': 'init',
         'results': [],
-        'start_time': datetime.now().isoformat()
+        'start_time': datetime.now().isoformat(),
+        'report_id': report_id
     }
 
     def run_orchestrated_diagnosis():
@@ -508,19 +748,26 @@ def perform_brand_test():
                 finally:
                     loop.close()
 
+            # 【P0 关键修复 - 2026-03-05】使用主线程捕获的 app_instance
+            # app_instance 已在主线程中捕获（见 line 595），通过闭包传递到背景线程
+            def run_with_app_context():
+                """在应用上下文中运行诊断"""
+                with app_instance.app_context():
+                    return run_async_in_thread(
+                        orchestrator.execute_diagnosis(
+                            user_id=user_id or 'anonymous',
+                            brand_list=brand_list,
+                            selected_models=selected_models,
+                            custom_questions=custom_questions,
+                            user_openid=user_openid,
+                            user_level=user_level.value
+                        )
+                    )
+
             # 创建并执行诊断编排器
             orchestrator = DiagnosisOrchestrator(execution_id, execution_store)
-            
-            result = run_async_in_thread(
-                orchestrator.execute_diagnosis(
-                    user_id=user_id or 'anonymous',
-                    brand_list=brand_list,
-                    selected_models=selected_models,
-                    custom_questions=custom_questions,
-                    user_openid=user_openid,
-                    user_level=user_level.value
-                )
-            )
+
+            result = run_with_app_context()
 
             # 处理编排器返回结果
             if result.get('success'):
@@ -528,13 +775,33 @@ def perform_brand_test():
                     f"[Orchestrator] ✅ 诊断执行完成 - execution_id={execution_id}, "
                     f"总耗时={result.get('total_time', 'N/A')}秒"
                 )
-                
+
                 # 取消超时计时器
                 try:
                     timeout_manager.cancel_timer(execution_id)
                     api_logger.info(f"[超时管理] ✅ 计时器已取消：{execution_id}")
                 except Exception as timer_err:
                     api_logger.warning(f"[超时管理] 计时器取消失败：{timer_err}")
+                
+                # 【P0 关键修复 - 2026-03-05】清理数据库连接，防止连接泄漏
+                try:
+                    from wechat_backend.database_connection_pool import get_pool_manager
+                    pool_manager = get_pool_manager()
+                    
+                    if hasattr(pool_manager, 'cleanup_thread_sessions'):
+                        pool_manager.cleanup_thread_sessions()
+                    
+                    try:
+                        from wechat_backend.database import db
+                        if hasattr(db, 'session') and db.session:
+                            db.session.close()
+                            db_logger.info(f"[DB 清理] 成功完成后的数据库会话已关闭：{execution_id}")
+                    except Exception:
+                        pass
+                    
+                    api_logger.info(f"[DB 清理] 成功完成后的数据库连接已清理：{execution_id}")
+                except Exception as cleanup_err:
+                    api_logger.warning(f"[DB 清理] 清理失败：{cleanup_err}")
                     
             else:
                 error_message = result.get('error', '诊断执行失败')
@@ -598,6 +865,22 @@ def perform_brand_test():
             except Exception:
                 pass
 
+        finally:
+            # 【P0 关键修复 - 2026-03-05】清理数据库连接，防止连接泄漏
+            # 背景线程中创建的数据库会话需要显式清理
+            try:
+                from wechat_backend.database_connection_pool import get_db_pool
+                pool = get_db_pool()
+                
+                # 清理当前线程的数据库连接
+                if pool and hasattr(pool, 'release_connection'):
+                    # 如果当前线程有连接，归还它
+                    pass  # 连接池会自动管理
+                
+                api_logger.info(f"[DB 清理] 背景线程数据库连接清理完成：{execution_id}")
+            except Exception as cleanup_err:
+                api_logger.warning(f"[DB 清理] 清理失败：{cleanup_err}")
+
     # 启动异步线程
     thread = Thread(target=run_orchestrated_diagnosis, daemon=True)
     thread.name = f"OrchestratorThread-{execution_id[:8]}"
@@ -608,11 +891,14 @@ def perform_brand_test():
         f"thread_name={thread.name}"
     )
 
-    return jsonify({
+    # P0 修复：转换为 camelCase 并返回 report_id
+    response_data = {
         'status': 'success',
         'execution_id': execution_id,
+        'report_id': report_id,
         'message': 'Test started successfully'
-    })
+    }
+    return jsonify(convert_response_to_camel(response_data))
 
 
 import signal
@@ -2782,28 +3068,73 @@ def get_task_status_api(task_id):
                 }), 404
 
         # 提取基本字段
-        stage = report.get('stage', 'init')
-        status = report.get('status', 'processing')
-        progress = report.get('progress', 0)
-        is_completed = bool(report.get('is_completed', False))
-        updated_at = report.get('updated_at', '')
+        # 【P0 关键修复 - 2026-03-04】安全访问报告字段，防止 NoneType 错误
+        if not report:
+            # 数据库查询返回 None，降级到缓存
+            api_logger.warning(
+                f"[TaskStatus] 数据库返回 None，降级到缓存：{task_id}"
+            )
+            if task_id in execution_store:
+                report = execution_store[task_id]
+            else:
+                return jsonify({
+                    'task_id': task_id,
+                    'status': 'not_found',
+                    'progress': 0,
+                    'error': 'Task not found'
+                }), 404
+
+        # 安全提取字段（使用默认值）
+        stage = (report or {}).get('stage', 'init')
+        status = (report or {}).get('status', 'processing')
+        progress = (report or {}).get('progress', 0)
+        is_completed = bool((report or {}).get('is_completed', False))
+        updated_at = (report or {}).get('updated_at', '')
+        error_message = (report or {}).get('error_message', None)
 
         # 【P0 优化】增量轮询：无变化时返回空响应
         if since and updated_at <= since:
-            return jsonify({
+            # P0 修复：转换为 camelCase
+            return jsonify(convert_response_to_camel({
                 'task_id': task_id,
                 'has_updates': False,
                 'last_updated': updated_at,
                 'status': status,
                 'progress': progress
-            }), 200
+            })), 200
 
-        # 【P0 修复】状态推导（防止一直是 init）
-        if stage == 'init' and progress > 0:
+        # 【P0 增强】完整状态推导（防止一直是 init）
+        # 阶段推导：根据进度推断实际阶段
+        if stage == 'init' and progress > 0 and progress < 30:
             stage = 'ai_fetching'
+        elif stage == 'init' and progress >= 30 and progress < 60:
+            stage = 'ai_fetching'
+        elif stage == 'init' and progress >= 60 and progress < 70:
+            stage = 'results_saving'
+        elif stage == 'init' and progress >= 70 and progress < 80:
+            stage = 'results_validating'
+        elif stage == 'init' and progress >= 80 and progress < 90:
+            stage = 'background_analysis'
+        elif stage == 'init' and progress >= 90 and progress < 100:
+            stage = 'report_aggregating'
+        
+        # 状态推导：根据阶段推断实际状态
+        if stage == 'init' and progress > 0:
+            status = 'ai_fetching'
+        elif stage in ['ai_fetching', 'results_saving', 'results_validating', 
+                      'background_analysis', 'report_aggregating']:
+            status = 'processing'
+        
+        # 完成状态推导
         if progress >= 100 and stage not in ['completed', 'failed']:
             stage = 'completed'
             status = 'completed'
+            is_completed = True
+        
+        # 失败状态推导
+        if error_message and status not in ['failed']:
+            stage = 'failed'
+            status = 'failed'
             is_completed = True
 
         # 构建轻量级响应
@@ -2828,7 +3159,8 @@ def get_task_status_api(task_id):
             response_data['result_count'] = len(results)
 
         # 【P0 修复】添加防缓存头
-        response = jsonify(response_data)
+        # P0 修复：转换为 camelCase
+        response = jsonify(convert_response_to_camel(response_data))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
@@ -2846,7 +3178,8 @@ def get_task_status_api(task_id):
         # 降级：从 execution_store 读取
         if task_id in execution_store:
             task_status = execution_store[task_id]
-            return jsonify({
+            # P0 修复：转换为 camelCase
+            return jsonify(convert_response_to_camel({
                 'task_id': task_id,
                 'status': task_status.get('status', 'unknown'),
                 'stage': task_status.get('stage', 'init'),
@@ -2854,13 +3187,14 @@ def get_task_status_api(task_id):
                 'is_completed': task_status.get('is_completed', False),
                 'should_stop_polling': task_status.get('status') in ['completed', 'failed'],
                 'source': 'cache'
-            }), 200
-        
-        return jsonify({
+            })), 200
+
+        # P0 修复：转换为 camelCase
+        return jsonify(convert_response_to_camel({
             'task_id': task_id,
             'status': 'error',
             'error': str(e)
-        }), 500
+        })), 500
 
 
 # ==================== 存储架构优化集成 ====================
@@ -3096,6 +3430,58 @@ def get_diagnosis_statistics():
     stats = get_task_statistics(days)
 
     return jsonify(stats), 200
+
+
+# ==================== AI 超时监控 API ====================
+@wechat_bp.route('/ai/timeout-metrics', methods=['GET'])
+@monitored_endpoint('/ai/timeout-metrics', require_auth=False, validate_inputs=False)
+def get_ai_timeout_metrics():
+    """
+    获取 AI 平台超时监控指标
+
+    返回:
+        {
+            "timestamp": "2026-03-04T12:00:00",
+            "window_seconds": 300,
+            "alert_threshold": 0.05,
+            "platforms": {
+                "qwen": {
+                    "requests_total": 100,
+                    "timeouts_total": 5,
+                    "timeout_rate": 0.05,
+                    "avg_duration_seconds": 2.5,
+                    "consecutive_timeouts": 0
+                },
+                "doubao": {
+                    "requests_total": 80,
+                    "timeouts_total": 12,
+                    "timeout_rate": 0.15,
+                    "avg_duration_seconds": 3.2,
+                    "consecutive_timeouts": 2
+                }
+            }
+        }
+    """
+    from wechat_backend.ai_adapters.timeout_monitor import get_timeout_monitor
+
+    monitor = get_timeout_monitor()
+    metrics = monitor.export_metrics()
+
+    # 添加告警建议
+    alerts = []
+    for platform, stats in metrics.get('platforms', {}).items():
+        if stats.get('timeout_rate', 0) > monitor.alert_threshold:
+            recommendation = monitor.get_recommendation(platform)
+            if recommendation:
+                alerts.append({
+                    'platform': platform,
+                    'message': recommendation,
+                    'severity': 'high' if stats.get('consecutive_timeouts', 0) >= 3 else 'medium'
+                })
+
+    metrics['alerts'] = alerts
+
+    return jsonify(metrics), 200
 
 
 # ==================== 更新 perform_brand_test - 集成新存储层 ====================

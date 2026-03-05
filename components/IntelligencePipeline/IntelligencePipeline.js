@@ -1,19 +1,25 @@
 /**
  * 情报流水线主组件 - 重构简化版
- * 
+ *
  * 重构说明:
  * - 阶段展示 → PipelineStage/index.js
  * - 进度指示 → PipelineProgress/index.js
- * 
+ *
  * 本文件保留:
  * - 组件协调
- * - SSE 连接管理
+ * - WebSocket 连接管理（替代 SSE，微信小程序不支持 SSE）
  * - 事件转发
+ *
+ * 【P0 关键修复 - 2026-03-03】
+ * - 微信小程序不支持 SSE (EventSource API)
+ * - 使用已有的 WebSocketClient 替代
+ * - WebSocket 客户端路径：miniprogram/services/webSocketClient.js
  */
 
 const app = getApp();
 const logger = require('../../utils/logger');
-const { watchIntelligenceUpdates } = require('../../utils/sse-client');
+// 【P0 关键修复】导入已有的 WebSocket 客户端，而非不存在的 SSE 客户端
+const webSocketClient = require('../../miniprogram/services/webSocketClient').default;
 
 Component({
   options: {
@@ -94,64 +100,117 @@ Component({
      * 初始化流水线
      */
     initPipeline() {
-      if (this.data.enableSSE && this.data.isLive) {
-        this.connectSSE();
+      if (this.data.isLive) {
+        // 【P0 关键修复】使用 WebSocket 替代 SSE
+        this.connectWebSocket();
       }
       this.calculateCounts();
     },
 
     /**
-     * 连接 SSE
+     * 连接 WebSocket
+     * 【P0 关键修复 - 2026-03-03】使用已有的 WebSocketClient 替代 SSE
      */
-    connectSSE() {
-      if (!this.data.executionId) return;
+    connectWebSocket() {
+      if (!this.data.executionId) {
+        logger.warn('[IntelligencePipeline] 缺少 executionId，无法连接 WebSocket');
+        return;
+      }
 
       this.setData({ sseConnecting: true });
 
       try {
-        this.sseClient = watchIntelligenceUpdates(
-          this.data.executionId,
-          (event) => {
-            this.onSSEUpdate(event);
-          },
-          () => {
-            this.setData({ 
-              sseConnected: true, 
-              sseConnecting: false 
+        // 【P0 关键修复】使用已有的 WebSocket 客户端
+        webSocketClient.connect(this.data.executionId, {
+          // 连接成功回调
+          onConnected: () => {
+            logger.info('[IntelligencePipeline] WebSocket 已连接');
+            this.setData({
+              sseConnected: true,  // 保持变量名兼容
+              sseConnecting: false
             });
           },
-          (error) => {
-            this.setData({ 
-              sseError: error.message, 
-              sseConnecting: false 
+
+          // 状态变化回调
+          onStateChange: (newState, oldState) => {
+            logger.debug(`[IntelligencePipeline] WebSocket 状态变化：${oldState} -> ${newState}`);
+            
+            // 根据状态更新 UI
+            if (newState === 'disconnected' || newState === 'fallback') {
+              this.setData({
+                sseConnected: false,
+                sseConnecting: false
+              });
+            }
+          },
+
+          // 进度更新回调
+          onProgress: (data) => {
+            logger.debug('[IntelligencePipeline] WebSocket 进度更新:', data);
+            this.triggerEvent('update', { 
+              item: {
+                type: 'intelligence',
+                data: data
+              }
+            });
+            this.calculateCounts();
+          },
+
+          // 中间结果回调
+          onResult: (data) => {
+            logger.debug('[IntelligencePipeline] WebSocket 结果更新:', data);
+            this.triggerEvent('update', { 
+              item: {
+                type: 'intelligence',
+                data: data
+              }
+            });
+            this.calculateCounts();
+          },
+
+          // 完成回调
+          onComplete: (data) => {
+            logger.info('[IntelligencePipeline] WebSocket 诊断完成:', data);
+            this.setData({ sseConnected: false });
+            this.triggerEvent('complete', data);
+            this.calculateCounts();
+          },
+
+          // 错误回调
+          onError: (error) => {
+            logger.error('[IntelligencePipeline] WebSocket 错误:', error);
+            this.setData({
+              sseError: error.message || '连接失败',
+              sseConnecting: false
+            });
+          },
+
+          // 断开连接回调
+          onDisconnected: (res) => {
+            logger.info('[IntelligencePipeline] WebSocket 连接已断开:', res);
+            this.setData({
+              sseConnected: false,
+              sseConnecting: false
+            });
+          },
+
+          // 降级回调（WebSocket 失败时使用轮询）
+          onFallback: () => {
+            logger.warn('[IntelligencePipeline] WebSocket 降级到轮询模式');
+            // 可以在这里启动 HTTP 轮询作为后备
+            this.setData({
+              sseConnected: false,
+              sseConnecting: false
             });
           }
-        );
+        });
       } catch (error) {
-        logger.error('[IntelligencePipeline] SSE 连接失败:', error);
-        this.setData({ 
-          sseError: error.message, 
-          sseConnecting: false 
+        logger.error('[IntelligencePipeline] WebSocket 连接失败:', error);
+        this.setData({
+          sseError: error.message,
+          sseConnecting: false
         });
       }
-    },
-
-    /**
-     * SSE 更新处理
-     */
-    onSSEUpdate(event) {
-      const { type, data } = event;
-      
-      logger.debug('[IntelligencePipeline] SSE update:', type, data);
-
-      if (type === 'intelligence') {
-        this.triggerEvent('update', { item: data });
-      } else if (type === 'complete') {
-        this.setData({ sseConnected: false });
-        this.triggerEvent('complete');
-      }
-
-      this.calculateCounts();
     },
 
     /**
@@ -233,9 +292,9 @@ Component({
      * 清理资源
      */
     cleanup() {
-      if (this.sseClient) {
-        this.sseClient.close();
-        this.sseClient = null;
+      // 【P0 关键修复】断开 WebSocket 连接
+      if (webSocketClient) {
+        webSocketClient.disconnect();
       }
       logger.debug('[IntelligencePipeline] Component cleaned up');
     }

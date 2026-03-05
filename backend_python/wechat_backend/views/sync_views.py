@@ -63,6 +63,9 @@ from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimite
 # Monitoring imports
 from wechat_backend.monitoring.monitoring_decorator import monitored_endpoint
 
+# P0 修复：导入字段转换器
+from utils.field_converter import convert_response_to_camel
+
 # Global store for execution progress (in production, use Redis or database)
 execution_store = {}
 
@@ -117,15 +120,16 @@ def sync_data():
     current_timestamp = datetime.now().isoformat()
     
     api_logger.info(f"Sync completed for user {user_id}: {len(cloud_results)} cloud results, {uploaded_count} uploaded")
-    
-    return jsonify({
+
+    # P0 修复：转换为 camelCase
+    return jsonify(convert_response_to_camel({
         'status': 'success',
         'message': 'Data synced successfully',
         'cloud_results': cloud_results,
         'uploaded_count': uploaded_count,
         'last_sync_timestamp': current_timestamp,
         'has_more': False  # For pagination support in future
-    })
+    }))
 
 
 
@@ -168,12 +172,13 @@ def download_data():
     current_timestamp = datetime.now().isoformat()
     
     api_logger.info(f"Download completed for user {user_id}: {len(cloud_results)} results")
-    
-    return jsonify({
+
+    # P0 修复：转换为 camelCase
+    return jsonify(convert_response_to_camel({
         'status': 'success',
         'message': 'Data downloaded successfully',
         'cloud_results': cloud_results,
         'last_sync_timestamp': current_timestamp,
         'has_more': False
-    })
+    }))
 

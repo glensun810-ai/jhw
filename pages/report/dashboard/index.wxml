@@ -104,6 +104,179 @@
     </view>
   </view>
 
+  <!-- 【P1 新增】品牌对比分析 -->
+  <view class="section" wx:if="{{brandAnalysis}}">
+    <view class="section-header">
+      <view class="section-title">
+        <text class="title-icon">📊</text>
+        <text class="title-text">品牌对比分析</text>
+      </view>
+      <view class="section-subtitle">竞争优势对比</view>
+    </view>
+
+    <!-- 用户品牌分析 -->
+    <view class="brand-analysis-card" wx:if="{{userBrandAnalysis}}">
+      <view class="brand-header">
+        <text class="brand-name">{{userBrandAnalysis.brand}}</text>
+        <view class="brand-badge {{userBrandAnalysis.is_top3 ? 'top3' : 'normal'}}">
+          <text class="badge-icon">{{userBrandAnalysis.is_top3 ? '🏆' : '📊'}}</text>
+          <text class="badge-text">{{userBrandAnalysis.is_top3 ? 'TOP3' : '普通'}}</text>
+        </view>
+      </view>
+
+      <view class="brand-metrics">
+        <view class="metric">
+          <text class="metric-label">提及率</text>
+          <text class="metric-value {{userBrandAnalysis.mention_rate >= 0.5 ? 'high' : userBrandAnalysis.mention_rate >= 0.3 ? 'medium' : 'low'}}">{{userBrandAnalysis.mention_rate * 100 || 0}}%</text>
+          <text class="metric-sub">{{userBrandAnalysis.mentioned_count || 0}}/{{userBrandAnalysis.total_responses || 0}} 次提及</text>
+        </view>
+
+        <view class="metric">
+          <text class="metric-label">平均排名</text>
+          <text class="metric-value {{userBrandAnalysis.average_rank > 0 && userBrandAnalysis.average_rank <= 3 ? 'good' : userBrandAnalysis.average_rank > 0 ? 'normal' : 'unranked'}}">{{userBrandAnalysis.average_rank > 0 ? userBrandAnalysis.average_rank : '未入榜'}}</text>
+          <text class="metric-sub">排名越靠前越好</text>
+        </view>
+
+        <view class="metric">
+          <text class="metric-label">情感均值</text>
+          <text class="metric-value {{userBrandAnalysis.average_sentiment >= 0.3 ? 'positive' : userBrandAnalysis.average_sentiment <= -0.3 ? 'negative' : 'neutral'}}">{{userBrandAnalysis.average_sentiment || 0}}</text>
+          <text class="metric-sub">{{userBrandAnalysis.average_sentiment >= 0.3 ? '正面' : userBrandAnalysis.average_sentiment <= -0.3 ? '负面' : '中性'}}</text>
+        </view>
+      </view>
+
+      <!-- 对比分析 -->
+      <view class="comparison-section" wx:if="{{comparison}}">
+        <view class="comparison-title">
+          <text class="icon">⚖️</text>
+          <text class="text">竞争优势</text>
+        </view>
+        <view class="comparison-content">
+          <view class="advantage-item" wx:if="{{comparison.advantages && comparison.advantages.length > 0}}">
+            <text class="advantage-label">✨ 优势:</text>
+            <text class="advantage-text">{{comparison.advantages.join(', ')}}</text>
+          </view>
+          <view class="advantage-item" wx:if="{{comparison.disadvantages && comparison.disadvantages.length > 0}}">
+            <text class="disadvantage-label">⚠️ 劣势:</text>
+            <text class="disadvantage-text">{{comparison.disadvantages.join(', ')}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 竞品分析列表 -->
+    <view class="competitor-list" wx:if="{{competitorAnalysis && competitorAnalysis.length > 0}}">
+      <view class="list-title">
+        <text class="icon">🎯</text>
+        <text class="text">竞品分析</text>
+      </view>
+
+      <view class="competitor-card" wx:for="{{competitorAnalysis}}" wx:key="brand">
+        <view class="competitor-header">
+          <text class="competitor-name">{{item.brand}}</text>
+          <view class="competitor-badge {{item.is_top3 ? 'top3' : 'normal'}}">
+            <text class="badge-icon">{{item.is_top3 ? '🏆' : '📊'}}</text>
+            <text class="badge-text">{{item.is_top3 ? 'TOP3' : '普通'}}</text>
+          </view>
+        </view>
+
+        <view class="competitor-metrics">
+          <view class="metric-small">
+            <text class="metric-label">提及率</text>
+            <text class="metric-value">{{item.mention_rate * 100 || 0}}%</text>
+          </view>
+          <view class="metric-small">
+            <text class="metric-label">平均排名</text>
+            <text class="metric-value">{{item.average_rank > 0 ? item.average_rank : '-'}}</text>
+          </view>
+          <view class="metric-small">
+            <text class="metric-label">情感</text>
+            <text class="metric-value {{item.average_sentiment >= 0.3 ? 'positive' : item.average_sentiment <= -0.3 ? 'negative' : 'neutral'}}">{{item.average_sentiment || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 【P1 新增】TOP3 竞品榜单 -->
+  <view class="section" wx:if="{{top3Brands && top3Brands.length > 0}}">
+    <view class="section-header">
+      <view class="section-title">
+        <text class="title-icon">🏆</text>
+        <text class="title-text">TOP3 竞品榜单</text>
+      </view>
+      <view class="section-subtitle">AI 提及率最高</view>
+    </view>
+
+    <view class="top3-list">
+      <view class="top3-item rank-1" wx:if="{{top3Brands[0]}}">
+        <view class="rank-badge">
+          <text class="rank-number">1</text>
+          <text class="rank-icon">🥇</text>
+        </view>
+        <view class="brand-info">
+          <text class="brand-name">{{top3Brands[0].name || top3Brands[0]}}</text>
+          <text class="brand-rank">排名第 {{top3Brands[0].rank || 1}}</text>
+        </view>
+        <view class="rank-trend">
+          <text class="trend-icon">📈</text>
+          <text class="trend-text">热门</text>
+        </view>
+      </view>
+
+      <view class="top3-item rank-2" wx:if="{{top3Brands[1]}}">
+        <view class="rank-badge">
+          <text class="rank-number">2</text>
+          <text class="rank-icon">🥈</text>
+        </view>
+        <view class="brand-info">
+          <text class="brand-name">{{top3Brands[1].name || top3Brands[1]}}</text>
+          <text class="brand-rank">排名第 {{top3Brands[1].rank || 2}}</text>
+        </view>
+        <view class="rank-trend">
+          <text class="trend-icon">📊</text>
+          <text class="trend-text">稳定</text>
+        </view>
+      </view>
+
+      <view class="top3-item rank-3" wx:if="{{top3Brands[2]}}">
+        <view class="rank-badge">
+          <text class="rank-number">3</text>
+          <text class="rank-icon">🥉</text>
+        </view>
+        <view class="brand-info">
+          <text class="brand-name">{{top3Brands[2].name || top3Brands[2]}}</text>
+          <text class="brand-rank">排名第 {{top3Brands[2].rank || 3}}</text>
+        </view>
+        <view class="rank-trend">
+          <text class="trend-icon">📊</text>
+          <text class="trend-text">稳定</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 【P2 新增】品牌对比图表可视化 -->
+  <view class="chart-section" wx:if="{{brandAnalysis || competitorAnalysis}}">
+    <!-- 竞争优势雷达图 -->
+    <view class="chart-card" wx:if="{{userBrandAnalysis && competitorAnalysis && competitorAnalysis.length > 0}}">
+      <brand-radar
+        title="品牌竞争力雷达图"
+        height="350"
+        userBrandData="{{userBrandAnalysis}}"
+        comparisonData="{{competitorAnalysis}}"
+      />
+    </view>
+
+    <!-- 情感对比柱状图 -->
+    <view class="chart-card" wx:if="{{competitorAnalysis && competitorAnalysis.length > 0}}">
+      <sentiment-bar
+        title="品牌情感分布对比"
+        height="350"
+        sentimentData="{{competitorAnalysis}}"
+      />
+    </view>
+  </view>
+
   <!-- P1 新增：工作流分析发现 -->
   <view class="section" wx:if="{{workflowResults}}">
     <workflow-findings

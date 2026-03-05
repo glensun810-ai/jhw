@@ -25,6 +25,9 @@ from wechat_backend.diagnosis_report_repository import (
     DATA_SCHEMA_VERSION
 )
 
+# P0 修复：导入字段转换器
+from utils.field_converter import convert_response_to_camel
+
 
 class DiagnosisReportService:
     """
@@ -96,11 +99,35 @@ class DiagnosisReportService:
         db_logger.debug(f"添加诊断结果：{execution_id}, result_id: {result_id}")
         return result_id
     
-    def add_results_batch(self, report_id: int, execution_id: str, 
-                         results: List[Dict[str, Any]]) -> List[int]:
-        """批量添加诊断结果"""
-        result_ids = self.result_repo.add_batch(report_id, execution_id, results)
-        db_logger.info(f"批量添加 {len(results)} 个诊断结果：{execution_id}")
+    def add_results_batch(self, report_id: int, execution_id: str,
+                         results: List[Dict[str, Any]],
+                         batch_size: int = 10,  # 【P0 新增】分批大小
+                         commit: bool = True    # 【P0 新增】是否提交
+    ) -> List[int]:
+        """
+        批量添加诊断结果
+
+        【P0 修复 - 2026-03-05】支持分批提交，减少连接持有时间
+
+        参数:
+            report_id: 报告 ID
+            execution_id: 执行 ID
+            results: 结果列表
+            batch_size: 每批数量（默认 10）
+            commit: 是否提交事务（默认 True）
+
+        返回:
+            result_ids: 结果 ID 列表
+        """
+        result_ids = self.result_repo.add_batch(
+            report_id, execution_id, results,
+            batch_size=batch_size,
+            commit=commit
+        )
+        db_logger.info(
+            f"批量添加 {len(results)} 个诊断结果：{execution_id}, "
+            f"batches={(len(results) + batch_size - 1) // batch_size}"
+        )
         return result_ids
     
     def add_analysis(self, report_id: int, execution_id: str, 
@@ -132,8 +159,8 @@ class DiagnosisReportService:
     
     def complete_report(self, execution_id: str, full_report: Dict[str, Any]) -> bool:
         """
-        完成诊断报告（创建快照、归档）
-        
+        完成诊断报告（创建快照、归档）- P0 修复增强版
+
         参数:
             execution_id: 执行 ID
             full_report: 完整报告数据 {
@@ -141,40 +168,46 @@ class DiagnosisReportService:
                 results: 结果列表
                 analysis: 分析数据
             }
-        
+
         返回:
             success: 是否成功
         """
         db_logger.info(f"开始完成诊断报告：{execution_id}")
-        
+
         try:
             # 1. 获取报告
             report = self.report_repo.get_by_execution_id(execution_id)
             if not report:
                 db_logger.error(f"❌ 报告不存在：{execution_id}")
                 return False
-            
+
             report_id = report['id']
-            
+
             # 2. 更新状态为完成
             self.report_repo.update_status(
                 execution_id, 'completed', 100, 'completed', True
             )
-            
-            # 3. 创建快照
-            self.report_repo.create_snapshot(
+
+            # 3. 创建快照（P0 修复：快照失败不影响主流程）
+            snapshot_result = self.report_repo.create_snapshot(
                 report_id, execution_id, full_report, 'completed'
             )
-            
+            if snapshot_result < 0:
+                db_logger.warning(f"⚠️ 快照创建失败，但继续执行：{execution_id}")
+
             # 4. 保存到文件
-            created_at = datetime.fromisoformat(report['created_at'])
-            self.archive_manager.save_report(execution_id, full_report, created_at)
-            
+            try:
+                created_at = datetime.fromisoformat(report['created_at'])
+                self.archive_manager.save_report(execution_id, full_report, created_at)
+            except Exception as e:
+                db_logger.error(f"❌ 文件保存失败：{execution_id}, 错误：{e}")
+                # 文件保存失败不影响主流程
+
             db_logger.info(f"✅ 诊断报告完成：{execution_id}")
             return True
-            
+
         except Exception as e:
-            db_logger.error(f"❌ 完成报告失败：{execution_id}, 错误：{e}")
+            db_logger.error(f"❌ 完成报告失败：{execution_id}, 错误：{e}", exc_info=True)
             return False
     
     def get_full_report(self, execution_id: str) -> Optional[Dict[str, Any]]:
@@ -199,23 +232,51 @@ class DiagnosisReportService:
         db_logger.info(f"获取完整报告：{execution_id}")
 
         # 1. 获取报告主数据
-        report = self.report_repo.get_by_execution_id(execution_id)
+        try:
+            report = self.report_repo.get_by_execution_id(execution_id)
+        except Exception as e:
+            db_logger.error(f"查询报告失败：execution_id={execution_id}, 错误：{e}")
+            return self._create_fallback_report(
+                execution_id,
+                f'数据库查询失败：{str(e)}',
+                'database_error'
+            )
+
+        # P0 修复：增加判空逻辑，防止 report 为 None
         if not report:
-            db_logger.warning(f"报告不存在：{execution_id}")
+            db_logger.warning(f"报告不存在：execution_id={execution_id}")
             return self._create_fallback_report(execution_id, '报告不存在', 'not_found')
 
+        # P0 修复：确保 report 是字典类型
+        if not isinstance(report, dict):
+            db_logger.error(f"报告格式错误：execution_id={execution_id}, type={type(report)}")
+            return self._create_fallback_report(
+                execution_id,
+                '报告数据格式错误',
+                'invalid_format'
+            )
+
+        # P0 修复：验证 report 关键字段，防止空字典
+        if not report.get('execution_id'):
+            db_logger.error(f"report 缺少 execution_id 字段：execution_id={execution_id}")
+            return self._create_fallback_report(
+                execution_id,
+                '报告数据不完整',
+                'incomplete_data'
+            )
+
         # P1-1 修复：完善降级方案，处理多种异常场景
-        
+
         # 场景 1: 报告状态为 failed
         if report.get('status') == 'failed':
-            db_logger.info(f"报告为失败状态：{execution_id}")
+            db_logger.info(f"报告为失败状态：execution_id={execution_id}")
             return self._create_fallback_report(
-                execution_id, 
+                execution_id,
                 '诊断执行失败，请查看日志获取详细错误信息',
                 'failed',
                 report
             )
-        
+
         # 场景 2: 报告状态为 processing 但超时（超过 10 分钟）
         if report.get('status') == 'processing':
             created_at = report.get('created_at')
@@ -224,7 +285,7 @@ class DiagnosisReportService:
                     created_time = datetime.fromisoformat(created_at)
                     time_diff = (datetime.now() - created_time).total_seconds()
                     if time_diff > 600:  # 超过 10 分钟
-                        db_logger.warning(f"报告处理超时：{execution_id}, 已耗时{time_diff}秒")
+                        db_logger.warning(f"报告处理超时：execution_id={execution_id}, 已耗时{time_diff}秒")
                         return self._create_fallback_report(
                             execution_id,
                             '诊断处理超时，建议重新执行诊断',
@@ -232,10 +293,14 @@ class DiagnosisReportService:
                             report
                         )
                 except Exception as e:
-                    db_logger.error(f"时间解析失败：{e}")
+                    db_logger.error(f"时间解析失败：execution_id={execution_id}, 错误：{e}")
 
         # 2. 获取结果明细
-        results = self.result_repo.get_by_execution_id(execution_id)
+        try:
+            results = self.result_repo.get_by_execution_id(execution_id)
+        except Exception as e:
+            db_logger.error(f"查询结果失败：execution_id={execution_id}, 错误：{e}")
+            results = []
 
         # P1-1 降级方案：结果为空时的处理
         if not results or len(results) == 0:
@@ -253,7 +318,11 @@ class DiagnosisReportService:
             )
 
         # 3. 获取分析数据
-        analysis = self.analysis_repo.get_by_execution_id(execution_id)
+        try:
+            analysis = self.analysis_repo.get_by_execution_id(execution_id)
+        except Exception as e:
+            db_logger.error(f"查询分析数据失败：execution_id={execution_id}, 错误：{e}")
+            analysis = {}
 
         # P1-1 降级方案：分析数据缺失时提供默认值
         analysis_data = self._ensure_complete_analysis(analysis, execution_id)
@@ -305,7 +374,8 @@ class DiagnosisReportService:
             full_report['checksum_verified'] = True
 
         db_logger.info(f"✅ 获取完整报告成功：{execution_id}, 结果数：{len(results)}")
-        return full_report
+        # P0 修复：转换为 camelCase
+        return convert_response_to_camel(full_report)
 
     def _create_fallback_report(self, execution_id: str, error_message: str, 
                                  error_type: str, report: Optional[Dict] = None) -> Dict[str, Any]:
@@ -322,8 +392,9 @@ class DiagnosisReportService:
             降级报告数据
         """
         db_logger.info(f"创建降级报告：{execution_id}, 类型：{error_type}")
-        
-        return {
+
+        # P0 修复：转换为 camelCase
+        return convert_response_to_camel({
             'report': report or {
                 'execution_id': execution_id,
                 'status': 'error',
@@ -354,7 +425,7 @@ class DiagnosisReportService:
                 'has_partial_analysis': True,
                 'warnings': [error_message]
             }
-        }
+        })
 
     def _create_partial_fallback_report(self, execution_id: str, report: Dict, 
                                          progress: int) -> Dict[str, Any]:
@@ -369,7 +440,8 @@ class DiagnosisReportService:
         返回:
             部分结果报告
         """
-        return {
+        # P0 修复：转换为 camelCase
+        return convert_response_to_camel({
             'report': report,
             'results': [],
             'analysis': {},
@@ -398,7 +470,7 @@ class DiagnosisReportService:
                 'has_partial_analysis': True,
                 'warnings': ['诊断进行中']
             }
-        }
+        })
 
     def _ensure_complete_analysis(self, analysis: Dict, execution_id: str = None) -> Dict[str, Any]:
         """
@@ -525,10 +597,10 @@ class DiagnosisReportService:
     def _calculate_brand_distribution(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         计算品牌分布数据
-        
+
         参数:
             results: 结果列表
-        
+
         返回:
             {
                 data: {品牌名：数量，...},
@@ -537,21 +609,26 @@ class DiagnosisReportService:
         """
         distribution = {}
         for result in results:
-            brand = result.get('brand', 'Unknown')
+            # P0 修复：检查结果是否为 None
+            if not result:
+                continue
+            
+            # P0 修复：安全获取 brand
+            brand = result.get('brand', 'Unknown') if result else 'Unknown'
             distribution[brand] = distribution.get(brand, 0) + 1
-        
+
         return {
             'data': distribution,
-            'total_count': len(results)
+            'total_count': sum(distribution.values())
         }
 
     def _calculate_sentiment_distribution(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         计算情感分布数据
-        
+
         参数:
             results: 结果列表
-        
+
         返回:
             {
                 data: {positive: 数量，neutral: 数量，negative: 数量},
@@ -559,47 +636,62 @@ class DiagnosisReportService:
             }
         """
         sentiment_counts = {'positive': 0, 'neutral': 0, 'negative': 0}
-        
+
         for result in results:
-            geo_data = result.get('geo_data', {})
-            sentiment = geo_data.get('sentiment', 0)
+            # P0 修复：检查结果是否为 None
+            if not result:
+                db_logger.warning('发现 None 结果，跳过情感分析')
+                continue
             
+            # P0 修复：安全获取 geo_data，确保默认为空字典
+            geo_data = result.get('geo_data') or {}
+            
+            # P0 修复：安全获取 sentiment 值
+            sentiment = geo_data.get('sentiment', 0) if geo_data else 0
+
             if sentiment > 0.3:
                 sentiment_counts['positive'] += 1
             elif sentiment < -0.3:
                 sentiment_counts['negative'] += 1
             else:
                 sentiment_counts['neutral'] += 1
-        
+
         return {
             'data': sentiment_counts,
-            'total_count': len(results)
+            'total_count': sum(sentiment_counts.values())
         }
 
     def _extract_keywords(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         提取关键词
-        
+
         参数:
             results: 结果列表
-        
+
         返回:
             关键词列表
         """
         keywords = []
         seen = set()
-        
+
         for result in results:
-            geo_data = result.get('geo_data', {})
-            extracted_keywords = geo_data.get('keywords', [])
+            # P0 修复：检查结果是否为 None
+            if not result:
+                continue
             
+            # P0 修复：安全获取 geo_data
+            geo_data = result.get('geo_data') or {}
+            
+            # P0 修复：安全获取 keywords
+            extracted_keywords = geo_data.get('keywords', []) if geo_data else []
+
             if extracted_keywords and isinstance(extracted_keywords, list):
                 for kw in extracted_keywords:
                     word = kw.get('word', '') if isinstance(kw, dict) else str(kw)
                     if word and word not in seen:
                         keywords.append(kw if isinstance(kw, dict) else {'word': kw, 'count': 1})
                         seen.add(word)
-        
+
         return keywords
 
     def _validate_report_data(self, report: Dict, results: List, analysis: Dict) -> Dict[str, Any]:
@@ -669,8 +761,9 @@ class DiagnosisReportService:
         """
         offset = (page - 1) * limit
         reports = self.report_repo.get_user_history(user_id, limit, offset)
-        
-        return {
+
+        # P0 修复：转换为 camelCase
+        return convert_response_to_camel({
             'reports': reports,
             'pagination': {
                 'page': page,
@@ -678,7 +771,7 @@ class DiagnosisReportService:
                 'total': len(reports),  # 实际应该查询总数
                 'has_more': len(reports) == limit
             }
-        }
+        })
     
     def update_progress(self, execution_id: str, progress: int, stage: str) -> bool:
         """
@@ -771,6 +864,11 @@ class ReportValidationService:
     @staticmethod
     def _validate_report_data(report_data: Dict, errors: List, warnings: List) -> bool:
         """验证报告主数据"""
+        # P0 修复：增加判空逻辑，防止 NoneType 错误
+        if report_data is None:
+            errors.append("report 对象为 None")
+            return False
+        
         if not report_data:
             errors.append("report 对象为空或缺失")
             return False
@@ -780,17 +878,17 @@ class ReportValidationService:
         for field in required_fields:
             if field not in report_data:
                 errors.append(f"缺少必填字段：{field}")
-        
+
         # 验证状态字段
         status = report_data.get('status')
         if status and status not in ['pending', 'processing', 'completed', 'failed']:
             warnings.append(f"未知状态：{status}")
-        
+
         # 验证进度
         progress = report_data.get('progress')
         if progress is not None and (not isinstance(progress, (int, float)) or progress < 0 or progress > 100):
             errors.append(f"进度值无效：{progress}")
-        
+
         return len(errors) == 0
 
     @staticmethod

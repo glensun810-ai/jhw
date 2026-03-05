@@ -1,0 +1,690 @@
+openapi: 3.0.3
+info:
+  title: 品牌战略洞察报告 API
+  description: |
+    品牌诊断报告查询 API，提供完整的品牌诊断结果、分析数据和可视化数据
+    
+    ## 认证
+    大部分接口需要 Bearer Token 认证
+    
+    ## 错误处理
+    - 400: 请求参数错误
+    - 401: 未认证或 Token 过期
+    - 403: 权限不足
+    - 404: 资源不存在
+    - 429: 请求频率超限
+    - 500: 服务器内部错误
+    
+    ## 数据格式
+    - 所有时间字段使用 ISO 8601 格式
+    - 所有数值字段可能为 null
+  version: 2.0.0
+  contact:
+    name: 系统架构组
+    email: support@example.com
+
+servers:
+  - url: http://localhost:5000
+    description: 本地开发环境
+  - url: https://api.example.com
+    description: 生产环境
+
+tags:
+  - name: diagnosis
+    description: 诊断报告相关接口
+  - name: health
+    description: 健康检查接口
+
+paths:
+  /api/diagnosis/report/{execution_id}:
+    get:
+      tags:
+        - diagnosis
+      summary: 获取完整诊断报告
+      description: |
+        根据执行 ID 获取完整的品牌诊断报告
+        
+        ## 返回数据结构
+        - report: 报告主数据
+        - results: 诊断结果列表
+        - analysis: 分析数据（嵌套结构）
+        - brandDistribution: 品牌分布（前端格式）
+        - sentimentDistribution: 情感分布（前端格式）
+        - keywords: 关键词列表
+        - validation: 验证信息（包含质量评分）
+        - qualityHints: 质量提示
+        
+        ## 错误场景
+        - 报告不存在：返回 404
+        - 报告失败：返回 200，包含 error 字段
+        - 服务器错误：返回 500
+      operationId: getFullReport
+      parameters:
+        - name: execution_id
+          in: path
+          description: 诊断执行 ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: 成功获取报告
+          headers:
+            X-RateLimit-Limit:
+              description: 请求频率上限
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: 剩余请求次数
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullReportResponse'
+        '404':
+          description: 报告不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '429':
+          description: 请求频率超限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /api/diagnosis/report/{execution_id}/validate:
+    get:
+      tags:
+        - diagnosis
+      summary: 验证报告完整性
+      description: 验证指定报告的完整性和数据质量
+      operationId: validateReport
+      parameters:
+        - name: execution_id
+          in: path
+          description: 诊断执行 ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 验证结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+        '404':
+          description: 报告不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  /api/diagnosis/history:
+    get:
+      tags:
+        - diagnosis
+      summary: 获取用户历史报告
+      description: |
+        获取用户的诊断报告历史记录
+        
+        ## 分页
+        - 默认每页 20 条
+        - 支持页码和每页数量参数
+      operationId: getUserHistory
+      parameters:
+        - name: user_id
+          in: query
+          description: 用户 ID（可选，默认 anonymous）
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: 页码（从 1 开始）
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: 每页数量
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: 成功获取历史报告
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryResponse'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+
+  /test/status/{execution_id}:
+    get:
+      tags:
+        - diagnosis
+      summary: 获取诊断任务状态
+      description: |
+        获取诊断任务的当前状态和进度
+        
+        ## 状态说明
+        - pending: 等待执行
+        - processing: 执行中
+        - completed: 已完成
+        - failed: 执行失败
+      operationId: getTaskStatus
+      parameters:
+        - name: execution_id
+          in: path
+          description: 诊断执行 ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: since
+          in: query
+          description: 增量轮询时间戳（可选）
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 成功获取任务状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatusResponse'
+        '404':
+          description: 任务不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  /api/health:
+    get:
+      tags:
+        - health
+      summary: 健康检查
+      description: 检查服务健康状态
+      operationId: healthCheck
+      responses:
+        '200':
+          description: 服务健康
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    # ==================== 响应 Schema ====================
+    
+    FullReportResponse:
+      type: object
+      required:
+        - report
+        - results
+        - analysis
+        - meta
+      properties:
+        report:
+          $ref: '#/components/schemas/Report'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Result'
+        analysis:
+          $ref: '#/components/schemas/Analysis'
+        brandDistribution:
+          $ref: '#/components/schemas/BrandDistribution'
+        sentimentDistribution:
+          $ref: '#/components/schemas/SentimentDistribution'
+        keywords:
+          type: array
+          items:
+            $ref: '#/components/schemas/Keyword'
+        meta:
+          $ref: '#/components/schemas/Meta'
+        validation:
+          $ref: '#/components/schemas/Validation'
+        qualityHints:
+          $ref: '#/components/schemas/QualityHints'
+        error:
+          $ref: '#/components/schemas/ErrorInfo'
+        partial:
+          $ref: '#/components/schemas/PartialInfo'
+
+    Report:
+      type: object
+      required:
+        - execution_id
+        - brand_name
+        - status
+        - created_at
+      properties:
+        id:
+          type: integer
+          example: 1
+        execution_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        user_id:
+          type: string
+          example: "user_123"
+        brand_name:
+          type: string
+          example: "华为"
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          example: "completed"
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 100
+        stage:
+          type: string
+          enum: [init, ai_fetching, intelligence_analyzing, completed, failed]
+          example: "completed"
+        is_completed:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        checksum:
+          type: string
+          nullable: true
+
+    Result:
+      type: object
+      required:
+        - brand
+        - question
+        - model
+      properties:
+        id:
+          type: integer
+        brand:
+          type: string
+        question:
+          type: string
+        model:
+          type: string
+        response:
+          type: object
+          properties:
+            content:
+              type: string
+            latency:
+              type: number
+              format: float
+        geo_data:
+          $ref: '#/components/schemas/GeoData'
+        quality_score:
+          type: number
+          minimum: 0
+          maximum: 100
+        quality_level:
+          type: string
+          enum: [very_low, low, medium, high, very_high]
+
+    GeoData:
+      type: object
+      properties:
+        brand_mentioned:
+          type: boolean
+        rank:
+          type: integer
+        sentiment:
+          type: number
+          format: float
+          minimum: -1
+          maximum: 1
+        cited_sources:
+          type: array
+          items:
+            type: string
+        keywords:
+          type: array
+          items:
+            type: object
+            properties:
+              word:
+                type: string
+              count:
+                type: integer
+              sentiment:
+                type: number
+
+    Analysis:
+      type: object
+      properties:
+        competitive_analysis:
+          type: object
+        brand_scores:
+          type: object
+        semantic_drift:
+          type: object
+        source_purity:
+          type: object
+        recommendations:
+          type: object
+
+    BrandDistribution:
+      type: object
+      required:
+        - data
+        - total_count
+      properties:
+        data:
+          type: object
+          additionalProperties:
+            type: integer
+        total_count:
+          type: integer
+
+    SentimentDistribution:
+      type: object
+      required:
+        - data
+        - total_count
+      properties:
+        data:
+          type: object
+          properties:
+            positive:
+              type: integer
+            neutral:
+              type: integer
+            negative:
+              type: integer
+        total_count:
+          type: integer
+
+    Keyword:
+      type: object
+      properties:
+        word:
+          type: string
+        count:
+          type: integer
+        sentiment:
+          type: number
+        sentiment_label:
+          type: string
+          enum: [positive, neutral, negative]
+
+    Meta:
+      type: object
+      properties:
+        data_schema_version:
+          type: string
+          example: "1.0"
+        server_version:
+          type: string
+          example: "2.0.0"
+        retrieved_at:
+          type: string
+          format: date-time
+
+    Validation:
+      type: object
+      required:
+        - is_valid
+      properties:
+        is_valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        quality_issues:
+          type: array
+          items:
+            type: string
+        quality_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        details:
+          type: object
+          properties:
+            report_valid:
+              type: boolean
+            results_valid:
+              type: boolean
+            analysis_valid:
+              type: boolean
+            aggregation_valid:
+              type: boolean
+            checksum_valid:
+              type: boolean
+
+    QualityHints:
+      type: object
+      properties:
+        has_low_quality_results:
+          type: boolean
+        has_partial_analysis:
+          type: boolean
+        warnings:
+          type: array
+          items:
+            type: string
+
+    ErrorInfo:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          enum: [not_found, failed, timeout, no_results, error]
+        message:
+          type: string
+        suggestion:
+          type: string
+        stage:
+          type: string
+
+    PartialInfo:
+      type: object
+      properties:
+        is_partial:
+          type: boolean
+        progress:
+          type: integer
+        stage:
+          type: string
+        message:
+          type: string
+        suggestion:
+          type: string
+
+    # ==================== 其他响应 Schema ====================
+    
+    ValidationResponse:
+      type: object
+      required:
+        - is_valid
+      properties:
+        is_valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        quality_score:
+          type: integer
+        checksum_verified:
+          type: boolean
+
+    HistoryResponse:
+      type: object
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ReportSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        execution_id:
+          type: string
+        brand_name:
+          type: string
+        status:
+          type: string
+        progress:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+
+    TaskStatusResponse:
+      type: object
+      properties:
+        execution_id:
+          type: string
+        status:
+          type: string
+        progress:
+          type: integer
+        stage:
+          type: string
+        results_count:
+          type: integer
+        total_tasks:
+          type: integer
+        should_stop_polling:
+          type: boolean
+        detailed_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Result'
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        services:
+          type: object
+          additionalProperties:
+            type: string
+
+    # ==================== 错误 Schema ====================
+    
+    NotFoundError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        execution_id:
+          type: string
+        suggestion:
+          type: string
+
+    ServerError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        execution_id:
+          type: string
+        suggestion:
+          type: string
+
+    AuthError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    RateLimitError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        retry_after:
+          type: integer
+          description: 重试等待时间（秒）
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

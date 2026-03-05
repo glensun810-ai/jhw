@@ -100,13 +100,21 @@ class RedisCacheService:
 
         except Exception as e:
             error_msg = str(e)
-            
+
             # P0-DB-INIT-005: 针对常见错误提供友好提示
             if "Connection refused" in error_msg or "Error 61" in error_msg:
+                api_logger.error(
+                    f"❌ [Redis] 连接被拒绝 (Error 61)：{self.config.HOST}:{self.config.PORT}"
+                )
+                api_logger.error(
+                    f"💡 解决方案：请在终端执行以下命令启动 Redis 服务："
+                )
+                api_logger.error("   brew services start redis")
+                api_logger.error(
+                    f"   验证命令：redis-cli ping (应返回 PONG)"
+                )
                 api_logger.warning(
-                    f"[Redis] 连接被拒绝 (Error 61)：{self.config.HOST}:{self.config.PORT} - "
-                    f"Redis 服务可能未启动。使用内存缓存降级方案。"
-                    f"如需启用 Redis，请运行：brew services start redis"
+                    f"⚠️  当前使用内存缓存降级方案，缓存数据在重启后会丢失。"
                 )
             elif "No such file or directory" in error_msg:
                 api_logger.warning(
@@ -117,7 +125,7 @@ class RedisCacheService:
                 api_logger.warning(
                     f"[Redis] 连接失败：{e}，使用内存缓存降级方案"
                 )
-            
+
             self._client = None
             self._stats['errors'] += 1
     

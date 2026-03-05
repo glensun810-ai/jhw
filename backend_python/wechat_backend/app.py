@@ -76,7 +76,7 @@ try:
         # Use safe access with .get() to avoid KeyError
         status = health_results.get('status', 'unknown')
         unhealthy = health_results.get('unhealthy_platforms', [])
-        
+
         # 仅在不健康平台时记录错误
         if status == 'unhealthy' and unhealthy:
             app_logger.error(f"⚠️  AI Platform health check FAILED! Unhealthy: {', '.join(unhealthy)}")
@@ -90,6 +90,23 @@ try:
             app_logger.info(f"✅ AI Platform health check passed! (status={status})")
 except Exception as e:
     app_logger.error(f"AI Platform health check failed: {e}")
+    import traceback
+    app_logger.error(f"Traceback: {traceback.format_exc()}")
+
+# P0-POOL-MONITOR-001: 启动连接池监控（防止连接耗尽）
+try:
+    from wechat_backend.monitoring.connection_pool_monitor_launcher import (
+        start_pool_monitors
+    )
+
+    app_logger.info("=== Connection Pool Monitoring ===")
+    start_pool_monitors(
+        db_pool_interval=10,   # 数据库连接池监控间隔 10 秒
+        http_pool_interval=10  # HTTP 连接池监控间隔 10 秒
+    )
+    app_logger.info("✅ 连接池监控已启动（实时检测连接耗尽风险）")
+except Exception as e:
+    app_logger.error(f"⚠️  连接池监控启动失败：{e}")
     import traceback
     app_logger.error(f"Traceback: {traceback.format_exc()}")
 
@@ -249,6 +266,12 @@ from wechat_backend.cache.api_cache import cache_bp, start_cache_maintenance
 app.register_blueprint(cache_bp)
 start_cache_maintenance()
 
+# P0-POOL-MONITOR-002: Register Pool Monitoring API blueprints (连接池监控)
+from wechat_backend.api.pool_monitoring_api import create_pool_monitoring_routes
+pool_monitoring_bp = create_pool_monitoring_routes()
+app.register_blueprint(pool_monitoring_bp)
+app_logger.info("✅ 连接池监控 API 已注册 (/api/monitoring/pool)")
+
 # Initialize database query optimization (数据库查询优化)
 from wechat_backend.database.query_optimizer import init_recommended_indexes
 init_recommended_indexes()
@@ -338,21 +361,21 @@ def warm_up_adapters():
 import threading
 threading.Thread(target=warm_up_adapters, daemon=True).start()
 
-# P2-1 优化：启动 SSE 服务并注册路由（使用统一后台服务管理器）
+# 【P0 关键修复 - 2026-03-02】启动 WebSocket 服务并注册路由（替代 SSE）
 try:
-    from wechat_backend.services.sse_service_v2 import register_sse_routes
-    register_sse_routes(app)  # 注册 SSE 路由
-    
+    from wechat_backend.websocket_route import register_websocket_routes
+    register_websocket_routes(app)  # 注册 WebSocket 路由
+
     # 使用统一后台服务管理器启动清理任务
     from wechat_backend.services.background_service_manager import initialize_background_services
     initialize_background_services()
-    
-    app_logger.info("✅ SSE 服务已启动")
+
+    app_logger.info("✅ WebSocket 服务已启动")
     app_logger.info("✅ 统一后台服务管理器已启动")
 except Exception as e:
-    app_logger.warning(f"⚠️  SSE 服务启动失败：{e}")
+    app_logger.warning(f"⚠️  WebSocket 服务启动失败：{e}")
     import traceback
-    app_logger.error(f"[SSE] 错误详情：{traceback.format_exc()}")
+    app_logger.error(f"[WebSocket] 错误详情：{traceback.format_exc()}")
 
 # P3-2 优化：启动配置热更新
 try:

@@ -87,7 +87,7 @@ const {
 } = require('../../services/initService');
 
 // 原有引入保留
-const { checkServerConnectionApi, startBrandTestApi, getTestProgressApi, getTaskStatusApi } = require('../../api/home');
+const { checkServerConnectionApi, startBrandTestApi, getTaskStatusApi } = require('../../api/home');
 const { parseTaskStatus } = require('../../services/taskStatusService');
 const { aggregateReport } = require('../../services/reportAggregator');
 
@@ -141,6 +141,8 @@ Page({
     ],
     selectedModelCount: 0,
     totalSelectedCount: 0,
+    selectedDomesticCount: 0,
+    selectedOverseasCount: 0,
     domesticSelectedNames: '',
     overseasSelectedNames: '',
 
@@ -220,7 +222,11 @@ Page({
     // 诊断配置兜底数据 - 严禁设为 null
     diagnosticConfig: {
       estimate: { duration: '30s', steps: 5 }
-    }
+    },
+
+    // 【P0 新增】AI 平台列表 - 初始化为空数组
+    domesticAiModels: [],
+    overseasAiModels: []
   },
 
   onLoad: function (options) {
@@ -236,7 +242,7 @@ Page({
       // 3. 【P0 关键修复】初始化 AI 平台数据（同步，确保页面渲染时有数据）
       this.initDomesticAiModels();
       this.initOverseasAiModels();
-      
+
       // 4. 加载用户 AI 平台偏好（使用服务，异步）
       loadUserPlatformPreferences(this);
       this.updateSelectedModelCount();
@@ -250,66 +256,113 @@ Page({
           this.setData({
             showAdvancedSettings: savedSettings.showAdvancedSettings
           });
-          console.log('[高级设置] 恢复用户上次状态:', savedSettings.showAdvancedSettings ? '展开' : '折叠');
         } else {
           // 默认展开
           this.setData({
             showAdvancedSettings: true
           });
-          console.log('[高级设置] 使用默认状态：展开');
         }
       } catch (e) {
-        console.warn('[高级设置] 读取 Storage 失败，使用默认展开状态');
-        this.setData({ showAdvancedSettings: true });
+        console.warn('读取高级设置状态失败');
       }
 
-      // 6. 防御性读取 config.estimate（多层保护）
-      let estimate = { duration: '30s', steps: 5 };
-      if (this.data && this.data.config) {
-        const config = this.data.config;
-        if (config.estimate && typeof config.estimate === 'object') {
-          estimate = config.estimate;
-        }
-      }
+      // 6. 【新增】获取平台配置状态，标记未配置的平台
+      this.loadPlatformConfigStatus();
 
-      console.log('诊断预估配置:', estimate);
+    } catch (e) {
+      console.error('页面初始化异常:', e);
+    }
+  },
 
-      // 7. 检查是否需要立即启动快速搜索
-      if (options && options.quickSearch === 'true') {
-        setTimeout(() => {
-          this.startBrandTest();
-        }, 1000);
-      }
+  onShow: function() {
+    try {
+      // 1. 恢复草稿（如果有）
+      this.restoreDraft();
 
-      // 8. 应用页面进入动画
-      this.applyPageEnterAnimation();
+      // 2. 检查是否有上次诊断的报告
+      this.checkLastReport();
 
-      // 注意：restoreDraft 移到 onShow 中调用，避免 onLoad 中重复 setData
     } catch (error) {
-      // 隔离报错环境：记录日志并维持默认状态
-      console.error('onLoad 初始化失败:', error);
-      console.error('错误堆栈:', error.stack);
+      console.error('onShow 执行失败:', error);
+    }
+  },
 
-      // 维持默认状态，确保页面可用
-      this.setData({
-        serverStatus: '初始化失败',
-        config: {
-          estimate: { duration: '30s', steps: 5 },
-          brandName: '',
-          competitorBrands: [],
-          customQuestions: [{text: '', show: true}, {text: '', show: true}, {text: '', show: true}]
-        },
-        diagnosticConfig: {
-          estimate: { duration: '30s', steps: 5 }
+  onReady: function() {
+    try {
+      // 1. 启动背景粒子动画
+      this.startParticleAnimation();
+
+    } catch (error) {
+      console.error('onReady 执行失败:', error);
+    }
+  },
+
+  onHide: function() {
+    try {
+      // 1. 停止背景粒子动画
+      this.stopParticleAnimation();
+
+    } catch (error) {
+      console.error('onHide 执行失败:', error);
+    }
+  },
+
+  onUnload: function() {
+    try {
+      // 1. 停止背景粒子动画
+      this.stopParticleAnimation();
+
+      // 2. 清理定时器
+      if (this.data.countdownTimer) {
+        clearInterval(this.data.countdownTimer);
+      }
+      
+      // 3. 【P0 关键修复 - 2026-03-02】清理 WebSocket 连接
+      if (this.pollingController && this.pollingController.stop) {
+        this.pollingController.stop();
+      }
+      
+      // 4. 关闭全局 WebSocket 连接
+      if (typeof global !== 'undefined' && global.wsClient) {
+        console.log('[IndexPage] 关闭 WebSocket 连接');
+        global.wsClient.close();
+        global.wsClient = null;
+      }
+
+    } catch (error) {
+      console.error('onUnload 执行失败:', error);
+    }
+  },
+
+  // ==================== 配置管理 ====================
+
+  /**
+   * 加载平台配置状态
+   */
+  loadPlatformConfigStatus: function() {
+    try {
+      const config = this.data.config || {};
+      const brandName = config.brandName || '';
+      const competitorBrands = config.competitorBrands || [];
+
+      // 标记未配置的品牌
+      const allBrands = [brandName, ...competitorBrands].filter(Boolean);
+      const unconfiguredPlatforms = [];
+
+      allBrands.forEach(brand => {
+        const apiKey = this.getApiKeyForBrand(brand);
+        if (!apiKey) {
+          unconfiguredPlatforms.push(brand);
         }
       });
 
-      // 不影响用户其他操作
-      wx.showToast({
-        title: '初始化失败，请刷新重试',
-        icon: 'none',
-        duration: 2000
-      });
+      if (unconfiguredPlatforms.length > 0) {
+        console.warn('[平台配置] 以下平台未配置 API Key:', unconfiguredPlatforms);
+        this.setData({ unconfiguredPlatforms });
+      }
+
+    } catch (error) {
+      console.error('[平台配置] 加载失败:', error);
     }
   },
 
@@ -386,13 +439,26 @@ Page({
   },
 
   /**
-   * 【新增】检查最新诊断结果
+   * 【修复】检查最新诊断结果（添加互斥逻辑）
+   * 修复说明：
+   * 1. 如果当前会话已完成诊断（appState === 'completed'），不显示历史最新入口
+   * 2. 只在没有当前会话报告时显示历史最新入口
    */
   checkLatestDiagnosis: function() {
     try {
       const latestExecutionId = wx.getStorageSync('latestExecutionId');
       const latestTargetBrand = wx.getStorageSync('latestTargetBrand');
       const latestDiagnosisTime = wx.getStorageSync('latestDiagnosisTime');
+
+      // 【互斥逻辑】如果当前会话已有完成的诊断，不显示历史最新入口
+      if (this.data.appState === 'completed' || this.data.reportData) {
+        console.log('✅ 当前会话已有诊断报告，隐藏历史最新入口');
+        this.setData({
+          hasLatestDiagnosis: false,
+          latestDiagnosisInfo: null
+        });
+        return;
+      }
 
       if (latestExecutionId && latestTargetBrand) {
         console.log('✅ 检测到最新诊断结果:', {
@@ -409,6 +475,12 @@ Page({
             brand: latestTargetBrand,
             time: latestDiagnosisTime
           }
+        });
+      } else {
+        // 没有历史最新诊断，清除标记
+        this.setData({
+          hasLatestDiagnosis: false,
+          latestDiagnosisInfo: null
         });
       }
     } catch (e) {
@@ -494,6 +566,28 @@ Page({
         pageLoaded: true
       });
     }, 50);
+  },
+
+  /**
+   * 停止粒子动画
+   */
+  stopParticleAnimation: function() {
+    try {
+      if (this.data.particleAnimateId) {
+        cancelAnimationFrame(this.data.particleAnimateId);
+        this.setData({ particleAnimateId: null });
+      }
+    } catch (error) {
+      console.error('停止粒子动画失败:', error);
+    }
+  },
+
+  /**
+   * 启动粒子动画（别名，用于兼容性）
+   */
+  startParticleAnimation: function() {
+    // 动画已在 initParticleCanvas 中启动，无需额外操作
+    // 此方法仅用于兼容性
   },
 
   initParticleCanvas: function() {
@@ -735,6 +829,103 @@ Page({
   },
 
   /**
+   * 【新增】加载平台配置状态，标记未配置的平台
+   */
+  loadPlatformConfigStatus: function() {
+    const that = this;
+
+    // 防御性检查：确保 domesticAiModels 和 overseasAiModels 是数组
+    if (!Array.isArray(that.data.domesticAiModels)) {
+      console.warn('[平台配置] domesticAiModels 不是数组 (类型：' + typeof that.data.domesticAiModels + ')，等待初始化完成');
+      // 延迟重试
+      setTimeout(() => {
+        this.loadPlatformConfigStatus();
+      }, 100);
+      return;
+    }
+
+    if (!Array.isArray(that.data.overseasAiModels)) {
+      console.warn('[平台配置] overseasAiModels 不是数组 (类型：' + typeof that.data.overseasAiModels + ')，等待初始化完成');
+      // 延迟重试
+      setTimeout(() => {
+        this.loadPlatformConfigStatus();
+      }, 100);
+      return;
+    }
+
+    // 在请求前保存数组引用，避免回调中数据变化
+    // 使用 Array.from 确保是真正的数组
+    const currentDomesticModels = Array.from(that.data.domesticAiModels || []);
+    const currentOverseasModels = Array.from(that.data.overseasAiModels || []);
+
+    console.log('[平台配置] 开始加载平台状态，国内平台数：' + currentDomesticModels.length + ', 海外平台数：' + currentOverseasModels.length);
+
+    wx.request({
+      url: getApp().globalData.serverUrl + '/api/platform-status',
+      method: 'GET',
+      success: function(res) {
+        // 【数据防御性编程】校验响应数据结构
+        if (!res || !res.data) {
+          console.warn('[平台配置] 响应数据为空');
+          return;
+        }
+
+        if (res.statusCode === 200 && res.data.status === 'success') {
+          // 【数据防御性编程】校验 platforms 是否为对象
+          const platforms = res.data.platforms;
+          if (!platforms || typeof platforms !== 'object') {
+            console.warn('[平台配置] platforms 数据格式无效，使用空对象');
+            platforms = {};
+          }
+
+          // 【数据防御性编程】确保 currentDomesticModels 是数组后再调用 .map()
+          const safeDomesticModels = Array.isArray(currentDomesticModels) ? currentDomesticModels : [];
+          const domesticAiModels = safeDomesticModels.map(model => {
+            // 【数据防御性编程】确保 model 存在且有 id
+            if (!model || !model.id) {
+              return model || { name: '未知', id: 'unknown', checked: false };
+            }
+            const platformStatus = platforms[model.id];
+            return {
+              ...model,
+              isConfigured: platformStatus ? platformStatus.isConfigured : false,
+              disabled: platformStatus ? !platformStatus.isConfigured : true
+            };
+          });
+
+          // 【数据防御性编程】确保 currentOverseasModels 是数组后再调用 .map()
+          const safeOverseasModels = Array.isArray(currentOverseasModels) ? currentOverseasModels : [];
+          const overseasAiModels = safeOverseasModels.map(model => {
+            // 【数据防御性编程】确保 model 存在且有 id
+            if (!model || !model.id) {
+              return model || { name: '未知', id: 'unknown', checked: false };
+            }
+            const platformStatus = platforms[model.id];
+            return {
+              ...model,
+              isConfigured: platformStatus ? platformStatus.isConfigured : false,
+              disabled: platformStatus ? !platformStatus.isConfigured : true
+            };
+          });
+
+          // 【数据防御性编程】最终校验：确保结果是数组
+          that.setData({
+            domesticAiModels: Array.isArray(domesticAiModels) ? domesticAiModels : [],
+            overseasAiModels: Array.isArray(overseasAiModels) ? overseasAiModels : []
+          });
+
+          console.log('[平台配置] 已更新平台配置状态');
+        } else {
+          console.warn('[平台配置] 响应状态异常:', res.statusCode);
+        }
+      },
+      fail: function(err) {
+        console.warn('[平台配置] 获取平台状态失败:', err);
+      }
+    });
+  },
+
+  /**
    * P2 修复：保存当前输入到本地存储（使用服务）
    */
   saveCurrentInput: function() {
@@ -954,17 +1145,24 @@ Page({
   toggleModelSelection: function(e) {
     const { type, index } = e.currentTarget.dataset;
     const key = type === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
-    
+
     // P3 修复：确保数据是数组
     const models = Array.isArray(this.data[key]) ? this.data[key] : [];
-    
+
     if (!models[index]) {
       wx.showToast({ title: '模型数据异常', icon: 'none' });
       return;
     }
 
-    if (models[index].disabled) {
-      wx.showToast({ title: '该模型暂未配置', icon: 'none' });
+    // 【新增】检查平台是否已配置
+    if (models[index].disabled || models[index].isConfigured === false) {
+      wx.showToast({ 
+        title: '该平台暂未配置 API Key', 
+        icon: 'none',
+        duration: 2000
+      });
+      // 【新增】显示配置提示
+      this.showMissingConfigTip(models[index]);
       return;
     }
 
@@ -974,23 +1172,61 @@ Page({
     this.saveCurrentInput();
   },
 
+  /**
+   * 【新增】显示未配置平台的提示信息
+   */
+  showMissingConfigTip: function(model) {
+    const that = this;
+    wx.showModal({
+      title: '平台未配置',
+      content: `平台 "${model.name}" 暂未配置 API Key。请在 .env 文件中配置相应的密钥，或联系管理员。`,
+      confirmText: '查看配置',
+      cancelText: '取消',
+      success: function(res) {
+        if (res.confirm) {
+          // 可以跳转到配置页面或显示配置说明
+          wx.showToast({
+            title: '请联系管理员配置',
+            icon: 'none'
+          });
+        }
+      }
+    });
+  },
+
+  /**
+   * 全选/取消全选指定市场的 AI 平台
+   * @param {Event} e - 点击事件，e.currentTarget.dataset.type 为 'domestic' 或 'overseas'
+   */
   selectAllModels: function(e) {
     const { type } = e.currentTarget.dataset;
-    const key = type === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
     
+    // 根据 data-type 确定操作哪个数组
+    const key = type === 'domestic' ? 'domesticAiModels' : 'overseasAiModels';
+
     // P3 修复：确保数据是数组
     const models = Array.isArray(this.data[key]) ? this.data[key] : [];
-    
+
+    // 判断当前是否已全部选中（排除 disabled 项）
+    const allChecked = models.every(model => model.disabled || model.checked);
+
+    // 如果已全部选中，则取消全选；否则全选（排除 disabled 项）
     const updatedModels = models.map(model => ({
       ...model,
-      checked: !model.disabled
+      checked: !model.disabled && !allChecked
     }));
-    
+
     this.setData({ [key]: updatedModels });
     this.updateSelectedModelCount();
     this.saveCurrentInput();
   },
 
+  /**
+   * 更新已选中的模型数量显示
+   * 【P0 修复】selectedModelCount 始终监听两个市场 Tab 下已选模型的总数
+   * totalSelectedCount 也同步更新为相同的值
+   * 【新增】selectedDomesticCount 和 selectedOverseasCount 分别显示各市场的选中数量
+   */
   updateSelectedModelCount: function() {
     // P3 修复：确保数据是数组
     const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
@@ -998,7 +1234,7 @@ Page({
 
     const selectedDomesticCount = domesticAiModels.filter(model => model.checked).length;
     const selectedOverseasCount = overseasAiModels.filter(model => model.checked).length;
-    
+
     // 【新增】获取已选平台名称列表
     const domesticSelectedNames = domesticAiModels
       .filter(model => model.checked)
@@ -1009,13 +1245,15 @@ Page({
       .map(model => model.name)
       .join('、');
 
-    // 【优化】只显示当前 Tab 的选中数量
-    const currentMarket = this.data.selectedMarketTab;
-    const displayCount = currentMarket === 'domestic' ? selectedDomesticCount : selectedOverseasCount;
+    // 【P0 关键修复】selectedModelCount 显示两个市场的总数，确保实时同步
+    const totalCount = selectedDomesticCount + selectedOverseasCount;
 
     this.setData({
-      selectedModelCount: displayCount,
-      totalSelectedCount: selectedDomesticCount + selectedOverseasCount,
+      selectedModelCount: totalCount,
+      totalSelectedCount: totalCount,
+      // 【新增】分别保存各市场的选中数量，供 WXML 显示使用
+      selectedDomesticCount: selectedDomesticCount,
+      selectedOverseasCount: selectedOverseasCount,
       domesticSelectedNames: domesticSelectedNames,
       overseasSelectedNames: overseasSelectedNames
     });
@@ -1097,7 +1335,7 @@ Page({
 
   /**
    * P2 新增：重置所有输入
-   * 清空品牌、竞品、自定义问题，恢复 AI 平台默认配置
+   * 清空品牌、竞品、自定义问题，并将所有 AI 平台的 checked 状态设为 false
    */
   resetAllInput: function() {
     // 重置品牌名称
@@ -1112,22 +1350,16 @@ Page({
     // P3 修复：确保 domesticAiModels 和 overseasAiModels 是数组
     const domesticAiModels = Array.isArray(this.data.domesticAiModels) ? this.data.domesticAiModels : [];
     const overseasAiModels = Array.isArray(this.data.overseasAiModels) ? this.data.overseasAiModels : [];
-    
-    // 重置 AI 平台偏好为默认配置（国内已验证平台默认选中）
-    this.setData({
-      selectedModels: DEFAULT_AI_PLATFORMS.domestic
-    });
 
-    // 更新国内平台选中状态
+    // 【P0 关键修复】重置所有 AI 平台的选中状态为 false
     const updatedDomestic = domesticAiModels.map(model => ({
       ...model,
-      checked: DEFAULT_AI_PLATFORMS.domestic.includes(model.name) && !model.disabled
+      checked: false
     }));
 
-    // 更新海外平台选中状态（默认不选中）
     const updatedOverseas = overseasAiModels.map(model => ({
       ...model,
-      checked: DEFAULT_AI_PLATFORMS.overseas.includes(model.name)
+      checked: false
     }));
 
     this.setData({
@@ -1339,10 +1571,10 @@ Page({
         customQuestions
       };
 
-      // P0-011 修复：只启动诊断，不轮询（统一使用 pollingController）
+      // 【P0 关键修复 - 2026-03-02】使用 WebSocket 替代轮询
       const executionId = await startDiagnosis(inputData);
 
-      // 统一使用 pollingController 轮询
+      // 统一使用 pollingController（自动检测 WebSocket）
       this.pollingController = createPollingController(
         executionId,
         (parsedStatus) => {
@@ -1727,7 +1959,11 @@ Page({
   },
 
   /**
-   * 【新增】查看最新诊断结果（使用服务）
+   * 【修复】查看最新诊断结果（统一跳转到 Dashboard）
+   * 修复说明：
+   * 1. 统一跳转目标为 Dashboard 页面
+   * 2. 清除最新诊断结果标记，避免重复显示
+   * 3. 与 viewReport 保持一致的跳转逻辑
    */
   viewLatestDiagnosis: function() {
     try {
@@ -1735,17 +1971,35 @@ Page({
       const brandName = this.data.latestDiagnosisInfo.brand;
 
       if (executionId) {
-        const resultData = {
-          executionId: executionId,
-          brand_name: brandName
-        };
-        navigateToReportDetail(resultData);
+        // 清除最新诊断结果标记
+        this.setData({
+          hasLatestDiagnosis: false,
+          latestDiagnosisInfo: null
+        });
+
+        // 统一跳转到 Dashboard 页面
+        wx.navigateTo({
+          url: '/pages/report/dashboard/index?executionId=' + executionId,
+          fail: (err) => {
+            console.error('跳转 Dashboard 页面失败:', err);
+            // 降级方案：跳转到结果页
+            wx.navigateTo({
+              url: '/pages/results/results?executionId=' + executionId + '&brandName=' + encodeURIComponent(brandName)
+            });
+          }
+        });
       } else {
-        wx.showToast({ title: '暂无诊断结果', icon: 'none' });
+        wx.showToast({ 
+          title: '暂无诊断结果', 
+          icon: 'none' 
+        });
       }
     } catch (e) {
       console.error('查看最新诊断结果失败:', e);
-      wx.showToast({ title: '操作失败，请重试', icon: 'none' });
+      wx.showToast({ 
+        title: '操作失败，请重试', 
+        icon: 'none' 
+      });
     }
   },
 
@@ -2215,29 +2469,54 @@ Page({
   },
 
   /**
-   * 查看诊断报告（跳转到 Dashboard）
+   * 【修复】查看诊断报告（统一跳转到 Dashboard）
+   * 修复说明：
+   * 1. 统一跳转目标为 Dashboard 页面
+   * 2. 添加互斥逻辑，避免与最新诊断结果入口冲突
+   * 3. 保存报告数据到 Storage
    */
   viewReport: function() {
-    const reportData = this.data.reportData || this.data.dashboardData;
-    if (reportData) {
-      // 保存报告数据到存储
-      if (reportData.executionId) {
-        wx.setStorageSync('lastReport', reportData);
+    try {
+      // 优先使用当前会话的报告数据
+      let reportData = this.data.reportData || this.data.dashboardData;
+      let executionId = this.data.executionId || (reportData ? reportData.executionId : null);
+      let brandName = this.data.brandName || (reportData ? reportData.brand_name : '品牌');
+
+      // 如果没有当前会话数据，尝试从 Storage 获取
+      if (!reportData && executionId) {
+        reportData = wx.getStorageSync('lastReport');
       }
-      
-      wx.navigateTo({
-        url: '/pages/report/dashboard/index?executionId=' + (reportData.executionId || ''),
-        fail: (err) => {
-          console.error('跳转报告页面失败:', err);
-          wx.showToast({
-            title: '跳转失败',
-            icon: 'none'
-          });
-        }
-      });
-    } else {
+
+      if (reportData && executionId) {
+        // 保存报告数据到 Storage
+        wx.setStorageSync('lastReport', reportData);
+
+        // 统一跳转到 Dashboard 页面
+        wx.navigateTo({
+          url: '/pages/report/dashboard/index?executionId=' + executionId,
+          fail: (err) => {
+            console.error('跳转 Dashboard 页面失败:', err);
+            // 降级方案：跳转到结果页
+            wx.navigateTo({
+              url: '/pages/results/results?executionId=' + executionId + '&brandName=' + encodeURIComponent(brandName)
+            });
+          }
+        });
+
+        // 清除最新诊断结果标记，避免两个入口同时显示
+        this.setData({
+          hasLatestDiagnosis: false
+        });
+      } else {
+        wx.showToast({
+          title: '暂无报告数据',
+          icon: 'none'
+        });
+      }
+    } catch (error) {
+      console.error('查看报告失败:', error);
       wx.showToast({
-        title: '暂无报告数据',
+        title: '操作失败，请重试',
         icon: 'none'
       });
     }

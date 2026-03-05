@@ -47,8 +47,27 @@ class ReportService {
 
       const report = res.result;
 
+      // P1-5 修复：处理空状态和错误状态
+      if (!report) {
+        console.warn('[ReportService] Report is empty');
+        return this._createEmptyReportWithSuggestion('报告不存在', 'not_found');
+      }
+
       // 处理报告数据
       const processedReport = this._processReportData(report);
+
+      // P1-5 修复：检查验证信息
+      const validation = processedReport.validation;
+      if (validation && !validation.is_valid && validation.errors?.length > 0) {
+        console.warn('[ReportService] Report validation failed:', validation.errors);
+      }
+
+      // P1-5 修复：检查质量评分
+      const qualityScore = validation?.quality_score;
+      if (qualityScore !== undefined && qualityScore < 60) {
+        console.warn('[ReportService] Low quality report:', qualityScore);
+        processedReport.lowQualityWarning = true;
+      }
 
       // 缓存报告
       this._setCache(executionId, processedReport);
@@ -61,8 +80,53 @@ class ReportService {
         context: 'getFullReport',
         executionId: executionId
       });
-      throw handledError;
+      
+      // P1-5 修复：错误时返回空报告
+      return this._createEmptyReportWithSuggestion(
+        '获取报告失败：' + (error.message || '未知错误'),
+        'error'
+      );
     }
+  }
+
+  /**
+   * P1-5 新增：创建带建议的空报告
+   * @param {string} message - 错误信息
+   * @param {string} type - 错误类型
+   * @returns {Object} 空报告
+   */
+  _createEmptyReportWithSuggestion(message, type) {
+    const suggestions = {
+      'not_found': '请检查执行 ID 是否正确，或重新进行诊断',
+      'error': '请稍后重试或联系技术支持',
+      'timeout': '诊断处理时间过长，建议减少品牌数量后重试',
+      'no_results': '诊断未生成有效结果，建议检查 AI 平台配置'
+    };
+
+    return {
+      report: {},
+      results: [],
+      analysis: {},
+      brandDistribution: { data: {}, total_count: 0 },
+      sentimentDistribution: { data: { positive: 0, neutral: 0, negative: 0 }, total_count: 0 },
+      keywords: [],
+      error: {
+        status: type,
+        message: message,
+        suggestion: suggestions[type] || '请稍后重试'
+      },
+      validation: {
+        is_valid: false,
+        errors: [message],
+        warnings: [],
+        quality_score: 0
+      },
+      meta: {
+        generated_at: new Date().toISOString(),
+        execution_id: '',
+        version: '2.0.0'
+      }
+    };
   }
 
   /**
@@ -189,28 +253,35 @@ class ReportService {
       return this._createEmptyReport();
     }
 
-    // 处理品牌分布数据
-    const brandDistribution = report.brand_distribution || report.brandDistribution;
+    // P0-4 修复：统一数据格式处理
+    
+    // 1. 处理品牌分布数据（支持多种格式）
+    const brandDistribution = report.brandDistribution || report.brand_distribution;
     if (brandDistribution && typeof brandDistribution === 'object') {
-      // 确保数据格式统一
       report.brandDistribution = {
         data: brandDistribution.data || brandDistribution,
         total_count: brandDistribution.total_count || 0,
         warning: brandDistribution.warning || null
       };
+    } else {
+      // 如果后端未提供，从 results 计算
+      report.brandDistribution = this._calculateBrandDistributionFromResults(report.results);
     }
 
-    // 处理情感分布数据
-    const sentimentDistribution = report.sentiment_distribution || report.sentimentDistribution;
+    // 2. 处理情感分布数据（支持多种格式）
+    const sentimentDistribution = report.sentimentDistribution || report.sentiment_distribution;
     if (sentimentDistribution && typeof sentimentDistribution === 'object') {
       report.sentimentDistribution = {
         data: sentimentDistribution.data || sentimentDistribution,
         total_count: sentimentDistribution.total_count || 0,
         warning: sentimentDistribution.warning || null
       };
+    } else {
+      // 如果后端未提供，从 results 计算
+      report.sentimentDistribution = this._calculateSentimentDistributionFromResults(report.results);
     }
 
-    // 处理关键词数据
+    // 3. 处理关键词数据（支持多种格式）
     const keywords = report.keywords || report.keyword_list;
     if (keywords && Array.isArray(keywords)) {
       report.keywords = keywords.map(kw => ({
@@ -223,26 +294,118 @@ class ReportService {
       report.keywords = [];
     }
 
-    // 处理趋势分析数据
-    const trendAnalysis = report.trend_analysis || report.trendAnalysis;
-    if (trendAnalysis && typeof trendAnalysis === 'object') {
-      report.trendAnalysis = trendAnalysis;
-    }
-
-    // 处理竞品分析数据
-    const competitorAnalysis = report.competitor_analysis || report.competitorAnalysis;
+    // 4. 处理竞品分析数据（支持多种路径）
+    const competitorAnalysis = report.competitorAnalysis || 
+                               report.competitor_analysis || 
+                               report.analysis?.competitive_analysis;
     if (competitorAnalysis && typeof competitorAnalysis === 'object') {
       report.competitorAnalysis = competitorAnalysis;
+    } else {
+      report.competitorAnalysis = {};
     }
 
-    // 添加报告元数据
+    // 5. 处理品牌评分数据（支持多种路径）
+    const brandScores = report.brandScores || 
+                        report.brand_scores || 
+                        report.analysis?.brand_scores;
+    if (brandScores && typeof brandScores === 'object') {
+      report.brandScores = brandScores;
+    } else {
+      report.brandScores = {};
+    }
+
+    // 6. 处理语义偏移数据
+    const semanticDrift = report.semanticDrift || 
+                          report.semantic_drift || 
+                          report.analysis?.semantic_drift;
+    report.semanticDrift = semanticDrift || {};
+
+    // 7. 处理信源纯净度数据
+    const sourcePurity = report.sourcePurity || 
+                         report.source_purity || 
+                         report.analysis?.source_purity;
+    report.sourcePurity = sourcePurity || {};
+
+    // 8. 处理优化建议数据
+    const recommendations = report.recommendations || 
+                            report.analysis?.recommendations;
+    report.recommendations = recommendations || {};
+
+    // 9. 添加/确保报告元数据
     report.meta = report.meta || {
       generated_at: report.generated_at || new Date().toISOString(),
-      execution_id: report.execution_id || '',
+      execution_id: report.execution_id || report.report?.execution_id || '',
       version: '2.0.0'
     };
 
+    // 10. 添加验证信息（如果后端返回）
+    if (report.validation) {
+      report.validation = {
+        is_valid: report.validation.is_valid || false,
+        errors: report.validation.errors || [],
+        warnings: report.validation.warnings || []
+      };
+    }
+
     return report;
+  }
+
+  /**
+   * 从结果数组计算品牌分布
+   * @private
+   * @param {Array} results - 结果数组
+   * @returns {Object} 品牌分布数据
+   */
+  _calculateBrandDistributionFromResults(results) {
+    const distribution = {};
+    let totalCount = 0;
+
+    if (results && Array.isArray(results)) {
+      for (const result of results) {
+        const brand = result.brand || 'Unknown';
+        distribution[brand] = (distribution[brand] || 0) + 1;
+        totalCount++;
+      }
+    }
+
+    return {
+      data: distribution,
+      total_count: totalCount
+    };
+  }
+
+  /**
+   * 从结果数组计算情感分布
+   * @private
+   * @param {Array} results - 结果数组
+   * @returns {Object} 情感分布数据
+   */
+  _calculateSentimentDistributionFromResults(results) {
+    const sentimentCounts = {
+      positive: 0,
+      neutral: 0,
+      negative: 0
+    };
+
+    if (results && Array.isArray(results)) {
+      for (const result of results) {
+        const geoData = result.geo_data || {};
+        const sentiment = geoData.sentiment || 0;
+
+        if (sentiment > 0.3) {
+          sentimentCounts.positive++;
+        } else if (sentiment < -0.3) {
+          sentimentCounts.negative++;
+        } else {
+          sentimentCounts.neutral++;
+        }
+      }
+    }
+
+    return {
+      data: sentimentCounts,
+      total_count: results ? results.length : 0
+    };
   }
 
   /**

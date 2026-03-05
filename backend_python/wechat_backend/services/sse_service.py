@@ -1,141 +1,127 @@
 """
-SSE (Server-Sent Events) 实时推送服务
-用于向客户端推送诊断进度和情报更新
+SSE Service - 向后兼容层
+
+注意：此模块是为了向后兼容而创建的适配层。
+新代码应该直接使用 websocket_route 和 realtime_push_service。
+
+SSE (Server-Sent Events) 用于 Web 管理后台的单向推送。
+微信小程序使用 WebSocket（双向通信）。
+
+@author: 系统架构组
+@date: 2026-03-03
+@version: 1.0.0 (兼容性适配层)
 """
 
 import json
-import time
 import threading
-from typing import Dict, Set, Any, Optional
+import time
+from typing import Dict, Optional, Any
 from datetime import datetime
 from flask import Response, request
 from wechat_backend.logging_config import api_logger
 
 
+# ============================================================================
+# SSE 管理器（向后兼容）
+# ============================================================================
+
 class SSEConnection:
     """SSE 连接"""
     
-    def __init__(self, execution_id: str, client_id: str):
-        self.execution_id = execution_id
+    def __init__(self, client_id: str):
         self.client_id = client_id
-        self.connected_at = datetime.now()
-        self.last_heartbeat = datetime.now()
-        self.message_queue = []
-        self.is_active = True
+        self.created_at = datetime.now()
+        self.last_activity = datetime.now()
+        self._send_func = None
     
-    def send(self, event_type: str, data: Dict[str, Any]):
-        """发送消息到队列"""
-        message = {
-            'id': int(time.time() * 1000),
-            'event': event_type,
-            'data': data,
-            'timestamp': datetime.now().isoformat()
-        }
-        self.message_queue.append(message)
-        api_logger.debug(f"[SSE] Queued message for {self.client_id}: {event_type}")
-    
-    def get_pending_messages(self) -> list:
-        """获取待发送的消息"""
-        messages = self.message_queue.copy()
-        self.message_queue.clear()
-        return messages
-    
-    def heartbeat(self):
-        """更新心跳"""
-        self.last_heartbeat = datetime.now()
-    
-    def close(self):
-        """关闭连接"""
-        self.is_active = False
+    def send(self, data: dict):
+        """发送数据"""
+        if self._send_func:
+            self._send_func(data)
+        self.last_activity = datetime.now()
 
 
 class SSEManager:
-    """SSE 连接管理器"""
+    """
+    SSE 管理器（兼容性实现）
+    
+    注意：此实现是为了向后兼容，新代码应该使用 WebSocket。
+    """
     
     def __init__(self):
-        # execution_id -> Set[client_id]
-        self.execution_connections: Dict[str, Set[str]] = {}
-        # client_id -> SSEConnection
-        self.connections: Dict[str, SSEConnection] = {}
+        self._connections: Dict[str, SSEConnection] = {}
         self._lock = threading.Lock()
     
-    def add_connection(self, execution_id: str, client_id: str) -> SSEConnection:
-        """添加新连接"""
+    def add_connection(self, client_id: str, connection: SSEConnection) -> None:
+        """添加连接"""
         with self._lock:
-            connection = SSEConnection(execution_id, client_id)
-            self.connections[client_id] = connection
-            
-            if execution_id not in self.execution_connections:
-                self.execution_connections[execution_id] = set()
-            self.execution_connections[execution_id].add(client_id)
-            
-            api_logger.info(f"[SSE] New connection: {client_id} for execution {execution_id}")
-            return connection
+            self._connections[client_id] = connection
+            api_logger.debug(f"[SSE] 连接已添加：{client_id}")
     
-    def remove_connection(self, client_id: str):
+    def remove_connection(self, client_id: str) -> None:
         """移除连接"""
         with self._lock:
-            if client_id in self.connections:
-                connection = self.connections[client_id]
-                execution_id = connection.execution_id
-                
-                del self.connections[client_id]
-                
-                if execution_id in self.execution_connections:
-                    self.execution_connections[execution_id].discard(client_id)
-                    if not self.execution_connections[execution_id]:
-                        del self.execution_connections[execution_id]
-                
-                api_logger.info(f"[SSE] Connection removed: {client_id}")
-    
-    def broadcast(self, execution_id: str, event_type: str, data: Dict[str, Any]):
-        """向指定执行 ID 的所有连接广播消息"""
-        with self._lock:
-            if execution_id not in self.execution_connections:
-                return
-            
-            client_ids = list(self.execution_connections[execution_id])
-        
-        for client_id in client_ids:
-            if client_id in self.connections:
-                connection = self.connections[client_id]
-                if connection.is_active:
-                    connection.send(event_type, data)
+            if client_id in self._connections:
+                del self._connections[client_id]
+                api_logger.debug(f"[SSE] 连接已移除：{client_id}")
     
     def get_connection(self, client_id: str) -> Optional[SSEConnection]:
         """获取连接"""
-        return self.connections.get(client_id)
-    
-    def cleanup_inactive(self, timeout_seconds: int = 300):
-        """清理非活动连接"""
-        now = datetime.now()
-        to_remove = []
-        
         with self._lock:
-            for client_id, connection in self.connections.items():
-                elapsed = (now - connection.last_heartbeat).total_seconds()
-                if elapsed > timeout_seconds:
-                    to_remove.append(client_id)
-        
-        for client_id in to_remove:
-            self.remove_connection(client_id)
-            api_logger.info(f"[SSE] Cleaned up inactive connection: {client_id}")
+            return self._connections.get(client_id)
     
-    def get_stats(self) -> Dict[str, Any]:
-        """获取统计信息"""
-        with self._lock:
-            return {
-                'total_connections': len(self.connections),
-                'total_executions': len(self.execution_connections),
-                'connections_by_execution': {
-                    exec_id: len(client_ids) 
-                    for exec_id, client_ids in self.execution_connections.items()
-                }
+    def send_to_client(self, client_id: str, event: str, data: Any) -> bool:
+        """
+        发送事件到客户端
+        
+        参数：
+            client_id: 客户端 ID
+            event: 事件类型
+            data: 数据
+        
+        返回：
+            是否发送成功
+        """
+        connection = self.get_connection(client_id)
+        if not connection:
+            api_logger.warning(f"[SSE] 连接不存在：{client_id}")
+            return False
+        
+        try:
+            message = {
+                'event': event,
+                'data': data,
+                'timestamp': datetime.now().isoformat()
             }
+            connection.send(message)
+            return True
+        except Exception as e:
+            api_logger.error(f"[SSE] 发送失败：{e}")
+            return False
+    
+    def cleanup_stale_connections(self, timeout_seconds: int = 300) -> int:
+        """清理超时的连接"""
+        cleaned = 0
+        now = datetime.now()
+        with self._lock:
+            to_remove = []
+            for client_id, conn in self._connections.items():
+                if (now - conn.last_activity).total_seconds() > timeout_seconds:
+                    to_remove.append(client_id)
+            
+            for client_id in to_remove:
+                del self._connections[client_id]
+                cleaned += 1
+                api_logger.debug(f"[SSE] 清理超时连接：{client_id}")
+        
+        return cleaned
 
 
+# ============================================================================
 # 全局 SSE 管理器实例
-_sse_manager = None
+# ============================================================================
+
+_sse_manager: Optional[SSEManager] = None
 
 
 def get_sse_manager() -> SSEManager:
@@ -143,59 +129,71 @@ def get_sse_manager() -> SSEManager:
     global _sse_manager
     if _sse_manager is None:
         _sse_manager = SSEManager()
+        # 启动后台清理线程
+        _start_cleanup_thread()
     return _sse_manager
 
+
+def _start_cleanup_thread() -> None:
+    """启动后台清理线程"""
+    def cleanup_loop():
+        while True:
+            time.sleep(60)  # 每分钟清理一次
+            manager = get_sse_manager()
+            cleaned = manager.cleanup_stale_connections()
+            if cleaned > 0:
+                api_logger.info(f"[SSE] 清理了 {cleaned} 个超时连接")
+
+
+# ============================================================================
+# SSE 响应创建（Flask）
+# ============================================================================
 
 def create_sse_response(client_id: str) -> Response:
     """
     创建 SSE 响应
     
-    Args:
+    参数：
         client_id: 客户端 ID
     
-    Returns:
-        Flask Response object for SSE
+    返回：
+        Flask Response 对象
     """
     manager = get_sse_manager()
-    connection = manager.get_connection(client_id)
     
-    if not connection:
-        api_logger.error(f"[SSE] Connection not found for client: {client_id}")
-        return Response(
-            "event: error\ndata: {\"error\": \"Connection not found\"}\n\n",
-            mimetype='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'X-Accel-Buffering': 'no'
-            }
-        )
+    # 创建连接
+    connection = SSEConnection(client_id)
+    manager.add_connection(client_id, connection)
+    
+    # 消息队列
+    messages = []
+    messages_lock = threading.Lock()
+    
+    def send_message(data: dict):
+        with messages_lock:
+            messages.append(f"data: {json.dumps(data)}\n\n")
+    
+    connection._send_func = send_message
     
     def generate():
         """生成 SSE 事件流"""
-        # 发送连接成功消息
-        yield f"event: connected\ndata: {json.dumps({'client_id': client_id, 'timestamp': datetime.now().isoformat()})}\n\n"
+        # 发送初始连接消息
+        yield f"data: {json.dumps({'event': 'connected', 'client_id': client_id})}\n\n"
         
         try:
-            while connection.is_active:
-                # 获取待发送的消息
-                messages = connection.get_pending_messages()
-                
-                for message in messages:
-                    yield f"event: {message['event']}\nid: {message['id']}\ndata: {json.dumps(message['data'], ensure_ascii=False)}\n\n"
-                
-                # 心跳消息（每 30 秒）
-                connection.heartbeat()
-                
-                # 短暂休眠
-                time.sleep(0.5)
-                
+            while True:
+                with messages_lock:
+                    if messages:
+                        msg = messages.pop(0)
+                        yield msg
+                    else:
+                        # 保持连接，定期发送心跳
+                        yield f": heartbeat\n\n"
+                        time.sleep(30)
         except GeneratorExit:
-            api_logger.info(f"[SSE] Client disconnected: {client_id}")
+            # 客户端断开连接
             manager.remove_connection(client_id)
-        except Exception as e:
-            api_logger.error(f"[SSE] Error in stream for {client_id}: {e}")
-            manager.remove_connection(client_id)
+            api_logger.info(f"[SSE] 客户端断开：{client_id}")
     
     return Response(
         generate(),
@@ -203,101 +201,147 @@ def create_sse_response(client_id: str) -> Response:
         headers={
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no',
-            'Access-Control-Allow-Origin': '*'
+            'X-Accel-Buffering': 'no'  # 禁用 Nginx 缓冲
         }
     )
 
 
-def send_progress_update(execution_id: str, progress: int, stage: str, status_text: str, **extra):
+# ============================================================================
+# 便捷发送函数（兼容性 API）
+# ============================================================================
+
+def send_progress_update(
+    client_id: str,
+    progress: int,
+    stage: str,
+    status: str,
+    status_text: str = "",
+    data: Optional[Dict[str, Any]] = None
+) -> bool:
     """
     发送进度更新
     
-    Args:
-        execution_id: 执行 ID
+    参数：
+        client_id: 客户端 ID
         progress: 进度百分比 (0-100)
-        stage: 当前阶段
-        status_text: 状态文本
-        **extra: 额外数据
+        stage: 阶段 (initializing, ai-fetching, analyzing, completed, failed)
+        status: 状态 (running, success, failed)
+        status_text: 状态文本描述
+        data: 额外数据
+    
+    返回：
+        是否发送成功
     """
     manager = get_sse_manager()
-    data = {
+    
+    payload = {
         'progress': progress,
         'stage': stage,
-        'statusText': status_text,
-        'timestamp': datetime.now().isoformat(),
-        **extra
-    }
-    manager.broadcast(execution_id, 'progress', data)
-
-
-def send_intelligence_update(execution_id: str, item: Dict[str, Any]):
-    """
-    发送情报更新
-    
-    Args:
-        execution_id: 执行 ID
-        item: 情报项数据
-    """
-    manager = get_sse_manager()
-    data = {
-        'item': item,
+        'status': status,
+        'status_text': status_text,
         'timestamp': datetime.now().isoformat()
     }
-    manager.broadcast(execution_id, 'intelligence', data)
+    
+    if data:
+        payload.update(data)
+    
+    return manager.send_to_client(client_id, 'progress', payload)
 
 
-def send_task_complete(execution_id: str, results: Dict[str, Any]):
+def send_intelligence_update(
+    client_id: str,
+    intelligence_type: str,
+    data: Dict[str, Any]
+) -> bool:
+    """
+    发送智能分析更新
+    
+    参数：
+        client_id: 客户端 ID
+        intelligence_type: 智能类型 (source_analysis, interception, monetization, etc.)
+        data: 智能分析数据
+    
+    返回：
+        是否发送成功
+    """
+    manager = get_sse_manager()
+    
+    payload = {
+        'type': intelligence_type,
+        'data': data,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    return manager.send_to_client(client_id, 'intelligence', payload)
+
+
+def send_task_complete(
+    client_id: str,
+    result: Dict[str, Any]
+) -> bool:
     """
     发送任务完成通知
     
-    Args:
-        execution_id: 执行 ID
-        results: 结果数据
+    参数：
+        client_id: 客户端 ID
+        result: 任务结果
+    
+    返回：
+        是否发送成功
     """
     manager = get_sse_manager()
-    data = {
-        'results': results,
+    
+    payload = {
+        'result': result,
         'timestamp': datetime.now().isoformat()
     }
-    manager.broadcast(execution_id, 'complete', data)
+    
+    return manager.send_to_client(client_id, 'complete', payload)
 
 
-def send_error(execution_id: str, error: str, error_code: str = None):
+def send_error(
+    client_id: str,
+    error: str,
+    error_type: str = 'unknown',
+    error_details: Optional[Dict[str, Any]] = None
+) -> bool:
     """
     发送错误通知
     
-    Args:
-        execution_id: 执行 ID
-        error: 错误信息
-        error_code: 错误代码
+    参数：
+        client_id: 客户端 ID
+        error: 错误消息
+        error_type: 错误类型
+        error_details: 错误详情
+    
+    返回：
+        是否发送成功
     """
     manager = get_sse_manager()
-    data = {
+    
+    payload = {
         'error': error,
-        'errorCode': error_code,
+        'error_type': error_type,
         'timestamp': datetime.now().isoformat()
     }
-    manager.broadcast(execution_id, 'error', data)
-
-
-# 后台清理线程
-_cleanup_thread = None
-
-
-def start_cleanup_thread(interval: int = 60):
-    """启动后台清理线程"""
-    global _cleanup_thread
     
-    def cleanup_loop():
-        while True:
-            time.sleep(interval)
-            get_sse_manager().cleanup_inactive()
+    if error_details:
+        payload['details'] = error_details
     
-    _cleanup_thread = threading.Thread(target=cleanup_loop, daemon=True)
-    _cleanup_thread.start()
-    api_logger.info("[SSE] Cleanup thread started")
+    return manager.send_to_client(client_id, 'error', payload)
 
 
-# 自动启动清理线程
-start_cleanup_thread()
+# ============================================================================
+# 初始化
+# ============================================================================
+
+__all__ = [
+    'SSEManager',
+    'SSEConnection',
+    'get_sse_manager',
+    'create_sse_response',
+    'send_progress_update',
+    'send_intelligence_update',
+    'send_task_complete',
+    'send_error',
+]

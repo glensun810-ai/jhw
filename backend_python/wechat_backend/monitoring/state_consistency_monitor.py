@@ -32,10 +32,11 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('logs/state_monitor.log', encoding='utf-8'
+        logging.FileHandler('logs/state_monitor.log', encoding='utf-8')
     ]
+)
 
-logger = logging.getLogger('state_monitor'
+logger = logging.getLogger('state_monitor')
 
 
 class ConsistencyLevel(Enum):
@@ -75,13 +76,13 @@ class StateConsistencyMonitor:
         self.check_count = 0
         self.issue_count = 0
         self.critical_count = 0
-        self._lock = threading.Lock(
-        
+        self._lock = threading.Lock()
+
         # 统计信息
-        self.stats = defaultdict(int
+        self.stats = defaultdict(int)
         self.recent_issues: List[ConsistencyCheckResult] = []
-        
-        logger.info("状态一致性监控器已初始化"
+
+        logger.info("状态一致性监控器已初始化")
     
     def check_and_log(self, task_data: Dict[str, Any]) -> ConsistencyCheckResult:
         """
@@ -235,9 +236,9 @@ class StateConsistencyMonitor:
                     if self.check_count > 0 else 100
                 ),
                 'by_level': dict(self.stats),
-                'recent_issues_count': len(self.recent_issues
+                'recent_issues_count': len(self.recent_issues)
             }
-    
+
     def get_recent_issues(self, limit: int = 10) -> List[Dict]:
         """获取最近的问题"""
         with self._lock:

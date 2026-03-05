@@ -159,18 +159,26 @@ Page({
    * 3. 选择最优结果（优先级：API > Storage > Cache）
    * 4. 避免竞态条件导致空结果展示
    */
+  /**
+   * 页面加载
+   */
   onLoad: async function(options) {
-    console.log('[结果页 P0-005] 页面加载，开始并行加载数据...');
+    console.log('========== [结果页] ========== 页面加载开始 ==========');
+    console.log('[结果页] 页面加载时间:', new Date().toLocaleString());
+    console.log('[结果页] 页面参数:', JSON.stringify(options));
+
+    const executionId = decodeURIComponent(options.executionId || '');
+    const brandName = decodeURIComponent(options.brandName || '');
+    
+    console.log('[结果页] 解析后的参数：executionId=', executionId, ', brandName=', brandName);
 
     // 应用页面进入动画
     this.applyPageEnterAnimation();
 
-    const executionId = decodeURIComponent(options.executionId || '');
-    const brandName = decodeURIComponent(options.brandName || '');
-
+    // P0-5 修复：增强错误处理
     if (!executionId) {
-      console.error('[结果页] 缺少 executionId');
-      this.showNoDataModal();
+      console.error('[结果页] ❌ 缺少 executionId');
+      this.showNoDataModal('缺少执行 ID，请从诊断页面重新进入');
       return;
     }
 
@@ -178,72 +186,362 @@ Page({
     this.setData({
       isLoading: true,
       showLoadingSpinner: true,
-      showErrorBanner: false
+      showErrorBanner: false,
+      showFallbackBanner: false
     });
+    
+    console.log('[结果页] 已设置加载状态，开始加载数据...');
 
-    // 并行加载所有数据源
-    const [cachedResult, storageResult, apiResult] = await Promise.allSettled([
-      this.loadFromCache(),
-      this.loadFromStorage(executionId),
-      this.loadFromApi(executionId)
-    ]);
+    try {
+      // P0-5 修复：带重试的加载逻辑
+      console.log('[结果页] 开始 loadWithRetry，executionId=', executionId);
+      const loadStartTime = Date.now();
+      const bestResult = await this.loadWithRetry(executionId, brandName, 3);
+      const loadEndTime = Date.now() - loadStartTime;
+      
+      console.log('[结果页] loadWithRetry 完成，耗时=', loadEndTime, 'ms');
 
-    // 选择最优结果（优先级：API > Storage > Cache）
-    let bestResult = null;
-    let loadError = null;
+      // 停止加载动画
+      this.setData({
+        isLoading: false,
+        showLoadingSpinner: false
+      });
 
-    if (apiResult.status === 'fulfilled' && apiResult.value && apiResult.value.results) {
-      bestResult = apiResult.value;
-      console.log('✅ 从 API 加载成功');
-    } else if (storageResult.status === 'fulfilled' && storageResult.value) {
-      bestResult = storageResult.value;
-      console.log('✅ 从 Storage 加载成功');
-      loadError = apiResult.reason?.message || 'API 加载失败';
-    } else if (cachedResult.status === 'fulfilled' && cachedResult.value) {
-      bestResult = cachedResult.value;
-      console.log('✅ 从缓存加载成功');
-      loadError = '使用缓存数据';
+      // 如果有结果，展示数据
+      if (bestResult) {
+        console.log('[结果页] ✅ 加载成功，开始处理并展示数据...');
+        console.log('[结果页] 报告数据结构:', Object.keys(bestResult));
+        console.log('[结果页] 结果数量:', bestResult.results?.length || 0);
+        console.log('[结果页] 验证信息:', bestResult.validation);
+        
+        const processStartTime = Date.now();
+        this.processAndDisplayResults(bestResult, brandName);
+        const processEndTime = Date.now() - processStartTime;
+        
+        console.log('[结果页] ✅ 数据处理完成，耗时=', processEndTime, 'ms');
+        console.log('========== [结果页] ========== 页面加载完成 ==========');
+      } else {
+        // 所有重试都失败
+        console.error('[结果页] ❌ 所有重试失败，显示错误模态框');
+        this.showLoadErrorModal(executionId);
+      }
+    } catch (error) {
+      console.error('[结果页] ❌ onLoad 加载过程发生错误:', error);
+      console.error('[结果页] 错误堆栈:', error.stack);
+
+      // 停止加载动画
+      this.setData({
+        isLoading: false,
+        showLoadingSpinner: false
+      });
+
+      // 显示错误提示
+      this.showLoadErrorModal(executionId, error.message);
+    }
+  },
+
+  /**
+   * P0-5 新增：带重试的加载逻辑
+   * @param {string} executionId - 执行 ID
+   * @param {string} brandName - 品牌名称
+   * @param {number} maxRetries - 最大重试次数
+   * @returns {Promise<Object|null>} 加载结果
+   */
+  loadWithRetry: async function(executionId, brandName, maxRetries = 3) {
+    let lastError = null;
+    let attempts = 0;
+
+    while (attempts < maxRetries) {
+      attempts++;
+      console.log(`[loadWithRetry] 第${attempts}次尝试`);
+
+      try {
+        // 并行加载所有数据源
+        const [cachedResult, storageResult, apiResult] = await Promise.allSettled([
+          this.loadFromCache(),
+          this.loadFromStorage(executionId),
+          this.loadFromApi(executionId)
+        ]);
+
+        // 选择最优结果（优先级：API > Storage > Cache）
+        let bestResult = null;
+        let loadError = null;
+
+        // P1-2 修复：处理 API 返回的降级报告
+        if (apiResult.status === 'fulfilled' && apiResult.value) {
+          const apiData = apiResult.value;
+
+          // 检查是否是失败状态（后端返回 status='failed'）
+          if (apiData.status === 'failed') {
+            console.log('❌ API 返回失败状态，停止重试');
+            return apiData;  // 直接返回失败状态，不再重试
+          }
+
+          // 检查是否是降级报告（有 error 或 partial 字段）
+          if (apiData.error || apiData.partial) {
+            console.log('⚠️ API 返回降级报告');
+            return apiData;  // 直接返回，让 processAndDisplayResults 处理
+          }
+
+          // 正常报告
+          if (apiData.results && apiData.results.length > 0) {
+            bestResult = apiData;
+            console.log('✅ 从 API 加载成功');
+          } else {
+            loadError = 'API 返回空结果';
+          }
+        }
+        
+        if (!bestResult && storageResult.status === 'fulfilled' && storageResult.value) {
+          const storageData = storageResult.value;
+          // 检查是否是失败状态
+          if (storageData.status === 'failed') {
+            console.log('❌ Storage 返回失败状态，停止重试');
+            return storageData;  // 直接返回失败状态，不再重试
+          }
+          // 检查 Storage 数据是否有效
+          if (storageData.results && storageData.results.length > 0) {
+            bestResult = storageData;
+            console.log('✅ 从 Storage 加载成功');
+            loadError = apiResult.reason?.message || 'API 加载失败';
+          }
+        }
+        
+        if (!bestResult && cachedResult.status === 'fulfilled' && cachedResult.value) {
+          const cachedData = cachedResult.value;
+          if (cachedData.results && cachedData.results.length > 0) {
+            bestResult = cachedData;
+            console.log('✅ 从缓存加载成功');
+            loadError = '使用缓存数据';
+          }
+        }
+
+        // 如果有结果，返回
+        if (bestResult) {
+          // 如果有降级提示，显示
+          if (loadError) {
+            this.setData({
+              showFallbackBanner: true,
+              fallbackMessage: loadError,
+              useFallbackData: true
+            });
+
+            // P2-023 新增：启动后台自动刷新
+            this.startAutoRefresh(executionId, brandName);
+          }
+          return bestResult;
+        }
+
+        // 没有结果，继续重试
+        lastError = new Error('所有数据源均无有效数据');
+        console.warn(`[loadWithRetry] 第${attempts}次尝试失败`);
+
+        // 指数退避
+        if (attempts < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        }
+      } catch (error) {
+        console.error(`[loadWithRetry] 第${attempts}次尝试发生错误:`, error);
+        lastError = error;
+
+        // 指数退避
+        if (attempts < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        }
+      }
     }
 
-    // 停止加载动画
+    // 所有重试都失败
+    console.error('[loadWithRetry] 所有重试失败', lastError);
+    return null;
+  },
+
+  /**
+   * P0-5 新增：显示加载错误模态框
+   * @param {string} executionId - 执行 ID
+   * @param {string} errorMessage - 错误信息
+   */
+  showLoadErrorModal: function(executionId, errorMessage = '') {
+    const app = getApp();
+    
+    wx.showModal({
+      title: '加载失败',
+      content: `诊断结果加载失败，可能原因：\n1. 网络异常\n2. 报告不存在\n3. 服务器异常\n\n请检查网络后重试`,
+      showCancel: true,
+      cancelText: '返回首页',
+      confirmText: '重试',
+      success: (res) => {
+        if (res.confirm) {
+          // 重试
+          this.onLoad({ executionId, brandName: '' });
+        } else if (res.cancel) {
+          // 返回首页
+          wx.switchTab({
+            url: '/pages/index/index'
+          });
+        }
+      }
+    });
+  },
+
+  /**
+   * P1-2 新增：显示降级提示横幅
+   * @param {Object} report - 报告数据
+   */
+  showFallbackBanner: function(report) {
+    const error = report?.error;
+    const partial = report?.partial;
+    const qualityHints = report?.qualityHints;
+    
+    let message = '';
+    let type = 'info';
+    let showRetry = false;
+    
+    if (error) {
+      // 错误场景
+      message = error.suggestion || error.message;
+      type = 'error';
+      showRetry = !['not_found'].includes(error.status);
+    } else if (partial) {
+      // 部分结果场景
+      message = `${partial.message} - ${partial.suggestion}`;
+      type = 'warning';
+      showRetry = true;
+    } else if (qualityHints?.warnings?.length > 0) {
+      // 质量警告场景
+      message = qualityHints.warnings.join('；');
+      type = 'warning';
+      showRetry = false;
+    }
+    
+    if (message) {
+      this.setData({
+        showFallbackBanner: true,
+        fallbackMessage: message,
+        fallbackType: type,
+        showFallbackRetry: showRetry
+      });
+    }
+  },
+
+  /**
+   * P1-2 新增：显示数据质量警告
+   * @param {Object} qualityHints - 质量提示数据
+   */
+  showQualityWarning: function(qualityHints) {
+    if (!qualityHints) return;
+    
+    const warnings = [];
+    
+    if (qualityHints.has_low_quality_results) {
+      warnings.push('部分诊断结果质量较低，可能影响分析准确性');
+    }
+    
+    if (qualityHints.has_partial_analysis) {
+      warnings.push('部分分析数据缺失，报告可能不完整');
+    }
+    
+    if (qualityHints.warnings && qualityHints.warnings.length > 0) {
+      warnings.push(...qualityHints.warnings);
+    }
+    
+    if (warnings.length > 0) {
+      const message = warnings.join('；');
+      this.setData({
+        showQualityWarning: true,
+        qualityWarningMessage: message
+      });
+      
+      // 显示 Toast 提示
+      wx.showToast({
+        title: '数据质量提示',
+        icon: 'none',
+        duration: 3000
+      });
+    }
+  },
+
+  /**
+   * P1-2 新增：处理降级报告
+   * @param {Object} report - 报告数据
+   * @param {string} brandName - 品牌名称
+   */
+  processFallbackReport: function(report, brandName) {
+    // 设置基础数据
     this.setData({
+      targetBrand: brandName || report?.report?.brand_name || '',
+      latestTestResults: [],
+      competitiveAnalysis: {},
       isLoading: false,
       showLoadingSpinner: false
     });
+    
+    // 显示降级提示
+    this.showFallbackBanner(report);
+    
+    // 显示空状态
+    this.showEmptyState(report);
+  },
 
-    // 如果有结果，展示数据
-    if (bestResult) {
-      this.processAndDisplayResults(bestResult, brandName);
-
-      // 如果有降级提示，显示
-      if (loadError) {
-        this.setData({
-          showFallbackBanner: true,
-          fallbackMessage: loadError,
-          useFallbackData: true
-        });
-        
-        // P2-023 新增：启动后台自动刷新
-        this.startAutoRefresh(executionId, brandName);
-      }
-    } else {
-      // 所有数据源都失败
-      this.setData({
-        showErrorBanner: true,
-        errorMessage: '加载诊断结果失败，请重试'
-      });
-      wx.showModal({
-        title: '加载失败',
-        content: '所有数据源均加载失败，请重试',
-        showCancel: false,
-        confirmText: '重试',
-        success: (res) => {
-          if (res.confirm) {
-            this.onLoad(options);
-          }
+  /**
+   * P1-2 新增：显示空状态
+   * @param {Object} report - 报告数据
+   */
+  showEmptyState: function(report) {
+    const errorType = report?.error?.status;
+    
+    let emptyState = {
+      showEmptyState: true,
+      emptyIcon: 'info',
+      emptyTitle: '暂无数据',
+      emptyMessage: '暂无可展示的诊断数据',
+      showEmptyAction: false
+    };
+    
+    switch (errorType) {
+      case 'not_found':
+        emptyState.emptyIcon = 'search';
+        emptyState.emptyTitle = '报告不存在';
+        emptyState.emptyMessage = '请检查执行 ID 是否正确，或重新进行诊断';
+        emptyState.showEmptyAction = true;
+        emptyState.emptyActionText = '返回首页';
+        break;
+      
+      case 'failed':
+        emptyState.emptyIcon = 'error';
+        emptyState.emptyTitle = '诊断失败';
+        emptyState.emptyMessage = report?.error?.message || '诊断过程中遇到错误';
+        emptyState.showEmptyAction = true;
+        emptyState.emptyActionText = '重新诊断';
+        break;
+      
+      case 'timeout':
+        emptyState.emptyIcon = 'clock';
+        emptyState.emptyTitle = '处理超时';
+        emptyState.emptyMessage = '诊断处理时间过长，建议减少品牌数量后重试';
+        emptyState.showEmptyAction = true;
+        emptyState.emptyActionText = '重试';
+        break;
+      
+      case 'no_results':
+        emptyState.emptyIcon = 'inbox';
+        emptyState.emptyTitle = '无有效结果';
+        emptyState.emptyMessage = '诊断未生成有效结果，建议检查 AI 平台配置';
+        emptyState.showEmptyAction = true;
+        emptyState.emptyActionText = '重新诊断';
+        break;
+      
+      default:
+        if (report?.partial) {
+          emptyState.emptyIcon = 'time';
+          emptyState.emptyTitle = '诊断进行中';
+          emptyState.emptyMessage = report.partial.message;
+          emptyState.showEmptyAction = true;
+          emptyState.emptyActionText = '稍后查看';
         }
-      });
     }
+    
+    this.setData(emptyState);
   },
 
   /**
@@ -313,8 +611,27 @@ Page({
   processAndDisplayResults: function(resultData, brandName) {
     console.log('[processAndDisplayResults] 处理结果数据:', resultData);
 
+    // P1-2 修复：检查是否是降级报告
+    if (resultData?.error || resultData?.partial) {
+      console.log('[processAndDisplayResults] 检测到降级报告，处理异常场景');
+      this.processFallbackReport(resultData, brandName);
+      
+      // 如果有质量提示，显示警告
+      if (resultData?.qualityHints) {
+        this.showQualityWarning(resultData.qualityHints);
+      }
+      return;
+    }
+
     const results = resultData.results || [];
     const competitiveAnalysis = resultData.competitive_analysis || resultData.competitiveAnalysis || {};
+
+    // P1-2 修复：检查结果是否为空
+    if (results.length === 0) {
+      console.warn('[processAndDisplayResults] 结果为空，显示空状态');
+      this.showEmptyState({ error: { status: 'no_results', message: '无有效结果' } });
+      return;
+    }
 
     // 初始化页面
     this.initializePageWithData(

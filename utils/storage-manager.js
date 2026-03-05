@@ -226,6 +226,83 @@ function clearDiagnosisResult(executionId) {
 }
 
 /**
+ * 批量清除诊断结果
+ * @param {Array} executionIds - 执行 ID 列表
+ * @returns {Object} 清除结果统计
+ */
+function batchClearDiagnosisResults(executionIds) {
+  try {
+    let successCount = 0;
+    let failCount = 0;
+    
+    executionIds.forEach(id => {
+      try {
+        const key = StorageKey.DIAGNOSIS_RESULT + id;
+        wx.removeStorageSync(key);
+        successCount++;
+        console.log(`[Storage] ✅ 已清除诊断结果：${id}`);
+      } catch (error) {
+        failCount++;
+        console.warn(`[Storage] ⚠️  清除诊断结果失败：${id}`, error);
+      }
+    });
+    
+    return {
+      successCount,
+      failCount,
+      totalCount: executionIds.length
+    };
+  } catch (error) {
+    console.error('[Storage] 批量清除诊断结果失败:', error);
+    return {
+      successCount: 0,
+      failCount: executionIds.length,
+      totalCount: executionIds.length
+    };
+  }
+}
+
+/**
+ * 获取所有本地诊断结果列表
+ * @returns {Array} 本地诊断结果列表
+ */
+function getAllLocalDiagnosisResults() {
+  try {
+    const info = wx.getStorageInfoSync();
+    const keys = info.keys || [];
+    const results = [];
+    
+    keys.forEach(key => {
+      if (key.startsWith(StorageKey.DIAGNOSIS_RESULT)) {
+        try {
+          const data = wx.getStorageSync(key);
+          if (data && data.version === STORAGE_VERSION) {
+            results.push({
+              executionId: data.executionId,
+              brandName: data.brandName,
+              completedAt: data.completedAt,
+              timestamp: data.timestamp,
+              overallScore: data.data?.overallScore || 0,
+              storageKey: key
+            });
+          }
+        } catch (error) {
+          console.warn(`[Storage] 读取诊断结果失败：${key}`, error);
+        }
+      }
+    });
+    
+    // 按时间倒序排序
+    results.sort((a, b) => b.timestamp - a.timestamp);
+    
+    return results;
+  } catch (error) {
+    console.error('[Storage] 获取所有诊断结果失败:', error);
+    return [];
+  }
+}
+
+/**
  * 获取 Storage 统计信息
  * @returns {Object} 统计信息
  */
@@ -301,6 +378,8 @@ module.exports = {
   loadDiagnosisResult,
   loadLastDiagnosis,
   clearDiagnosisResult,
+  batchClearDiagnosisResults,
+  getAllLocalDiagnosisResults,
   getStorageStats,
   cleanupExpiredData
 };

@@ -5,6 +5,11 @@ Qwen (Alibaba Tongyi) AI 平台的适配器
 - 添加动态超时配置（默认 30 秒）
 - 添加请求频率控制
 - 超时后自动降级到其他模型
+
+【P3 超时监控增强 - 2026-03-04】
+- 集成超时监控器
+- 记录超时指标
+- 支持超时告警
 """
 
 import time
@@ -19,6 +24,8 @@ from wechat_backend.monitoring.logging_enhancements import log_api_request, log_
 from wechat_backend.config_manager import ConfigurationManager as PlatformConfigManager
 # 【P0-Qwen 超时修复】导入超时管理器
 from wechat_backend.ai_timeout import get_timeout_manager
+# 【P3 超时监控增强 - 2026-03-04】导入超时监控器
+from wechat_backend.ai_adapters.timeout_monitor import get_timeout_monitor
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -87,21 +94,46 @@ class QwenAdapter(AIClient):
     def send_prompt(self, prompt: str, **kwargs) -> AIResponse:
         """
         向 Qwen API 发送请求
-        
+
         【P0-Qwen 超时修复】
         - 添加频率控制
         - 超时后自动降级
+
+        【P3 超时监控增强 - 2026-03-04】
+        - 记录超时指标
+        - 支持超时告警
         """
         # 【P0-Qwen 频率控制】应用请求频率控制
         self._apply_frequency_control()
-        
+
+        # 【P3 超时监控增强 - 2026-03-04】记录请求开始时间
+        start_time = time.time()
+        timeout_threshold = getattr(self.request_wrapper, 'timeout', 30.0)
+
         # 使用电路断路器保护 API 调用
         try:
             response = self.circuit_breaker.call(self._make_request_internal, prompt, **kwargs)
+            
+            # 【P3 超时监控增强 - 2026-03-04】记录成功请求
+            duration = time.time() - start_time
+            self._record_timeout_metrics(
+                duration=duration,
+                timeout_threshold=timeout_threshold,
+                success=True
+            )
+            
             return response
         except CircuitBreakerOpenError as e:
             error_message = f"Qwen 服务暂时不可用（熔断器开启）: {e}"
             api_logger.warning(error_message)
+
+            # 【P3 超时监控增强 - 2026-03-04】记录失败请求
+            duration = time.time() - start_time
+            self._record_timeout_metrics(
+                duration=duration,
+                timeout_threshold=timeout_threshold,
+                success=False
+            )
 
             # Log failed response to enhanced logger with context
             try:
@@ -133,7 +165,15 @@ class QwenAdapter(AIClient):
             # 【P0-Qwen 超时修复】超时后降级
             error_message = f"Qwen API 超时（>{self.request_wrapper.timeout}秒）: {e}"
             api_logger.warning(error_message)
-            
+
+            # 【P3 超时监控增强 - 2026-03-04】记录超时请求
+            duration = time.time() - start_time
+            self._record_timeout_metrics(
+                duration=duration,
+                timeout_threshold=timeout_threshold,
+                success=False
+            )
+
             # 记录超时错误
             try:
                 execution_id = kwargs.get('execution_id', 'unknown')
@@ -151,7 +191,7 @@ class QwenAdapter(AIClient):
                 )
             except Exception as log_error:
                 api_logger.warning(f"Failed to log timeout to enhanced logger: {log_error}")
-            
+
             # 【P0-Qwen 超时修复】触发降级，返回超时错误让上层切换到其他模型
             return AIResponse(
                 success=False,
@@ -161,6 +201,39 @@ class QwenAdapter(AIClient):
                 platform=self.platform_type.value,
                 latency=self.request_wrapper.timeout
             )
+
+    def _record_timeout_metrics(
+        self,
+        duration: float,
+        timeout_threshold: float,
+        success: bool
+    ):
+        """
+        【P3 超时监控增强 - 2026-03-04】记录超时指标
+
+        参数:
+            duration: 实际耗时（秒）
+            timeout_threshold: 超时阈值（秒）
+            success: 是否成功
+        """
+        try:
+            monitor = get_timeout_monitor()
+            monitor.record_request(
+                platform=self.platform_type.value,
+                model=self.model_name,
+                duration=duration,
+                timeout_threshold=timeout_threshold,
+                success=success
+            )
+
+            # 检查是否需要告警
+            if monitor.should_alert(self.platform_type.value):
+                recommendation = monitor.get_recommendation(self.platform_type.value)
+                if recommendation:
+                    api_logger.warning(f"[AI 超时告警] {recommendation}")
+        except Exception as e:
+            # 监控记录失败不影响主流程
+            api_logger.debug(f"[超时监控] 记录指标失败：{e}")
 
     def _make_request_internal(self, prompt: str, **kwargs) -> AIResponse:
         """

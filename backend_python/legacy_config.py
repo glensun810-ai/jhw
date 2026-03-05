@@ -7,6 +7,9 @@ class Config:
     WECHAT_APP_ID = os.environ.get('WECHAT_APP_ID') or ''
     WECHAT_APP_SECRET = os.environ.get('WECHAT_APP_SECRET') or ''
     WECHAT_TOKEN = os.environ.get('WECHAT_TOKEN') or ''
+    
+    # 【P0 关键修复 - 2026-03-05】添加 APP_ID 别名，兼容不同代码中的引用
+    APP_ID = WECHAT_APP_ID  # 别名，用于错误通知等场景
 
     # Server Configuration
     DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'

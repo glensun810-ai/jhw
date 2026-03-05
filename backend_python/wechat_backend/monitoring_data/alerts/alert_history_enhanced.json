@@ -1,0 +1,117 @@
+[
+  {
+    "title": "测试告警",
+    "message": "这是一条测试告警",
+    "severity": "warning",
+    "metric_name": "test_metric",
+    "current_value": 0.85,
+    "threshold": 0.8,
+    "timestamp": "2026-03-05T20:18:33.604465",
+    "metadata": {},
+    "channels": [
+      "log"
+    ],
+    "results": {
+      "log": true
+    }
+  },
+  {
+    "title": "⚠️ 连接池警告",
+    "message": "连接池利用率=85.0%, 活跃连接=42, 潜在泄漏=0",
+    "severity": "warning",
+    "metric_name": "connection_pool_utilization",
+    "current_value": 0.85,
+    "threshold": 0.8,
+    "timestamp": "2026-03-05T20:18:33.605612",
+    "metadata": {
+      "alert_level": "warning",
+      "utilization_rate": 0.85,
+      "active_connections": 42,
+      "potential_leaks": 0
+    },
+    "channels": [
+      "log"
+    ],
+    "results": {
+      "log": true
+    }
+  },
+  {
+    "title": "测试告警",
+    "message": "这是一条测试告警",
+    "severity": "warning",
+    "metric_name": "test_metric",
+    "current_value": 0.85,
+    "threshold": 0.8,
+    "timestamp": "2026-03-05T20:38:57.539704",
+    "metadata": {},
+    "channels": [
+      "log"
+    ],
+    "results": {
+      "log": true
+    }
+  },
+  {
+    "title": "⚠️ 连接池警告",
+    "message": "连接池利用率=85.0%, 活跃连接=42, 潜在泄漏=0",
+    "severity": "warning",
+    "metric_name": "connection_pool_utilization",
+    "current_value": 0.85,
+    "threshold": 0.8,
+    "timestamp": "2026-03-05T20:38:57.540306",
+    "metadata": {
+      "alert_level": "warning",
+      "utilization_rate": 0.85,
+      "active_connections": 42,
+      "potential_leaks": 0
+    },
+    "channels": [
+      "log",
+      "webhook"
+    ],
+    "results": {
+      "log": true,
+      "webhook": true
+    }
+  },
+  {
+    "title": "测试告警",
+    "message": "这是一条测试告警",
+    "severity": "warning",
+    "metric_name": "test_metric",
+    "current_value": 0.85,
+    "threshold": 0.8,
+    "timestamp": "2026-03-05T20:39:36.652307",
+    "metadata": {},
+    "channels": [
+      "log"
+    ],
+    "results": {
+      "log": true
+    }
+  },
+  {
+    "title": "⚠️ 连接池警告",
+    "message": "连接池利用率=85.0%, 活跃连接=42, 潜在泄漏=0",
+    "severity": "warning",
+    "metric_name": "connection_pool_utilization",
+    "current_value": 0.85,
+    "threshold": 0.8,
+    "timestamp": "2026-03-05T20:39:36.652877",
+    "metadata": {
+      "alert_level": "warning",
+      "utilization_rate": 0.85,
+      "active_connections": 42,
+      "potential_leaks": 0
+    },
+    "channels": [
+      "log",
+      "webhook"
+    ],
+    "results": {
+      "log": true,
+      "webhook": true
+    }
+  }
+]

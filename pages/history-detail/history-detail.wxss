@@ -1,9 +1,13 @@
 /* pages/history-detail/history-detail.wxss */
+/* 与项目整体风格统一的深色主题 */
+
+@import "../../app.wxss";
 
 .page-container {
   padding: 30rpx;
-  background-color: #f5f5f5;
+  background: linear-gradient(135deg, #1a1f29 0%, #121826 100%);
   min-height: 100vh;
+  color: #e8e8e8;
 }
 
 /* 加载状态 */
@@ -18,8 +22,8 @@
 .loading-spinner {
   width: 60rpx;
   height: 60rpx;
-  border: 4rpx solid #e0e0e0;
-  border-top-color: #667eea;
+  border: 4rpx solid #303030;
+  border-top-color: #00E5FF;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -30,7 +34,7 @@
 
 .loading-text {
   margin-top: 30rpx;
-  color: #999;
+  color: #8c8c8c;
   font-size: 28rpx;
 }
 
@@ -43,13 +47,13 @@
   display: block;
   font-size: 40rpx;
   font-weight: bold;
-  color: #333;
+  color: #FFFFFF;
 }
 
 .page-subtitle {
   display: block;
   font-size: 26rpx;
-  color: #999;
+  color: #8c8c8c;
   margin-top: 10rpx;
 }
 
@@ -59,12 +63,11 @@
 }
 
 .score-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #00E5FF 0%, #00F5A0 100%);
   border-radius: 20rpx;
   padding: 40rpx;
   text-align: center;
-  color: #fff;
-  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8rpx 24rpx rgba(0, 229, 255, 0.3);
 }
 
 .score-main {
@@ -78,29 +81,34 @@
   font-size: 80rpx;
   font-weight: bold;
   line-height: 1;
+  color: #121826;
+  font-family: 'Courier New', 'DIN', monospace;
 }
 
 .score-grade {
   font-size: 40rpx;
   font-weight: bold;
   margin-left: 20rpx;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(18, 24, 38, 0.2);
   padding: 10rpx 30rpx;
   border-radius: 10rpx;
+  color: #121826;
 }
 
 .score-desc {
   font-size: 28rpx;
+  color: #121826;
   opacity: 0.9;
 }
 
 /* 评分维度 */
 .score-dimensions-section {
-  background-color: #fff;
+  background: #1A202C;
   border-radius: 20rpx;
   padding: 30rpx;
   margin-bottom: 30rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid #303030;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .section-title-wrap {
@@ -110,12 +118,12 @@
 .section-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #333;
+  color: #FFFFFF;
 }
 
 .section-subtitle {
   font-size: 24rpx;
-  color: #999;
+  color: #8c8c8c;
   margin-left: 10rpx;
 }
 
@@ -123,7 +131,7 @@
   display: flex;
   align-items: center;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid #303030;
 }
 
 .dimension-item:last-child {
@@ -133,13 +141,13 @@
 .dimension-label {
   width: 100rpx;
   font-size: 28rpx;
-  color: #666;
+  color: #8c8c8c;
 }
 
 .dimension-bar {
   flex: 1;
   height: 20rpx;
-  background-color: #f0f0f0;
+  background-color: #303030;
   border-radius: 10rpx;
   margin: 0 20rpx;
   overflow: hidden;
@@ -152,7 +160,7 @@
 }
 
 .bar-fill.authority {
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #00E5FF 0%, #00F5A0 100%);
 }
 
 .bar-fill.visibility {
@@ -172,16 +180,18 @@
   text-align: right;
   font-size: 28rpx;
   font-weight: bold;
-  color: #333;
+  color: #00E5FF;
+  font-family: 'Courier New', 'DIN', monospace;
 }
 
 /* 测试信息 */
 .info-section {
-  background-color: #fff;
+  background: #1A202C;
   border-radius: 20rpx;
   padding: 30rpx;
   margin-bottom: 30rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid #303030;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .info-grid {
@@ -194,29 +204,32 @@
   display: flex;
   flex-direction: column;
   padding: 20rpx;
-  background-color: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12rpx;
+  border: 1rpx solid #303030;
 }
 
 .info-label {
   font-size: 24rpx;
-  color: #999;
+  color: #8c8c8c;
   margin-bottom: 10rpx;
 }
 
 .info-value {
   font-size: 32rpx;
   font-weight: bold;
-  color: #667eea;
+  color: #00E5FF;
+  font-family: 'Courier New', 'DIN', monospace;
 }
 
 /* 详细结果列表 */
 .detailed-results-section {
-  background-color: #fff;
+  background: #1A202C;
   border-radius: 20rpx;
   padding: 30rpx;
   margin-bottom: 30rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid #303030;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
 }
 
 .result-list {
@@ -224,10 +237,11 @@
 }
 
 .result-item {
-  background-color: #f8f9fa;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12rpx;
   padding: 20rpx;
   margin-bottom: 20rpx;
+  border: 1rpx solid #303030;
 }
 
 .result-header {
@@ -240,30 +254,31 @@
 .result-brand {
   font-size: 28rpx;
   font-weight: bold;
-  color: #333;
+  color: #FFFFFF;
 }
 
 .result-model {
   font-size: 24rpx;
-  color: #999;
-  background-color: #e0e0e0;
+  color: #00E5FF;
+  background: rgba(0, 229, 255, 0.1);
   padding: 6rpx 16rpx;
   border-radius: 20rpx;
+  border: 1rpx solid rgba(0, 229, 255, 0.3);
 }
 
 .result-question {
   font-size: 26rpx;
-  color: #666;
+  color: #8c8c8c;
   margin-bottom: 15rpx;
   line-height: 1.5;
 }
 
 .result-response {
   font-size: 24rpx;
-  color: #999;
+  color: #5a5a5a;
   margin-bottom: 20rpx;
   line-height: 1.6;
-  background-color: #fff;
+  background: rgba(0, 0, 0, 0.2);
   padding: 15rpx;
   border-radius: 8rpx;
 }
@@ -281,7 +296,7 @@
 .score-label {
   display: block;
   font-size: 22rpx;
-  color: #999;
+  color: #8c8c8c;
   margin-bottom: 6rpx;
 }
 
@@ -289,7 +304,8 @@
   display: block;
   font-size: 28rpx;
   font-weight: bold;
-  color: #667eea;
+  color: #00E5FF;
+  font-family: 'Courier New', 'DIN', monospace;
 }
 
 .result-total {
@@ -297,18 +313,19 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 15rpx;
-  border-top: 1rpx solid #e0e0e0;
+  border-top: 1rpx solid #303030;
 }
 
 .total-label {
   font-size: 26rpx;
-  color: #666;
+  color: #8c8c8c;
 }
 
 .total-value {
   font-size: 36rpx;
   font-weight: bold;
-  color: #667eea;
+  color: #00F5A0;
+  font-family: 'Courier New', 'DIN', monospace;
 }
 
 /* 底部操作栏 */
@@ -318,7 +335,10 @@
   padding: 30rpx;
   position: sticky;
   bottom: 0;
-  background-color: #f5f5f5;
+  background: rgba(18, 24, 38, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1rpx solid #303030;
 }
 
 .action-btn {
@@ -331,19 +351,79 @@
 }
 
 .home-btn {
-  background-color: #fff;
-  color: #666;
-  border: 2rpx solid #e0e0e0;
+  background: #1A202C;
+  color: #8c8c8c;
+  border: 1rpx solid #303030;
+}
+
+.home-btn:active {
+  background: #303030;
 }
 
 .history-btn {
-  background-color: #fff;
-  color: #667eea;
-  border: 2rpx solid #667eea;
+  background: transparent;
+  color: #00E5FF;
+  border: 1rpx solid #00E5FF;
+}
+
+.history-btn:active {
+  background: rgba(0, 229, 255, 0.1);
 }
 
 .report-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #00E5FF 0%, #00F5A0 100%);
+  color: #121826;
+  box-shadow: 0 8rpx 24rpx rgba(0, 229, 255, 0.3);
+}
+
+.report-btn:active {
+  transform: scale(0.95);
+}
+
+/* 操作菜单 */
+.action-menu {
+  margin-top: 20rpx;
+  background: #1A202C;
+  border-radius: 16rpx;
+  padding: 16rpx 0;
+  border: 1rpx solid #303030;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx 30rpx;
+  transition: background 0.2s ease;
+}
+
+.menu-item:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.menu-icon {
+  font-size: 36rpx;
+}
+
+.menu-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: #e8e8e8;
+  font-weight: 500;
+}
+
+.menu-text.delete {
+  color: #e74c3c;
 }

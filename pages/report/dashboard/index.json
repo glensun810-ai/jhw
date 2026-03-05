@@ -10,6 +10,8 @@
     "workflow-findings": "/components/WorkflowFindings/WorkflowFindings",
     "intelligence-pipeline": "/components/IntelligencePipeline/IntelligencePipeline",
     "export-options": "/components/ExportOptions/ExportOptions",
-    "competitive-analysis": "/components/CompetitiveAnalysis/CompetitiveAnalysis"
+    "competitive-analysis": "/components/CompetitiveAnalysis/CompetitiveAnalysis",
+    "brand-radar": "/components/BrandComparison/BrandRadar",
+    "sentiment-bar": "/components/BrandComparison/SentimentBar"
   }
 }

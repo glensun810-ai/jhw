@@ -16,7 +16,7 @@ import asyncio
 import json
 from datetime import datetime
 from wechat_backend.v2.services.websocket_service import get_websocket_service
-from wechat_backend.logging_config import api_logger
+from wechat_backend.logging_config import api_logger, app_logger
 
 
 # WebSocket 路由配置
@@ -184,48 +184,63 @@ def send_diagnosis_complete(execution_id: str, complete_data: dict):
 def send_diagnosis_error(execution_id: str, error_data: dict):
     """
     发送诊断错误推送
-    
+
     参数：
         execution_id: 执行 ID
         error_data: 错误数据
     """
     ws_service = get_websocket_service()
-    
+
     message = {
         'type': 'error',
         'executionId': execution_id,
         'data': error_data,
         'timestamp': datetime.now().isoformat()
     }
-    
+
     asyncio.create_task(ws_service.broadcast_to_execution(
         execution_id=execution_id,
         message=message
     ))
-    
+
     api_logger.warning(f"[WebSocket] 推送错误：{execution_id}, {error_data.get('message')}")
 
 
-# 便捷函数：与 SSE 集成
+# 【P0 关键修复 - 2026-03-02】删除 SSE 兼容代码，只使用 WebSocket
 def send_progress_update(execution_id: str, progress_data: dict):
     """
-    发送进度更新（兼容 SSE 和 WebSocket）
-    
+    发送进度更新（只使用 WebSocket）
+
     参数：
         execution_id: 执行 ID
         progress_data: 进度数据
     """
     # WebSocket 推送
     send_diagnosis_progress(execution_id, progress_data)
+
+
+def register_websocket_routes(app):
+    """
+    注册 WebSocket 路由到 Flask 应用
+
+    参数：
+        app: Flask 应用实例
+    """
+    # 注意：WebSocket 服务器在独立线程中运行，不需要注册 Flask 路由
+    # 只需要确保 WebSocket 服务启动即可
     
-    # SSE 推送（保持向后兼容）
-    try:
-        from wechat_backend.services.sse_service import get_sse_manager
-        sse_manager = get_sse_manager()
-        sse_manager.broadcast(
-            execution_id=execution_id,
-            event_type='progress',
-            data=progress_data
-        )
-    except Exception as e:
-        api_logger.debug(f"[SSE] 推送失败：{e}")
+    @app.route('/ws/hello')
+    def websocket_hello():
+        """WebSocket 握手接口（HTTP）"""
+        from flask import request, jsonify
+        
+        execution_id = request.args.get('execution_id', 'unknown')
+        
+        return jsonify({
+            'success': True,
+            'message': 'WebSocket 服务已就绪',
+            'ws_url': f"ws://{request.host}/ws/diagnosis/{execution_id}",
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    app_logger.info("✅ WebSocket 路由已注册")

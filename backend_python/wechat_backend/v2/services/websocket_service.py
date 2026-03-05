@@ -25,8 +25,10 @@ WebSocket 实时推送服务（增强稳定版）
 import asyncio
 import websockets
 import json
-from typing import Dict, Set, Any, Optional
+import zlib
+from typing import Dict, Set, Any, Optional, Tuple
 from datetime import datetime, timedelta
+from collections import OrderedDict
 from wechat_backend.logging_config import api_logger
 
 
@@ -42,14 +44,30 @@ WS_CONFIG = {
     'max_size': 1024 * 1024,  # 1MB
     # 最大队列大小
     'max_queue': 32,
+    
+    # 【P2 性能优化 - 2026-03-09】连接池配置
+    'max_connections': 1000,  # 最大连接数
+    'idle_timeout': 300,  # 空闲超时（秒）
+    'connection_pool_size': 100,  # 连接池大小
+    
+    # 【P2 性能优化 - 2026-03-09】消息压缩配置
+    'enable_compression': True,  # 启用消息压缩
+    'compression_threshold': 1024,  # 压缩阈值（字节），大于此值才压缩
+    'compression_level': 6,  # 压缩级别（1-9），6 为平衡点
 }
 
 
 class WebSocketService:
     """
-    WebSocket 服务
+    WebSocket 服务（P2 性能优化版）
 
     管理客户端连接和消息推送
+    
+    优化特性：
+    1. 连接池管理 - 复用连接，减少创建开销
+    2. 消息压缩 - 减少网络传输量
+    3. LRU 缓存 - 快速访问热点连接
+    4. 性能监控 - 实时统计指标
     """
 
     def __init__(self):
@@ -63,6 +81,30 @@ class WebSocketService:
         self.logger = api_logger
         # 健康检查任务
         self._health_check_task: Optional[asyncio.Task] = None
+        
+        # 【P2 性能优化 - 2026-03-09】连接池管理
+        # LRU 连接池：用于复用频繁访问的连接
+        self._connection_pool: OrderedDict = OrderedDict()
+        self._pool_lock = asyncio.Lock()
+        
+        # 【P2 性能优化 - 2026-03-09】性能监控指标
+        self._metrics = {
+            'connections_total': 0,
+            'connections_active': 0,
+            'connections_peak': 0,
+            'messages_sent': 0,
+            'messages_failed': 0,
+            'bytes_sent_original': 0,
+            'bytes_sent_compressed': 0,
+            'compression_ratio': 0.0,
+            'avg_latency_ms': 0.0,
+            'last_updated': datetime.now()
+        }
+        self._metrics_lock = asyncio.Lock()
+        
+        # 【P2 性能优化 - 2026-03-09】延迟统计（用于计算平均延迟）
+        self._latency_samples = []
+        self._max_latency_samples = 1000
 
     async def start_health_check(self) -> None:
         """启动连接健康检查任务"""
@@ -86,12 +128,14 @@ class WebSocketService:
     async def _health_check_loop(self) -> None:
         """
         健康检查循环
-        定期检查所有连接的健康状态，清理僵尸连接
+        定期检查所有连接的健康状态，清理僵尸连接和空闲连接
         """
         while True:
             try:
                 await asyncio.sleep(30)  # 每 30 秒检查一次
                 await self._check_connections_health()
+                # 【P2 性能优化 - 2026-03-09】清理空闲连接
+                await self._cleanup_idle_connections()
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -209,13 +253,253 @@ class WebSocketService:
                 'timestamp': datetime.now().isoformat()
             })
 
+    # ========================================================================
+    # 【P2 性能优化 - 2026-03-09】连接池管理
+    # ========================================================================
+    
+    async def _get_connection_from_pool(self, execution_id: str) -> Optional[websockets.WebSocketServerProtocol]:
+        """
+        从连接池获取连接（LRU 策略）
+        
+        参数:
+            execution_id: 诊断执行 ID
+            
+        返回:
+            WebSocket 连接对象，如果池中无连接则返回 None
+        """
+        async with self._pool_lock:
+            pool_key = f"pool:{execution_id}"
+            if pool_key in self._connection_pool:
+                # 移动到末尾（最近使用）
+                self._connection_pool.move_to_end(pool_key)
+                websocket = self._connection_pool[pool_key]
+                
+                # 验证连接是否仍然有效
+                if websocket.open:
+                    self.logger.debug(f"websocket_connection_pool_hit", extra={
+                        'event': 'websocket_connection_pool_hit',
+                        'execution_id': execution_id,
+                        'timestamp': datetime.now().isoformat()
+                    })
+                    return websocket
+                else:
+                    # 连接已关闭，从池中移除
+                    del self._connection_pool[pool_key]
+                    self.logger.debug(f"websocket_connection_pool_stale", extra={
+                        'event': 'websocket_connection_pool_stale',
+                        'execution_id': execution_id,
+                        'timestamp': datetime.now().isoformat()
+                    })
+            
+            return None
+    
+    async def _return_connection_to_pool(self, execution_id: str, websocket: websockets.WebSocketServerProtocol) -> None:
+        """
+        将连接返回到连接池
+        
+        参数:
+            execution_id: 诊断执行 ID
+            websocket: WebSocket 连接对象
+        """
+        async with self._pool_lock:
+            pool_key = f"pool:{execution_id}"
+            
+            # 如果池已满，移除最旧的连接
+            if len(self._connection_pool) >= WS_CONFIG['connection_pool_size']:
+                # 移除第一个（最旧的）连接
+                oldest_key = next(iter(self._connection_pool))
+                oldest_ws = self._connection_pool.pop(oldest_key)
+                try:
+                    await oldest_ws.close(1000, 'Pool eviction')
+                except Exception:
+                    pass
+            
+            # 添加到池中
+            self._connection_pool[pool_key] = websocket
+            
+            self.logger.debug(f"websocket_connection_returned_to_pool", extra={
+                'event': 'websocket_connection_returned_to_pool',
+                'execution_id': execution_id,
+                'pool_size': len(self._connection_pool),
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    async def _cleanup_idle_connections(self) -> int:
+        """
+        清理空闲连接
+        
+        返回:
+            清理的连接数
+        """
+        now = datetime.now()
+        cleaned_count = 0
+        
+        async with self._pool_lock:
+            to_remove = []
+            
+            # 查找空闲超时的连接
+            for pool_key, websocket in self._connection_pool.items():
+                metadata = self.connection_metadata.get(websocket)
+                if metadata:
+                    idle_time = (now - metadata.get('last_heartbeat', now)).total_seconds()
+                    if idle_time > WS_CONFIG['idle_timeout']:
+                        to_remove.append(pool_key)
+            
+            # 清理空闲连接
+            for pool_key in to_remove:
+                websocket = self._connection_pool.pop(pool_key)
+                try:
+                    await websocket.close(1001, 'Idle timeout')
+                except Exception:
+                    pass
+                cleaned_count += 1
+        
+        if cleaned_count > 0:
+            self.logger.info(f"websocket_idle_connections_cleaned", extra={
+                'event': 'websocket_idle_connections_cleaned',
+                'count': cleaned_count,
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        return cleaned_count
+
+    # ========================================================================
+    # 【P2 性能优化 - 2026-03-09】消息压缩
+    # ========================================================================
+    
+    def _compress_message(self, message: str) -> Tuple[bytes, bool]:
+        """
+        压缩消息
+        
+        参数:
+            message: 原始消息字符串
+            
+        返回:
+            (压缩后的字节，是否压缩)
+        """
+        if not WS_CONFIG['enable_compression']:
+            return message.encode('utf-8'), False
+        
+        message_bytes = message.encode('utf-8')
+        
+        # 如果消息太小，不压缩
+        if len(message_bytes) < WS_CONFIG['compression_threshold']:
+            return message_bytes, False
+        
+        try:
+            # 使用 zlib 压缩
+            compressed = zlib.compress(
+                message_bytes,
+                level=WS_CONFIG['compression_level']
+            )
+            
+            # 如果压缩后没有显著减小，使用原始消息
+            if len(compressed) >= len(message_bytes) * 0.9:
+                return message_bytes, False
+            
+            return compressed, True
+            
+        except Exception as e:
+            self.logger.warning(f"websocket_compression_failed: {e}")
+            return message_bytes, False
+    
+    def _decompress_message(self, data: bytes, is_compressed: bool) -> str:
+        """
+        解压消息
+        
+        参数:
+            data: 消息字节
+            is_compressed: 是否已压缩
+            
+        返回:
+            解压后的字符串
+        """
+        if not is_compressed:
+            return data.decode('utf-8')
+        
+        try:
+            decompressed = zlib.decompress(data)
+            return decompressed.decode('utf-8')
+        except Exception as e:
+            self.logger.error(f"websocket_decompression_failed: {e}")
+            # 尝试直接解码
+            try:
+                return data.decode('utf-8')
+            except:
+                return ""
+
+    # ========================================================================
+    # 【P2 性能优化 - 2026-03-09】性能监控
+    # ========================================================================
+    
+    async def _update_metrics(
+        self,
+        messages_sent: int = 0,
+        messages_failed: int = 0,
+        bytes_original: int = 0,
+        bytes_compressed: int = 0,
+        latency_ms: float = 0.0
+    ) -> None:
+        """
+        更新性能指标
+        
+        参数:
+            messages_sent: 发送成功消息数
+            messages_failed: 发送失败消息数
+            bytes_original: 原始字节数
+            bytes_compressed: 压缩后字节数
+            latency_ms: 延迟（毫秒）
+        """
+        async with self._metrics_lock:
+            self._metrics['messages_sent'] += messages_sent
+            self._metrics['messages_failed'] += messages_failed
+            self._metrics['bytes_sent_original'] += bytes_original
+            self._metrics['bytes_sent_compressed'] += bytes_compressed
+            
+            # 计算压缩比
+            if bytes_original > 0:
+                self._metrics['compression_ratio'] = (
+                    (bytes_original - bytes_compressed) / bytes_original * 100
+                )
+            
+            # 更新平均延迟
+            if latency_ms > 0:
+                self._latency_samples.append(latency_ms)
+                if len(self._latency_samples) > self._max_latency_samples:
+                    self._latency_samples.pop(0)
+                
+                if self._latency_samples:
+                    self._metrics['avg_latency_ms'] = (
+                        sum(self._latency_samples) / len(self._latency_samples)
+                    )
+            
+            self._metrics['last_updated'] = datetime.now()
+    
+    async def get_metrics(self) -> Dict[str, Any]:
+        """
+        获取性能指标
+        
+        返回:
+            性能指标字典
+        """
+        async with self._metrics_lock:
+            metrics = self._metrics.copy()
+            metrics['connections_active'] = self.connection_count
+            metrics['pool_size'] = len(self._connection_pool)
+            
+            # 更新峰值连接数
+            if self.connection_count > metrics['connections_peak']:
+                metrics['connections_peak'] = self.connection_count
+            
+            return metrics
+
     async def broadcast(
         self,
         execution_id: str,
         message: Dict[str, Any]
     ) -> None:
         """
-        广播消息给所有订阅该 execution_id 的客户端
+        广播消息给所有订阅该 execution_id 的客户端（支持压缩）
 
         参数:
             execution_id: 诊断执行 ID
@@ -233,18 +517,47 @@ class WebSocketService:
         }
 
         message_json = json.dumps(full_message, ensure_ascii=False)
-        message_bytes = len(message_json.encode('utf-8'))
+        original_bytes = len(message_json.encode('utf-8'))
+        
+        # 【P2 性能优化 - 2026-03-09】消息压缩
+        compressed_data, is_compressed = self._compress_message(message_json)
+        compressed_bytes = len(compressed_data)
+        
+        # 记录压缩统计
+        if is_compressed:
+            self.logger.debug(f"websocket_message_compressed", extra={
+                'event': 'websocket_message_compressed',
+                'execution_id': execution_id,
+                'original_bytes': original_bytes,
+                'compressed_bytes': compressed_bytes,
+                'compression_ratio': (original_bytes - compressed_bytes) / original_bytes * 100,
+                'timestamp': datetime.now().isoformat()
+            })
 
         # 异步发送给所有客户端
+        send_start = datetime.now()
         results = await asyncio.gather(
-            *[self._send_to_client(client, message_json, message_bytes)
+            *[self._send_to_client_compressed(client, compressed_data, is_compressed)
               for client in self.clients[execution_id]],
             return_exceptions=True
         )
-
+        send_end = datetime.now()
+        
+        # 计算延迟
+        latency_ms = (send_end - send_start).total_seconds() * 1000
+        
         # 统计发送结果
         success_count = sum(1 for r in results if not isinstance(r, Exception))
         failed_count = len(results) - success_count
+        
+        # 【P2 性能优化 - 2026-03-09】更新性能指标
+        await self._update_metrics(
+            messages_sent=success_count,
+            messages_failed=failed_count,
+            bytes_original=original_bytes * len(self.clients[execution_id]),
+            bytes_compressed=compressed_bytes * success_count,
+            latency_ms=latency_ms
+        )
 
         if failed_count > 0:
             self.logger.warning("websocket_broadcast_partial_failure", extra={
@@ -275,6 +588,51 @@ class WebSocketService:
             # 更新统计
             if client in self.connection_metadata:
                 self.connection_metadata[client]['bytes_sent'] += message_bytes
+        except websockets.exceptions.ConnectionClosed:
+            # 客户端已断开，从列表中移除
+            if client in self.connection_metadata:
+                execution_id = self.connection_metadata[client].get('execution_id')
+                await self.unregister(execution_id, client)
+        except websockets.exceptions.WebSocketException as e:
+            self.logger.error("websocket_send_failed", extra={
+                'event': 'websocket_send_failed',
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            })
+        except Exception as e:
+            self.logger.error("websocket_send_failed", extra={
+                'event': 'websocket_send_failed',
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            })
+
+    async def _send_to_client_compressed(
+        self,
+        client: websockets.WebSocketServerProtocol,
+        data: bytes,
+        is_compressed: bool
+    ) -> None:
+        """
+        发送给单个客户端（支持压缩）
+
+        参数:
+            client: WebSocket 连接对象
+            data: 消息字节（可能已压缩）
+            is_compressed: 是否已压缩
+        """
+        try:
+            # WebSocket 自动处理二进制消息
+            if is_compressed:
+                # 添加压缩标记
+                header = bytes([1]) + data
+                await client.send(header)
+            else:
+                await client.send(data)
+
+            # 更新统计
+            if client in self.connection_metadata:
+                self.connection_metadata[client]['bytes_sent'] += len(data)
+                self.connection_metadata[client]['message_count'] += 1
         except websockets.exceptions.ConnectionClosed:
             # 客户端已断开，从列表中移除
             if client in self.connection_metadata:
