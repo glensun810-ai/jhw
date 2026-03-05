@@ -213,8 +213,8 @@ exports.main = async (event, context) => {
     // 5. 返回结果给前端
     const result = {
       success: true,
-      execution_id: response.data.execution_id || response.data.data?.execution_id,
-      report_id: response.data.report_id || response.data.data?.report_id,
+      execution_id: response.data.executionId || response.data.execution_id,
+      report_id: response.data.reportId || response.data.report_id,
       message: response.data.message || '诊断任务已启动',
       elapsedTime: elapsed
     };
