@@ -781,7 +781,7 @@ class UnifiedLoggerFactory:
             )
             error_handlers.append(category_handler)
 
-        return handlers
+        return error_handlers
 
     def _configure_root_logger(self, numeric_level: int):
         """配置根日志器"""

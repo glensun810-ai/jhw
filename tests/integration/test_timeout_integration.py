@@ -34,7 +34,7 @@ class TestTimeoutIntegration:
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
         # 创建诊断服务
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
+        diagnosis_service = DiagnosisService()
         
         # 创建任务
         repo = diagnosis_service.diagnosis_repo

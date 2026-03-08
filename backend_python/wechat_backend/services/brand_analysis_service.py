@@ -63,12 +63,12 @@ class BrandAnalysisService:
         user_selected_models: Optional[List[str]] = None
     ) -> str:
         """
-        智能选择裁判模型（P0 修复 - 2026-03-04）
+        智能选择裁判模型（P0 修复 - 2026-03-07）
 
-        选择策略：
+        选择策略（按优先级）：
         1. 优先使用调用方明确指定的 judge_model
-        2. 【新增】使用环境变量配置的固定 Judge 模型（推荐：deepseek）
-        3. 从用户选择的模型中选择第一个可用的
+        2. 【P0 修复】从用户选择的模型中选择第一个可用的（用户选择优先）
+        3. 使用环境变量配置的固定 Judge 模型
         4. 按降级列表选择已配置的平台
         5. 降级方案：返回 None，使用简单文本匹配
 
@@ -84,39 +84,39 @@ class BrandAnalysisService:
             api_logger.info(f"[BrandAnalysis] 使用指定的裁判模型：{judge_model}")
             return judge_model
 
-        # 【策略 2: P0 修复 - 2026-03-04】使用环境变量配置的固定 Judge 模型
-        judge_platform = os.getenv('JUDGE_LLM_PLATFORM', 'deepseek')
-        judge_model_env = os.getenv('JUDGE_LLM_MODEL', 'deepseek-chat')
-        judge_key = os.getenv('JUDGE_LLM_API_KEY')
-        
-        # 检查 JUDGE_LLM_API_KEY 是否已配置（或 DEEPSEEK_API_KEY 作为备选）
-        if judge_key or Config.is_api_key_configured('DEEPSEEK_API_KEY'):
-            api_logger.info(
-                f"[BrandAnalysis] 使用环境变量配置的固定 Judge 模型：{judge_platform}/{judge_model_env}"
-            )
-            return judge_model_env
-
-        # 策略 3: 从用户选择的模型中选择第一个可用的
+        # 【策略 2: P0 修复 - 2026-03-07】优先从用户选择的模型中选择
         if user_selected_models:
             for model in user_selected_models:
                 model_lower = model.lower() if isinstance(model, str) else ''
                 # 检查模型是否已配置
                 if Config.is_api_key_configured(model_lower):
-                    api_logger.info(f"[BrandAnalysis] 从用户选择的模型中使用：{model_lower}")
+                    api_logger.info(f"[BrandAnalysis] ✅ 使用用户选择的模型：{model_lower}")
                     return model_lower
             # 如果用户选择的模型都不可用，记录警告
             api_logger.warning(
-                f"[BrandAnalysis] 用户选择的模型均不可用：{user_selected_models}，将使用降级列表"
+                f"[BrandAnalysis] ⚠️ 用户选择的模型均不可用：{user_selected_models}，将使用环境变量配置"
             )
+
+        # 策略 3: 使用环境变量配置的固定 Judge 模型
+        judge_platform = os.getenv('JUDGE_LLM_PLATFORM', 'deepseek')
+        judge_model_env = os.getenv('JUDGE_LLM_MODEL', 'deepseek-chat')
+        judge_key = os.getenv('JUDGE_LLM_API_KEY')
+
+        # 【P0 修复】验证平台与 Key 是否匹配
+        if judge_key and Config.is_api_key_configured(judge_platform):
+            api_logger.info(
+                f"[BrandAnalysis] ✅ 使用环境变量配置的 Judge 模型：{judge_platform}/{judge_model_env}"
+            )
+            return judge_model_env
 
         # 策略 4: 按降级列表选择已配置的平台
         for platform in self.JUDGE_MODEL_FALLBACK:
             if Config.is_api_key_configured(platform):
-                api_logger.info(f"[BrandAnalysis] 使用降级模型：{platform}")
+                api_logger.info(f"[BrandAnalysis] ✅ 使用降级模型：{platform}")
                 return platform
 
         # 降级方案：返回 None，上层使用简单文本匹配
-        api_logger.warning("[BrandAnalysis] 无可用 Judge 模型，将使用简单文本匹配（降级方案）")
+        api_logger.warning("[BrandAnalysis] ⚠️ 无可用 Judge 模型，将使用简单文本匹配（降级方案）")
         return None
 
     def _ensure_string_input(self, input_data) -> str:
@@ -349,7 +349,8 @@ class BrandAnalysisService:
         self,
         results: List[Dict[str, Any]],
         user_brand: str,
-        competitor_brands: Optional[List[str]] = None
+        competitor_brands: Optional[List[str]] = None,
+        execution_id: str = 'unknown'
     ) -> Dict[str, Any]:
         """
         分析品牌提及情况
@@ -358,6 +359,7 @@ class BrandAnalysisService:
             results: AI 回答列表（客观回答）
             user_brand: 用户品牌
             competitor_brands: 竞品品牌列表（可选，若为 None 则从回答中提取）
+            execution_id: 执行 ID（用于日志追踪）
 
         Returns:
             分析结果字典，包含：
@@ -373,7 +375,7 @@ class BrandAnalysisService:
         # 【P0 关键修复 - 2026-03-02】添加完整的 try-except 包裹，防止静默失败
         try:
             api_logger.info(
-                f"[BrandAnalysis] Starting brand analysis: execution_id={user_brand}, "
+                f"[BrandAnalysis] Starting brand analysis: execution_id={execution_id}, "
                 f"results_count={len(results)}, user_brand={user_brand}"
             )
             
@@ -384,29 +386,34 @@ class BrandAnalysisService:
                 'top3_brands': []
             }
 
-            # 步骤 1: 使用批量提取从每个回答中提取所有品牌（每个回答仅 1 次 LLM 调用）
+            # 【P0 关键修复 - 2026-03-07】批量提取优化：合并所有回答，单次 AI 调用提取所有品牌
+            # 优化前：每个回答单独调用 AI（10 个结果 = 10 次 AI 调用）
+            # 优化后：合并所有回答，单次 AI 调用（1 次提取所有品牌）
+            # 预期效果：AI 调用次数减少 90%，耗时从 100 秒降至 15 秒
+            
+            api_logger.info(f"[BrandAnalysis] 开始批量提取优化：results_count={len(results)}")
+            
+            # 合并所有回答为一个文本
+            all_responses_text = "\n\n=== 回答分隔符 ===\n\n".join([
+                f"问题：{r.get('question', '')}\n回答：{r.get('response', '')}"
+                for r in results if r.get('response')
+            ])
+            
+            # 单次 AI 调用提取所有品牌
+            all_brands_in_one_call = self._batch_extract_brands(all_responses_text, "综合分析")
+            
+            # 构建品牌到其提及数据的映射
             all_brands_map = {}  # {brand_name: [brand_data_per_response]}
-            for idx, result in enumerate(results):
-                response = result.get('response', '')
-                question = result.get('question', '')
-                
-                if not response:
-                    api_logger.warning(f"[BrandAnalysis] 第 {idx} 个结果为空，跳过")
-                    continue
-                    
-                brands_in_response = self._batch_extract_brands(response, question)
-
-                # 构建品牌到其提及数据的映射
-                for brand_data in brands_in_response:
-                    brand_name = brand_data.get('brand_name', '')
-                    if brand_name:
-                        if brand_name not in all_brands_map:
-                            all_brands_map[brand_name] = []
-                        all_brands_map[brand_name].append(brand_data)
+            for brand_data in all_brands_in_one_call:
+                brand_name = brand_data.get('brand_name', '')
+                if brand_name:
+                    if brand_name not in all_brands_map:
+                        all_brands_map[brand_name] = []
+                    all_brands_map[brand_name].append(brand_data)
 
             api_logger.info(
-                f"[BrandAnalysis] 批量提取完成：共 {len(all_brands_map)} 个品牌，"
-                f"品牌列表={list(all_brands_map.keys())[:10]}"  # 只显示前 10 个
+                f"[BrandAnalysis] ✅ 批量提取完成：共 {len(all_brands_map)} 个品牌，"
+                f"AI 调用次数=1 次，品牌列表={list(all_brands_map.keys())[:10]}"  # 只显示前 10 个
             )
 
             # 步骤 2: 提取 TOP3 品牌作为竞品
@@ -587,25 +594,60 @@ class BrandAnalysisService:
             api_logger.info("[BrandAnalysis] 使用简单文本匹配提取品牌（无 Judge 模型）")
             return self._fallback_extract_brands(text_to_process)
 
-        # 使用 AI 批量提取所有品牌（单次调用）
-        try:
-            client = AIAdapterFactory.create(self.judge_model)
-            prompt = BATCH_BRAND_EXTRACTION_TEMPLATE.format(
-                ai_response=text_to_process[:3000],  # 限制长度避免超时
-            )
+        # 【P0 修复 - 2026-03-07】添加 API 限流重试机制
+        max_retries = 3
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                client = AIAdapterFactory.create(self.judge_model)
+                prompt = BATCH_BRAND_EXTRACTION_TEMPLATE.format(
+                    ai_response=text_to_process[:3000],  # 限制长度避免超时
+                )
 
-            result = client.send_prompt(prompt)
+                result = client.send_prompt(prompt)
 
-            # 解析批量提取结果
-            if result and result.success and result.content:
-                brands_data = self._parse_batch_brand_extraction(result.content)
-                if brands_data:
-                    return brands_data
+                # 解析批量提取结果
+                if result and result.success and result.content:
+                    brands_data = self._parse_batch_brand_extraction(result.content)
+                    if brands_data:
+                        if attempt > 0:
+                            api_logger.info(f"[BrandAnalysis] ✅ 重试成功：attempt={attempt+1}/{max_retries}")
+                        return brands_data
+                else:
+                    api_logger.warning(f"[BrandAnalysis] ⚠️ AI 调用返回失败：attempt={attempt+1}/{max_retries}")
+                    if attempt < max_retries - 1:
+                        # 指数退避
+                        import time
+                        sleep_time = 2 ** attempt
+                        api_logger.info(f"[BrandAnalysis] 等待 {sleep_time}秒后重试...")
+                        time.sleep(sleep_time)
+                        continue
 
-        except Exception as e:
-            api_logger.warning(f"[BrandAnalysis] 批量提取失败：{e}，使用降级方案")
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+                
+                # 判断是否为限流错误
+                is_rate_limit = ('429' in error_str or 'rate limit' in error_str or 'quota' in error_str)
+                
+                if is_rate_limit and attempt < max_retries - 1:
+                    # 限流错误，指数退避
+                    import time
+                    sleep_time = 2 ** (attempt + 1)  # 2, 4, 8 秒
+                    api_logger.warning(
+                        f"[BrandAnalysis] ⚠️ API 限流，等待 {sleep_time}秒后重试："
+                        f"attempt={attempt+1}/{max_retries}, error={e}"
+                    )
+                    time.sleep(sleep_time)
+                    continue
+                else:
+                    api_logger.warning(f"[BrandAnalysis] ⚠️ AI 调用失败：attempt={attempt+1}/{max_retries}, error={e}")
 
-        # 降级方案：简单文本匹配提取品牌
+        # 所有重试失败，使用降级方案
+        api_logger.warning(f"[BrandAnalysis] ⚠️ 所有 {max_retries} 次重试失败，使用简单文本匹配（降级方案）")
+        if last_error:
+            api_logger.warning(f"[BrandAnalysis] 最后错误：{last_error}")
         return self._fallback_extract_brands(text_to_process)
 
     def _parse_batch_brand_extraction(self, text: str) -> Optional[List[Dict[str, Any]]]:

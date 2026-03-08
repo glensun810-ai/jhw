@@ -1,5 +1,5 @@
 <!-- components/AnalysisCard/AnalysisCard.wxml -->
-<view class="analysis-card {{loading ? 'loading' : ''}}">
+<view class="analysis-card {{loading ? 'loading' : ''}} {{status === 'failed' ? 'status-failed' : ''}}">
   <view class="card-header">
     <text class="card-title">{{title}}</text>
     <text class="card-subtitle" wx:if="{{subtitle}}">{{subtitle}}</text>
@@ -8,14 +8,15 @@
   <view class="card-content">
     <!-- 状态指示器 -->
     <view class="status-indicator" wx:if="{{status}}">
-      <view class="status-text" style="color: {{getStatusColor(status)}};">
+      <view class="status-text {{status === 'failed' ? 'status-text-failed' : ''}}" style="color: {{getStatusColor(status)}};">
         {{getStatusText(status)}}
       </view>
       <view class="progress-container" wx:if="{{progress >= 0}}">
-        <view class="progress-bar-container">
-          <view class="progress-bar" style="width: {{progress}}%; background-color: {{getStatusColor(status)}};"></view>
+        <view class="progress-bar-container {{status === 'failed' ? 'progress-bar-failed' : ''}}">
+          <view class="progress-bar {{status === 'failed' ? 'progress-bar-failed' : ''}}" 
+                style="width: {{progress}}%; background-color: {{getStatusColor(status)}};"></view>
         </view>
-        <text class="progress-text">{{progress}}%</text>
+        <text class="progress-text {{status === 'failed' ? 'progress-text-failed' : ''}}">{{progress}}%</text>
       </view>
     </view>
 

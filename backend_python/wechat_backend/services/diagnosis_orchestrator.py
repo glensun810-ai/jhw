@@ -396,7 +396,7 @@ class DiagnosisOrchestrator:
 
             # ========== 阶段 6: 报告聚合 (事务 B - 短事务) ==========
             # 【P0 关键修复 - 2026-03-05】独立事务，快速提交释放连接
-            phase6_result = await self._phase_report_aggregating_transaction(
+            phase6_result = await self._phase_report_aggregating(
                 db_results, brand_list
             )
             if not phase6_result.success:
@@ -404,7 +404,7 @@ class DiagnosisOrchestrator:
 
             # ========== 阶段 7: 完成 (事务 C - 状态更新) ==========
             # 【P0 关键修复 - 2026-03-05】独立事务，快速提交释放连接
-            phase7_result = await self._phase_complete_transaction(phase6_result.data)
+            phase7_result = await self._phase_complete(phase6_result.data)
             if not phase7_result.success:
                 raise ValueError(f"完成处理失败：{phase7_result.error}")
 
@@ -939,6 +939,7 @@ class DiagnosisOrchestrator:
                     execution_id=self.execution_id,
                     task_type='brand_analysis',
                     payload={
+                        'execution_id': self.execution_id,  # 【P2 修复】添加 execution_id
                         'results': results,
                         'user_brand': brand_list[0],
                         'competitor_brands': brand_list[1:] if len(brand_list) > 1 else [],
@@ -951,6 +952,7 @@ class DiagnosisOrchestrator:
                     execution_id=self.execution_id,
                     task_type='competitive_analysis',
                     payload={
+                        'execution_id': self.execution_id,  # 【P2 修复】添加 execution_id
                         'results': results,
                         'main_brand': brand_list[0],
                         'competitor_brands': brand_list[1:] if len(brand_list) > 1 else []
@@ -1014,15 +1016,17 @@ class DiagnosisOrchestrator:
                 write_to_db=True
             )
 
-            # 【P1 关键修复 - 2026-03-05】等待后台分析完成（最多等待 210 秒）
-            # 注意：后台分析是异步的，但需要确保分析完成才能生成完整报告
-            # 修改：超时时间从 180 秒增加到 210 秒（后台任务超时 180 秒 + 30 秒余量）
-            # 余量用于处理任务状态更新的延迟，避免编排器在任务即将完成时超时
+            # 【P1 关键修复 - 2026-03-07】等待后台分析完成
+            # 超时时间增加到 360 秒（后台任务超时 300 秒 + 60 秒余量）
             analysis_results = {}
+            analysis_completed = False
+            analysis_error = None
+            
             try:
-                api_logger.info(f"[Orchestrator] 开始等待后台分析：{self.execution_id}")
-                analysis_results = await self._wait_for_analysis_complete(timeout_seconds=210)
+                api_logger.info(f"[Orchestrator] 开始等待后台分析：{self.execution_id}, 超时=360 秒")
+                analysis_results = await self._wait_for_analysis_complete(timeout_seconds=360)
                 if analysis_results:
+                    analysis_completed = True
                     api_logger.info(
                         f"[Orchestrator] ✅ 后台分析已完成：{self.execution_id}, "
                         f"总耗时={(datetime.now() - datetime.fromisoformat(self.execution_store[self.execution_id]['start_time'])).total_seconds():.2f}秒"
@@ -1030,12 +1034,28 @@ class DiagnosisOrchestrator:
                 else:
                     api_logger.warning(f"[Orchestrator] ⚠️ 后台分析超时，使用空结果继续：{self.execution_id}")
             except Exception as e:
+                analysis_error = str(e)
                 api_logger.warning(f"[Orchestrator] 等待后台分析失败：{e}，继续生成报告")
                 analysis_results = {}
 
             # 聚合报告
-            # 【阶段一：报告聚合器】使用 Python 版本的报告聚合器
             final_report = None
+            report_quality_level = 'complete'
+            missing_sections = []
+            quality_warnings = []
+            
+            # 评估报告质量
+            if not analysis_completed:
+                report_quality_level = 'partial'
+                missing_sections.append('brand_analysis')
+                missing_sections.append('competitive_analysis')
+                quality_warnings.append('后台分析超时，部分深度分析缺失')
+            
+            if not analysis_results:
+                if report_quality_level == 'complete':
+                    report_quality_level = 'partial'
+                quality_warnings.append('后台分析结果为空')
+            
             try:
                 from wechat_backend.services.report_aggregator import aggregate_report
 
@@ -1049,22 +1069,139 @@ class DiagnosisOrchestrator:
 
                 api_logger.info(
                     f"[Orchestrator] ✅ 报告聚合完成：{self.execution_id}, "
-                    f"overallScore={final_report.get('overallScore', 'N/A')}"
+                    f"overallScore={final_report.get('overallScore', 'N/A')}, "
+                    f"quality={report_quality_level}"
                 )
 
             except ImportError as e:
                 api_logger.warning(f"[Orchestrator] 报告聚合服务不可用：{e}, 使用简化报告")
+                report_quality_level = 'minimal'
+                missing_sections.append('detailed_analysis')
+                quality_warnings.append('使用简化报告生成器')
                 # 降级处理：创建简化报告
                 final_report = self._create_simplified_report(results, brand_list)
             except Exception as e:
                 api_logger.error(f"[Orchestrator] 报告聚合失败：{e}", exc_info=True)
+                report_quality_level = 'minimal'
+                quality_warnings.append(f'报告聚合错误：{str(e)}')
                 # 降级处理：创建简化报告
                 final_report = self._create_simplified_report(results, brand_list)
 
             # 【P0 关键修复】确保 final_report 不为 None
             if final_report is None:
                 api_logger.error(f"[Orchestrator] 报告聚合结果为 None，创建空报告")
+                report_quality_level = 'minimal'
                 final_report = self._create_simplified_report(results, brand_list)
+
+            # 【P0 修复 - 2026-03-07】添加报告质量分级信息
+            final_report['quality'] = {
+                'level': report_quality_level,  # 'complete' | 'partial' | 'minimal'
+                'completeness_score': 95 if report_quality_level == 'complete' else (60 if report_quality_level == 'partial' else 30),
+                'missing_sections': missing_sections,
+                'warnings': quality_warnings,
+                'analysis_completed': analysis_completed,
+                'analysis_error': analysis_error
+            }
+
+            # 【P3 修复 - 2026-03-07】保存分析数据到 diagnosis_analysis 表
+            if analysis_results and hasattr(self, '_report_id') and self._report_id is not None:
+                try:
+                    from wechat_backend.services.diagnosis_transaction import DiagnosisTransaction
+                    
+                    tx = DiagnosisTransaction(self.execution_id)
+                    tx._init_dependencies()  # 初始化依赖
+                    
+                    # 保存品牌分析
+                    if 'brand_analysis' in analysis_results:
+                        analysis_id = tx.add_analysis(
+                            report_id=self._report_id,
+                            analysis_type='brand_analysis',
+                            analysis_data=analysis_results['brand_analysis']
+                        )
+                        api_logger.info(
+                            f"[Orchestrator] ✅ 品牌分析已保存：{self.execution_id}, "
+                            f"analysis_id={analysis_id}"
+                        )
+                    
+                    # 保存竞争分析
+                    if 'competitive_analysis' in analysis_results:
+                        analysis_id = tx.add_analysis(
+                            report_id=self._report_id,
+                            analysis_type='competitive_analysis',
+                            analysis_data=analysis_results['competitive_analysis']
+                        )
+                        api_logger.info(
+                            f"[Orchestrator] ✅ 竞争分析已保存：{self.execution_id}, "
+                            f"analysis_id={analysis_id}"
+                        )
+                    
+                    # 保存语义偏移分析
+                    if 'semantic_drift' in analysis_results:
+                        analysis_id = tx.add_analysis(
+                            report_id=self._report_id,
+                            analysis_type='semantic_drift',
+                            analysis_data=analysis_results['semantic_drift']
+                        )
+                        api_logger.info(
+                            f"[Orchestrator] ✅ 语义偏移分析已保存：{self.execution_id}, "
+                            f"analysis_id={analysis_id}"
+                        )
+                    
+                    api_logger.info(
+                        f"[Orchestrator] ✅ 分析数据已保存到 diagnosis_analysis 表：{self.execution_id}"
+                    )
+                    
+                    # 【P3 修复 - 2026-03-07】创建报告快照
+                    try:
+                        snapshot_data = {
+                            'final_report': final_report,
+                            'analysis_results': analysis_results,
+                            'report_quality': final_report.get('quality', {}),
+                            'timestamp': datetime.now().isoformat()
+                        }
+                        
+                        snapshot_id = tx._report_service.create_snapshot(
+                            report_id=self._report_id,
+                            execution_id=self.execution_id,
+                            snapshot_data=snapshot_data,
+                            reason='diagnosis_completed'
+                        )
+                        
+                        if snapshot_id > 0:
+                            api_logger.info(
+                                f"[Orchestrator] ✅ 报告快照已创建：{self.execution_id}, "
+                                f"snapshot_id={snapshot_id}"
+                            )
+                        else:
+                            api_logger.warning(
+                                f"[Orchestrator] ⚠️ 报告快照创建失败：{self.execution_id}"
+                            )
+                            
+                    except Exception as snapshot_err:
+                        api_logger.error(
+                            f"[Orchestrator] ❌ 创建报告快照失败：{self.execution_id}, "
+                            f"错误：{snapshot_err}",
+                            exc_info=True
+                        )
+                        # 不阻塞主流程
+                    
+                except Exception as analysis_err:
+                    api_logger.error(
+                        f"[Orchestrator] ❌ 保存分析数据失败：{self.execution_id}, "
+                        f"错误：{analysis_err}",
+                        exc_info=True
+                    )
+                    # 不阻塞主流程，继续执行
+            elif not analysis_results:
+                api_logger.warning(
+                    f"[Orchestrator] ⚠️ 跳过保存分析数据：{self.execution_id}, "
+                    f"原因：analysis_results 为空"
+                )
+            elif not hasattr(self, '_report_id') or self._report_id is None:
+                api_logger.warning(
+                    f"[Orchestrator] ⚠️ 跳过保存分析数据：{self.execution_id}, "
+                    f"原因：report_id 不存在"
+                )
 
             # 保存最终报告到 execution_store
             if self.execution_id in self.execution_store:
@@ -1117,16 +1254,16 @@ class DiagnosisOrchestrator:
 
     async def _wait_for_analysis_complete(
         self,
-        timeout_seconds: int = 180
+        timeout_seconds: int = 360  # 【P0 修复 - 2026-03-07】增加到 6 分钟，与后台任务超时 (300 秒) 匹配并留有余量
     ) -> Dict[str, Any]:
         """
         等待后台分析完成
 
         【P1 关键修复 - 2026-03-03】增加超时时间，优化轮询频率，确保分析完成
         【P0 关键修复 - 2026-03-05】异步非阻塞等待，防止线程阻塞
-        【P0 关键修复 - 2026-03-05】统一超时时间为 180 秒
+        【P0 关键修复 - 2026-03-07】统一超时时间为 360 秒（6 分钟）
         修改：
-        1. 超时时间从 60 秒增加到 180 秒（与后台任务超时一致）
+        1. 超时时间从 210 秒增加到 360 秒（后台任务超时 300 秒 + 60 秒余量）
         2. 轮询间隔从 2 秒改为 1 秒（更快响应）
         3. 添加详细日志，便于问题排查
         4. 【P0 修复】使用自适应轮询间隔，减少资源浪费
@@ -1254,8 +1391,9 @@ class DiagnosisOrchestrator:
 
         任务：
         1. 统一更新状态为完成
-        2. 发送完成通知
-        3. 清理临时状态
+        2. 【P0 修复】创建报告快照和分析数据
+        3. 发送完成通知
+        4. 清理临时状态
 
         参数：
             final_report: 最终报告数据
@@ -1268,6 +1406,35 @@ class DiagnosisOrchestrator:
 
         try:
             params = self._initial_params
+
+            # 【P0 修复 - 关键】创建报告快照和分析数据
+            # 这是前端能获取完整报告数据的关键步骤
+            try:
+                from wechat_backend.diagnosis_report_service import get_report_service
+                
+                report_service = get_report_service()
+                
+                # 构建完整的报告数据结构
+                full_report_data = {
+                    'report': final_report.get('report', {}),
+                    'results': final_report.get('results', []),
+                    'analysis': final_report.get('analysis', {})
+                }
+                
+                # 创建快照和归档
+                success = report_service.complete_report(
+                    execution_id=self.execution_id,
+                    full_report=full_report_data
+                )
+                
+                if success:
+                    api_logger.info(f"[Orchestrator] ✅ 报告快照已创建：{self.execution_id}")
+                else:
+                    api_logger.warning(f"[Orchestrator] ⚠️ 报告快照创建失败：{self.execution_id}")
+                    
+            except Exception as report_err:
+                api_logger.error(f"[Orchestrator] ❌ 创建报告快照失败：{self.execution_id}, 错误：{report_err}", exc_info=True)
+                # 快照失败不影响主流程，继续执行
 
             # 统一更新状态为完成
             if self._state_manager:
@@ -1468,71 +1635,25 @@ class DiagnosisOrchestrator:
 
     def _schedule_cleanup(self, delay_seconds: int = 300):
         """
-        调度清理任务（延迟执行，防止前端轮询时数据已清除）
+        调度清理任务（简化版 - 仅记录日志）
 
-        【P0 关键修复 - 2026-03-05】
-        清理策略：
-        1. 成功任务：延迟 5 分钟清理，确保前端有足够时间获取最终状态
-        2. 失败任务：延迟 1 分钟清理，错误状态已持久化到数据库
-        3. 后台异步清理，不阻塞主流程
+        【P0 关键修复 - 2026-03-08】
+        清理逻辑已统一由 StateManager 负责，此方法仅记录日志
+        
+        优化原因：
+        1. 避免双重清理机制导致的资源浪费
+        2. StateManager 已有完善的定时清理和紧急清理机制
+        3. 统一清理逻辑，便于监控和维护
 
         参数：
-            delay_seconds: 延迟清理时间（秒），默认 300 秒
+            delay_seconds: 延迟清理时间（秒），默认 300 秒（参数已废弃）
         """
-        import threading
-        import time
-
-        def _cleanup_task():
-            """后台清理任务"""
-            try:
-                # 等待延迟时间
-                time.sleep(delay_seconds)
-
-                # 执行清理
-                if self.execution_id in self.execution_store:
-                    # 保存关键状态到数据库（如果还未保存）
-                    if self._state_manager:
-                        try:
-                            # 确保最终状态已持久化
-                            state = self.execution_store[self.execution_id]
-                            if state.get('status') in ['completed', 'failed']:
-                                self._state_manager.update_state(
-                                    execution_id=self.execution_id,
-                                    status=state.get('status'),
-                                    stage=state.get('stage', 'completed'),
-                                    progress=state.get('progress', 100),
-                                    is_completed=True,
-                                    should_stop_polling=True,
-                                    write_to_db=True
-                                )
-                        except Exception as e:
-                            api_logger.error(
-                                f"[Orchestrator] 清理前状态持久化失败：{self.execution_id}, 错误={e}"
-                            )
-
-                    # 从内存中清除
-                    del self.execution_store[self.execution_id]
-                    api_logger.info(
-                        f"[Orchestrator] ✅ 清理完成：{self.execution_id}, "
-                        f"延迟={delay_seconds}秒，当前内存任务数={len(self.execution_store)}"
-                    )
-                else:
-                    api_logger.debug(
-                        f"[Orchestrator] 无需清理：{self.execution_id} 已不存在于内存中"
-                    )
-
-            except Exception as e:
-                api_logger.error(
-                    f"[Orchestrator] ❌ 清理任务失败：{self.execution_id}, 错误={e}",
-                    exc_info=True
-                )
-
-        # 启动后台线程执行清理（不阻塞主流程）
-        cleanup_thread = threading.Thread(target=_cleanup_task, daemon=True)
-        cleanup_thread.start()
+        # 【P0 优化 - 2026-03-08】不再启动独立清理线程
+        # 清理工作由 StateManager 统一负责（每 3 分钟自动清理已完成任务）
+        
         api_logger.info(
-            f"[Orchestrator] ⏰ 清理任务已调度：{self.execution_id}, "
-            f"延迟={delay_seconds}秒"
+            f"[Orchestrator] ⏰ 任务完成，将由 StateManager 统一清理：{self.execution_id}, "
+            f"TTL=300s, 清理间隔=180s"
         )
 
 

@@ -144,15 +144,19 @@ class DatabaseConnectionPool:
                             self._total_wait_time_ms += wait_time_ms
                             self._connection_count += 1
                             self._update_metrics()
+                            # 【P2 增强】详细日志 - 记录线程名称
+                            current_thread = threading.current_thread()
                             db_logger.debug(
-                                f"连接池获取连接：等待{wait_time_ms:.2f}ms，"
-                                f"池中剩余{len(self._pool)}"
+                                f"[DB] 连接获取：thread_name={current_thread.name}, "
+                                f"thread_id={current_thread.ident}, conn_id={id(conn)}, "
+                                f"等待={wait_time_ms:.2f}ms, 池中剩余={len(self._pool)}"
                             )
                             return conn
                         else:
                             # 连接不健康，关闭并继续
+                            current_thread = threading.current_thread()
                             db_logger.warning(
-                                f"连接池检测到 unhealthy 连接，已关闭：id={id(conn)}"
+                                f"[DB] 连接不健康，已关闭：thread_name={current_thread.name}, conn_id={id(conn)}"
                             )
                             try:
                                 conn.close()
@@ -397,9 +401,12 @@ class DatabaseConnectionPool:
 
                 if age > self.max_connection_age:
                     thread_id = self._connection_thread.get(conn_id, 'unknown')
+                    
+                    # 【P2 增强】记录更详细的泄漏信息，便于定位泄漏源
                     db_logger.warning(
                         f"[连接泄漏] 连接超时未归还：id={conn_id}, "
-                        f"年龄={age:.1f}秒，thread={thread_id}"
+                        f"年龄={age:.1f}秒，thread_id={thread_id}, "
+                        f"池中剩余={len(self._pool)}, 使用中={len(self._in_use)}"
                     )
 
                     # 强制归还

@@ -40,10 +40,7 @@ class TestConcurrentScenarios:
                     await asyncio.sleep(delay)
                     return {'content': f'Response for {brand}', 'latency_ms': int(delay*1000)}
             
-            service = DiagnosisService(
-                db_path=test_db_path,
-                ai_adapter=RandomDelayAdapter()
-            )
+            service = DiagnosisService()
             
             await service.start_diagnosis(
                 execution_id=exec_id,
@@ -70,7 +67,7 @@ class TestConcurrentScenarios:
         assert len(results) == 10
         
         # 验证没有任务卡死
-        service = DiagnosisService(db_path=test_db_path)
+        service = DiagnosisService()
         for exec_id in results:
             status = await service.get_status(exec_id)
             assert status['should_stop_polling'] is True
@@ -86,7 +83,7 @@ class TestConcurrentScenarios:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        service = DiagnosisService(db_path=test_db_path)
+        service = DiagnosisService()
         exec_id = setup_completed_diagnosis['execution_id']
         
         async def poll_status():
@@ -118,7 +115,7 @@ class TestConcurrentScenarios:
         from wechat_backend.v2.repositories.diagnosis_result_repository import DiagnosisResultRepository
         from wechat_backend.v2.models.diagnosis_result import DiagnosisResult
         
-        repo = DiagnosisResultRepository(test_db_path)
+        repo = DiagnosisResultRepository()
         
         async def write_result(idx):
             result = DiagnosisResult(
@@ -154,7 +151,7 @@ class TestConcurrentScenarios:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        service = DiagnosisService(db_path=test_db_path)
+        service = DiagnosisService()
         
         # 创建任务
         repo = service.diagnosis_repo

@@ -49,7 +49,7 @@ const startBrandTestApi = (data) => {
 const getTaskStatusApi = (executionId) => {
   // 【P0 关键修复 - 2026-03-04】过滤重复请求
   const requestKey = `status_${executionId}`;
-  
+
   if (pendingRequests.has(requestKey)) {
     console.warn(`[API] ⚠️ 重复请求被拦截：${requestKey}`);
     // 返回已存在的 Promise
@@ -57,7 +57,8 @@ const getTaskStatusApi = (executionId) => {
   }
 
   // 统一使用 /test/status/{id} 接口
-  const apiUrl = `${API_ENDPOINTS.BRAND.STATUS}/${executionId}`;
+  // 【P2 修复 - 2026-03-07】添加 fields=full 参数，确保返回详细结果数据
+  const apiUrl = `${API_ENDPOINTS.BRAND.STATUS}/${executionId}?fields=full`;
   console.log(`Calling API: ${apiUrl} with executionId: ${executionId}`);
 
   const requestPromise = get(apiUrl)

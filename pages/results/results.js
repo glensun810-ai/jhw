@@ -545,6 +545,148 @@ Page({
   },
 
   /**
+   * 【P0 关键修复 - 2026-03-07】新增：展示失败详情（配置回顾 + 执行日志 + 错误详情）
+   * 即使诊断完全失败，也让用户看到发生了什么
+   * @param {Object} resultData - 结果数据
+   * @param {string} brandName - 品牌名称
+   */
+  showFailedStateWithDetails: function(resultData, brandName) {
+    console.log('[showFailedStateWithDetails] 展示失败详情');
+
+    // 提取元数据
+    const executionMetadata = resultData.execution_metadata || {};
+    const errorDetails = resultData.error_details || resultData.error || {};
+    const selectedModels = executionMetadata.selected_models || resultData.selected_models || [];
+    const customQuestions = executionMetadata.custom_questions || resultData.custom_questions || [];
+    const executionLog = executionMetadata.execution_log || [];
+    const totalTasks = resultData.total_tasks || executionMetadata.total_tasks || 0;
+    const completedTasks = resultData.completed_tasks || executionMetadata.completed_tasks || 0;
+    const completionRate = resultData.completion_rate !== undefined 
+      ? resultData.completion_rate 
+      : (totalTasks > 0 ? Math.round((completedTasks * 100) / totalTasks) : 0);
+
+    // 构建错误日志列表（从执行日志）
+    const errorLogList = executionLog.map((log, index) => ({
+      id: index,
+      task: log.task_id || `任务${index + 1}`,
+      errorType: this._extractErrorType(log.error || ''),
+      errorMessage: log.error || '未知错误',
+      status: log.status || 'failed',
+      timestamp: log.timestamp || new Date().toISOString(),
+      model: log.model || 'unknown',
+      question: log.question || ''
+    }));
+
+    // 统计错误类型
+    const quotaExhaustedCount = errorLogList.filter(e =>
+      e.errorType === 'quota_exhausted' || e.errorType === 'insufficient_quota'
+    ).length;
+    const otherErrorCount = errorLogList.filter(e =>
+      e.errorType !== 'quota_exhausted' && e.errorType !== 'insufficient_quota'
+    ).length;
+
+    // 设置页面数据
+    this.setData({
+      // 基础信息
+      targetBrand: brandName || executionMetadata.main_brand || '',
+      selectedModels: selectedModels,
+      customQuestions: customQuestions,
+      completedAt: executionMetadata.timestamp ? this.formatDateTime(executionMetadata.timestamp) : '',
+      stage: 'failed',
+      isCompleted: true,
+      reportErrorMessage: typeof errorDetails === 'string' ? errorDetails : (errorDetails.message || '诊断失败'),
+
+      // 执行统计
+      totalTasks: totalTasks,
+      completedTasks: completedTasks,
+      completionRate: completionRate,
+      hasPartialResults: completionRate < 100 && completionRate > 0,
+      partialWarning: completionRate > 0 
+        ? `诊断部分完成：${completedTasks}/${totalTasks} (${completionRate}%)`
+        : '诊断完全失败，未获取任何有效结果',
+
+      // 错误详情
+      errorLogList: errorLogList,
+      quotaExhaustedCount: quotaExhaustedCount,
+      otherErrorCount: otherErrorCount,
+
+      // 失败状态
+      showEmptyState: true,
+      emptyIcon: 'alert-triangle',
+      emptyTitle: '诊断失败',
+      emptyMessage: typeof errorDetails === 'string' 
+        ? errorDetails 
+        : (errorDetails.message || '诊断过程中遇到错误'),
+      showEmptyAction: true,
+      emptyActionText: '查看诊断详情',
+
+      // 新增：显示配置回顾和执行日志
+      showConfigSection: true,
+      showModelPerformance: false,
+      showQualityDetails: false,
+      showResponseTime: false,
+
+      // 错误详情展示
+      showErrorDetailsModal: false,  // 默认不自动弹出，用户可手动查看
+
+      // 加载状态
+      isLoading: false,
+      showLoadingSpinner: false
+    });
+
+    // 显示错误提示（但不阻断用户）
+    const errorType = typeof errorDetails === 'object' && errorDetails.type 
+      ? this._getErrorTypeText(errorDetails.type)
+      : '诊断失败';
+    
+    const suggestion = typeof errorDetails === 'object' && errorDetails.suggestion
+      ? errorDetails.suggestion
+      : '请查看下方的诊断详情了解更多信息';
+
+    // 显示非阻断式提示
+    wx.showToast({
+      title: errorType + '，请查看详情',
+      icon: 'none',
+      duration: 3000
+    });
+  },
+
+  /**
+   * 辅助函数：从错误消息提取错误类型
+   * @private
+   * @param {string} errorMessage - 错误消息
+   * @returns {string} 错误类型
+   */
+  _extractErrorType: function(errorMessage) {
+    if (!errorMessage) return 'unknown';
+    const msg = errorMessage.toLowerCase();
+    if (msg.includes('quota') || msg.includes('配额')) return 'quota_exhausted';
+    if (msg.includes('insufficient')) return 'insufficient_quota';
+    if (msg.includes('timeout') || msg.includes('超时')) return 'timeout';
+    if (msg.includes('network') || msg.includes('网络')) return 'network_error';
+    if (msg.includes('api key') || msg.includes('authentication')) return 'auth_error';
+    return 'unknown';
+  },
+
+  /**
+   * 辅助函数：获取错误类型文本
+   * @private
+   * @param {string} type - 错误类型
+   * @returns {string} 错误类型文本
+   */
+  _getErrorTypeText: function(type) {
+    const typeMap = {
+      'all_ai_calls_failed': '所有 AI 调用失败',
+      'quota_exhausted': '配额用尽',
+      'timeout': '执行超时',
+      'network_error': '网络错误',
+      'auth_error': '认证失败',
+      'parse_error': '解析错误'
+    };
+    return typeMap[type] || '诊断失败';
+  },
+
+  /**
    * P0-005 新增：从缓存加载
    */
   loadFromCache: function() {
@@ -607,15 +749,24 @@ Page({
 
   /**
    * P0-005 新增：处理并展示结果
+   * 【P0 关键修复 - 2026-03-07】即使无结果也展示诊断信息（配置、日志、错误详情）
    */
   processAndDisplayResults: function(resultData, brandName) {
     console.log('[processAndDisplayResults] 处理结果数据:', resultData);
+
+    // 【P0 关键修复】检查后端返回的 status 字段
+    if (resultData?.status === 'failed') {
+      console.error('[processAndDisplayResults] 后端返回 failed 状态，展示失败详情');
+      // 【修复】不直接返回，而是展示失败详情 + 配置回顾 + 执行日志
+      this.showFailedStateWithDetails(resultData, brandName);
+      return;
+    }
 
     // P1-2 修复：检查是否是降级报告
     if (resultData?.error || resultData?.partial) {
       console.log('[processAndDisplayResults] 检测到降级报告，处理异常场景');
       this.processFallbackReport(resultData, brandName);
-      
+
       // 如果有质量提示，显示警告
       if (resultData?.qualityHints) {
         this.showQualityWarning(resultData.qualityHints);
@@ -626,14 +777,15 @@ Page({
     const results = resultData.results || [];
     const competitiveAnalysis = resultData.competitive_analysis || resultData.competitiveAnalysis || {};
 
-    // P1-2 修复：检查结果是否为空
-    if (results.length === 0) {
-      console.warn('[processAndDisplayResults] 结果为空，显示空状态');
-      this.showEmptyState({ error: { status: 'no_results', message: '无有效结果' } });
+    // 【P0 关键修复 - 2026-03-07】即使 results.length == 0 也展示诊断信息
+    if (!Array.isArray(results) || results.length === 0) {
+      console.error('[processAndDisplayResults] results.length == 0，展示失败详情');
+      // 【修复】不直接返回，而是展示失败详情 + 配置回顾 + 执行日志
+      this.showFailedStateWithDetails(resultData, brandName);
       return;
     }
 
-    // 初始化页面
+    // 初始化页面（有结果的情况）
     this.initializePageWithData(
       results,
       brandName,
@@ -1292,14 +1444,28 @@ Page({
   /**
    * P0-1 修复：使用加载的数据初始化页面
    * P3-1 优化：支持流式渲染（分阶段展示）
+   * 【关键修复】严格校验 results 长度，杜绝"假完成"
    */
   initializePageWithData: function(results, targetBrand, competitorBrands, competitiveAnalysis, negativeSources, semanticDriftData, recommendationData, insightsData) {
     try {
       console.log('📊 初始化页面数据，结果数量:', results.length);
 
+      // 【P0 关键修复】严格校验 results 长度
+      if (!Array.isArray(results) || results.length === 0) {
+        console.error('[initializePageWithData] results.length == 0，进入故障恢复模式');
+        this.showEmptyState({ 
+          status: 'failed', 
+          error: { 
+            status: 'no_results', 
+            message: '未获取到任何诊断结果，建议重新运行诊断' 
+          } 
+        });
+        return;
+      }
+
       // P3-1 优化：检查是否使用流式渲染
       const useStreaming = this.data.useStreamingRender !== false;  // 默认启用
-      
+
       if (useStreaming && results && results.length > 10) {
         // 大数据量时使用流式渲染
         console.log('🚀 使用流式渲染');
@@ -1310,7 +1476,7 @@ Page({
       // 传统全量渲染
       console.log('📊 使用传统全量渲染');
       this._initializePageWithDataInternal(results, targetBrand, competitorBrands, competitiveAnalysis, negativeSources, semanticDriftData, recommendationData, insightsData);
-      
+
     } catch (error) {
       console.error('❌ 初始化页面数据失败:', error);
       wx.hideLoading();
@@ -3629,5 +3795,28 @@ Page({
       });
       console.log('[P1-001 自动刷新] 页面隐藏，清理定时器');
     }
+  },
+
+  /**
+   * 【P0 关键修复 - 2026-03-07】重新诊断按钮处理函数
+   * 从报告页直接发起新的诊断
+   */
+  retryDiagnosis: function() {
+    const that = this;
+    
+    wx.showModal({
+      title: '重新诊断',
+      content: '将使用当前配置重新进行品牌诊断，确定继续？',
+      confirmText: '确定',
+      cancelText: '取消',
+      success: function(res) {
+        if (res.confirm) {
+          // 跳转到首页，并传递重新诊断标志
+          wx.reLaunch({
+            url: '/pages/index/index?retry=true&brandName=' + encodeURIComponent(that.data.targetBrand || '')
+          });
+        }
+      }
+    });
   }
 });

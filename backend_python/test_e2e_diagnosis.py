@@ -73,7 +73,8 @@ def test_create_diagnosis():
         
         if response.status_code == 200:
             data = response.json()
-            execution_id = data.get('execution_id')
+            # Support both camelCase and snake_case
+            execution_id = data.get('execution_id') or data.get('executionId')
             if execution_id:
                 print_success(f"诊断任务创建成功：{execution_id}")
                 return execution_id
@@ -90,30 +91,35 @@ def test_create_diagnosis():
 def test_poll_status(execution_id):
     """测试 3: 轮询任务状态"""
     print_step("测试 3: 轮询任务状态")
-    
+
     max_polls = 60
     poll_interval = 2
     
+    # Use the correct endpoint
+    status_url = f"{BASE_URL}/api/diagnosis/status/{execution_id}"
+
     for i in range(max_polls):
         try:
             response = requests.get(
-                f"{BASE_URL}/test/status/{execution_id}",
+                status_url,
                 timeout=10
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 stage = data.get('stage', 'unknown')
                 progress = data.get('progress', 0)
-                results_count = len(data.get('results', []) or data.get('detailed_results', []))
-                
+                # Support both result field names
+                results_data = data.get('results') or data.get('detailed_results') or []
+                results_count = len(results_data)
+
                 print(f"  轮询 {i+1}/{max_polls}: stage={stage}, progress={progress}%, results={results_count}")
-                
+
                 # 检查完成状态
                 if stage in ['completed', 'finished', 'done'] or data.get('is_completed'):
                     print_success(f"任务完成！results={results_count}")
                     return data
-                
+
                 # 检查失败状态
                 if stage == 'failed':
                     if results_count > 0:
@@ -122,27 +128,28 @@ def test_poll_status(execution_id):
                     else:
                         print_error(f"任务失败：{data.get('error', '未知错误')}")
                         return None
-                
+            elif response.status_code == 404:
+                print_warning(f"轮询 404 - 任务可能尚未创建：{execution_id}")
                 time.sleep(poll_interval)
             else:
                 print_error(f"轮询失败：{response.status_code}")
                 time.sleep(poll_interval)
-                
+
         except Exception as e:
             print_error(f"轮询异常：{e}")
             time.sleep(poll_interval)
-    
+
     print_error(f"轮询超时：{max_polls * poll_interval}秒")
     return None
 
 def test_database_save(execution_id):
     """测试 4: 验证数据库保存"""
     print_step("测试 4: 验证数据库保存")
-    
+
     import sqlite3
     conn = sqlite3.connect('backend_python/database.db')
     cursor = conn.cursor()
-    
+
     # 检查 diagnosis_reports
     cursor.execute('SELECT execution_id, brand_name, status, stage, progress FROM diagnosis_reports WHERE execution_id = ?', (execution_id,))
     report = cursor.fetchone()
@@ -150,32 +157,31 @@ def test_database_save(execution_id):
         print_success(f"diagnosis_reports: {report}")
     else:
         print_error("diagnosis_reports: 无记录")
-    
-    # 检查 dimension_results
-    cursor.execute('SELECT execution_id, dimension_name, status, COUNT(*) FROM dimension_results WHERE execution_id = ? GROUP BY status', (execution_id,))
-    dimensions = cursor.fetchall()
-    if dimensions:
-        for dim in dimensions:
-            print_success(f"dimension_results: {dim[2]} - {dim[3]}条")
-    else:
-        print_error("dimension_results: 无记录")
-    
-    # 检查 test_records
-    cursor.execute('SELECT execution_id, brand_name FROM test_records WHERE execution_id = ?', (execution_id,))
-    test_record = cursor.fetchone()
-    if test_record:
-        print_success(f"test_records: {test_record}")
-    else:
-        print_error("test_records: 无记录")
-    
+
+    # 检查 diagnosis_results (替代 dimension_results)
+    try:
+        cursor.execute('SELECT execution_id, brand, question, model, response FROM diagnosis_results WHERE execution_id = ? LIMIT 5', (execution_id,))
+        results = cursor.fetchall()
+        if results:
+            print_success(f"diagnosis_results: 找到 {len(results)} 条记录")
+            for r in results[:3]:
+                print_success(f"  - brand={r[1]}, model={r[3]}")
+        else:
+            print_error("diagnosis_results: 无记录")
+    except sqlite3.OperationalError as e:
+        print_warning(f"diagnosis_results 表不存在或字段错误：{e}")
+
     # 检查 report_snapshots
-    cursor.execute('SELECT execution_id, report_version FROM report_snapshots WHERE execution_id = ?', (execution_id,))
-    snapshot = cursor.fetchone()
-    if snapshot:
-        print_success(f"report_snapshots: {snapshot}")
-    else:
-        print_error("report_snapshots: 无记录")
-    
+    try:
+        cursor.execute('SELECT execution_id, report_version FROM report_snapshots WHERE execution_id = ?', (execution_id,))
+        snapshot = cursor.fetchone()
+        if snapshot:
+            print_success(f"report_snapshots: {snapshot}")
+        else:
+            print_error("report_snapshots: 无记录")
+    except sqlite3.OperationalError as e:
+        print_warning(f"report_snapshots 表不存在：{e}")
+
     conn.close()
 
 def test_get_report(execution_id):

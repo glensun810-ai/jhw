@@ -25,7 +25,7 @@ from collections import defaultdict
 from functools import wraps
 import logging
 
-from wechat_backend.error_codes import ErrorCodeDefinition, ErrorSeverity, get_error_code
+from wechat_backend.error_codes import ErrorCode, get_error_by_code
 from wechat_backend.error_logger import get_error_logger, ErrorLogger
 
 
@@ -288,7 +288,7 @@ class RetryHandler:
 
                     self.logger.log_error(
                         error=e,
-                        error_code=get_error_code(error_code),
+                        error_code=get_error_by_code(error_code),
                         execution_id=execution_id,
                         additional_info={
                             'function': func.__name__,
@@ -427,7 +427,7 @@ class RetryHandler:
 
                     self.logger.log_error(
                         error=e,
-                        error_code=get_error_code(error_code),
+                        error_code=get_error_by_code(error_code),
                         execution_id=execution_id,
                         additional_info={
                             'function': func.__name__,

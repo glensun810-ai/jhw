@@ -1,0 +1,61 @@
+<!--
+  质量指示器组件模板
+  
+  P2-4 优化：可复用组件 - 显示报告质量评分和等级
+-->
+
+<view 
+  class="quality-indicator {{customClass}} {{currentLevel.level}}" 
+  bindtap="handleClick"
+  hover-class="{{clickable ? 'quality-hover' : ''}}"
+>
+  <!-- 质量评分环 -->
+  <view class="quality-score-ring">
+    <view 
+      class="quality-score-circle" 
+      style="background: conic-gradient({{currentLevel.color}} {{qualityScore}}%, #e0e0e0 {{qualityScore}}%)"
+    >
+      <view class="quality-score-inner">
+        <text class="quality-score-value">{{qualityScore}}</text>
+        <text class="quality-score-label">分</text>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 质量等级信息 -->
+  <view class="quality-level-info">
+    <view class="quality-level-header">
+      <text 
+        class="quality-level-icon" 
+        style="color: {{currentLevel.color}}"
+      >
+        {{currentLevel.icon}}
+      </text>
+      <text 
+        class="quality-level-label"
+        style="color: {{currentLevel.color}}"
+      >
+        {{currentLevel.label}}
+      </text>
+    </view>
+    
+    <text class="quality-level-desc" wx:if="{{showDetail}}">
+      {{currentLevel.description}}
+    </text>
+    
+    <text class="quality-level-recommend" wx:if="{{showDetail}}">
+      {{currentLevel.recommendation}}
+    </text>
+  </view>
+  
+  <!-- 质量提示 -->
+  <view class="quality-tip" wx:if="{{showTip}}">
+    <view class="quality-tip-content">
+      <text class="quality-tip-text">{{currentLevel.description}}</text>
+      <text class="quality-tip-close" bindtap="closeTip">✕</text>
+    </view>
+    <view class="quality-tip-actions" wx:if="{{currentLevel.level === 'poor' || currentLevel.level === 'critical'}}">
+      <button class="quality-tip-btn" bindtap="viewDetail">查看详情</button>
+    </view>
+  </view>
+</view>

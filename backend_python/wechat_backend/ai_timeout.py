@@ -32,32 +32,33 @@ class QuestionComplexity(Enum):
     COMPLEX = "complex"    # >50 字
 
 
-# P1-2 优化：动态超时配置 (秒) - 缩短 30-40%
+# P1-2 优化：动态超时配置 (秒) - 增加超时阈值避免偶发超时
+# 【P2 修复 - 2026-03-06】增加超时阈值，避免网络波动导致的偶发超时
 TIMEOUT_CONFIG: Dict[str, Dict[QuestionComplexity, int]] = {
     'doubao': {
-        QuestionComplexity.SIMPLE: 10,   # 从 15 秒降至 10 秒
-        QuestionComplexity.NORMAL: 20,   # 从 30 秒降至 20 秒
-        QuestionComplexity.COMPLEX: 40,  # 从 60 秒降至 40 秒
+        QuestionComplexity.SIMPLE: 15,   # 增加至 15 秒
+        QuestionComplexity.NORMAL: 30,   # 增加至 30 秒
+        QuestionComplexity.COMPLEX: 60,  # 增加至 60 秒
     },
     'qwen': {
-        QuestionComplexity.SIMPLE: 8,    # 从 10 秒降至 8 秒
-        QuestionComplexity.NORMAL: 15,   # 从 20 秒降至 15 秒
-        QuestionComplexity.COMPLEX: 35,  # 从 45 秒降至 35 秒
+        QuestionComplexity.SIMPLE: 15,   # 增加至 15 秒
+        QuestionComplexity.NORMAL: 30,   # 增加至 30 秒
+        QuestionComplexity.COMPLEX: 60,  # 增加至 60 秒
     },
     'deepseek': {
-        QuestionComplexity.SIMPLE: 10,   # 从 15 秒降至 10 秒
-        QuestionComplexity.NORMAL: 20,   # 从 30 秒降至 20 秒
-        QuestionComplexity.COMPLEX: 40,  # 从 60 秒降至 40 秒
+        QuestionComplexity.SIMPLE: 15,   # 增加至 15 秒
+        QuestionComplexity.NORMAL: 30,   # 增加至 30 秒
+        QuestionComplexity.COMPLEX: 60,  # 增加至 60 秒
     },
     'zhipu': {
-        QuestionComplexity.SIMPLE: 8,    # 从 10 秒降至 8 秒
-        QuestionComplexity.NORMAL: 15,   # 从 20 秒降至 15 秒
-        QuestionComplexity.COMPLEX: 35,  # 从 45 秒降至 35 秒
+        QuestionComplexity.SIMPLE: 15,   # 增加至 15 秒
+        QuestionComplexity.NORMAL: 30,   # 增加至 30 秒
+        QuestionComplexity.COMPLEX: 60,  # 增加至 60 秒
     },
     'default': {
-        QuestionComplexity.SIMPLE: 10,   # 从 15 秒降至 10 秒
-        QuestionComplexity.NORMAL: 20,   # 从 30 秒降至 20 秒
-        QuestionComplexity.COMPLEX: 40,  # 从 60 秒降至 40 秒
+        QuestionComplexity.SIMPLE: 15,   # 增加至 15 秒
+        QuestionComplexity.NORMAL: 30,   # 增加至 30 秒
+        QuestionComplexity.COMPLEX: 60,  # 增加至 60 秒
     },
 }
 

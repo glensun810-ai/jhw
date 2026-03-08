@@ -1,0 +1,114 @@
+{
+  "brandName": "趣车良品",
+  "competitors": [
+    "车蚂蚁",
+    "车享家"
+  ],
+  "brandScores": {
+    "趣车良品": {
+      "overallScore": 50,
+      "overallGrade": "D",
+      "overallAuthority": 45,
+      "overallVisibility": 42,
+      "overallPurity": 45,
+      "overallConsistency": 40,
+      "overallSummary": "需要改进"
+    },
+    "车蚂蚁": {
+      "overallScore": 50,
+      "overallGrade": "C",
+      "overallAuthority": 50,
+      "overallVisibility": 50,
+      "overallPurity": 50,
+      "overallConsistency": 50,
+      "overallSummary": "暂无数据"
+    },
+    "车享家": {
+      "overallScore": 50,
+      "overallGrade": "C",
+      "overallAuthority": 50,
+      "overallVisibility": 50,
+      "overallPurity": 50,
+      "overallConsistency": 50,
+      "overallSummary": "暂无数据"
+    }
+  },
+  "sov": {
+    "brandMentions": 1,
+    "competitorMentions": 0,
+    "totalMentions": 1,
+    "brandSOV": 100,
+    "competitorSOV": 0
+  },
+  "risk": {
+    "riskScore": 0,
+    "riskLevel": "low",
+    "positiveInterceptions": 1,
+    "negativeInterceptions": 0,
+    "totalMentions": 1
+  },
+  "health": {
+    "score": 43,
+    "level": "fair",
+    "authority": 45,
+    "visibility": 42,
+    "purity": 45,
+    "consistency": 40
+  },
+  "insights": {
+    "summary": "趣车良品 表现一般，需要加强在 AI 平台的存在",
+    "strengths": [
+      "品牌基础稳定"
+    ],
+    "weaknesses": [
+      "权威性有待提升，需要增强专业内容",
+      "可见性不足，需要增加曝光"
+    ],
+    "opportunities": [
+      "加强 AI 平台内容优化",
+      "提升品牌在 AI 回答中的提及率",
+      "增强与竞品的差异化定位"
+    ],
+    "threats": [
+      "竞品可能在 AI 平台占据更多曝光",
+      "AI 算法变化可能影响品牌展示"
+    ]
+  },
+  "semanticDriftData": null,
+  "recommendationData": null,
+  "negativeSources": null,
+  "competitiveAnalysis": {
+    "success": true,
+    "data": {
+      "brand_scores": {
+        "": {
+          "overallScore": 0,
+          "overallGrade": "D"
+        }
+      },
+      "first_mention_by_platform": {},
+      "interception_risks": {
+        "level": "medium",
+        "description": "中等风险"
+      },
+      "main_brand": "趣车良品",
+      "competitor_brands": [
+        "车蚂蚁",
+        "车享家"
+      ]
+    },
+    "main_brand": "趣车良品",
+    "duration_seconds": 0.003561
+  },
+  "firstMentionByPlatform": [
+    {
+      "platform": "doubao",
+      "rate": 0,
+      "firstMention": 0,
+      "total": 1
+    }
+  ],
+  "interceptionRisks": [],
+  "overallScore": 50,
+  "timestamp": "2026-03-06T14:18:36.029176"
+}

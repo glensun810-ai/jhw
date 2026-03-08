@@ -33,6 +33,7 @@ from wechat_backend.fault_tolerant_executor import FaultTolerantExecutor
 from wechat_backend.ai_timeout import get_timeout_manager
 from wechat_backend.multi_model_executor import get_single_model_executor
 from wechat_backend.rate_limiter import acquire_rate_limit  # 【P0 新增】速率限制
+from wechat_backend.error_recovery import RetryHandler, PresetRetryConfigs  # 【P2 修复】重试机制
 from legacy_config import Config
 
 
@@ -125,13 +126,14 @@ class NxMParallelExecutor:
         for q_idx, question in enumerate(raw_questions):
             for model_info in selected_models:
                 model_name = model_info.get('name', '')
-                
+
                 # 创建异步任务
                 task = self._execute_single_task(
                     question=question,
                     model_name=model_name,
                     q_idx=q_idx,
-                    model_idx=selected_models.index(model_info)
+                    model_idx=selected_models.index(model_info),
+                    main_brand=main_brand  # 【P2 修复 - 2026-03-07】传递 main_brand 参数
                 )
                 tasks.append(task)
         
@@ -146,6 +148,7 @@ class NxMParallelExecutor:
         
         # 5. 处理结果
         valid_results = []
+        failed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 api_logger.error(f"[NxM-Parallel] ❌ 任务 {i} 异常：{result}")
@@ -154,22 +157,32 @@ class NxMParallelExecutor:
                     'error': str(result)
                 })
             elif isinstance(result, dict) and result.get('success'):
+                # 【P0 关键修复 - 2026-03-06】只收集成功的结果
                 valid_results.append(result['data'])
+            elif isinstance(result, dict):
+                # 【P0 关键修复】失败的结果单独收集，不混入有效结果
+                failed_results.append(result)
+                api_logger.warning(
+                    f"[NxM-Parallel] ⚠️ 任务 {i} 失败：{result.get('error', '未知错误')}"
+                )
             else:
-                # 失败的结果也收集（用于错误分析）
-                if isinstance(result, dict):
-                    valid_results.append(result)
-        
+                api_logger.error(f"[NxM-Parallel] ❌ 任务 {i} 返回未知类型：{type(result)}")
+                self._errors.append({
+                    'task_index': i,
+                    'error': f'未知返回类型：{type(result)}'
+                })
+
         # 6. 推送完成通知
         elapsed_time = time.time() - start_time
         api_logger.info(
             f"[NxM-Parallel] ✅ 执行完成 - execution_id={self.execution_id}, "
             f"有效结果={len(valid_results)}/{self._total_tasks}, "
+            f"失败={len(failed_results)}/{self._total_tasks}, "
             f"耗时={elapsed_time:.2f}秒"
         )
-        
+
         await self._push_complete(len(valid_results))
-        
+
         # 7. 构建返回结果
         return self._build_success_result(valid_results, elapsed_time)
     
@@ -178,7 +191,8 @@ class NxMParallelExecutor:
         question: str,
         model_name: str,
         q_idx: int,
-        model_idx: int
+        model_idx: int,
+        main_brand: str  # 【P2 修复 - 2026-03-07】添加 main_brand 参数
     ) -> Dict[str, Any]:
         """
         执行单个任务（问题×模型，带超时保护）
@@ -188,6 +202,7 @@ class NxMParallelExecutor:
             model_name: 模型名称
             q_idx: 问题索引
             model_idx: 模型索引
+            main_brand: 主品牌名称
 
         返回：
             任务结果
@@ -217,17 +232,25 @@ class NxMParallelExecutor:
                 timeout_manager = get_timeout_manager()
                 timeout = timeout_manager.get_timeout(model_name) or 60  # 默认 60 秒
 
-                # 3. 创建 AI 客户端
-                client = AIAdapterFactory.create(model_name)
-                api_key = Config.get_api_key(model_name)
+                # 3. 创建 AI 客户端并验证 API Key
+                # 【P0 关键修复 - 2026-03-06】使用平台名称而非具体模型名称获取 API Key
+                # 对于 doubao-seed-2-0-mini-260215 这样的模型，需要使用 'doubao' 平台名称
+                platform_name = 'doubao' if 'doubao' in model_name.lower() else model_name
+                api_key = Config.get_api_key(platform_name)
 
                 if not api_key:
-                    raise ValueError(f"模型 {model_name} API Key 未配置")
+                    raise ValueError(f"模型 {model_name} API Key 未配置（平台：{platform_name}）")
 
-                # 4. 执行 AI 调用（使用单模型执行器，带超时保护）
-                # 【P0 关键修复 - 2026-03-02】使用 asyncio.wait_for 添加超时保护
-                try:
-                    ai_result, actual_model = await asyncio.wait_for(
+                client = AIAdapterFactory.create(model_name)
+
+                # 4. 执行 AI 调用（使用单模型执行器，带超时保护 + 重试机制）
+                # 【P2 修复 - 2026-03-07】添加重试机制
+                ai_retry_handler = RetryHandler(PresetRetryConfigs.AI_CALL_RETRY)
+                
+                async def _execute_ai_call():
+                    """执行 AI 调用的闭包函数"""
+                    # 注意：execute() 返回 tuple: (AIResponse, actual_model)
+                    return await asyncio.wait_for(
                         get_single_model_executor(timeout=timeout).execute(
                             prompt=prompt,
                             model_name=model_name,
@@ -236,6 +259,39 @@ class NxMParallelExecutor:
                         ),
                         timeout=timeout
                     )
+
+                try:
+                    # 使用重试机制执行 AI 调用
+                    retry_result = await ai_retry_handler.execute_with_retry_async(
+                        _execute_ai_call,
+                        execution_id=f"{self.execution_id}_Q{q_idx + 1}x{model_name}"
+                    )
+
+                    if retry_result.success:
+                        # 【P2 修复 - 2026-03-07】处理返回值 tuple
+                        ai_call_result = retry_result.result
+                        if isinstance(ai_call_result, tuple):
+                            ai_result, actual_model = ai_call_result
+                        else:
+                            ai_result = ai_call_result
+                    else:
+                        # 重试失败
+                        task_elapsed = time.time() - task_start
+                        api_logger.error(
+                            f"[NxM-Parallel] ❌ Q{q_idx + 1}×{model_name} 重试失败 "
+                            f"({task_elapsed:.2f}秒): {retry_result.error}"
+                        )
+                        
+                        return {
+                            'success': False,
+                            'error': f'AI 调用失败（已重试{len(retry_result.attempts)}次）: {str(retry_result.error)}',
+                            'brand': main_brand,
+                            'question': question,
+                            'model': model_name,
+                            'latency': task_elapsed,
+                            'retry_attempts': len(retry_result.attempts)
+                        }
+                        
                 except asyncio.TimeoutError:
                     # 【P0 关键修复】AI 调用超时，返回错误结果但不阻塞其他任务
                     task_elapsed = time.time() - task_start
@@ -243,10 +299,11 @@ class NxMParallelExecutor:
                         f"[NxM-Parallel] ⏰ 任务超时：Q{q_idx + 1}×{model_name} "
                         f"({task_elapsed:.2f}秒 > {timeout}秒)"
                     )
-                    
+
                     return {
                         'success': False,
                         'error': f'AI 调用超时（{timeout}秒）',
+                        'brand': main_brand,  # 【P0 修复 - 2026-03-07】添加 brand 字段
                         'question': question,
                         'model': model_name,
                         'timeout': True,
@@ -260,71 +317,84 @@ class NxMParallelExecutor:
 
                     api_logger.info(
                         f"[NxM-Parallel] ✅ Q{q_idx + 1}×{model_name} 成功 "
-                        f"({task_elapsed:.2f}秒)"
+                        f"({task_elapsed:.2f}秒，tokens={ai_result.tokens_used})"
                     )
-                    
+
                     # 推送进度更新
                     await self._increment_progress("ai_fetching")
-                    
+
+                    # 【P1 修复 - 2026-03-07】传递 tokens_used 到结果字典
                     return {
                         'success': True,
                         'data': {
+                            'brand': main_brand,  # 【P0 修复 - 2026-03-07】添加 brand 字段
                             'question': question,
                             'model': actual_model,
                             'response': {
                                 'content': str(ai_result.content),
                                 'latency': task_elapsed,
-                                'metadata': {}
+                                'metadata': ai_result.metadata or {}
                             },
                             'geo_data': self._parse_geo_data(ai_result.content),
                             'error': None,
                             'error_type': None,
-                            'is_objective': True
+                            'is_objective': True,
+                            'tokens_used': ai_result.tokens_used,  # 【P1 修复】添加 tokens_used
+                            'prompt_tokens': (ai_result.metadata or {}).get('prompt_tokens', 0),  # 【P1 修复】添加 prompt_tokens
+                            'completion_tokens': (ai_result.metadata or {}).get('completion_tokens', 0),  # 【P1 修复】添加 completion_tokens
+                            'cached_tokens': (ai_result.metadata or {}).get('cached_tokens', 0)  # 【P1 修复】添加 cached_tokens
                         }
                     }
                 else:
                     # AI 调用失败
                     task_elapsed = time.time() - task_start
-                    
+
                     api_logger.warning(
                         f"[NxM-Parallel] ⚠️ Q{q_idx + 1}×{model_name} 失败 "
                         f"({task_elapsed:.2f}秒): {ai_result.error_message}"
                     )
-                    
+
                     # 推送进度更新
                     await self._increment_progress("ai_fetching")
-                    
+
+                    # 【P1 修复 - 2026-03-07】失败时也传递 tokens_used（如果有部分响应）
                     return {
                         'success': False,
                         'data': {
+                            'brand': main_brand,  # 【P0 修复 - 2026-03-07】添加 brand 字段
                             'question': question,
                             'model': model_name,
                             'response': {
                                 'content': None,
                                 'latency': task_elapsed,
-                                'metadata': {}
+                                'metadata': ai_result.metadata or {}
                             },
                             'geo_data': None,
                             'error': ai_result.error_message,
                             'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') else 'unknown',
-                            'is_objective': True
+                            'is_objective': True,
+                            'tokens_used': ai_result.tokens_used if ai_result.tokens_used > 0 else 0,  # 【P1 修复】
+                            'prompt_tokens': (ai_result.metadata or {}).get('prompt_tokens', 0),  # 【P1 修复】
+                            'completion_tokens': (ai_result.metadata or {}).get('completion_tokens', 0),  # 【P1 修复】
+                            'cached_tokens': (ai_result.metadata or {}).get('cached_tokens', 0)  # 【P1 修复】
                         }
                     }
-                    
+
             except Exception as e:
                 task_elapsed = time.time() - task_start
-                
+
                 api_logger.error(
                     f"[NxM-Parallel] ❌ Q{q_idx + 1}×{model_name} 异常 "
                     f"({task_elapsed:.2f}秒): {e}"
                 )
-                
+
                 # 推送进度更新
                 await self._increment_progress("ai_fetching")
-                
+
                 return {
                     'success': False,
                     'data': {
+                        'brand': main_brand,  # 【P0 修复 - 2026-03-07】添加 brand 字段
                         'question': question,
                         'model': model_name,
                         'response': {
@@ -335,7 +405,11 @@ class NxMParallelExecutor:
                         'geo_data': None,
                         'error': str(e),
                         'error_type': 'execution_error',
-                        'is_objective': True
+                        'is_objective': True,
+                        'tokens_used': 0,  # 异常情况下无 token 消耗
+                        'prompt_tokens': 0,
+                        'completion_tokens': 0,
+                        'cached_tokens': 0
                     }
                 }
     

@@ -1,7 +1,7 @@
 """
 视图模块 - 路由拆分后的蓝图注册
 
-重构版本：v2.0
+重构版本：v2.1
 将原 views.py (4,440 行) 拆分为以下模块：
 - diagnosis_views: 诊断相关路由 (品牌诊断、测试执行、进度查询)
 - user_views: 用户相关路由 (登录、注册、用户资料)
@@ -11,6 +11,7 @@
 - audit_views: 审计相关路由 (测试 API)
 - sync_views: 同步相关路由 (数据同步、下载)
 - diagnosis_retry_api: 重试 API (维度重试、报告重新生成) [M006 新增]
+- dashboard_api: Dashboard 看板 API (报告聚合数据查询) [2026-03-06 新增]
 """
 
 from flask import Blueprint
@@ -28,6 +29,10 @@ from . import analytics_views
 from . import audit_views
 from . import sync_views
 from . import diagnosis_retry_api  # M006 新增：重试 API
+from . import dashboard_api  # 2026-03-06 新增：Dashboard 看板 API
+
+# 注册 Dashboard API 路由
+dashboard_api.register_dashboard_routes(wechat_bp)
 
 # 导出主蓝图供 app.py 使用
 __all__ = ['wechat_bp']

@@ -100,12 +100,11 @@ def is_strict_auth_endpoint(path: str) -> bool:
         # '/test/status/',  # 【P0 修复】移除，允许匿名访问任务进度
         '/api/test-history',
         '/api/user/',
-        '/api/user_info',
-        '/api/user/profile',
+        '/api/user_profile',
         '/api/user/update',
         '/api/saved-results/',
         '/api/deep-intelligence/',
-        '/api/dashboard/aggregate',
+        # '/api/dashboard/aggregate',  # 【P0 修复 - 2026-03-06】移除，允许匿名访问诊断报告
         '/api/admin/',
         '/admin/',
     ]

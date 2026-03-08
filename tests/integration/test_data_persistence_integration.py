@@ -36,10 +36,7 @@ class TestDataPersistenceIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=mock_ai_adapter
-        )
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断
         await diagnosis_service.start_diagnosis(
@@ -51,7 +48,7 @@ class TestDataPersistenceIntegration:
         await asyncio.sleep(5)
         
         # 验证日志持久化
-        log_repo = APICallLogRepository(test_db_path)
+        log_repo = APICallLogRepository()
         logs = log_repo.get_by_execution_id(sample_execution_id)
         
         assert len(logs) > 0
@@ -75,10 +72,7 @@ class TestDataPersistenceIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=mock_ai_adapter
-        )
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断
         await diagnosis_service.start_diagnosis(
@@ -90,7 +84,7 @@ class TestDataPersistenceIntegration:
         await asyncio.sleep(5)
         
         # 验证原始数据持久化
-        result_repo = DiagnosisResultRepository(test_db_path)
+        result_repo = DiagnosisResultRepository()
         results = result_repo.get_by_execution_id(sample_execution_id)
         
         assert len(results) > 0
@@ -110,7 +104,7 @@ class TestDataPersistenceIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
+        diagnosis_service = DiagnosisService()
         exec_id = setup_completed_diagnosis['execution_id']
         
         # 获取报告
@@ -143,10 +137,7 @@ class TestDataPersistenceIntegration:
                     raise Exception("前两次失败")
                 return {'content': '成功', 'model': model}
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=PartialFailAdapter()
-        )
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断
         await diagnosis_service.start_diagnosis(
@@ -158,7 +149,7 @@ class TestDataPersistenceIntegration:
         await asyncio.sleep(5)
         
         # 验证部分数据恢复
-        result_repo = DiagnosisResultRepository(test_db_path)
+        result_repo = DiagnosisResultRepository()
         results = result_repo.get_by_execution_id(sample_execution_id)
         
         # 应有部分成功的数据
@@ -176,8 +167,8 @@ class TestDataPersistenceIntegration:
         exec_id = setup_completed_diagnosis['execution_id']
         
         # 验证各表数据一致
-        log_repo = APICallLogRepository(test_db_path)
-        result_repo = DiagnosisResultRepository(test_db_path)
+        log_repo = APICallLogRepository()
+        result_repo = DiagnosisResultRepository()
         
         logs = log_repo.get_by_execution_id(exec_id)
         results = result_repo.get_by_execution_id(exec_id)
@@ -204,7 +195,7 @@ class TestDataPersistenceIntegration:
         from wechat_backend.v2.repositories.diagnosis_result_repository import DiagnosisResultRepository
         from wechat_backend.v2.models.diagnosis_result import DiagnosisResult
         
-        result_repo = DiagnosisResultRepository(test_db_path)
+        result_repo = DiagnosisResultRepository()
         
         # 创建大量结果
         results = []
@@ -238,7 +229,7 @@ class TestDataPersistenceIntegration:
         from wechat_backend.v2.repositories.diagnosis_result_repository import DiagnosisResultRepository
         from wechat_backend.v2.models.diagnosis_result import DiagnosisResult
         
-        result_repo = DiagnosisResultRepository(test_db_path)
+        result_repo = DiagnosisResultRepository()
         
         # 创建结果列表
         results = [

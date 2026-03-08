@@ -172,6 +172,43 @@ const navigateToUserGuide = () => {
   );
 };
 
+/**
+ * 【P0 关键修复 - 2026-03-07】跳转到报告页（即使无结果也展示详情）
+ * @param {string} executionId - 执行 ID
+ * @param {Object} options - 选项
+ * @param {boolean} options.hasResults - 是否有诊断结果
+ * @param {boolean} options.showExecutionLog - 是否展示执行日志
+ * @param {boolean} options.showConfigReview - 是否展示配置回顾
+ */
+const navigateToReportPage = (executionId, options = {}) => {
+  try {
+    const {
+      hasResults = false,
+      showExecutionLog = true,
+      showConfigReview = true
+    } = options;
+
+    // 保存元数据到 Storage（供报告页使用）
+    wx.setStorageSync('diagnosis_metadata_' + executionId, {
+      hasResults: hasResults,
+      showExecutionLog: showExecutionLog,
+      showConfigReview: showConfigReview,
+      timestamp: Date.now()
+    });
+
+    // 跳转到报告页
+    PageTransition.navigateTo(
+      `/pages/results/results?executionId=${executionId}&showDetails=true`,
+      ANIMATION_TYPES.SLIDE_LEFT
+    );
+
+    info(`✅ 已跳转到报告页：executionId=${executionId}, hasResults=${hasResults}`);
+  } catch (error) {
+    console.error('跳转到报告页失败:', error);
+    wx.showToast({ title: '跳转失败', icon: 'none' });
+  }
+};
+
 module.exports = {
   saveAndNavigateToResults,
   navigateToDashboard,
@@ -180,5 +217,6 @@ module.exports = {
   navigateToConfigManager,
   navigateToPermissionManager,
   navigateToDataManager,
-  navigateToUserGuide
+  navigateToUserGuide,
+  navigateToReportPage
 };

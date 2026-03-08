@@ -71,10 +71,11 @@ class SingleModelExecutor:
         )
 
         try:
-            # 检查 API Key 是否配置
-            if not Config.is_api_key_configured(model_name):
+            # 【P0 紧急修复 - 2026-03-06】提取平台名称，支持 doubao-xxx, deepseek-xxx 等格式
+            platform_name = model_name.split('-')[0] if '-' in model_name else model_name
+            if not Config.is_api_key_configured(platform_name):
                 api_logger.warning(
-                    f"[SingleModel] 模型 {model_name} 未配置 API Key: {log_context}"
+                    f"[SingleModel] 模型 {model_name} (平台：{platform_name}) 未配置 API Key: {log_context}"
                 )
                 return AIResponse(
                     success=False,

@@ -5,90 +5,77 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/2026-03-08-品牌洞察报告完整实现链路分析报告.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/PythonProject.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PythonProject.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/history.js" beforeDir="false" afterPath="$PROJECT_DIR$/api/history.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/api/home.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/app.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/database.db-shm" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database.db-shm" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/database.db-wal" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database.db-wal" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/legacy_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/legacy_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_state_manager_enhanced.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/tests/test_state_manager_enhanced.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/entry.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/unified_logging/entry.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/run.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_e2e_diagnosis.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/test_e2e_diagnosis.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_state_manager_memory_leak_fix.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/test_state_manager_memory_leak_fix.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/unified_logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/unified_logging/unified_logger.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/utils/cdn_helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/utils/cdn_helper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/deepseek_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/deepseek_adapter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/qwen_adapter.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/qwen_adapter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_timeout.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_timeout.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/cache/cache_warmup_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/cache/cache_warmup_scheduler.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/cache/redis_cache.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/cache/redis_cache.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/database_connection_pool.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/database_connection_pool.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/database_repositories.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/database_repositories.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_repository.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_repository.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_storage.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_storage.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_handler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_codes.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_codes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_logger.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/monitoring/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/monitoring/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/monitoring/monitoring_decorator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/monitoring/monitoring_decorator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/monitoring/state_consistency_monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/monitoring/state_consistency_monitor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_recovery.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_recovery.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/multi_model_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/multi_model_executor.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_concurrent_engine_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_concurrent_engine_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/security/sql_protection.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/security/sql_protection.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/security/auth_enhanced.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/security/auth_enhanced.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/background_service_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/background_service_manager.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/brand_analysis_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/brand_analysis_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_orchestrator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_orchestrator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_transaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_transaction.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/realtime_push_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/realtime_push_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/result_validator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/result_validator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/sse_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/sse_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/sse_service_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/report_aggregator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/report_aggregator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/state_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/state_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/tests/test_result_validator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/tests/test_result_validator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/v2/services/websocket_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/v2/services/websocket_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/types.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/types.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/admin_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/admin_views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_api.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views_v2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/sync_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/sync_views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/websocket_route.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/websocket_route.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/IntelligencePipeline.js" beforeDir="false" afterPath="$PROJECT_DIR$/components/IntelligencePipeline/IntelligencePipeline.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/2026-03-01_前后端联调状态报告.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/2026-03-01_前后端联调状态报告.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend_progress_poller.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend_progress_poller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.js" beforeDir="false" afterPath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/startDiagnosis/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/cloudfunctions/startDiagnosis/index.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/services/diagnosisService.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/diagnosisService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/miniprogram/services/reportService.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/reportService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/services/webSocketClient.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/webSocketClient.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history-detail/history-detail.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history-detail/history-detail.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history-detail/history-detail.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history/history.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.json" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history/history.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history/history.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history/history.wxss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/index/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.wxml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/index/index.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.wxss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.json" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.wxss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/results/results.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/project.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/brand-question-service.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/brand-question-service.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/results/results.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/results/results.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server_output.log" beforeDir="false" afterPath="$PROJECT_DIR$/server_output.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/brandTestService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/brandTestService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/draftService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/draftService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/reportAggregator.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/reportAggregator.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/resultDataService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/resultDataService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/sseClient.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/taskStatusEnums.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/taskStatusEnums.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/navigationService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/navigationService.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/taskStatusService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/taskStatusService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/request.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/request.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/sse-client.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/sseClient.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/storage-manager.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/storage-manager.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/conftest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_concurrent_scenarios.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_concurrent_scenarios.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_data_consistency.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_data_consistency.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_data_persistence_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_data_persistence_integration.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_diagnosis_flow.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_diagnosis_flow.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_error_scenarios.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_error_scenarios.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_polling_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_polling_integration.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_report_stub_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_report_stub_integration.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_state_machine_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_state_machine_integration.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/integration/test_timeout_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_timeout_integration.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -101,7 +88,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="14459" />
+    <option name="cachedIndexableFilesCount" value="20740" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -137,26 +124,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Flask 服务器.Flask (backend_python/run.py).executor": "Run",
-    "Python.live.executor": "Run",
-    "Python.run.py.executor": "Run",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "feature/phase1-state-machine-timeout-retry",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "editor.preferences.tabs",
-    "vue.rearranger.settings.migration": "true",
-    "wxn.project": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Flask 服务器.Flask (backend_python/run.py).executor&quot;: &quot;Run&quot;,
+    &quot;Python.live.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run.py.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/phase1-state-machine-timeout-retry&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/sgl/PycharmProjects/PythonProject&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.tabs&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;,
+    &quot;wxn.project&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Python.run.py">
     <configuration name="live" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PythonProject" />
@@ -216,7 +204,6 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.31033.139" />
         <option value="bundled-python-sdk-2653e85de345-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.31033.139" />
       </set>
     </attachedChunks>
@@ -254,6 +241,8 @@
       <workItem from="1772452695626" duration="21465000" />
       <workItem from="1772524900375" duration="40291000" />
       <workItem from="1772639108890" duration="37113000" />
+      <workItem from="1772724811833" duration="1685000" />
+      <workItem from="1772757851719" duration="33456000" />
     </task>
     <servers />
   </component>
@@ -283,7 +272,7 @@
     <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main 覆盖结果" MODIFIED="1770933166725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$demo_main.coverage" NAME="demo_main 覆盖结果" MODIFIED="1770745116755" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/demo" />
     <SUITE FILE_PATH="coverage/PythonProject$qwen_adapter.coverage" NAME="qwen_adapter 覆盖结果" MODIFIED="1770828819857" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wechat_backend/ai_adapters" />
-    <SUITE FILE_PATH="coverage/PythonProject$run_py.coverage" NAME="run.py 覆盖结果" MODIFIED="1772724606161" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/PythonProject$run_py.coverage" NAME="run.py 覆盖结果" MODIFIED="1772814380936" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/PythonProject$window_tiler.coverage" NAME="window_tiler 覆盖结果" MODIFIED="1770295290564" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$test.coverage" NAME="test 覆盖结果" MODIFIED="1771467522812" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/backend_python/tests" />
     <SUITE FILE_PATH="coverage/PythonProject$PythonProject.coverage" NAME="PythonProject 覆盖结果" MODIFIED="1771514678933" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

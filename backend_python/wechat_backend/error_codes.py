@@ -1,786 +1,322 @@
 """
 统一错误码定义模块
 
-所有错误码必须在此文件中定义，禁止在业务代码中硬编码错误码。
+P2-2 优化：统一错误码管理，解决错误码分散问题
 
-错误码命名规范：
-- 格式：{MODULE}_{ERROR_TYPE}_{SPECIFIC_ERROR}
-- 示例：DIAGNOSIS_AI_PLATFORM_TIMEOUT
+错误码格式：XXXX-XXX
+- 前 4 位：错误类别
+- 后 3 位：具体错误
 
-错误码分类：
-- 1xxx: 通用错误
-- 2xxx: 诊断相关错误
-- 3xxx: AI 平台相关错误
-- 4xxx: 数据库相关错误
-- 5xxx: 统计分析相关错误
-- 6xxx: 安全相关错误
+错误类别:
+- 1000: 通用错误
+- 2000: 诊断执行错误
+- 3000: 数据库错误
+- 4000: AI 服务错误
+- 5000: 报告处理错误
+- 6000: 数据验证错误
+- 7000: 前端/客户端错误
 
-@author: 系统架构组
-@date: 2026-03-02
-@version: 1.0.0
+使用示例:
+    from wechat_backend.error_codes import ErrorCode, get_error_message
+    
+    # 抛出错误
+    raise BusinessException(ErrorCode.REPORT_NOT_FOUND)
+    
+    # 获取错误消息
+    msg = get_error_message(ErrorCode.REPORT_NOT_FOUND)
+    
+    # 获取带参数的错误消息
+    msg = get_error_message(ErrorCode.AI_TIMEOUT, {'timeout': 30})
 """
 
 from enum import Enum
 from typing import Dict, Any, Optional
-from dataclasses import dataclass
 
 
-class ErrorSeverity(Enum):
-    """错误严重程度"""
-    INFO = 'info'               # 信息提示，不影响功能
-    WARNING = 'warning'         # 警告，可能影响部分功能
-    ERROR = 'error'             # 错误，影响当前操作
-    CRITICAL = 'critical'       # 严重错误，系统级故障
-
-
-@dataclass
-class ErrorCodeDefinition:
-    """错误码定义"""
-    code: str                   # 错误码
-    message: str                # 默认消息
-    severity: ErrorSeverity     # 严重程度
-    http_status: int            # HTTP 状态码
-    category: str               # 错误分类
-    retryable: bool = False     # 是否可重试
-    user_message: Optional[str] = None  # 用户友好消息
-    action_suggestion: Optional[str] = None  # 操作建议
+class ErrorCode(Enum):
+    """
+    统一错误码枚举
+    
+    格式：XXXX-XXX (类别 - 具体错误)
+    """
+    
+    # ==================== 1000: 通用错误 ====================
+    SUCCESS = ("1000-000", "成功", 200)
+    UNKNOWN_ERROR = ("1000-001", "未知错误", 500)
+    INVALID_PARAMETER = ("1000-002", "参数无效：{parameter}", 400)
+    MISSING_PARAMETER = ("1000-003", "缺少必填参数：{parameter}", 400)
+    UNAUTHORIZED = ("1000-004", "未授权访问", 401)
+    FORBIDDEN = ("1000-005", "禁止访问", 403)
+    NOT_FOUND = ("1000-006", "资源不存在", 404)
+    METHOD_NOT_ALLOWED = ("1000-007", "方法不允许", 405)
+    CONFLICT = ("1000-008", "资源冲突", 409)
+    RATE_LIMIT_EXCEEDED = ("1000-009", "请求频率超限", 429)
+    INTERNAL_ERROR = ("1000-010", "系统内部错误", 500)
+    SERVICE_UNAVAILABLE = ("1000-011", "服务不可用", 503)
+    REQUEST_TIMEOUT = ("1000-012", "请求超时", 408)
+    PAYLOAD_TOO_LARGE = ("1000-013", "请求体过大", 413)
+    UNSUPPORTED_MEDIA_TYPE = ("1000-014", "不支持的媒体类型", 415)
+    
+    # ==================== 2000: 诊断执行错误 ====================
+    DIAGNOSIS_NOT_FOUND = ("2000-001", "诊断任务不存在", 404)
+    DIAGNOSIS_ALREADY_EXISTS = ("2000-002", "诊断任务已存在", 409)
+    DIAGNOSIS_EXECUTION_FAILED = ("2000-003", "诊断执行失败：{reason}", 500)
+    DIAGNOSIS_TIMEOUT = ("2000-004", "诊断超时：{timeout}秒", 408)
+    DIAGNOSIS_CANCELLED = ("2000-005", "诊断已取消", 499)
+    DIAGNOSIS_IN_PROGRESS = ("2000-006", "诊断正在进行中", 202)
+    DIAGNOSIS_NOT_COMPLETED = ("2000-007", "诊断尚未完成", 400)
+    DIAGNOSIS_CONFIG_INVALID = ("2000-008", "诊断配置无效：{detail}", 400)
+    DIAGNOSIS_BRAND_MISSING = ("2000-009", "品牌列表不能为空", 400)
+    DIAGNOSIS_COMPETITOR_MISSING = ("2000-010", "竞品列表不能为空", 400)
+    DIAGNOSIS_MODEL_MISSING = ("2000-011", "AI 模型列表不能为空", 400)
+    DIAGNOSIS_QUESTION_MISSING = ("2000-012", "问题列表不能为空", 400)
+    DIAGNOSIS_PARTIAL_SUCCESS = ("2000-013", "诊断部分成功：{success_count}/{total_count}", 207)
+    
+    # ==================== 3000: 数据库错误 ====================
+    DATABASE_ERROR = ("3000-001", "数据库错误：{detail}", 500)
+    DATABASE_CONNECTION_FAILED = ("3000-002", "数据库连接失败", 503)
+    DATABASE_QUERY_FAILED = ("3000-003", "数据库查询失败：{detail}", 500)
+    DATABASE_INSERT_FAILED = ("3000-004", "数据库插入失败：{detail}", 500)
+    DATABASE_UPDATE_FAILED = ("3000-005", "数据库更新失败：{detail}", 500)
+    DATABASE_DELETE_FAILED = ("3000-006", "数据库删除失败：{detail}", 500)
+    DATABASE_CONSTRAINT_VIOLATION = ("3000-007", "数据库约束违反：{detail}", 400)
+    DATABASE_NOT_NULL_VIOLATION = ("3000-008", "非空约束违反：{field}", 400)
+    DATABASE_UNIQUE_VIOLATION = ("3000-009", "唯一约束违反：{field}", 409)
+    DATABASE_FOREIGN_KEY_VIOLATION = ("3000-010", "外键约束违反：{field}", 400)
+    DATABASE_CONNECTION_TIMEOUT = ("3000-011", "数据库连接超时", 408)
+    DATABASE_CONNECTION_EXHAUSTED = ("3000-012", "数据库连接池耗尽", 503)
+    DATABASE_TRANSACTION_FAILED = ("3000-013", "数据库事务失败：{detail}", 500)
+    DATABASE_LOCK_TIMEOUT = ("3000-014", "数据库锁超时", 408)
+    DATABASE_DEADLOCK = ("3000-015", "数据库死锁", 500)
+    
+    # ==================== 4000: AI 服务错误 ====================
+    AI_SERVICE_ERROR = ("4000-001", "AI 服务错误：{detail}", 500)
+    AI_SERVICE_UNAVAILABLE = ("4000-002", "AI 服务不可用", 503)
+    AI_TIMEOUT = ("4000-003", "AI 请求超时：{timeout}秒", 408)
+    AI_RATE_LIMIT_EXCEEDED = ("4000-004", "AI 请求频率超限", 429)
+    AI_INVALID_RESPONSE = ("4000-005", "AI 返回无效响应：{detail}", 502)
+    AI_EMPTY_RESPONSE = ("4000-006", "AI 返回空响应", 502)
+    AI_RESPONSE_PARSE_FAILED = ("4000-007", "AI 响应解析失败：{detail}", 502)
+    AI_MODEL_NOT_FOUND = ("4000-008", "AI 模型不存在：{model}", 400)
+    AI_MODEL_UNAVAILABLE = ("4000-009", "AI 模型不可用：{model}", 503)
+    AI_QUOTA_EXCEEDED = ("4000-010", "AI 配额已用尽", 429)
+    AI_AUTH_FAILED = ("4000-011", "AI 认证失败", 401)
+    AI_CONTENT_FILTERED = ("4000-012", "AI 内容被过滤", 400)
+    AI_CONTEXT_LENGTH_EXCEEDED = ("4000-013", "AI 上下文长度超限", 400)
+    
+    # ==================== 5000: 报告处理错误 ====================
+    REPORT_NOT_FOUND = ("5000-001", "报告不存在", 404)
+    REPORT_ALREADY_EXISTS = ("5000-002", "报告已存在", 409)
+    REPORT_GENERATION_FAILED = ("5000-003", "报告生成失败：{detail}", 500)
+    REPORT_SAVE_FAILED = ("5000-004", "报告保存失败：{detail}", 500)
+    REPORT_LOAD_FAILED = ("5000-005", "报告加载失败：{detail}", 500)
+    REPORT_DELETE_FAILED = ("5000-006", "报告删除失败：{detail}", 500)
+    REPORT_INVALID_FORMAT = ("5000-007", "报告格式无效：{detail}", 400)
+    REPORT_INCOMPLETE = ("5000-008", "报告数据不完整：{missing_fields}", 400)
+    REPORT_VALIDATION_FAILED = ("5000-009", "报告验证失败：{detail}", 400)
+    REPORT_CHECKSUM_MISMATCH = ("5000-010", "报告校验和不匹配", 400)
+    REPORT_EXPIRED = ("5000-011", "报告已过期", 410)
+    REPORT_ARCHIVING_FAILED = ("5000-012", "报告归档失败：{detail}", 500)
+    REPORT_SNAPSHOT_FAILED = ("5000-013", "报告快照创建失败：{detail}", 500)
+    REPORT_LOW_QUALITY = ("5000-014", "报告质量过低：{quality_score}", 400)
+    
+    # ==================== 6000: 数据验证错误 ====================
+    VALIDATION_ERROR = ("6000-001", "数据验证失败：{detail}", 400)
+    VALIDATION_TYPE_MISMATCH = ("6000-002", "数据类型不匹配：{field}", 400)
+    VALIDATION_LENGTH_MISMATCH = ("6000-003", "数据长度不匹配：{field}", 400)
+    VALIDATION_RANGE_ERROR = ("6000-004", "数据范围错误：{field}", 400)
+    VALIDATION_FORMAT_ERROR = ("6000-005", "数据格式错误：{field}", 400)
+    VALIDATION_PATTERN_MISMATCH = ("6000-006", "数据模式不匹配：{field}", 400)
+    VALIDATION_REQUIRED = ("6000-007", "必填字段缺失：{field}", 400)
+    VALIDATION_DUPLICATE = ("6000-008", "数据重复：{field}", 409)
+    VALIDATION_INVALID_ENUM = ("6000-009", "无效的枚举值：{field}", 400)
+    VALIDATION_INVALID_JSON = ("6000-010", "无效的 JSON 格式：{detail}", 400)
+    VALIDATION_SCHEMA_MISMATCH = ("6000-011", "数据模式不匹配：{detail}", 400)
+    
+    # ==================== 7000: 前端/客户端错误 ====================
+    CLIENT_ERROR = ("7000-001", "客户端错误：{detail}", 400)
+    CLIENT_NETWORK_ERROR = ("7000-002", "客户端网络错误", 503)
+    CLIENT_TIMEOUT = ("7000-003", "客户端超时", 408)
+    CLIENT_INVALID_REQUEST = ("7000-004", "客户端请求无效：{detail}", 400)
+    CLIENT_VERSION_TOO_LOW = ("7000-005", "客户端版本过低", 426)
+    CLIENT_UNSUPPORTED_FEATURE = ("7000-006", "客户端不支持的功能", 400)
+    CLIENT_CACHE_ERROR = ("7000-007", "客户端缓存错误", 500)
+    CLIENT_STORAGE_FULL = ("7000-008", "客户端存储空间不足", 507)
+    CLIENT_PERMISSION_DENIED = ("7000-009", "客户端权限被拒绝", 403)
+    CLIENT_SESSION_EXPIRED = ("7000-010", "客户端会话过期", 401)
+    
+    # ==================== 8000: 监控和告警错误 ====================
+    MONITORING_ERROR = ("8000-001", "监控错误：{detail}", 500)
+    MONITORING_THRESHOLD_EXCEEDED = ("8000-002", "监控阈值超限：{metric}", 500)
+    MONITORING_DATA_LOSS = ("8000-003", "监控数据丢失", 500)
+    ALERT_TRIGGERED = ("8000-004", "告警触发：{alert_name}", 500)
+    METRIC_COLLECTION_FAILED = ("8000-005", "指标采集失败：{metric}", 500)
+    
+    def __init__(self, code: str, message: str, http_status: int):
+        self.code = code
+        self.message = message
+        self.http_status = http_status
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
+        """转换为字典"""
         return {
             'code': self.code,
             'message': self.message,
-            'severity': self.severity.value,
-            'http_status': self.http_status,
-            'category': self.category,
-            'retryable': self.retryable,
-            'user_message': self.user_message,
-            'action_suggestion': self.action_suggestion,
+            'http_status': self.http_status
         }
 
 
-# ==================== 通用错误 (1xxx) ====================
-
-class CommonErrorCode(Enum):
-    """通用错误码"""
-    UNKNOWN_ERROR = ErrorCodeDefinition(
-        code='UNKNOWN_ERROR',
-        message='系统未知错误',
-        severity=ErrorSeverity.CRITICAL,
-        http_status=500,
-        category='COMMON',
-        retryable=False,
-        user_message='系统繁忙，请稍后重试',
-        action_suggestion='refresh'
-    )
-    
-    VALIDATION_ERROR = ErrorCodeDefinition(
-        code='VALIDATION_ERROR',
-        message='输入验证失败',
-        severity=ErrorSeverity.WARNING,
-        http_status=400,
-        category='COMMON',
-        retryable=False,
-        user_message='输入信息有误，请检查后重试',
-        action_suggestion='fix_input'
-    )
-    
-    TIMEOUT_ERROR = ErrorCodeDefinition(
-        code='TIMEOUT_ERROR',
-        message='操作超时',
-        severity=ErrorSeverity.ERROR,
-        http_status=408,
-        category='COMMON',
-        retryable=True,
-        user_message='操作超时，请稍后重试',
-        action_suggestion='retry'
-    )
-    
-    NOT_FOUND_ERROR = ErrorCodeDefinition(
-        code='NOT_FOUND_ERROR',
-        message='资源未找到',
-        severity=ErrorSeverity.WARNING,
-        http_status=404,
-        category='COMMON',
-        retryable=False,
-        user_message='请求的资源不存在',
-        action_suggestion='navigate_home'
-    )
-    
-    UNAUTHORIZED_ERROR = ErrorCodeDefinition(
-        code='UNAUTHORIZED_ERROR',
-        message='未授权访问',
-        severity=ErrorSeverity.WARNING,
-        http_status=401,
-        category='COMMON',
-        retryable=False,
-        user_message='请先登录',
-        action_suggestion='login'
-    )
-    
-    FORBIDDEN_ERROR = ErrorCodeDefinition(
-        code='FORBIDDEN_ERROR',
-        message='权限不足',
-        severity=ErrorSeverity.WARNING,
-        http_status=403,
-        category='COMMON',
-        retryable=False,
-        user_message='您没有执行此操作的权限',
-        action_suggestion='contact_admin'
-    )
-    
-    RATE_LIMIT_ERROR = ErrorCodeDefinition(
-        code='RATE_LIMIT_ERROR',
-        message='请求过于频繁',
-        severity=ErrorSeverity.WARNING,
-        http_status=429,
-        category='COMMON',
-        retryable=True,
-        user_message='请求过于频繁，请稍后再试',
-        action_suggestion='wait_retry'
-    )
+# 错误消息模板缓存
+_error_message_cache: Dict[ErrorCode, str] = {}
 
 
-# ==================== 诊断相关错误 (2xxx) ====================
-
-class DiagnosisErrorCode(Enum):
-    """诊断系统错误码"""
-    
-    # 诊断执行错误 (2001-2099)
-    DIAGNOSIS_INIT_FAILED = ErrorCodeDefinition(
-        code='DIAGNOSIS_INIT_FAILED',
-        message='诊断初始化失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='诊断初始化失败，请稍后重试',
-        action_suggestion='retry'
-    )
-    
-    DIAGNOSIS_EXECUTION_FAILED = ErrorCodeDefinition(
-        code='DIAGNOSIS_EXECUTION_FAILED',
-        message='诊断执行失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='诊断执行失败，已保存当前进度',
-        action_suggestion='view_history'
-    )
-    
-    DIAGNOSIS_TIMEOUT = ErrorCodeDefinition(
-        code='DIAGNOSIS_TIMEOUT',
-        message='诊断任务执行超时',
-        severity=ErrorSeverity.ERROR,
-        http_status=408,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='诊断任务执行时间过长，已保存当前进度',
-        action_suggestion='view_history'
-    )
-    
-    DIAGNOSIS_STATE_ERROR = ErrorCodeDefinition(
-        code='DIAGNOSIS_STATE_ERROR',
-        message='诊断状态异常',
-        severity=ErrorSeverity.ERROR,
-        http_status=400,
-        category='DIAGNOSIS',
-        retryable=False,
-        user_message='诊断状态异常，请刷新页面后重试',
-        action_suggestion='refresh'
-    )
-    
-    DIAGNOSIS_INCOMPLETE = ErrorCodeDefinition(
-        code='DIAGNOSIS_INCOMPLETE',
-        message='诊断结果不完整',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='诊断结果不完整，已保存当前进度',
-        action_suggestion='view_history'
-    )
-    
-    # 结果验证错误 (2100-2199)
-    DIAGNOSIS_RESULT_COUNT_MISMATCH = ErrorCodeDefinition(
-        code='DIAGNOSIS_RESULT_COUNT_MISMATCH',
-        message='诊断结果数量不匹配',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='诊断结果数量异常，正在重新验证',
-        action_suggestion='wait'
-    )
-    
-    DIAGNOSIS_RESULT_INVALID = ErrorCodeDefinition(
-        code='DIAGNOSIS_RESULT_INVALID',
-        message='诊断结果无效',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='部分诊断结果无效，正在重新获取',
-        action_suggestion='wait'
-    )
-    
-    DIAGNOSIS_RESULT_EMPTY = ErrorCodeDefinition(
-        code='DIAGNOSIS_RESULT_EMPTY',
-        message='诊断结果为空',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='未获取到有效诊断结果',
-        action_suggestion='retry'
-    )
-    
-    # 数据持久化错误 (2200-2299)
-    DIAGNOSIS_SAVE_FAILED = ErrorCodeDefinition(
-        code='DIAGNOSIS_SAVE_FAILED',
-        message='诊断结果保存失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='诊断结果保存失败，正在重试',
-        action_suggestion='wait'
-    )
-    
-    DIAGNOSIS_ROLLBACK_FAILED = ErrorCodeDefinition(
-        code='DIAGNOSIS_ROLLBACK_FAILED',
-        message='诊断回滚失败',
-        severity=ErrorSeverity.CRITICAL,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=False,
-        user_message='诊断回滚失败，请联系管理员',
-        action_suggestion='contact_admin'
-    )
-    
-    # 后台分析错误 (2300-2399)
-    DIAGNOSIS_ANALYSIS_FAILED = ErrorCodeDefinition(
-        code='DIAGNOSIS_ANALYSIS_FAILED',
-        message='后台分析失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='后台分析失败，已保存基础诊断结果',
-        action_suggestion='view_report'
-    )
-    
-    DIAGNOSIS_ANALYSIS_TIMEOUT = ErrorCodeDefinition(
-        code='DIAGNOSIS_ANALYSIS_TIMEOUT',
-        message='后台分析超时',
-        severity=ErrorSeverity.WARNING,
-        http_status=408,
-        category='DIAGNOSIS',
-        retryable=False,
-        user_message='后台分析超时，已生成基础报告',
-        action_suggestion='view_report'
-    )
-    
-    # 报告聚合错误 (2400-2499)
-    DIAGNOSIS_REPORT_AGGREGATION_FAILED = ErrorCodeDefinition(
-        code='DIAGNOSIS_REPORT_AGGREGATION_FAILED',
-        message='报告聚合失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='报告生成失败，正在重试',
-        action_suggestion='wait'
-    )
-    
-    DIAGNOSIS_REPORT_SAVE_FAILED = ErrorCodeDefinition(
-        code='DIAGNOSIS_REPORT_SAVE_FAILED',
-        message='最终报告保存失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DIAGNOSIS',
-        retryable=True,
-        user_message='报告保存失败，正在重试',
-        action_suggestion='wait'
-    )
-
-
-# ==================== AI 平台相关错误 (3xxx) ====================
-
-class AIPlatformErrorCode(Enum):
-    """AI 平台相关错误码"""
-    
-    # 配置错误 (3001-3099)
-    AI_CONFIG_MISSING = ErrorCodeDefinition(
-        code='AI_CONFIG_MISSING',
-        message='AI 配置缺失',
-        severity=ErrorSeverity.ERROR,
-        http_status=400,
-        category='AI_PLATFORM',
-        retryable=False,
-        user_message='AI 配置不完整，请检查设置',
-        action_suggestion='check_config'
-    )
-    
-    AI_API_KEY_MISSING = ErrorCodeDefinition(
-        code='AI_API_KEY_MISSING',
-        message='API Key 缺失',
-        severity=ErrorSeverity.ERROR,
-        http_status=400,
-        category='AI_PLATFORM',
-        retryable=False,
-        user_message='缺少 API Key，请检查配置',
-        action_suggestion='check_config'
-    )
-    
-    # 调用错误 (3100-3199)
-    AI_PLATFORM_UNAVAILABLE = ErrorCodeDefinition(
-        code='AI_PLATFORM_UNAVAILABLE',
-        message='AI 平台不可用',
-        severity=ErrorSeverity.ERROR,
-        http_status=503,
-        category='AI_PLATFORM',
-        retryable=True,
-        user_message='AI 平台暂时不可用，请稍后重试',
-        action_suggestion='retry'
-    )
-    
-    AI_PLATFORM_TIMEOUT = ErrorCodeDefinition(
-        code='AI_PLATFORM_TIMEOUT',
-        message='AI 平台调用超时',
-        severity=ErrorSeverity.ERROR,
-        http_status=408,
-        category='AI_PLATFORM',
-        retryable=True,
-        user_message='AI 平台响应超时，正在重试',
-        action_suggestion='wait'
-    )
-    
-    AI_PLATFORM_RATE_LIMIT = ErrorCodeDefinition(
-        code='AI_PLATFORM_RATE_LIMIT',
-        message='AI 平台请求频率限制',
-        severity=ErrorSeverity.WARNING,
-        http_status=429,
-        category='AI_PLATFORM',
-        retryable=True,
-        user_message='请求过于频繁，请稍后再试',
-        action_suggestion='wait_retry'
-    )
-    
-    AI_PLATFORM_QUOTA_EXHAUSTED = ErrorCodeDefinition(
-        code='AI_PLATFORM_QUOTA_EXHAUSTED',
-        message='AI 配额已用尽',
-        severity=ErrorSeverity.WARNING,
-        http_status=429,
-        category='AI_PLATFORM',
-        retryable=False,
-        user_message='当前 AI 平台的可用配额已用尽',
-        action_suggestion='switch_platform'
-    )
-    
-    # 响应错误 (3200-3299)
-    AI_RESPONSE_INVALID = ErrorCodeDefinition(
-        code='AI_RESPONSE_INVALID',
-        message='AI 响应格式无效',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='AI_PLATFORM',
-        retryable=True,
-        user_message='AI 响应格式异常，正在重试',
-        action_suggestion='wait'
-    )
-    
-    AI_RESPONSE_EMPTY = ErrorCodeDefinition(
-        code='AI_RESPONSE_EMPTY',
-        message='AI 响应为空',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='AI_PLATFORM',
-        retryable=True,
-        user_message='未获取到有效 AI 响应',
-        action_suggestion='retry'
-    )
-    
-    AI_RESPONSE_PARSE_FAILED = ErrorCodeDefinition(
-        code='AI_RESPONSE_PARSE_FAILED',
-        message='AI 响应解析失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='AI_PLATFORM',
-        retryable=True,
-        user_message='AI 响应解析失败，正在重试',
-        action_suggestion='wait'
-    )
-    
-    # 模型错误 (3300-3399)
-    AI_MODEL_NOT_FOUND = ErrorCodeDefinition(
-        code='AI_MODEL_NOT_FOUND',
-        message='AI 模型不存在',
-        severity=ErrorSeverity.ERROR,
-        http_status=404,
-        category='AI_PLATFORM',
-        retryable=False,
-        user_message='所选 AI 模型不存在',
-        action_suggestion='switch_model'
-    )
-    
-    AI_MODEL_UNAVAILABLE = ErrorCodeDefinition(
-        code='AI_MODEL_UNAVAILABLE',
-        message='AI 模型不可用',
-        severity=ErrorSeverity.ERROR,
-        http_status=503,
-        category='AI_PLATFORM',
-        retryable=True,
-        user_message='所选 AI 模型暂时不可用',
-        action_suggestion='switch_model'
-    )
-
-
-# ==================== 数据库相关错误 (4xxx) ====================
-
-class DatabaseErrorCode(Enum):
-    """数据库相关错误码"""
-    
-    # 连接错误 (4001-4099)
-    DB_CONNECTION_FAILED = ErrorCodeDefinition(
-        code='DB_CONNECTION_FAILED',
-        message='数据库连接失败',
-        severity=ErrorSeverity.CRITICAL,
-        http_status=503,
-        category='DATABASE',
-        retryable=True,
-        user_message='数据库连接失败，请稍后重试',
-        action_suggestion='retry'
-    )
-    
-    DB_CONNECTION_TIMEOUT = ErrorCodeDefinition(
-        code='DB_CONNECTION_TIMEOUT',
-        message='数据库连接超时',
-        severity=ErrorSeverity.ERROR,
-        http_status=408,
-        category='DATABASE',
-        retryable=True,
-        user_message='数据库连接超时，正在重试',
-        action_suggestion='wait'
-    )
-    
-    # 操作错误 (4100-4199)
-    DB_QUERY_FAILED = ErrorCodeDefinition(
-        code='DB_QUERY_FAILED',
-        message='数据库查询失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DATABASE',
-        retryable=True,
-        user_message='数据库查询失败，正在重试',
-        action_suggestion='wait'
-    )
-    
-    DB_INSERT_FAILED = ErrorCodeDefinition(
-        code='DB_INSERT_FAILED',
-        message='数据库插入失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DATABASE',
-        retryable=True,
-        user_message='数据保存失败，正在重试',
-        action_suggestion='wait'
-    )
-    
-    DB_UPDATE_FAILED = ErrorCodeDefinition(
-        code='DB_UPDATE_FAILED',
-        message='数据库更新失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DATABASE',
-        retryable=True,
-        user_message='数据更新失败，正在重试',
-        action_suggestion='wait'
-    )
-    
-    DB_DELETE_FAILED = ErrorCodeDefinition(
-        code='DB_DELETE_FAILED',
-        message='数据库删除失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DATABASE',
-        retryable=True,
-        user_message='数据删除失败，正在重试',
-        action_suggestion='wait'
-    )
-    
-    # 事务错误 (4200-4299)
-    DB_TRANSACTION_FAILED = ErrorCodeDefinition(
-        code='DB_TRANSACTION_FAILED',
-        message='数据库事务失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='DATABASE',
-        retryable=True,
-        user_message='数据库事务失败，正在回滚',
-        action_suggestion='wait'
-    )
-    
-    DB_ROLLBACK_FAILED = ErrorCodeDefinition(
-        code='DB_ROLLBACK_FAILED',
-        message='数据库回滚失败',
-        severity=ErrorSeverity.CRITICAL,
-        http_status=500,
-        category='DATABASE',
-        retryable=False,
-        user_message='数据库回滚失败，请联系管理员',
-        action_suggestion='contact_admin'
-    )
-    
-    # 数据完整性错误 (4300-4399)
-    DB_DATA_INTEGRITY_ERROR = ErrorCodeDefinition(
-        code='DB_DATA_INTEGRITY_ERROR',
-        message='数据完整性错误',
-        severity=ErrorSeverity.CRITICAL,
-        http_status=500,
-        category='DATABASE',
-        retryable=False,
-        user_message='数据完整性错误，请联系管理员',
-        action_suggestion='contact_admin'
-    )
-    
-    DB_CONSTRAINT_VIOLATION = ErrorCodeDefinition(
-        code='DB_CONSTRAINT_VIOLATION',
-        message='数据库约束冲突',
-        severity=ErrorSeverity.ERROR,
-        http_status=400,
-        category='DATABASE',
-        retryable=False,
-        user_message='数据约束冲突，请检查输入',
-        action_suggestion='fix_input'
-    )
-
-
-# ==================== 统计分析相关错误 (5xxx) ====================
-
-class AnalyticsErrorCode(Enum):
-    """统计分析相关错误码"""
-    
-    # 数据错误 (5001-5099)
-    ANALYTICS_DATA_INVALID = ErrorCodeDefinition(
-        code='ANALYTICS_DATA_INVALID',
-        message='分析数据无效',
-        severity=ErrorSeverity.ERROR,
-        http_status=400,
-        category='ANALYTICS',
-        retryable=False,
-        user_message='分析数据格式错误',
-        action_suggestion='fix_input'
-    )
-    
-    ANALYTICS_DATA_INCOMPLETE = ErrorCodeDefinition(
-        code='ANALYTICS_DATA_INCOMPLETE',
-        message='分析数据不完整',
-        severity=ErrorSeverity.WARNING,
-        http_status=400,
-        category='ANALYTICS',
-        retryable=False,
-        user_message='分析数据不完整，结果可能不准确',
-        action_suggestion='continue_with_warning'
-    )
-    
-    # 配置错误 (5100-5199)
-    ANALYTICS_CONFIG_INVALID = ErrorCodeDefinition(
-        code='ANALYTICS_CONFIG_INVALID',
-        message='分析配置无效',
-        severity=ErrorSeverity.ERROR,
-        http_status=400,
-        category='ANALYTICS',
-        retryable=False,
-        user_message='分析配置参数错误',
-        action_suggestion='fix_config'
-    )
-    
-    # 处理错误 (5200-5299)
-    ANALYTICS_PROCESSING_FAILED = ErrorCodeDefinition(
-        code='ANALYTICS_PROCESSING_FAILED',
-        message='分析处理失败',
-        severity=ErrorSeverity.ERROR,
-        http_status=500,
-        category='ANALYTICS',
-        retryable=True,
-        user_message='分析处理失败，正在重试',
-        action_suggestion='wait'
-    )
-    
-    ANALYTICS_TIMEOUT = ErrorCodeDefinition(
-        code='ANALYTICS_TIMEOUT',
-        message='分析处理超时',
-        severity=ErrorSeverity.WARNING,
-        http_status=408,
-        category='ANALYTICS',
-        retryable=False,
-        user_message='分析处理超时，已生成基础报告',
-        action_suggestion='view_report'
-    )
-
-
-# ==================== 安全相关错误 (6xxx) ====================
-
-class SecurityErrorCode(Enum):
-    """安全相关错误码"""
-    
-    # 认证错误 (6001-6099)
-    SECURITY_AUTHENTICATION_FAILED = ErrorCodeDefinition(
-        code='SECURITY_AUTHENTICATION_FAILED',
-        message='认证失败',
-        severity=ErrorSeverity.WARNING,
-        http_status=401,
-        category='SECURITY',
-        retryable=False,
-        user_message='认证失败，请重新登录',
-        action_suggestion='login'
-    )
-    
-    SECURITY_TOKEN_EXPIRED = ErrorCodeDefinition(
-        code='SECURITY_TOKEN_EXPIRED',
-        message='Token 已过期',
-        severity=ErrorSeverity.WARNING,
-        http_status=401,
-        category='SECURITY',
-        retryable=False,
-        user_message='登录已过期，请重新登录',
-        action_suggestion='login'
-    )
-    
-    SECURITY_TOKEN_INVALID = ErrorCodeDefinition(
-        code='SECURITY_TOKEN_INVALID',
-        message='Token 无效',
-        severity=ErrorSeverity.WARNING,
-        http_status=401,
-        category='SECURITY',
-        retryable=False,
-        user_message='认证令牌无效',
-        action_suggestion='login'
-    )
-    
-    # 授权错误 (6100-6199)
-    SECURITY_AUTHORIZATION_FAILED = ErrorCodeDefinition(
-        code='SECURITY_AUTHORIZATION_FAILED',
-        message='授权失败',
-        severity=ErrorSeverity.WARNING,
-        http_status=403,
-        category='SECURITY',
-        retryable=False,
-        user_message='您没有执行此操作的权限',
-        action_suggestion='contact_admin'
-    )
-    
-    # 输入安全错误 (6200-6299)
-    SECURITY_INPUT_VALIDATION_FAILED = ErrorCodeDefinition(
-        code='SECURITY_INPUT_VALIDATION_FAILED',
-        message='输入验证失败',
-        severity=ErrorSeverity.WARNING,
-        http_status=400,
-        category='SECURITY',
-        retryable=False,
-        user_message='输入包含不安全内容',
-        action_suggestion='fix_input'
-    )
-    
-    SECURITY_XSS_DETECTED = ErrorCodeDefinition(
-        code='SECURITY_XSS_DETECTED',
-        message='检测到 XSS 攻击',
-        severity=ErrorSeverity.CRITICAL,
-        http_status=400,
-        category='SECURITY',
-        retryable=False,
-        user_message='输入包含不安全内容',
-        action_suggestion='fix_input'
-    )
-    
-    SECURITY_SQL_INJECTION_DETECTED = ErrorCodeDefinition(
-        code='SECURITY_SQL_INJECTION_DETECTED',
-        message='检测到 SQL 注入攻击',
-        severity=ErrorSeverity.CRITICAL,
-        http_status=400,
-        category='SECURITY',
-        retryable=False,
-        user_message='输入包含非法内容',
-        action_suggestion='fix_input'
-    )
-    
-    # 频率限制 (6300-6399)
-    SECURITY_RATE_LIMIT_EXCEEDED = ErrorCodeDefinition(
-        code='SECURITY_RATE_LIMIT_EXCEEDED',
-        message='请求频率超限',
-        severity=ErrorSeverity.WARNING,
-        http_status=429,
-        category='SECURITY',
-        retryable=True,
-        user_message='请求过于频繁，请稍后再试',
-        action_suggestion='wait_retry'
-    )
-
-
-# ==================== 工具函数 ====================
-
-def get_error_code(code_or_enum) -> ErrorCodeDefinition:
+def get_error_message(error_code: ErrorCode, params: Optional[Dict[str, Any]] = None) -> str:
     """
-    获取错误码定义
+    获取错误消息
     
     Args:
-        code_or_enum: 错误码字符串或枚举值
+        error_code: 错误码
+        params: 参数用于格式化消息
         
     Returns:
-        ErrorCodeDefinition: 错误码定义
+        格式化后的错误消息
     """
-    if isinstance(code_or_enum, Enum):
-        return code_or_enum.value
-    
-    # 从所有枚举类中查找
-    for enum_class in [CommonErrorCode, DiagnosisErrorCode, AIPlatformErrorCode, 
-                       DatabaseErrorCode, AnalyticsErrorCode, SecurityErrorCode]:
-        if hasattr(enum_class, code_or_enum):
-            return getattr(enum_class, code_or_enum).value
-    
-    # 返回未知错误
-    return CommonErrorCode.UNKNOWN_ERROR.value
+    if params:
+        try:
+            return error_code.message.format(**params)
+        except KeyError:
+            return error_code.message
+    return error_code.message
 
 
-def get_retryable_errors() -> Dict[str, ErrorCodeDefinition]:
+def get_error_by_code(code_str: str) -> Optional[ErrorCode]:
     """
-    获取所有可重试的错误码
-    
-    Returns:
-        Dict[str, ErrorCodeDefinition]: 可重试的错误码字典
-    """
-    retryable = {}
-    for enum_class in [CommonErrorCode, DiagnosisErrorCode, AIPlatformErrorCode, 
-                       DatabaseErrorCode, AnalyticsErrorCode, SecurityErrorCode]:
-        for item in enum_class:
-            if item.value.retryable:
-                retryable[item.value.code] = item.value
-    return retryable
+    根据错误码字符串获取错误码枚举
 
-
-def get_error_by_category(category: str) -> Dict[str, ErrorCodeDefinition]:
-    """
-    按分类获取错误码
-    
     Args:
-        category: 错误分类（COMMON, DIAGNOSIS, AI_PLATFORM, DATABASE, ANALYTICS, SECURITY）
-        
+        code_str: 错误码字符串（如 "1000-001"）
+
     Returns:
-        Dict[str, ErrorCodeDefinition]: 错误码字典
+        ErrorCode 枚举或 None
     """
-    category_map = {
-        'COMMON': CommonErrorCode,
-        'DIAGNOSIS': DiagnosisErrorCode,
-        'AI_PLATFORM': AIPlatformErrorCode,
-        'DATABASE': DatabaseErrorCode,
-        'ANALYTICS': AnalyticsErrorCode,
-        'SECURITY': SecurityErrorCode,
-    }
+    for error_code in ErrorCode:
+        if error_code.code == code_str:
+            return error_code
+    return None
+
+
+# 兼容别名
+get_error_code = get_error_by_code
+
+
+class BusinessException(Exception):
+    """
+    业务异常基类
     
-    enum_class = category_map.get(category.upper())
-    if not enum_class:
-        return {}
+    所有业务异常都应继承此类
+    """
     
-    return {item.value.code: item.value for item in enum_class}
+    def __init__(self, error_code: ErrorCode, params: Optional[Dict[str, Any]] = None,
+                 detail: Optional[str] = None):
+        """
+        初始化业务异常
+        
+        Args:
+            error_code: 错误码
+            params: 参数用于格式化消息
+            detail: 详细错误信息
+        """
+        self.error_code = error_code
+        self.params = params
+        self.detail = detail
+        self.message = get_error_message(error_code, params)
+        self.http_status = error_code.http_status
+        
+        # 构建完整的错误消息
+        full_message = self.message
+        if detail:
+            full_message += f" - {detail}"
+        
+        super().__init__(full_message)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        result = {
+            'error_code': self.error_code.code,
+            'error_message': self.message,
+            'http_status': self.http_status
+        }
+        if self.detail:
+            result['detail'] = self.detail
+        if self.params:
+            result['params'] = self.params
+        return result
+
+
+# 便捷异常类
+class ValidationException(BusinessException):
+    """数据验证异常"""
+    pass
+
+
+class DatabaseException(BusinessException):
+    """数据库异常"""
+    pass
+
+
+class AIServiceException(BusinessException):
+    """AI 服务异常"""
+    pass
+
+
+class ReportException(BusinessException):
+    """报告处理异常"""
+    pass
+
+
+class DiagnosisException(BusinessException):
+    """诊断执行异常"""
+    pass
+
+
+class ClientException(BusinessException):
+    """客户端异常"""
+    pass
+
+
+# ==================== 兼容别名（用于旧代码迁移） ====================
+# 以下别名用于兼容使用旧错误码枚举的代码
+# 所有别名都指向统一的 ErrorCode 枚举
+
+# 诊断错误码别名
+DiagnosisErrorCode = ErrorCode
+
+# AI 平台错误码别名  
+AIPlatformErrorCode = ErrorCode
+
+# 数据库错误码别名
+DatabaseErrorCode = ErrorCode
+
+# 分析错误码别名
+AnalyticsErrorCode = ErrorCode
+
+
+# 导出所有符号
+__all__ = [
+    'ErrorCode',
+    'get_error_message',
+    'get_error_by_code',
+    'get_error_code',  # 兼容别名
+    'BusinessException',
+    'ValidationException',
+    'DatabaseException',
+    'AIServiceException',
+    'ReportException',
+    'DiagnosisException',
+    'ClientException',
+    # 兼容别名
+    'DiagnosisErrorCode',
+    'AIPlatformErrorCode',
+    'DatabaseErrorCode',
+    'AnalyticsErrorCode',
+]

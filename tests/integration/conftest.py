@@ -266,7 +266,7 @@ async def setup_completed_diagnosis(test_db_path, sample_execution_id, sample_di
     from wechat_backend.v2.repositories.diagnosis_result_repository import DiagnosisResultRepository
     from wechat_backend.v2.models.diagnosis_result import DiagnosisResult
     
-    repo = DiagnosisRepository(test_db_path)
+    repo = DiagnosisRepository()
     
     # 创建报告
     report_id = repo.create_report(
@@ -287,7 +287,7 @@ async def setup_completed_diagnosis(test_db_path, sample_execution_id, sample_di
     )
     
     # 添加一些结果
-    result_repo = DiagnosisResultRepository(test_db_path)
+    result_repo = DiagnosisResultRepository()
     for brand in sample_diagnosis_config['brand_list']:
         for model in ['deepseek', 'doubao', 'qwen']:
             result_repo.create(DiagnosisResult(
@@ -313,7 +313,7 @@ async def setup_pending_diagnosis(test_db_path, sample_execution_id, sample_diag
     """创建进行中的诊断测试数据"""
     from wechat_backend.v2.repositories.diagnosis_repository import DiagnosisRepository
     
-    repo = DiagnosisRepository(test_db_path)
+    repo = DiagnosisRepository()
     
     # 创建报告
     report_id = repo.create_report(
@@ -345,7 +345,7 @@ async def setup_failed_diagnosis(test_db_path, sample_execution_id, sample_diagn
     """创建失败的诊断测试数据"""
     from wechat_backend.v2.repositories.diagnosis_repository import DiagnosisRepository
     
-    repo = DiagnosisRepository(test_db_path)
+    repo = DiagnosisRepository()
     
     # 创建报告
     report_id = repo.create_report(

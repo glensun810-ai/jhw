@@ -718,14 +718,25 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
           // P2 优化：使用统一的状态判断函数（兼容旧逻辑）
           const status = parsedStatus.status || parsedStatus.stage;
 
+          // 【P0 关键修复 - 2026-03-07】优先检查 should_stop_polling 字段
+          if (parsedStatus.should_stop_polling === true) {
+            console.log('[轮询终止] ✅ 后端明确标记 should_stop_polling=true，立即停止');
+            controller.stop();
+            global.isTerminated = true;
+            if (onComplete) {
+              onComplete(parsedStatus);
+            }
+            return;
+          }
+
           if (isTerminalStatus(status)) {
             // 任务完成（包括部分完成）
             controller.stop();
             console.log('[轮询终止] 任务完成，status:', status);
-            
+
             // 【P0 关键修复 - 2026-03-04】设置全局熔断标志
             global.isTerminated = true;
-            
+
             if (onComplete) {
               onComplete(parsedStatus);
             }
@@ -744,16 +755,27 @@ const startLegacyPolling = (executionId, onProgress, onComplete, onError) => {
             if (hasAnyResults) {
               // 有结果的部分失败，视为部分完成
               console.warn('[品牌诊断] 部分失败但有结果，继续展示可用数据');
-              
+
               // 【P0 关键修复 - 2026-03-04】设置全局熔断标志
               global.isTerminated = true;
-              
+
               if (onComplete) {
                 onComplete(parsedStatus);
               }
             } else if (onError) {
               // 完全失败
               onError(new Error(parsedStatus.error || '诊断失败'));
+            }
+            return;
+          }
+
+          // 【P0 增强 - 2026-03-07】进度 100% 但未标记 should_stop_polling，视为完成
+          if (parsedStatus.progress >= 100 && status === 'completed') {
+            console.log('[轮询终止] ⚠️ 进度 100% 且状态 completed，但 should_stop_polling=false，视为完成');
+            controller.stop();
+            global.isTerminated = true;
+            if (onComplete) {
+              onComplete(parsedStatus);
             }
             return;
           }

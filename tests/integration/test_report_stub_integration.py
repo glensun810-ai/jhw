@@ -33,10 +33,7 @@ class TestReportStubIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=failing_ai_adapter
-        )
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断（会失败）
         await diagnosis_service.start_diagnosis(
@@ -67,10 +64,7 @@ class TestReportStubIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=flaky_ai_adapter  # 30% 失败率
-        )
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断
         await diagnosis_service.start_diagnosis(
@@ -116,10 +110,7 @@ class TestReportStubIntegration:
                     self.fail_count += 1
                     raise Exception("失败")
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=PartialAdapter()
-        )
+        diagnosis_service = DiagnosisService()
         
         await diagnosis_service.start_diagnosis(
             execution_id=sample_execution_id,
@@ -149,10 +140,7 @@ class TestReportStubIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=failing_ai_adapter
-        )
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断
         await diagnosis_service.start_diagnosis(
@@ -180,7 +168,7 @@ class TestReportStubIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
+        diagnosis_service = DiagnosisService()
         exec_id = setup_completed_diagnosis['execution_id']
         
         # 获取报告
@@ -208,10 +196,7 @@ class TestReportStubIntegration:
                 error.code = 'AI_PLATFORM_ERROR'
                 raise error
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=DetailedErrorAdapter()
-        )
+        diagnosis_service = DiagnosisService()
         
         await diagnosis_service.start_diagnosis(
             execution_id=sample_execution_id,

@@ -1,0 +1,12 @@
+{
+  "name": "getDiagnosisReport",
+  "version": "1.0.0",
+  "description": "获取完整诊断报告",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "wx-server-sdk": "~2.6.3"
+  },
+  "author": "系统架构组",
+  "license": "MIT"
+}

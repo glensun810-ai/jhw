@@ -16,6 +16,8 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from wechat_backend.logging_config import db_logger, api_logger
+# P2-1 优化：导入日志增强模块
+from wechat_backend.logging_enhancements import sampled_logger, aggregated_logger
 from wechat_backend.diagnosis_report_repository import (
     DiagnosisReportRepository,
     DiagnosisResultRepository,
@@ -25,8 +27,25 @@ from wechat_backend.diagnosis_report_repository import (
     DATA_SCHEMA_VERSION
 )
 
-# P0 修复：导入字段转换器
-from utils.field_converter import convert_response_to_camel
+# P2-1 优化：创建采样日志器（用于高频日志）
+# 批量操作日志使用 10% 采样率
+batch_operation_logger = sampled_logger('wechat_backend.service.batch', sample_rate=0.1)
+# 缓存日志使用 20% 采样率
+cache_operation_logger = sampled_logger('wechat_backend.service.cache', sample_rate=0.2)
+
+# P0 修复：导入字段转换器（使用相对导入）
+try:
+    from utils.field_converter import convert_response_to_camel
+except ImportError:
+    # 如果在 wechat_backend 包内，尝试相对导入
+    try:
+        from ..utils.field_converter import convert_response_to_camel
+    except ImportError:
+        # 如果都失败，使用备用方案
+        api_logger.warning("field_converter 导入失败，使用备用转换函数")
+        def convert_response_to_camel(data):
+            """备用转换函数"""
+            return data
 
 
 class DiagnosisReportService:
@@ -124,9 +143,15 @@ class DiagnosisReportService:
             batch_size=batch_size,
             commit=commit
         )
-        db_logger.info(
-            f"批量添加 {len(results)} 个诊断结果：{execution_id}, "
-            f"batches={(len(results) + batch_size - 1) // batch_size}"
+        # P2-1 优化：批量操作日志使用采样日志器，减少日志量
+        batch_count = (len(results) + batch_size - 1) // batch_size
+        batch_operation_logger.info(
+            f"批量添加 {len(results)} 个诊断结果：{execution_id}, batches={batch_count}"
+        )
+        # 详细日志使用 DEBUG 级别
+        db_logger.debug(
+            f"批量添加诊断结果详情：{execution_id}, count={len(results)}, "
+            f"batch_size={batch_size}, batches={batch_count}"
         )
         return result_ids
     
@@ -338,11 +363,16 @@ class DiagnosisReportService:
 
         # P1-1 降级方案：验证数据质量，添加警告信息
         validation = self._validate_report_data(report, results, analysis_data)
-        
+
         # 如果数据质量低，添加警告
         quality_warnings = self._check_data_quality(results, analysis_data)
         if quality_warnings:
             validation['warnings'].extend(quality_warnings)
+
+        # P1-1 增强：添加降级场景识别
+        fallback_scenarios = self._detect_fallback_scenarios(report, results, analysis_data)
+        if fallback_scenarios:
+            validation['fallback_scenarios'] = fallback_scenarios
 
         # 7. 构建完整报告（增强版）
         full_report = {
@@ -377,21 +407,70 @@ class DiagnosisReportService:
         # P0 修复：转换为 camelCase
         return convert_response_to_camel(full_report)
 
-    def _create_fallback_report(self, execution_id: str, error_message: str, 
+    def _create_fallback_report(self, execution_id: str, error_message: str,
                                  error_type: str, report: Optional[Dict] = None) -> Dict[str, Any]:
         """
         P1-1 新增：创建降级报告（用于异常场景）
-        
+
         参数:
             execution_id: 执行 ID
             error_message: 错误信息
             error_type: 错误类型 (not_found, failed, timeout, no_results)
             report: 原始报告数据（可选）
-        
+
         返回:
             降级报告数据
         """
         db_logger.info(f"创建降级报告：{execution_id}, 类型：{error_type}")
+
+        # P1-1 增强：添加详细的降级场景信息
+        fallback_info = {
+            'not_found': {
+                'title': '报告不存在',
+                'description': '未找到对应的诊断报告',
+                'icon': 'search',
+                'actions': [
+                    {'text': '重新诊断', 'type': 'navigate', 'url': '/pages/diagnosis/diagnosis'},
+                    {'text': '查看历史', 'type': 'navigate', 'url': '/pages/history/history'}
+                ]
+            },
+            'failed': {
+                'title': '诊断失败',
+                'description': '诊断过程中遇到错误',
+                'icon': 'error',
+                'actions': [
+                    {'text': '查看错误详情', 'type': 'show_error_details'},
+                    {'text': '重新诊断', 'type': 'navigate', 'url': '/pages/diagnosis/diagnosis'}
+                ]
+            },
+            'timeout': {
+                'title': '诊断超时',
+                'description': '诊断处理时间过长',
+                'icon': 'time',
+                'actions': [
+                    {'text': '继续等待', 'type': 'wait'},
+                    {'text': '查看历史', 'type': 'navigate', 'url': '/pages/history/history'}
+                ]
+            },
+            'no_results': {
+                'title': '无有效结果',
+                'description': '诊断未生成有效结果',
+                'icon': 'warning',
+                'actions': [
+                    {'text': '优化配置', 'type': 'navigate', 'url': '/pages/diagnosis/diagnosis'},
+                    {'text': '联系支持', 'type': 'contact_support'}
+                ]
+            }
+        }
+
+        fallback_config = fallback_info.get(error_type, {
+            'title': '未知错误',
+            'description': '发生未知错误',
+            'icon': 'error',
+            'actions': [
+                {'text': '返回首页', 'type': 'navigate', 'url': '/pages/index/index'}
+            ]
+        })
 
         # P0 修复：转换为 camelCase
         return convert_response_to_camel({
@@ -408,7 +487,8 @@ class DiagnosisReportService:
             'error': {
                 'status': error_type,
                 'message': error_message,
-                'suggestion': self._get_error_suggestion(error_type)
+                'suggestion': self._get_error_suggestion(error_type),
+                'fallback_info': fallback_config
             },
             'meta': {
                 'data_schema_version': DATA_SCHEMA_VERSION,
@@ -418,7 +498,8 @@ class DiagnosisReportService:
             'validation': {
                 'is_valid': False,
                 'errors': [error_message],
-                'warnings': []
+                'warnings': [],
+                'fallback_scenarios': [error_type]
             },
             'qualityHints': {
                 'has_low_quality_results': False,
@@ -474,14 +555,14 @@ class DiagnosisReportService:
 
     def _ensure_complete_analysis(self, analysis: Dict, execution_id: str = None) -> Dict[str, Any]:
         """
-        P1-1 新增：确保分析数据完整（缺失时提供默认值）
+        P1-2 修复：确保分析数据完整（缺失时提供默认值 - 增强版）
 
         参数:
             analysis: 原始分析数据
             execution_id: 执行 ID（可选，用于日志）
 
         返回:
-            完整的分析数据
+            完整的分析数据（包含缺失标记和建议）
         """
         required_analysis_types = [
             'competitive_analysis',
@@ -493,54 +574,157 @@ class DiagnosisReportService:
 
         complete_analysis = {}
         missing_types = []
+        partial_types = []  # 有部分数据但不完整
 
         for analysis_type in required_analysis_types:
             if analysis_type in analysis and analysis[analysis_type]:
-                complete_analysis[analysis_type] = analysis[analysis_type]
+                analysis_data = analysis[analysis_type]
+                
+                # 检查数据是否完整（有 warning 表示是默认值）
+                if analysis_data.get('warning'):
+                    partial_types.append(analysis_type)
+                    complete_analysis[analysis_type] = analysis_data
+                else:
+                    complete_analysis[analysis_type] = analysis_data
             else:
                 complete_analysis[analysis_type] = self._get_default_analysis(analysis_type)
                 missing_types.append(analysis_type)
 
+        # P1-2 增强：详细日志记录
         if missing_types and execution_id:
-            db_logger.warning(f"分析数据缺失：{execution_id}, 缺失类型：{missing_types}")
+            db_logger.warning(
+                f"分析数据缺失：{execution_id}, "
+                f"缺失类型：{missing_types}, "
+                f"部分缺失：{partial_types}"
+            )
+        elif partial_types and execution_id:
+            db_logger.info(
+                f"分析数据部分缺失：{execution_id}, "
+                f"部分缺失类型：{partial_types}"
+            )
+        elif execution_id:
+            db_logger.info(f"分析数据完整：{execution_id}")
+
+        # 添加分析完整性摘要
+        complete_analysis['_completeness_summary'] = {
+            'total_types': len(required_analysis_types),
+            'complete_count': len(required_analysis_types) - len(missing_types) - len(partial_types),
+            'partial_count': len(partial_types),
+            'missing_count': len(missing_types),
+            'missing_types': missing_types,
+            'partial_types': partial_types,
+            'completeness_ratio': round(
+                (len(required_analysis_types) - len(missing_types)) / len(required_analysis_types) * 100, 2
+            )
+        }
 
         return complete_analysis
 
     def _get_default_analysis(self, analysis_type: str) -> Dict[str, Any]:
         """
-        P1-1 新增：获取默认分析数据
-        
+        P1-2 修复：获取默认分析数据（增强版 - 提供有意义的默认值）
+
         参数:
             analysis_type: 分析类型
-        
+
         返回:
-            默认分析数据
+            默认分析数据（包含有用的占位符和建议）
         """
         defaults = {
             'competitive_analysis': {
                 'warning': '竞品分析数据暂缺',
-                'data': {}
+                'description': '竞品分析模块未能生成有效数据，可能是因为竞品品牌数量不足或 AI 未能返回有效的竞品信息',
+                'data': {
+                    'main_brand_share': 0,
+                    'competitor_shares': {},
+                    'rank': 0,
+                    'total_competitors': 0,
+                    'analysis_note': '建议：增加竞品品牌数量（至少 3 个）以获得更准确的竞争分析'
+                },
+                'fallback_tips': [
+                    '确保选择了足够的竞品品牌（建议 3-5 个）',
+                    '检查竞品品牌名称是否准确',
+                    '尝试使用更具体的问题来获取竞品信息'
+                ]
             },
             'brand_scores': {
                 'warning': '品牌评分数据暂缺',
-                'scores': {}
+                'description': '品牌评分模块未能生成有效数据，可能是因为 AI 返回的评分格式不正确或缺少必要的评分维度',
+                'scores': {},
+                'fallback_tips': [
+                    '品牌评分需要 AI 返回结构化的评分数据',
+                    '检查 AI 平台是否支持评分功能',
+                    '尝试减少评分维度以提高成功率'
+                ],
+                'default_dimensions': {
+                    'brand_awareness': {'score': 0, 'note': '数据不足'},
+                    'brand_image': {'score': 0, 'note': '数据不足'},
+                    'brand_loyalty': {'score': 0, 'note': '数据不足'},
+                    'perceived_quality': {'score': 0, 'note': '数据不足'}
+                }
             },
             'semantic_drift': {
                 'warning': '语义偏移数据暂缺',
+                'description': '语义偏移分析需要足够的关键词数据，当前结果中关键词数量不足',
                 'drift_score': 0,
-                'keywords': []
+                'keywords': [],
+                'fallback_tips': [
+                    '语义偏移分析需要每个品牌至少有 5 条有效结果',
+                    '增加问题数量以获取更多关键词数据',
+                    '检查 AI 返回的内容是否包含足够的关键词'
+                ],
+                'analysis_note': '当结果数量充足时，语义偏移分析将自动计算'
             },
             'source_purity': {
                 'warning': '信源纯净度数据暂缺',
+                'description': '信源纯净度分析需要识别信息来源，当前数据中信源信息不足',
                 'purity_score': 0,
-                'sources': []
+                'sources': [],
+                'fallback_tips': [
+                    '信源纯净度分析需要 AI 返回信息来源',
+                    '确保问题设计中包含来源相关的询问',
+                    '检查 AI 平台是否支持来源识别'
+                ],
+                'source_types': {
+                    'official': 0,
+                    'media': 0,
+                    'user_generated': 0,
+                    'unknown': 0
+                }
             },
             'recommendations': {
                 'warning': '优化建议数据暂缺',
-                'suggestions': []
+                'description': '优化建议模块未能生成有效建议，可能是因为缺少足够的分析数据',
+                'suggestions': [],
+                'fallback_tips': [
+                    '优化建议基于其他分析模块的结果',
+                    '确保竞品分析、品牌评分等模块正常工作',
+                    '查看其他分析模块的警告信息以了解具体问题'
+                ],
+                'generic_suggestions': [
+                    '增加竞品数量以获得更全面的竞争视角',
+                    '优化问题描述以获取更具体的 AI 回答',
+                    '选择更具体的品牌名称以减少歧义',
+                    '定期检查诊断结果质量并调整配置'
+                ]
             }
         }
-        return defaults.get(analysis_type, {'warning': '数据暂缺', 'data': {}})
+        
+        result = defaults.get(analysis_type, {
+            'warning': '数据暂缺',
+            'description': f'{analysis_type} 模块未能生成有效数据',
+            'data': {},
+            'fallback_tips': [
+                '检查诊断配置是否正确',
+                '查看系统日志获取详细错误信息',
+                '联系技术支持获取帮助'
+            ]
+        })
+        
+        # P1-2 增强：记录默认值使用日志
+        db_logger.debug(f"使用默认分析数据：type={analysis_type}")
+        
+        return result
 
     def _check_data_quality(self, results: List[Dict], analysis: Dict) -> List[str]:
         """
@@ -579,10 +763,10 @@ class DiagnosisReportService:
     def _get_error_suggestion(self, error_type: str) -> str:
         """
         P1-1 新增：获取错误建议
-        
+
         参数:
             error_type: 错误类型
-        
+
         返回:
             建议文本
         """
@@ -593,6 +777,106 @@ class DiagnosisReportService:
             'no_results': '诊断未生成有效结果，建议检查 AI 平台配置后重试'
         }
         return suggestions.get(error_type, '请稍后重试或联系技术支持')
+
+    def _detect_fallback_scenarios(self, report: Dict, results: List, analysis: Dict) -> List[Dict[str, Any]]:
+        """
+        P1-1 新增：检测降级场景
+
+        参数:
+            report: 报告主数据
+            results: 结果列表
+            analysis: 分析数据
+
+        返回:
+            降级场景列表，每个场景包含：
+            - scenario: 场景类型
+            - severity: 严重程度 (low/medium/high)
+            - message: 描述信息
+            - suggestion: 用户建议
+        """
+        scenarios = []
+
+        # 场景 1: 低质量结果过多
+        if results:
+            low_quality_count = sum(1 for r in results if r.get('quality_score', 100) < 60)
+            ratio = low_quality_count / len(results)
+            if ratio > 0.5:
+                scenarios.append({
+                    'scenario': 'low_quality_results',
+                    'severity': 'high' if ratio > 0.8 else 'medium',
+                    'message': f'{low_quality_count}/{len(results)} 条结果质量较低',
+                    'suggestion': 'AI 返回的内容质量不高，建议优化问题描述或选择更具体的品牌名称',
+                    'metrics': {
+                        'low_quality_count': low_quality_count,
+                        'total_count': len(results),
+                        'ratio': round(ratio * 100, 2)
+                    }
+                })
+
+        # 场景 2: 分析数据缺失
+        if analysis:
+            missing_analysis = [k for k, v in analysis.items() if not v or v == {} or v.get('warning')]
+            if len(missing_analysis) > 0:
+                scenarios.append({
+                    'scenario': 'missing_analysis',
+                    'severity': 'high' if len(missing_analysis) > 3 else 'medium',
+                    'message': f'{len(missing_analysis)} 项分析数据缺失',
+                    'suggestion': '部分分析模块未能生成结果，报告参考价值可能受限',
+                    'metrics': {
+                        'missing_types': missing_analysis,
+                        'missing_count': len(missing_analysis)
+                    }
+                })
+
+        # 场景 3: 结果数量不足
+        if results and len(results) < 5:
+            scenarios.append({
+                'scenario': 'insufficient_results',
+                'severity': 'medium',
+                'message': f'诊断结果数量较少（{len(results)} 条）',
+                'suggestion': '结果数量不足可能影响分析准确性，建议增加竞品数量或问题数量',
+                'metrics': {
+                    'result_count': len(results),
+                    'recommended_min': 5
+                }
+            })
+
+        # 场景 4: 情感分布异常
+        if results:
+            sentiment_dist = self._calculate_sentiment_distribution(results)
+            total = sentiment_dist['total_count']
+            if total > 0:
+                neutral_ratio = sentiment_dist['data']['neutral'] / total
+                if neutral_ratio > 0.8:
+                    scenarios.append({
+                        'scenario': 'neutral_sentiment_dominant',
+                        'severity': 'low',
+                        'message': '情感分析结果以中性为主',
+                        'suggestion': '中性评价过多可能意味着问题不够具体或品牌特征不明显',
+                        'metrics': {
+                            'neutral_ratio': round(neutral_ratio * 100, 2)
+                        }
+                    })
+
+        # 场景 5: 执行时间过长
+        if report.get('created_at'):
+            try:
+                created_time = datetime.fromisoformat(report['created_at'])
+                elapsed = (datetime.now() - created_time).total_seconds()
+                if elapsed > 300:  # 超过 5 分钟
+                    scenarios.append({
+                        'scenario': 'long_execution_time',
+                        'severity': 'low',
+                        'message': f'诊断执行时间较长（{int(elapsed)}秒）',
+                        'suggestion': '执行时间长可能是因为分析的数据量大，不影响结果准确性',
+                        'metrics': {
+                            'elapsed_seconds': int(elapsed)
+                        }
+                    })
+            except Exception:
+                pass
+
+        return scenarios
 
     def _calculate_brand_distribution(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """

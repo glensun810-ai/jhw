@@ -1,0 +1,163 @@
+/**
+ * 质量指示器组件样式
+ * 
+ * P2-4 优化：可复用组件 - 显示报告质量评分和等级
+ */
+
+.quality-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30rpx;
+  border-radius: 16rpx;
+  margin: 20rpx;
+  transition: all 0.3s ease;
+}
+
+.quality-hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 质量评分环 */
+.quality-score-ring {
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 20rpx;
+}
+
+.quality-score-circle {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.quality-score-inner {
+  position: absolute;
+  width: 120rpx;
+  height: 120rpx;
+  background-color: #fff;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.quality-score-value {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.quality-score-label {
+  font-size: 20rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+/* 质量等级信息 */
+.quality-level-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.quality-level-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.quality-level-icon {
+  font-size: 32rpx;
+  margin-right: 10rpx;
+}
+
+.quality-level-label {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.quality-level-desc {
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
+  margin: 10rpx 0;
+}
+
+.quality-level-recommend {
+  font-size: 22rpx;
+  color: #999;
+  text-align: center;
+  padding: 10rpx 20rpx;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 8rpx;
+}
+
+/* 质量提示 */
+.quality-tip {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  background-color: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.quality-tip-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quality-tip-text {
+  font-size: 26rpx;
+  color: #333;
+  flex: 1;
+}
+
+.quality-tip-close {
+  font-size: 32rpx;
+  color: #999;
+  padding: 10rpx;
+}
+
+.quality-tip-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 15rpx;
+}
+
+.quality-tip-btn {
+  background-color: #007aff;
+  color: #fff;
+  font-size: 26rpx;
+  padding: 10rpx 40rpx;
+  border-radius: 30rpx;
+  border: none;
+}
+
+/* 不同等级的背景色 */
+.quality-indicator.excellent {
+  background-color: var(--level-excellent-bg, #e8f5e9);
+}
+
+.quality-indicator.good {
+  background-color: var(--level-good-bg, #e0f2f1);
+}
+
+.quality-indicator.fair {
+  background-color: var(--level-fair-bg, #fff3e0);
+}
+
+.quality-indicator.poor {
+  background-color: var(--level-poor-bg, #fbe9e7);
+}
+
+.quality-indicator.critical {
+  background-color: var(--level-critical-bg, #ffebee);
+}

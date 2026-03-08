@@ -108,18 +108,25 @@ class DiagnosisReportRepository:
     
     @contextmanager
     def get_connection(self):
-        """获取数据库连接"""
-        conn = get_db_pool().get_connection()
+        """获取数据库连接
+
+        【P0 紧急修复 - 2026-03-06】修复连接超时未初始化导致的重复超时问题
+        """
+        conn = None
         try:
+            conn = get_db_pool().get_connection()
             yield conn
-            conn.commit()
+            if conn:
+                conn.commit()
         except Exception as e:
-            conn.rollback()
+            if conn:
+                conn.rollback()
             db_logger.error(f"数据库操作失败：{e}")
             raise
         finally:
-            get_db_pool().return_connection(conn)
-    
+            if conn is not None:
+                get_db_pool().return_connection(conn)
+
     def create_report(self, execution_id: str, user_id: str, config: Dict[str, Any]) -> int:
         """
         创建诊断报告（初始化）

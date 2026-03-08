@@ -137,7 +137,7 @@ Page({
    */
   fetchDataFromServer: function(executionId) {
     logger.debug('开始获取 Dashboard 数据', { executionId });
-    
+
     wx.request({
       url: `${API_BASE_URL}/api/dashboard/aggregate`,
       method: 'GET',
@@ -147,20 +147,60 @@ Page({
       },
       timeout: 30000, // 30 秒超时
       success: (res) => {
-        logger.debug('Dashboard API 响应成功', { 
+        logger.debug('Dashboard API 响应成功', {
           success: res.data?.success,
-          hasData: !!res.data?.dashboard 
+          hasData: !!res.data?.dashboard
         });
-        
+
         if (res.data && res.data.success) {
+          // 【P0 关键修复】检查后端返回的 status 字段
+          if (res.data.status === 'failed') {
+            logger.error('[Dashboard] 后端返回 failed 状态，进入故障恢复模式');
+            this.setData({
+              loading: false,
+              loadError: '诊断任务失败：' + (res.data.error_message || res.data.message || '未知错误')
+            });
+            wx.showModal({
+              title: '加载失败',
+              content: '诊断任务执行失败，建议重新尝试',
+              showCancel: false,
+              confirmText: '我知道了'
+            });
+            return;
+          }
+
+          // 【P0 关键修复】检查 results 长度（支持多种字段名）
+          const dashboard = res.data.dashboard;
+          // 【P0 修复 - 2026-03-06】支持 results 和 detailed_results 字段
+          const rawResults = dashboard?.rawResults 
+            || dashboard?.results        // ← 后端返回 results
+            || dashboard?.detailed_results  // ← 后端返回 detailed_results
+            || dashboard?.raw 
+            || [];
+          
+          if (!Array.isArray(rawResults) || rawResults.length === 0) {
+            logger.error('[Dashboard] results.length == 0，进入故障恢复模式');
+            this.setData({
+              loading: false,
+              loadError: '未找到测试数据，请先执行品牌测试'
+            });
+            wx.showModal({
+              title: '无有效数据',
+              content: '报告未包含任何有效结果，可能原因：\n1. 诊断任务失败\n2. 数据未正确保存\n3. 网络异常\n\n建议重新执行测试',
+              showCancel: false,
+              confirmText: '我知道了'
+            });
+            return;
+          }
+
           this.processServerData(res.data.dashboard);
         } else {
           // API 返回错误
           const errorMsg = res.data?.error || '数据格式错误';
           const errorCode = res.data?.code;
-          
+
           logger.warn('Dashboard API 返回错误', { error: errorMsg, code: errorCode });
-          
+
           if (errorCode === 'NO_DATA') {
             // 没有数据，提示用户重新测试
             this.setData({
@@ -178,7 +218,7 @@ Page({
       fail: (error) => {
         logger.error('获取 Dashboard 数据失败', error);
         let errorMsg = '网络请求失败';
-        
+
         if (error.errMsg) {
           if (error.errMsg.includes('timeout')) {
             errorMsg = '请求超时，请检查网络连接';
@@ -186,7 +226,7 @@ Page({
             errorMsg = '无法连接服务器，请检查网络';
           }
         }
-        
+
         this.setData({
           loading: false,
           loadError: errorMsg

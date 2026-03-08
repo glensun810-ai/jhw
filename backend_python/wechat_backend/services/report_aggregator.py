@@ -127,14 +127,20 @@ class ReportAggregator:
             'firstMentionByPlatform': first_mention_data,
             'interceptionRisks': interception_risks,
             'overallScore': brand_scores.get(brand_name, {}).get('overallScore', 50),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            
+            # 【P1 修复 - 2026-03-06】补充品牌分析相关字段
+            'brandAnalysis': additional_data.get('brand_analysis') if additional_data else None,
+            'userBrandAnalysis': additional_data.get('user_brand_analysis') if additional_data else None,
+            'comparison': additional_data.get('comparison') if additional_data else None,
+            'top3Brands': additional_data.get('top_3_brands', []) if additional_data else []
         }
-        
+
         api_logger.info(
             f"[ReportAggregator] ✅ 报告聚合完成：{brand_name}, "
             f"overallScore={report['overallScore']}"
         )
-        
+
         return report
     
     def _sanitize_results(self, results: List[Dict]) -> List[Dict]:

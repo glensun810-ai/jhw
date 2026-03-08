@@ -4,7 +4,8 @@ App({
     openid: null,
     serverUrl: 'http://127.0.0.1:5001', // 后端服务器地址（使用 5001 避免与 macOS Control Center 冲突）
     deviceId: null, // 设备 ID，用于日志追踪
-    errorToast: null // 全局错误提示组件引用
+    errorToast: null, // 全局错误提示组件引用
+    wsClient: null // 【P0 关键修复 - 2026-03-06】WebSocket 客户端单例
   },
 
   onLaunch: function () {
@@ -24,6 +25,28 @@ App({
 
     // 注册 Service Worker（离线缓存）
     this.registerServiceWorker();
+
+    // 【P0 关键修复 - 2026-03-06】初始化 WebSocket 客户端单例
+    this.initWebSocketClient();
+  },
+
+  /**
+   * 【P0 关键修复 - 2026-03-06】初始化 WebSocket 客户端
+   * 确保全局只有一个 WebSocket 实例
+   */
+  initWebSocketClient: function() {
+    try {
+      const webSocketClient = require('./miniprogram/services/webSocketClient').default;
+      
+      // 保存到全局
+      this.globalData.wsClient = webSocketClient;
+      global.wsClient = webSocketClient; // 同时设置到 global
+      
+      console.log('✅ WebSocket 客户端已初始化');
+      console.log('[WebSocket] 全局 wsClient 已注册:', !!global.wsClient);
+    } catch (error) {
+      console.error('❌ WebSocket 客户端初始化失败:', error);
+    }
   },
 
   /**

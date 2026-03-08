@@ -256,7 +256,7 @@ Page({
 
   /**
    * 处理完成
-   * @param {Object} result 
+   * @param {Object} result
    */
   handleComplete(result) {
     console.log('[DiagnosisPage] Task completed:', result);
@@ -269,10 +269,10 @@ Page({
       duration: 2000
     });
 
-    // 跳转到报告页面
+    // 【修复】跳转到报告页面 v2
     setTimeout(() => {
       wx.navigateTo({
-        url: `/pages/report/report?executionId=${this.data.executionId}`
+        url: `/pages/report-v2/report-v2?executionId=${this.data.executionId}`
       });
     }, 1500);
   },

@@ -1,15 +1,15 @@
 /**
- * 报告页面 v2 - WebSocket 实时推送版本
- * 
- * 主要改进：
- * 1. 使用 WebSocket 实时接收诊断进度
- * 2. 自动降级到轮询模式
- * 3. 友好的错误提示
- * 4. 连接状态显示
- * 
+ * 报告页面 v2 - WebSocket 实时推送版本（P1-6 简化版）
+ *
+ * P1-6 改进：
+ * 1. 简化轮询逻辑，减少状态分支
+ * 2. 使用单一状态机管理状态
+ * 3. 添加超时处理
+ * 4. 网络恢复自动重连
+ *
  * @author: 系统架构组
  * @date: 2026-02-27
- * @version: 2.1.0
+ * @version: 2.2.0
  */
 
 import diagnosisService from '../../services/diagnosisService';
@@ -18,6 +18,19 @@ import pollingManager from '../../services/pollingManager';
 import { isFeatureEnabled } from '../../config/featureFlags';
 import { showToast, showModal, showLoading, hideLoading } from '../../utils/uiHelper';
 import { logError } from '../../utils/errorHandler';
+
+/**
+ * P1-6 新增：统一状态机定义
+ */
+const ConnectionState = {
+  IDLE: 'idle',
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  POLLING: 'polling',
+  DISCONNECTED: 'disconnected',
+  ERROR: 'error',
+  COMPLETED: 'completed'
+};
 
 Page({
   /**
@@ -41,7 +54,12 @@ Page({
     activeTab: 'overview',
     brandDistribution: {},
     sentimentDistribution: {},
-    keywords: []
+    keywords: [],
+    // P1-6 新增：连接状态
+    connectionState: ConnectionState.IDLE,
+    // P1-6 新增：超时时间
+    pollingTimeout: 300000, // 5 分钟
+    pollingStartTime: null
   },
 
   /**
@@ -132,11 +150,16 @@ Page({
   },
 
   /**
-   * 开始监听（优先 WebSocket，降级到轮询）
+   * 开始监听（P1-6 简化版 - 优先 WebSocket，自动降级到轮询）
    */
   async startListening() {
     console.log('[ReportPageV2] Starting listening...');
-    this.setData({ isPolling: false });
+    
+    // P1-6 简化：使用统一状态机
+    this.setData({ 
+      isPolling: false,
+      connectionState: ConnectionState.CONNECTING
+    });
 
     try {
       // 尝试使用 WebSocket
@@ -154,10 +177,11 @@ Page({
         console.log('[ReportPageV2] WebSocket 连接已启动');
         this.setData({
           connectionMode: 'websocket',
-          isWebSocketConnected: false // 等待连接确认
+          isWebSocketConnected: false, // 等待连接确认
+          connectionState: ConnectionState.CONNECTING
         });
       } else {
-        // WebSocket 不可用，降级到轮询
+        // WebSocket 不可用，直接降级到轮询
         console.log('[ReportPageV2] WebSocket 不可用，降级到轮询');
         await this.startPolling();
       }
@@ -168,7 +192,7 @@ Page({
       console.log('[ReportPageV2] Listening started successfully');
     } catch (error) {
       console.error('[ReportPageV2] Failed to start listening:', error);
-      // 降级到轮询
+      // 任何错误都降级到轮询
       await this.startPolling();
     }
   },
@@ -230,27 +254,30 @@ Page({
   },
 
   /**
-   * 启动轮询（降级方案）
+   * 启动轮询（P1-6 简化版 - 降级方案）
    */
   async startPolling() {
     console.log('[ReportPageV2] Starting polling (fallback)...');
 
-    // P0 修复：添加执行 ID 验证
+    // P1-6 简化：添加执行 ID 验证和超时控制
     if (!this.data.executionId) {
       console.error('[ReportPageV2] 无法启动轮询：缺少 executionId');
       this.handleError(new Error('缺少 executionId，无法轮询'));
       return;
     }
 
+    // P1-6 简化：使用统一状态机
     this.setData({
       isPolling: true,
-      connectionMode: 'polling'
+      connectionMode: 'polling',
+      connectionState: ConnectionState.POLLING,
+      pollingStartTime: Date.now()
     });
 
     try {
       console.log('[ReportPageV2] 调用 diagnosisService.startPolling, executionId:', this.data.executionId);
 
-      // P0 修复：直接传递 executionId 给 diagnosisService
+      // P1-6 简化：直接传递 executionId 给 diagnosisService
       diagnosisService.startPolling({
         onStatus: this.handleStatusUpdate.bind(this),
         onComplete: this.handleComplete.bind(this),
@@ -266,13 +293,39 @@ Page({
   },
 
   /**
-   * 处理 WebSocket 连接成功
+   * P1-6 新增：检查轮询超时
+   */
+  checkPollingTimeout() {
+    const { pollingStartTime, pollingTimeout } = this.data;
+    
+    if (!pollingStartTime) {
+      return false;
+    }
+    
+    const elapsed = Date.now() - pollingStartTime;
+    if (elapsed > pollingTimeout) {
+      console.warn('[ReportPageV2] 轮询超时');
+      this.handleTimeout({
+        message: '诊断处理时间过长，建议查看历史记录',
+        elapsed: elapsed
+      });
+      return true;
+    }
+    
+    return false;
+  },
+
+  /**
+   * 处理 WebSocket 连接成功（P1-6 简化版）
    */
   handleWebSocketConnected() {
     console.log('[ReportPageV2] WebSocket 已连接');
+    
+    // P1-6 简化：使用统一状态机
     this.setData({
       isWebSocketConnected: true,
-      connectionMode: 'websocket'
+      connectionMode: 'websocket',
+      connectionState: ConnectionState.CONNECTED
     });
 
     showToast({
@@ -283,11 +336,16 @@ Page({
   },
 
   /**
-   * 处理 WebSocket 断开
+   * 处理 WebSocket 断开（P1-6 简化版）
    */
   handleWebSocketDisconnected() {
     console.log('[ReportPageV2] WebSocket 已断开');
-    this.setData({ isWebSocketConnected: false });
+    
+    // P1-6 简化：使用统一状态机
+    this.setData({ 
+      isWebSocketConnected: false,
+      connectionState: ConnectionState.DISCONNECTED
+    });
 
     // 如果正在诊断中，显示提示
     if (this.data.status && this.data.status.status !== 'completed') {
@@ -296,19 +354,42 @@ Page({
         icon: 'none',
         duration: 2000
       });
+      
+      // P1-6 新增：自动重连逻辑
+      this.scheduleReconnect();
     }
   },
 
   /**
-   * 处理 WebSocket 错误
+   * P1-6 新增：安排重连
+   */
+  scheduleReconnect() {
+    const reconnectDelay = 3000; // 3 秒后重连
+    
+    console.log(`[ReportPageV2] 安排重连：${reconnectDelay}ms 后`);
+    
+    setTimeout(() => {
+      // 检查是否仍需要重连
+      if (this.data.status?.status !== 'completed' && this.data.connectionState !== ConnectionState.CONNECTED) {
+        console.log('[ReportPageV2] 执行自动重连');
+        this.setData({ connectionState: ConnectionState.CONNECTING });
+        this.startListening();
+      }
+    }, reconnectDelay);
+  },
+
+  /**
+   * 处理 WebSocket 错误（P1-6 简化版）
    * @param {Object} error
    */
   handleWebSocketError(error) {
     console.error('[ReportPageV2] WebSocket 错误:', error);
 
+    // P1-6 简化：使用统一状态机
     this.setData({
       errorMessage: error.message || 'WebSocket 连接错误',
-      retryCount: this.data.retryCount + 1
+      retryCount: this.data.retryCount + 1,
+      connectionState: ConnectionState.ERROR
     });
 
     // 显示错误提示
@@ -320,14 +401,15 @@ Page({
   },
 
   /**
-   * 处理降级到轮询
+   * 处理降级到轮询（P1-6 简化版）
    */
   handleFallbackToPolling() {
     console.log('[ReportPageV2] 降级到轮询模式');
-    
+
     this.setData({
       connectionMode: 'polling',
-      isWebSocketConnected: false
+      isWebSocketConnected: false,
+      connectionState: ConnectionState.POLLING
     });
 
     showToast({
@@ -341,7 +423,30 @@ Page({
   },
 
   /**
-   * 处理进度更新
+   * 处理轮询错误（P1-6 简化版）
+   * @param {Object} error
+   */
+  handlePollingError(error) {
+    console.error('[ReportPageV2] 轮询错误:', error);
+
+    this.setData({
+      errorMessage: error.message || '网络错误',
+      retryCount: this.data.retryCount + 1,
+      connectionState: ConnectionState.ERROR
+    });
+
+    // 根据错误类型显示不同提示
+    if (error.message && error.message.includes('网络')) {
+      showToast({
+        title: '网络连接失败',
+        icon: 'none',
+        duration: 2000
+      });
+    }
+  },
+
+  /**
+   * 处理进度更新（P1-6 简化版）
    * @param {Object} data
    */
   handleProgressUpdate(data) {
@@ -356,7 +461,7 @@ Page({
   },
 
   /**
-   * 处理结果更新
+   * 处理结果更新（P1-6 简化版）
    * @param {Object} data
    */
   handleResultUpdate(data) {
@@ -379,7 +484,7 @@ Page({
   },
 
   /**
-   * 处理状态更新
+   * 处理状态更新（P1-6 简化版）
    * @param {Object} status
    */
   handleStatusUpdate(status) {
@@ -399,25 +504,37 @@ Page({
       history.shift();
     }
 
+    // P1-6 简化：使用统一状态机
     this.setData({
       status: status,
       progressHistory: history,
-      errorMessage: ''
+      errorMessage: '',
+      connectionState: status.status === 'completed' 
+        ? ConnectionState.COMPLETED 
+        : this.data.connectionState
     });
 
     // 更新页面标题
     wx.setNavigationBarTitle({
       title: this._getTitleByStatus(status)
     });
+    
+    // P1-6 新增：检查轮询超时
+    if (this.data.connectionMode === 'polling') {
+      this.checkPollingTimeout();
+    }
   },
 
   /**
-   * 处理完成
+   * 处理完成（P1-6 简化版）
    * @param {Object} result
    */
   handleComplete(result) {
     console.log('[ReportPageV2] 诊断完成:', result);
     this.stopListening();
+
+    // P1-6 简化：使用统一状态机
+    this.setData({ connectionState: ConnectionState.COMPLETED });
 
     // 显示成功提示
     showToast({
@@ -426,38 +543,14 @@ Page({
       duration: 2000
     });
 
-    // 跳转到报告详情页
+    // 刷新当前页面数据
     setTimeout(() => {
-      wx.navigateTo({
-        url: `/pages/report-detail/report-detail?executionId=${this.data.executionId}`
-      });
+      this.loadReportData(this.data.executionId);
     }, 1500);
   },
 
   /**
-   * 处理轮询错误
-   * @param {Object} error
-   */
-  handlePollingError(error) {
-    console.error('[ReportPageV2] 轮询错误:', error);
-
-    this.setData({
-      errorMessage: error.message || '网络错误',
-      retryCount: this.data.retryCount + 1
-    });
-
-    // 根据错误类型显示不同提示
-    if (error.message && error.message.includes('网络')) {
-      showToast({
-        title: '网络连接失败',
-        icon: 'none',
-        duration: 2000
-      });
-    }
-  },
-
-  /**
-   * 处理超时
+   * 处理超时（P1-6 简化版）
    * @param {Object} timeoutInfo
    */
   async handleTimeout(timeoutInfo) {
@@ -487,13 +580,75 @@ Page({
     showLoading('加载中...');
 
     try {
-      // 直接跳转到报告详情页
-      wx.navigateTo({
-        url: `/pages/report-detail/report-detail?reportId=${reportId}`
-      });
+      // 【修复】加载历史报告数据并在当前页面显示
+      await this.loadReportData(null, reportId);
     } catch (error) {
       console.error('[ReportPageV2] 加载历史报告失败:', error);
       this.handleError(error);
+    } finally {
+      hideLoading();
+    }
+  },
+
+  /**
+   * 加载报告数据
+   * @param {string} executionId - 执行 ID
+   * @param {string} reportId - 报告 ID（可选）
+   */
+  async loadReportData(executionId, reportId) {
+    console.log('[ReportPageV2] 加载报告数据:', { executionId, reportId });
+
+    try {
+      // 使用 reportService 获取完整报告
+      const reportService = require('../../services/reportService').default;
+      
+      const id = executionId || this.data.executionId;
+      
+      if (!id) {
+        throw new Error('缺少执行 ID');
+      }
+
+      showLoading('加载报告中...');
+
+      // 获取完整报告
+      const report = await reportService.getFullReport(id);
+
+      console.log('[ReportPageV2] 报告数据:', report);
+
+      // 检查是否有错误
+      if (report.error) {
+        this.setData({
+          hasError: true,
+          errorMessage: report.error.message || '加载报告失败'
+        });
+        showToast({
+          title: report.error.message,
+          icon: 'none'
+        });
+        return;
+      }
+
+      // 更新页面数据
+      this.setData({
+        brandDistribution: report.brandDistribution || {},
+        sentimentDistribution: report.sentimentDistribution || {},
+        keywords: report.keywords || [],
+        status: { status: 'completed', progress: 100, stage: 'completed' },
+        lastUpdateTime: new Date().toLocaleTimeString(),
+        hasError: false
+      });
+
+      console.log('[ReportPageV2] 报告数据加载成功');
+    } catch (error) {
+      console.error('[ReportPageV2] 加载报告数据失败:', error);
+      this.setData({
+        hasError: true,
+        errorMessage: '加载报告失败：' + (error.message || '未知错误')
+      });
+      showToast({
+        title: '加载报告失败',
+        icon: 'none'
+      });
     } finally {
       hideLoading();
     }

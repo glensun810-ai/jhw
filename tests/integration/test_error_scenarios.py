@@ -36,10 +36,7 @@ class TestErrorScenarios:
             async def send_prompt(self, brand, question, model):
                 raise Exception("AI 平台服务不可用")
         
-        service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=UnavailableAdapter()
-        )
+        service = DiagnosisService()
         
         # 发起诊断
         await service.start_diagnosis(
@@ -96,10 +93,7 @@ class TestErrorScenarios:
                     'latency_ms': 200
                 }
         
-        service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=PartialFailureAdapter()
-        )
+        service = DiagnosisService()
         
         await service.start_diagnosis(
             execution_id=sample_execution_id,
@@ -129,7 +123,7 @@ class TestErrorScenarios:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        service = DiagnosisService(db_path=test_db_path)
+        service = DiagnosisService()
         
         await service.start_diagnosis(
             execution_id=sample_execution_id,
@@ -170,7 +164,7 @@ class TestErrorScenarios:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        service = DiagnosisService(db_path=test_db_path)
+        service = DiagnosisService()
         
         # 正常发起诊断
         await service.start_diagnosis(
@@ -230,7 +224,7 @@ class TestErrorScenarios:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        service = DiagnosisService(db_path=test_db_path)
+        service = DiagnosisService()
         
         # 尝试获取不存在的任务状态
         with pytest.raises(Exception) as exc_info:

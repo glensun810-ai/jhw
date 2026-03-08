@@ -205,15 +205,18 @@ class DiagnosisReportRepository:
     def update_status_sync(self, execution_id: str, status: str, progress: int = None,
                           is_completed: bool = False) -> bool:
         """
-        P0 修复：统一状态更新函数（确保 status 和 stage 同步）
-        
+        P0-5 修复：统一状态更新函数（确保 status 和 stage 同步）
+
         自动根据 status 推导 stage，避免状态不一致
-        
+
         Args:
             execution_id: 执行 ID
             status: 状态（initializing/ai_fetching/analyzing/completed/failed）
             progress: 进度（可选，默认根据 status 推导）
             is_completed: 是否完成
+            
+        Returns:
+            bool: 是否更新成功
         """
         # 状态映射表
         status_stage_map = {
@@ -224,10 +227,10 @@ class DiagnosisReportRepository:
             'failed': 'failed',
             'partial_completed': 'completed'  # 部分完成也视为完成
         }
-        
+
         # 自动推导 stage
         stage = status_stage_map.get(status, status)
-        
+
         # 自动推导 progress
         if progress is None:
             progress_map = {
@@ -238,9 +241,173 @@ class DiagnosisReportRepository:
                 'failed': 0
             }
             progress = progress_map.get(status, 0)
-        
+
         # 调用原有更新函数
         return self.update_status(execution_id, status, progress, stage, is_completed)
+
+    def update_report_status(self, execution_id: str, status: str, stage: str,
+                            progress: int = None, is_completed: bool = False) -> bool:
+        """
+        P0-5 修复：统一状态更新方法（同时更新 status 和 stage，确保一致性）
+        
+        Args:
+            execution_id: 执行 ID
+            status: 状态（initializing/ai_fetching/analyzing/completed/failed）
+            stage: 阶段（与 status 保持一致）
+            progress: 进度（可选）
+            is_completed: 是否完成
+            
+        Returns:
+            bool: 是否更新成功
+            
+        Note:
+            此方法强制要求同时传入 status 和 stage，确保调用方明确指定两者
+        """
+        if progress is None:
+            progress = 100 if status == 'completed' else 0
+            
+        return self.update_status(execution_id, status, progress, stage, is_completed)
+
+    def validate_state_consistency(self, execution_id: str) -> Dict[str, Any]:
+        """
+        P0-5 修复：验证状态一致性
+        
+        Args:
+            execution_id: 执行 ID
+            
+        Returns:
+            dict: {
+                'is_consistent': bool,  # 状态是否一致
+                'status': str,  # 当前 status
+                'stage': str,  # 当前 stage
+                'expected_stage': str,  # 期望的 stage
+                'issues': list  # 发现的问题列表
+            }
+        """
+        report = self.get_by_execution_id(execution_id)
+        
+        issues = []
+        is_consistent = True
+        
+        if not report:
+            return {
+                'is_consistent': False,
+                'status': None,
+                'stage': None,
+                'expected_stage': None,
+                'issues': ['报告不存在']
+            }
+        
+        status = report.get('status', 'unknown')
+        stage = report.get('stage', 'unknown')
+        is_completed = report.get('is_completed', False)
+        
+        # 状态映射表
+        status_stage_map = {
+            'initializing': 'init',
+            'ai_fetching': 'ai_fetching',
+            'analyzing': 'analyzing',
+            'completed': 'completed',
+            'failed': 'failed',
+            'partial_completed': 'completed'
+        }
+        
+        expected_stage = status_stage_map.get(status, status)
+        
+        # 检查 status 和 stage 是否一致
+        if stage != expected_stage:
+            issues.append(f'stage 不匹配：当前={stage}, 期望={expected_stage}')
+            is_consistent = False
+        
+        # 检查 is_completed 和 status 是否一致
+        if is_completed and status not in ['completed', 'partial_completed']:
+            issues.append(f'is_completed=true 但 status={status}')
+            is_consistent = False
+        
+        if not is_completed and status in ['completed', 'partial_completed']:
+            issues.append(f'status={status} 但 is_completed=false')
+            is_consistent = False
+        
+        return {
+            'is_consistent': is_consistent,
+            'status': status,
+            'stage': stage,
+            'expected_stage': expected_stage,
+            'issues': issues
+        }
+
+    def fix_inconsistent_state(self, execution_id: str) -> bool:
+        """
+        P0-5 修复：修复不一致的历史数据
+        
+        Args:
+            execution_id: 执行 ID
+            
+        Returns:
+            bool: 是否修复成功
+            
+        Note:
+            此方法用于修复历史数据中的状态不一致问题
+            优先信任 status 字段，根据 status 修正 stage 和 is_completed
+        """
+        validation = self.validate_state_consistency(execution_id)
+        
+        if validation['is_consistent']:
+            db_logger.info(f"✅ 状态已一致，无需修复：{execution_id}")
+            return True
+        
+        report = self.get_by_execution_id(execution_id)
+        if not report:
+            db_logger.error(f"❌ 修复失败，报告不存在：{execution_id}")
+            return False
+        
+        status = report.get('status', 'unknown')
+        
+        # 根据 status 推导正确的 stage 和 is_completed
+        status_stage_map = {
+            'initializing': 'init',
+            'ai_fetching': 'ai_fetching',
+            'analyzing': 'analyzing',
+            'completed': 'completed',
+            'failed': 'failed',
+            'partial_completed': 'completed'
+        }
+        
+        correct_stage = status_stage_map.get(status, status)
+        correct_is_completed = status in ['completed', 'partial_completed']
+        
+        # 计算进度
+        progress_map = {
+            'initializing': 0,
+            'ai_fetching': 50,
+            'analyzing': 80,
+            'completed': 100,
+            'failed': 0,
+            'partial_completed': 100
+        }
+        progress = progress_map.get(status, report.get('progress', 0))
+        
+        # 执行修复
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE diagnosis_reports
+                    SET status = ?, stage = ?, progress = ?, is_completed = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE execution_id = ?
+                ''', (status, correct_stage, progress, 1 if correct_is_completed else 0, execution_id))
+                
+                db_logger.info(
+                    f"✅ 状态修复成功：{execution_id}, "
+                    f"status={status}, stage={correct_stage}, "
+                    f"is_completed={correct_is_completed}, progress={progress}"
+                )
+                return True
+                
+        except Exception as e:
+            db_logger.error(f"❌ 状态修复失败：{execution_id}, 错误：{e}", exc_info=True)
+            return False
     
     def get_by_execution_id(self, execution_id: str) -> Optional[Dict[str, Any]]:
         """根据执行 ID 获取报告"""
@@ -376,21 +543,26 @@ class DiagnosisResultRepository:
         获取数据库连接（P0 修复 - 2026-03-05：修复上下文管理器）
 
         【P0 关键修复】确保上下文管理器在任何情况下都正确 yield 和清理
+        【P0 紧急修复 - 2026-03-06】修复连接超时未初始化导致的重复超时问题
         """
-        conn = get_db_pool().get_connection()
+        conn = None
         try:
+            conn = get_db_pool().get_connection()
             yield conn  # 先 yield 连接
-            conn.commit()  # 成功后提交
+            if conn:
+                conn.commit()  # 成功后提交
         except Exception as e:
-            conn.rollback()  # 失败时回滚
+            if conn:
+                conn.rollback()  # 失败时回滚
             db_logger.error(f"数据库操作失败：{e}")
             raise  # 重新抛出异常
         finally:
-            # 无论成功还是失败，都归还连接
-            try:
-                get_db_pool().return_connection(conn)
-            except Exception as return_err:
-                db_logger.error(f"归还连接失败：{return_err}")
+            # 无论成功还是失败，都归还连接（但要检查 conn 是否为 None）
+            if conn is not None:
+                try:
+                    get_db_pool().return_connection(conn)
+                except Exception as return_err:
+                    db_logger.error(f"归还连接失败：{return_err}")
 
     def add(self, report_id: int, execution_id: str, result: Dict[str, Any]) -> int:
         """添加单个诊断结果（完整版 - Migration 004）
@@ -484,7 +656,92 @@ class DiagnosisResultRepository:
 
             result_id = cursor.lastrowid
             return result_id
-    
+
+    def add_batch_with_retry(
+        self,
+        report_id: int,
+        execution_id: str,
+        results: List[Dict[str, Any]],
+        batch_size: int = 10,
+        max_retries: int = 3,
+        retry_delay: float = 1.0
+    ) -> List[int]:
+        """
+        批量添加诊断结果（带重试机制 - P0-3 新增）
+
+        【P0-3 修复 - 2026-03-08】添加重试机制，处理临时数据库失败
+
+        参数:
+            report_id: 报告 ID
+            execution_id: 执行 ID
+            results: 结果列表
+            batch_size: 每批数量（默认 10）
+            max_retries: 最大重试次数（默认 3）
+            retry_delay: 重试延迟秒数（默认 1.0）
+
+        返回:
+            result_ids: 结果 ID 列表
+
+        异常:
+            RuntimeError: 重试后仍然失败
+        """
+        import time
+        import asyncio
+
+        last_error = None
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                # 执行批量添加
+                result_ids = self.add_batch(
+                    report_id=report_id,
+                    execution_id=execution_id,
+                    results=results,
+                    batch_size=batch_size,
+                    commit=True
+                )
+
+                # 【P0-3 新增】验证保存结果
+                saved_count = len(result_ids)
+                expected_count = len(results)
+
+                if saved_count != expected_count:
+                    raise RuntimeError(
+                        f"保存结果数量不匹配：期望{expected_count}, 实际{saved_count}"
+                    )
+
+                # 等待数据库提交
+                if attempt > 1:
+                    asyncio.sleep(0.2)  # 重试时多等待
+
+                db_logger.info(
+                    f"[ResultRepository] ✅ 批量保存成功：execution_id={execution_id}, "
+                    f"count={saved_count}, attempt={attempt}"
+                )
+
+                return result_ids
+
+            except Exception as e:
+                last_error = e
+                db_logger.warning(
+                    f"[ResultRepository] ⚠️ 批量保存失败 (尝试 {attempt}/{max_retries}): "
+                    f"execution_id={execution_id}, error={e}"
+                )
+
+                if attempt < max_retries:
+                    # 等待后重试
+                    time.sleep(retry_delay * attempt)  # 指数退避
+                else:
+                    db_logger.error(
+                        f"[ResultRepository] ❌ 批量保存失败 (已重试{max_retries}次): "
+                        f"execution_id={execution_id}, error={last_error}"
+                    )
+
+        # 所有重试失败
+        raise RuntimeError(
+            f"批量保存失败 (已重试{max_retries}次): {str(last_error)}"
+        )
+
     def add_batch(self, report_id: int, execution_id: str,
                  results: List[Dict[str, Any]],
                  batch_size: int = 10,  # 【P0 新增】分批大小
@@ -494,6 +751,7 @@ class DiagnosisResultRepository:
         批量添加诊断结果
 
         【P0 修复 - 2026-03-05】支持分批提交，减少连接持有时间
+        【P0-2 修复 - 2026-03-08】添加连接监控日志
 
         参数:
             report_id: 报告 ID
@@ -506,37 +764,68 @@ class DiagnosisResultRepository:
             result_ids: 结果 ID 列表
         """
         result_ids = []
+        conn_id = None
+
+        # 【P0-2 修复 - 2026-03-08】添加连接监控日志
+        try:
+            pool = get_db_pool()
+            db_logger.debug(
+                f"[ResultRepository] 开始批量添加：execution_id={execution_id}, "
+                f"count={len(results)}, pool_active={len(pool._in_use) if pool else 'unknown'}"
+            )
+        except Exception as e:
+            db_logger.debug(f"[ResultRepository] 获取连接池状态失败：{e}")
 
         # 【P0 修复 - 2026-03-05】使用上下文管理器正确获取连接
         with self.get_connection() as conn:
-            cursor = conn.cursor()
-
-            # 分批处理
-            total_batches = (len(results) + batch_size - 1) // batch_size if results else 0
-
-            for i in range(0, len(results), batch_size):
-                batch = results[i:i + batch_size]
-                batch_num = (i // batch_size) + 1
-
-                # 插入当前批次
-                for result in batch:
-                    result_id = self._insert_result(cursor, report_id, execution_id, result)
-                    result_ids.append(result_id)
-
+            try:
+                conn_id = id(conn)
                 db_logger.debug(
-                    f"[ResultRepository] 批量添加：batch={batch_num}/{total_batches}, "
-                    f"count={len(batch)}, total={len(result_ids)}"
+                    f"[ResultRepository] 获取数据库连接：conn_id={conn_id}, "
+                    f"execution_id={execution_id}"
                 )
+                
+                cursor = conn.cursor()
 
-            # 提交事务
-            if commit:
-                db_logger.debug(
-                    f"[ResultRepository] 批量添加完成：count={len(result_ids)}, "
-                    f"batches={total_batches}"
+                # 分批处理
+                total_batches = (len(results) + batch_size - 1) // batch_size if results else 0
+
+                for i in range(0, len(results), batch_size):
+                    batch = results[i:i + batch_size]
+                    batch_num = (i // batch_size) + 1
+
+                    # 插入当前批次
+                    for result in batch:
+                        result_id = self._insert_result(cursor, report_id, execution_id, result)
+                        result_ids.append(result_id)
+
+                    db_logger.debug(
+                        f"[ResultRepository] 批量添加：batch={batch_num}/{total_batches}, "
+                        f"count={len(batch)}, total={len(result_ids)}"
+                    )
+
+                # 提交事务
+                if commit:
+                    db_logger.debug(
+                        f"[ResultRepository] 批量添加完成：count={len(result_ids)}, "
+                        f"batches={total_batches}, conn_id={conn_id}"
+                    )
+                else:
+                    db_logger.debug(
+                        f"[ResultRepository] 批量添加完成但未提交：count={len(result_ids)}, "
+                        f"conn_id={conn_id}"
+                    )
+
+            except Exception as e:
+                db_logger.error(
+                    f"[ResultRepository] 批量添加失败：execution_id={execution_id}, "
+                    f"conn_id={conn_id}, error={e}"
                 )
-            else:
+                raise
+            finally:
                 db_logger.debug(
-                    f"[ResultRepository] 批量添加完成但未提交：count={len(result_ids)}"
+                    f"[ResultRepository] 数据库操作完成：conn_id={conn_id}, "
+                    f"execution_id={execution_id}"
                 )
 
             return result_ids
@@ -568,6 +857,29 @@ class DiagnosisResultRepository:
         geo_data = result.get('geo_data', {})
         quality_details = result.get('quality_details', {})
 
+        # 【P0-1 修复 - 2026-03-08】AI 空内容检测和占位符处理
+        response_content = response.get('content', '')
+        
+        # 检查 AI 响应内容是否为空
+        if not response_content or response_content.strip() == "":
+            # 使用占位符替代空内容
+            response_content = "[AI 未返回有效内容，已记录空响应]"
+            quality_score = 0
+            sentiment = 'neutral'
+            
+            # 记录警告日志
+            api_logger.warning(
+                f"[ResultRepository] AI 空内容检测：brand={brand}, "
+                f"question={question[:50]}..., model={model}, "
+                f"execution_id={execution_id}"
+            )
+            
+            # 在 quality_details 中记录空内容标记
+            if not quality_details:
+                quality_details = {}
+            quality_details['empty_content'] = True
+            quality_details['empty_reason'] = 'AI 未返回有效内容'
+
         # 插入数据库
         cursor.execute('''
             INSERT INTO diagnosis_results (
@@ -586,7 +898,7 @@ class DiagnosisResultRepository:
             model,
             quality_score,
             sentiment,
-            response.get('content', ''),
+            response_content,
             response.get('latency', 0),
             json.dumps(geo_data, ensure_ascii=False),
             json.dumps(quality_details, ensure_ascii=False),
@@ -594,7 +906,26 @@ class DiagnosisResultRepository:
         ))
 
         return cursor.lastrowid
-    
+
+    def count_by_execution_id(self, execution_id: str) -> int:
+        """
+        根据执行 ID 统计结果数量（P0-3 新增验证方法）
+
+        参数:
+            execution_id: 执行 ID
+
+        返回:
+            结果数量
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT COUNT(*) FROM diagnosis_results WHERE execution_id = ?',
+                (execution_id,)
+            )
+            result = cursor.fetchone()
+            return result[0] if result else 0
+
     def get_by_execution_id(self, execution_id: str) -> List[Dict[str, Any]]:
         """根据执行 ID 获取所有结果"""
         with self.get_connection() as conn:

@@ -1,9 +1,10 @@
 """
 Factory for creating and managing AI adapters
 """
-from typing import Dict, Type, Union
+from typing import Dict, Type, Union, List, Tuple
 from wechat_backend.ai_adapters.base_adapter import AIClient, AIPlatformType
 from wechat_backend.logging_config import api_logger
+import os
 
 api_logger.info("=== Starting AI Adapter Imports ===")
 
@@ -97,6 +98,19 @@ class AIAdapterFactory:
     """
     Factory class for creating AI adapters based on platform type.
     """
+
+    # 【P1 修复 - 2026-03-07】API Key 配置验证
+    # 必需的 API Key 环境变量
+    REQUIRED_API_KEYS = {
+        AIPlatformType.DOUBAO: 'DOUBAO_API_KEY',
+        AIPlatformType.QWEN: 'QWEN_API_KEY', 
+        AIPlatformType.DEEPSEEK: 'DEEPSEEK_API_KEY',
+        AIPlatformType.DEEPSEEKR1: 'DEEPSEEK_API_KEY',
+        AIPlatformType.ZHIPU: 'ZHIPU_API_KEY',
+        AIPlatformType.WENXIN: 'BAIDU_API_KEY',
+        AIPlatformType.CHATGPT: 'OPENAI_API_KEY',
+        AIPlatformType.GEMINI: 'GEMINI_API_KEY',
+    }
 
     # 名称映射引擎：在类中注入或更新映射表
     MODEL_NAME_MAP = {
@@ -204,6 +218,116 @@ class AIAdapterFactory:
                 return False
         
         return platform_type in cls._adapters
+
+    # 【P1 修复 - 2026-03-07】API Key 配置验证方法
+    @classmethod
+    def validate_api_key(cls, platform_type: Union[AIPlatformType, str]) -> Tuple[bool, str]:
+        """
+        验证单个平台的 API Key 配置
+        
+        参数:
+            platform_type: 平台类型或平台名称
+            
+        返回:
+            (is_valid, error_message): 验证结果和错误信息
+        """
+        if isinstance(platform_type, str):
+            normalized_platform_type = cls.get_normalized_model_name(platform_type)
+            try:
+                platform_type = AIPlatformType(normalized_platform_type)
+            except ValueError:
+                return False, f"未知平台类型：{platform_type}"
+        
+        # 检查平台是否已注册
+        if platform_type not in cls._adapters:
+            return False, f"平台未注册：{platform_type.value}"
+        
+        # 检查是否配置了 API Key
+        env_var = cls.REQUIRED_API_KEYS.get(platform_type)
+        if not env_var:
+            api_logger.warning(f"平台 {platform_type.value} 未配置 API Key 环境变量映射")
+            return True, "平台未配置 API Key 映射（可能使用其他方式认证）"
+        
+        api_key = os.getenv(env_var)
+        if not api_key:
+            return False, f"缺少 API Key 配置：{env_var}"
+        
+        # 验证 API Key 格式（基本检查）
+        if len(api_key.strip()) < 10:
+            return False, f"API Key 格式可疑：长度过短 ({len(api_key)} 字符)"
+        
+        return True, "API Key 配置有效"
+    
+    @classmethod
+    def validate_all_api_keys(cls) -> Dict[str, Tuple[bool, str]]:
+        """
+        验证所有已注册平台的 API Key 配置
+        
+        返回:
+            {platform_name: (is_valid, error_message)}
+        """
+        results = {}
+        
+        for platform_type in cls._adapters.keys():
+            is_valid, error_msg = cls.validate_api_key(platform_type)
+            results[platform_type.value] = (is_valid, error_msg)
+        
+        return results
+    
+    @classmethod
+    def get_api_key_health_report(cls) -> Dict[str, any]:
+        """
+        生成 API Key 配置健康检查报告
+        
+        返回:
+            {
+                'total_platforms': int,
+                'configured_count': int,
+                'missing_count': int,
+                'health_rate': float,
+                'details': Dict[str, Tuple[bool, str]]
+            }
+        """
+        details = cls.validate_all_api_keys()
+        
+        configured = sum(1 for valid, _ in details.values() if valid)
+        missing = len(details) - configured
+        
+        return {
+            'total_platforms': len(details),
+            'configured_count': configured,
+            'missing_count': missing,
+            'health_rate': configured / len(details) if details else 0,
+            'details': details
+        }
+    
+    @classmethod
+    def check_and_log_api_keys(cls) -> bool:
+        """
+        检查并记录 API Key 配置状态
+        
+        返回:
+            bool: 是否所有平台都配置了 API Key
+        """
+        report = cls.get_api_key_health_report()
+        
+        api_logger.info("=== API Key 配置健康检查 ===")
+        api_logger.info(f"平台总数：{report['total_platforms']}")
+        api_logger.info(f"已配置：{report['configured_count']}")
+        api_logger.info(f"缺失：{report['missing_count']}")
+        api_logger.info(f"健康度：{report['health_rate']:.1%}")
+        
+        for platform, (is_valid, message) in report['details'].items():
+            if is_valid:
+                api_logger.info(f"  ✅ {platform}: {message}")
+            else:
+                api_logger.error(f"  ❌ {platform}: {message}")
+        
+        all_configured = report['missing_count'] == 0
+        if not all_configured:
+            api_logger.warning("部分 AI 平台 API Key 未配置，相关功能将不可用")
+        
+        return all_configured
 
     @classmethod
     def create(cls, platform_type: Union[AIPlatformType, str], api_key: str = None, model_name: str = None, **kwargs) -> AIClient:

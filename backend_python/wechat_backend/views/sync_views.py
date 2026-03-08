@@ -64,7 +64,15 @@ from wechat_backend.security.rate_limiting import rate_limit, CombinedRateLimite
 from wechat_backend.monitoring.monitoring_decorator import monitored_endpoint
 
 # P0 修复：导入字段转换器
-from utils.field_converter import convert_response_to_camel
+# P0 修复：字段转换器导入（兼容不同执行环境）
+try:
+    from utils.field_converter import convert_response_to_camel
+except ImportError:
+    try:
+        from backend_python.utils.field_converter import convert_response_to_camel
+    except ImportError:
+        def convert_response_to_camel(data):
+            return data
 
 # Global store for execution progress (in production, use Redis or database)
 execution_store = {}

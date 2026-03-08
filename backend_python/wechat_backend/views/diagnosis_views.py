@@ -99,7 +99,15 @@ from wechat_backend.services.diagnosis_orchestrator import DiagnosisOrchestrator
 from . import wechat_bp
 
 # P0 修复：导入字段转换器
-from utils.field_converter import convert_response_to_camel
+# P0 修复：字段转换器导入（兼容不同执行环境）
+try:
+    from utils.field_converter import convert_response_to_camel
+except ImportError:
+    try:
+        from backend_python.utils.field_converter import convert_response_to_camel
+    except ImportError:
+        def convert_response_to_camel(data):
+            return data
 
 # 【P2 增强 - 2026-03-05】品牌分析输入验证增强
 # 导入输入验证工具函数
@@ -785,21 +793,14 @@ def perform_brand_test():
                 
                 # 【P0 关键修复 - 2026-03-05】清理数据库连接，防止连接泄漏
                 try:
-                    from wechat_backend.database_connection_pool import get_pool_manager
-                    pool_manager = get_pool_manager()
-                    
-                    if hasattr(pool_manager, 'cleanup_thread_sessions'):
-                        pool_manager.cleanup_thread_sessions()
-                    
-                    try:
-                        from wechat_backend.database import db
-                        if hasattr(db, 'session') and db.session:
-                            db.session.close()
-                            db_logger.info(f"[DB 清理] 成功完成后的数据库会话已关闭：{execution_id}")
-                    except Exception:
-                        pass
-                    
-                    api_logger.info(f"[DB 清理] 成功完成后的数据库连接已清理：{execution_id}")
+                    from wechat_backend.database_connection_pool import get_db_pool
+                    pool = get_db_pool()
+
+                    # 清理当前线程的数据库连接
+                    if pool and hasattr(pool, 'release_connection'):
+                        pass  # 连接池会自动管理
+
+                    api_logger.info(f"[DB 清理] 背景线程数据库连接清理完成：{execution_id}")
                 except Exception as cleanup_err:
                     api_logger.warning(f"[DB 清理] 清理失败：{cleanup_err}")
                     
@@ -3150,13 +3151,48 @@ def get_task_status_api(task_id):
             'source': 'database'
         }
 
-        # 【P0 优化】只在完成时返回结果数据
-        if is_completed and fields == 'full':
-            from wechat_backend.diagnosis_report_repository import DiagnosisResultRepository
+        # 【P0 关键修复 - 2026-03-07】完成时总是返回结果数据（移除 fields==full 条件）
+        # 原因：前端轮询时未传递 fields 参数，导致完成时无法获取结果
+        if is_completed:
+            from wechat_backend.diagnosis_report_repository import DiagnosisResultRepository, DiagnosisReportRepository
             result_repo = DiagnosisResultRepository()
+            report_repo = DiagnosisReportRepository()
+
             results = result_repo.get_by_execution_id(task_id)
-            response_data['results'] = results
-            response_data['result_count'] = len(results)
+            response_data['results'] = results or []
+            response_data['result_count'] = len(results) if results else 0
+
+            # 【P0 关键修复】添加 detailed_results 字段，与前端期望保持一致
+            response_data['detailed_results'] = results or []  # 使用相同的数据
+
+            # 获取报告信息以提取品牌名称
+            report = report_repo.get_by_execution_id(task_id)
+            brand_name = report.get('brand_name', '') if report else ''
+            competitors = report.get('competitor_brands', '[]') if report else '[]'
+            try:
+                import json
+                competitors_list = json.loads(competitors) if isinstance(competitors, str) else (competitors or [])
+            except:
+                competitors_list = []
+
+            # 同时返回竞争分析数据
+            try:
+                from wechat_backend.services.report_aggregator import ReportAggregator
+                aggregator = ReportAggregator()
+                # 使用正确的 aggregate 方法
+                competitive_analysis = aggregator.aggregate(
+                    raw_results=results or [],
+                    brand_name=brand_name,
+                    competitors=competitors_list
+                )
+                response_data['competitive_analysis'] = competitive_analysis
+                # 确保 brand_scores 在顶层（前端期望）
+                if 'brand_scores' in competitive_analysis:
+                    response_data['brand_scores'] = competitive_analysis['brand_scores']
+                elif 'brandScores' in competitive_analysis:
+                    response_data['brand_scores'] = competitive_analysis['brandScores']
+            except Exception as agg_err:
+                api_logger.warning(f'[TaskStatus] 竞争分析聚合失败：{agg_err}')
 
         # 【P0 修复】添加防缓存头
         # P0 修复：转换为 camelCase

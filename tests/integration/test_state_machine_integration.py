@@ -37,8 +37,7 @@ class TestStateMachineIntegration:
         
         # 创建状态机
         state_machine = DiagnosisStateMachine(
-            execution_id=sample_execution_id,
-            db_path=test_db_path
+            execution_id=sample_execution_id
         )
         
         # 初始化状态
@@ -65,7 +64,7 @@ class TestStateMachineIntegration:
         assert state_machine.current_state == DiagnosisState.TIMEOUT
         
         # 验证数据库状态
-        repo = DiagnosisRepository(test_db_path)
+        repo = DiagnosisRepository()
         db_record = repo.get_by_execution_id(sample_execution_id)
         assert db_record['status'] == 'timeout'
         assert db_record['should_stop_polling'] is True
@@ -82,10 +81,10 @@ class TestStateMachineIntegration:
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
         # 诊断服务更新状态
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
+        diagnosis_service = DiagnosisService()
         
         # 模拟创建任务
-        repo = DiagnosisRepository(test_db_path)
+        repo = DiagnosisRepository()
         repo.create_report(
             execution_id=sample_execution_id,
             user_id='test_user',
@@ -102,8 +101,7 @@ class TestStateMachineIntegration:
         
         # 通过状态机直接读取
         state_machine = DiagnosisStateMachine(
-            execution_id=sample_execution_id,
-            db_path=test_db_path
+            execution_id=sample_execution_id
         )
         
         assert state_machine.current_state == DiagnosisState.AI_FETCHING
@@ -125,8 +123,7 @@ class TestStateMachineIntegration:
         """测试状态机与死信队列的集成"""
         
         state_machine = DiagnosisStateMachine(
-            execution_id=sample_execution_id,
-            db_path=test_db_path
+            execution_id=sample_execution_id
         )
         
         # 模拟失败
@@ -134,7 +131,7 @@ class TestStateMachineIntegration:
             raise Exception("模拟致命错误")
         except Exception as e:
             # 添加到死信队列
-            dlq = DeadLetterQueue(test_db_path)
+            dlq = DeadLetterQueue()
             dlq.add_to_dead_letter(
                 execution_id=sample_execution_id,
                 task_type='state_machine',
@@ -161,8 +158,7 @@ class TestStateMachineIntegration:
         """测试非法状态流转处理"""
         
         state_machine = DiagnosisStateMachine(
-            execution_id=sample_execution_id,
-            db_path=test_db_path
+            execution_id=sample_execution_id
         )
         
         # 尝试非法流转（从 initializing 直接到 completed）
@@ -183,8 +179,7 @@ class TestStateMachineIntegration:
         """测试合法状态流转"""
         
         state_machine = DiagnosisStateMachine(
-            execution_id=sample_execution_id,
-            db_path=test_db_path
+            execution_id=sample_execution_id
         )
         
         # 初始化 -> AI 获取
@@ -203,7 +198,7 @@ class TestStateMachineIntegration:
         assert state_machine.current_state == DiagnosisState.COMPLETED
         
         # 验证数据库状态
-        repo = DiagnosisRepository(test_db_path)
+        repo = DiagnosisRepository()
         db_record = repo.get_by_execution_id(sample_execution_id)
         assert db_record['status'] == 'completed'
         assert db_record['should_stop_polling'] is True
@@ -216,8 +211,7 @@ class TestStateMachineIntegration:
         """测试部分成功状态流转"""
         
         state_machine = DiagnosisStateMachine(
-            execution_id=sample_execution_id,
-            db_path=test_db_path
+            execution_id=sample_execution_id
         )
         
         # 流转到 AI 获取
@@ -229,7 +223,7 @@ class TestStateMachineIntegration:
         assert state_machine.current_state == DiagnosisState.PARTIAL_SUCCESS
         
         # 验证数据库
-        repo = DiagnosisRepository(test_db_path)
+        repo = DiagnosisRepository()
         db_record = repo.get_by_execution_id(sample_execution_id)
         assert db_record['status'] == 'partial_success'
         assert db_record['should_stop_polling'] is True
@@ -242,8 +236,7 @@ class TestStateMachineIntegration:
         """测试进度更新"""
         
         state_machine = DiagnosisStateMachine(
-            execution_id=sample_execution_id,
-            db_path=test_db_path
+            execution_id=sample_execution_id
         )
         
         # 更新进度
@@ -257,7 +250,7 @@ class TestStateMachineIntegration:
         assert state_machine.progress == 100
         
         # 验证数据库进度
-        repo = DiagnosisRepository(test_db_path)
+        repo = DiagnosisRepository()
         db_record = repo.get_by_execution_id(sample_execution_id)
         assert db_record['progress'] == 100
     
@@ -269,8 +262,7 @@ class TestStateMachineIntegration:
         """测试元数据持久化"""
         
         state_machine = DiagnosisStateMachine(
-            execution_id=sample_execution_id,
-            db_path=test_db_path
+            execution_id=sample_execution_id
         )
         
         # 添加元数据
@@ -280,7 +272,7 @@ class TestStateMachineIntegration:
         assert state_machine.metadata['results_count'] == 10
         
         # 验证数据库
-        repo = DiagnosisRepository(test_db_path)
+        repo = DiagnosisRepository()
         db_record = repo.get_by_execution_id(sample_execution_id)
         metadata = db_record.get('metadata')
         if metadata:

@@ -187,7 +187,7 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
           parsed.stage = TASK_STAGES.COMPLETED;  // 改为 completed，让前端停止轮询
           parsed.is_completed = true;
           parsed.has_partial_failure = true;  // 标记有部分失败
-          
+
           // 如果有错误信息，保留
           if (!parsed.error && statusData?.error) {
             parsed.error = statusData.error;
@@ -202,11 +202,12 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
           parsed.has_low_quality_results = true;
         } else {
           // 真正的失败（进度<100% 且没有完成标志）
-          parsed.progress = 0;
+          // 【P0 修复 - 2026-03-06】进度条保持当前进度，不重置为 0
           parsed.statusText = '诊断中断';
           parsed.detailText = parsed.error || '诊断过程中遇到错误，已保存的进度不会丢失';
           parsed.stage = TASK_STAGES.FAILED;
           parsed.is_completed = false;
+          // 保留当前进度，用于显示
         }
         break;
       default:
@@ -254,8 +255,15 @@ const parseTaskStatus = (statusData, startTime = Date.now()) => {
       parsed.stage = statusData.status;
       parsed.status = statusData.status;
       parsed.is_completed = (statusData.status === 'completed');
-      parsed.progress = 100;
-      parsed.statusText = statusData.status === 'completed' ? '诊断完成！' : '诊断完成（失败）';
+      parsed.progress = statusData.progress || 100;  // 【P0 修复】保留后端返回的进度值
+      
+      // 【P0 修复 - 2026-03-06】根据 status 显示不同的文案
+      if (statusData.status === 'failed') {
+        parsed.statusText = '报告聚合异常';  // 明确的业务语义
+        parsed.detailText = '诊断执行完成，但报告生成失败';
+      } else {
+        parsed.statusText = '诊断完成！';
+      }
     } else if (parsed.stage !== 'completed' && parsed.stage !== 'failed') {
       // 如果 stage 不是终态，但 should_stop_polling=true，说明是异常情况
       console.warn('[parseTaskStatus] ⚠️ 异常：should_stop_polling=true 但 stage 不是终态，强制设置为 completed');

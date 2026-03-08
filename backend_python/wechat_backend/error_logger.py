@@ -21,7 +21,39 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, asdict
 from functools import wraps
 
-from wechat_backend.error_codes import ErrorCodeDefinition, ErrorSeverity
+from wechat_backend.error_codes import ErrorCode, get_error_message
+
+
+class ErrorSeverity:
+    """错误严重程度（兼容层）"""
+    CRITICAL = 'critical'
+    ERROR = 'error'
+    WARNING = 'warning'
+    INFO = 'info'
+
+
+def _get_severity_from_error_code(error_code) -> str:
+    """从错误码获取严重程度
+    
+    Args:
+        error_code: ErrorCode 枚举或字符串
+        
+    Returns:
+        str: 严重程度
+    """
+    # 如果是 ErrorCode 枚举
+    if hasattr(error_code, 'http_status'):
+        http_status = error_code.http_status
+        if http_status >= 500:
+            return ErrorSeverity.CRITICAL
+        elif http_status >= 400:
+            return ErrorSeverity.ERROR
+        elif http_status >= 300:
+            return ErrorSeverity.WARNING
+        else:
+            return ErrorSeverity.INFO
+    # 如果是字符串
+    return ErrorSeverity.ERROR
 
 
 @dataclass
@@ -115,7 +147,7 @@ class ErrorLogger:
     def log_error(
         self,
         error: Exception,
-        error_code,  # 可以是 ErrorCodeDefinition 或 Enum（如 DiagnosisErrorCode）
+        error_code,  # 可以是 ErrorCode 或 Enum（如 DiagnosisErrorCode）
         execution_id: Optional[str] = None,
         user_id: Optional[str] = None,
         request_params: Optional[Dict] = None,
@@ -129,7 +161,7 @@ class ErrorLogger:
 
         Args:
             error: 异常对象
-            error_code: 错误码定义（可以是 ErrorCodeDefinition 或 Enum 成员）
+            error_code: 错误码（ErrorCode 枚举或字符串）
             execution_id: 执行 ID
             user_id: 用户 ID
             request_params: 请求参数
@@ -142,7 +174,7 @@ class ErrorLogger:
             str: 追踪 ID（用于日志关联查询）
         """
         from enum import Enum
-        
+
         # 生成追踪 ID
         trace_id = self._generate_trace_id()
         request_id = self._generate_request_id()
@@ -150,15 +182,29 @@ class ErrorLogger:
         # 提取堆栈信息
         stack_info = self._extract_stack_info()
 
-        # 【修复 - 2026-03-03】支持 Enum 类型的错误码（如 DiagnosisErrorCode）
-        # 如果是 Enum，通过 .value 获取 ErrorCodeDefinition
-        error_code_def = error_code.value if isinstance(error_code, Enum) else error_code
+        # 【修复 - 2026-03-03】支持 Enum 类型的错误码
+        # 如果是 Enum，获取其值
+        if isinstance(error_code, Enum):
+            error_code_obj = error_code.value if hasattr(error_code, 'value') else error_code
+        else:
+            error_code_obj = error_code
+
+        # 获取错误码字符串和严重程度
+        if hasattr(error_code_obj, 'code'):
+            error_code_str = error_code_obj.code
+            severity = _get_severity_from_error_code(error_code_obj)
+        elif isinstance(error_code_obj, str):
+            error_code_str = error_code_obj
+            severity = ErrorSeverity.ERROR
+        else:
+            error_code_str = str(error_code_obj)
+            severity = ErrorSeverity.ERROR
 
         # 构建错误上下文
         context = ErrorContext(
-            error_code=error_code_def.code,
+            error_code=error_code_str,
             error_message=str(error),
-            severity=error_code_def.severity.value,
+            severity=severity,
             timestamp=datetime.now().isoformat(),
             execution_id=execution_id,
             user_id=user_id,
@@ -172,18 +218,18 @@ class ErrorLogger:
         )
 
         # 根据严重程度选择日志级别
-        if error_code_def.severity == ErrorSeverity.CRITICAL:
+        if severity == ErrorSeverity.CRITICAL:
             log_level = logging.CRITICAL
-        elif error_code_def.severity == ErrorSeverity.ERROR:
+        elif severity == ErrorSeverity.ERROR:
             log_level = logging.ERROR
-        elif error_code_def.severity == ErrorSeverity.WARNING:
+        elif severity == ErrorSeverity.WARNING:
             log_level = logging.WARNING
         else:
             log_level = logging.INFO
 
         # 记录结构化日志
         log_message = (
-            f"[{error_code_def.code}] {context.error_message}\n"
+            f"[{error_code_str}] {context.error_message}\n"
             f"TraceID: {trace_id} | RequestID: {request_id}"
         )
 
@@ -203,25 +249,25 @@ class ErrorLogger:
             self.logger.debug(log_message, extra={'error_context': context.to_dict()})
 
         # 对于严重错误，额外记录完整 JSON
-        if error_code_def.severity in [ErrorSeverity.CRITICAL, ErrorSeverity.ERROR]:
+        if severity in [ErrorSeverity.CRITICAL, ErrorSeverity.ERROR]:
             self.logger.debug(f"Error Context JSON: {context.to_json()}")
 
         return trace_id
-    
+
     def log_warning(
         self,
         message: str,
-        error_code: Optional[ErrorCodeDefinition] = None,
+        error_code: Optional[ErrorCode] = None,
         **kwargs
     ) -> str:
         """
         记录警告日志
-        
+
         Args:
             message: 警告消息
-            error_code: 错误码定义（可选）
+            error_code: 错误码（可选）
             **kwargs: 其他参数传递给 log_error
-            
+
         Returns:
             str: 追踪 ID
         """
@@ -277,15 +323,15 @@ def get_error_logger() -> ErrorLogger:
 
 # ==================== 装饰器 ====================
 
-def log_errors(error_code: ErrorCodeDefinition):
+def log_errors(error_code: ErrorCode):
     """
     错误日志装饰器
-    
+
     自动记录函数执行过程中的错误，并附加完整的上下文信息
-    
+
     Args:
-        error_code: 错误码定义（可以是枚举值或 ErrorCodeDefinition）
-        
+        error_code: 错误码（ErrorCode 枚举）
+
     Returns:
         装饰器函数
     """

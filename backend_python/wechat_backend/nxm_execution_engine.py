@@ -20,6 +20,8 @@ NxM 执行引擎 - 主入口
 - M001: 修复 AI 调用方法 (generate_response → send_prompt)
 - M002: 添加容错包裹 (引入 FaultTolerantExecutor)
 - M003: 实时持久化 (save_dimension_result)
+- P0-TRACE: 添加 TraceID 结构化日志追踪 (2026-03-07)
+- P0-VALIDATE: 添加字段完整性验证 (2026-03-07)
 """
 
 import time
@@ -29,6 +31,7 @@ import asyncio
 import json
 import traceback
 import pickle
+import uuid
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -259,19 +262,31 @@ def execute_nxm_test(
 ) -> Dict[str, Any]:
     """
     执行 NxM 测试（M001-M003 改造后版本）
-    
+
     改造内容:
     - M001: 使用 send_prompt 替代 generate_response
     - M002: 使用 FaultTolerantExecutor 统一包裹 AI 调用
     - M003: 实时持久化维度结果到数据库
+    - P0-TRACE: 添加 TraceID 结构化日志追踪
+    - P0-VALIDATE: 添加字段完整性验证
     """
+    
+    # 【P0-TRACE】生成 TraceID（贯穿整个请求链路）
+    trace_id = str(uuid.uuid4())[:8]
+    
+    # 【P0-TRACE】结构化日志上下文
+    log_context = {
+        'trace_id': trace_id,
+        'execution_id': execution_id,
+        'main_brand': main_brand,
+        'question_count': len(raw_questions),
+        'model_count': len(selected_models)
+    }
 
     # 创建调度器
     scheduler = create_scheduler(execution_id, execution_store)
 
     # P0 修复：客观提问模式下，请求次数 = 问题数 × AI 平台数（不包含品牌遍历）
-    # 原代码：total_tasks = (1 + len(competitor_brands or [])) * len(raw_questions) * len(selected_models)
-    # 修复后：只计算问题×模型的组合数
     total_tasks = len(raw_questions) * len(selected_models)
     scheduler.initialize_execution(total_tasks)
 
@@ -281,6 +296,17 @@ def execute_nxm_test(
 
     scheduler.start_timeout_timer(timeout_seconds, on_timeout)
 
+    # 【P0-TRACE】记录执行开始日志（结构化）
+    api_logger.info(
+        f"[NxM] 🚀 执行开始",
+        extra={
+            **log_context,
+            'event': 'nxm_execution_start',
+            'total_tasks': total_tasks,
+            'timeout_seconds': timeout_seconds
+        }
+    )
+
     # 在后台线程中执行
     def run_execution():
         # 【修复 P0-4】在 try 块外先导入 execution_store，避免作用域问题
@@ -288,27 +314,34 @@ def execute_nxm_test(
             from wechat_backend.views.diagnosis_views import execution_store
         except ImportError:
             execution_store = {}
-            api_logger.error(f"[NxM] 无法导入 execution_store，使用空字典")
+            api_logger.error(
+                f"[NxM] 无法导入 execution_store，使用空字典",
+                extra={**log_context, 'event': 'execution_store_import_failed'}
+            )
 
         try:
             results = []
             completed = 0
 
             # P0 修复：只遍历问题和模型，不遍历品牌（获取客观回答）
-            # 请求次数 = 问题数 × AI 平台数
-            api_logger.info(f"[NxM] 执行开始 - execution_id={execution_id}, 问题数={len(raw_questions)}, AI 平台数={len(selected_models)}")
-            
-            # 【P0 修复 - 2026-03-02】添加执行进度日志
-            total_iterations = len(raw_questions) * len(selected_models)
-            api_logger.info(f"[NxM] 预计总迭代次数：{total_iterations}")
-            
+            api_logger.info(
+                f"[NxM] 📋 任务初始化完成",
+                extra={
+                    **log_context,
+                    'event': 'nxm_task_initialized',
+                    'total_tasks': total_tasks
+                }
+            )
+
             # 【P0 颠覆性修复】立即更新 stage 为 ai_fetching，避免前端一直看到 init
-            # 借鉴 Google Cloud Run：任务启动后立即报告"运行中"状态
             try:
                 scheduler.update_progress(0, total_tasks, 'ai_fetching')
-                api_logger.info(f"[NxM] ✅ 状态已更新为 ai_fetching")
+                api_logger.info(
+                    f"[NxM] ✅ 状态已更新为 ai_fetching",
+                    extra={**log_context, 'event': 'stage_updated', 'stage': 'ai_fetching'}
+                )
 
-                # 【P0 增强 - 2026-03-02】同时写入数据库，确保状态立即持久化
+                # 【P0 增强】同时写入数据库，确保状态立即持久化
                 from wechat_backend.repositories.task_status_repository import save_task_status
                 save_task_status(
                     task_id=execution_id,
@@ -319,21 +352,51 @@ def execute_nxm_test(
                     total_count=total_tasks,
                     is_completed=False
                 )
-                api_logger.info(f"[NxM] ✅ 数据库状态已同步：execution_id={execution_id}, stage=ai_fetching")
+                api_logger.info(
+                    f"[NxM] ✅ 数据库状态已同步",
+                    extra={**log_context, 'event': 'database_state_synced', 'stage': 'ai_fetching'}
+                )
             except Exception as e:
-                api_logger.warning(f"[NxM] ⚠️ 初始状态更新失败：{e}")
+                api_logger.warning(
+                    f"[NxM] ⚠️ 初始状态更新失败：{e}",
+                    extra={**log_context, 'event': 'initial_state_update_failed', 'error': str(e)}
+                )
 
             # 外层循环：遍历问题
             for q_idx, question in enumerate(raw_questions):
-                # 【P0 修复 - 2026-03-02】添加问题进度日志
-                api_logger.info(f"[NxM] 开始处理问题 {q_idx + 1}/{len(raw_questions)}: {question[:50]}...")
+                # 【P0-TRACE】结构化日志
+                question_context = {
+                    **log_context,
+                    'question_index': q_idx + 1,
+                    'question_preview': question[:50] + '...' if len(question) > 50 else question
+                }
+                
+                api_logger.info(
+                    f"[NxM] ❓ 开始处理问题 {q_idx + 1}/{len(raw_questions)}",
+                    extra={
+                        **question_context,
+                        'event': 'question_start'
+                    }
+                )
 
                 # 内层循环：遍历模型
                 for model_info in selected_models:
                     model_name = model_info.get('name', '')
 
-                    # 【P0 修复 - 2026-03-02】添加模型进度日志
-                    api_logger.info(f"[NxM] 开始处理模型 {model_name}, Q{q_idx + 1}")
+                    # 【P0-TRACE】结构化日志
+                    task_context = {
+                        **question_context,
+                        'model_name': model_name,
+                        'task_id': f"Q{q_idx + 1}×{model_name}"
+                    }
+                    
+                    api_logger.debug(
+                        f"[NxM] 🔧 开始任务 Q{q_idx + 1}×{model_name}",
+                        extra={
+                            **task_context,
+                            'event': 'task_start'
+                        }
+                    )
 
                     # 检查模型是否可用（熔断器）
                     if not scheduler.is_model_available(model_name):
@@ -418,7 +481,9 @@ def execute_nxm_test(
                                 # P0-4 修复：直接使用字典收集结果
                                 # P3 修复：确保所有字段都是可序列化的
                                 # 【P0 关键修复】response 改为字典格式，兼容存储层要求
+                                # 【P0 关键修复 - 2026-03-07】添加 brand 和 tokens_used 字段
                                 result = {
+                                    'brand': main_brand,  # 【P0 修复】添加品牌字段
                                     'question': question,
                                     'model': model_name,
                                     'response': {  # 字典格式：{content, latency, metadata}
@@ -429,14 +494,20 @@ def execute_nxm_test(
                                     'geo_data': geo_data,
                                     'error': str(parse_error or geo_data.get('_error', '解析失败')),
                                     'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'parse_error',
-                                    'is_objective': True  # 标记为客观回答
+                                    'is_objective': True,  # 标记为客观回答
+                                    'tokens_used': ai_result.tokens_used if hasattr(ai_result, 'tokens_used') and ai_result.tokens_used > 0 else 0,  # 【P1 修复】添加 tokens_used
+                                    'prompt_tokens': (ai_result.metadata or {}).get('prompt_tokens', 0) if hasattr(ai_result, 'metadata') else 0,  # 【P1 修复】
+                                    'completion_tokens': (ai_result.metadata or {}).get('completion_tokens', 0) if hasattr(ai_result, 'metadata') else 0,  # 【P1 修复】
+                                    'cached_tokens': (ai_result.metadata or {}).get('cached_tokens', 0) if hasattr(ai_result, 'metadata') else 0  # 【P1 修复】
                                 }
                                 results.append(result)
                             else:
                                 # 解析成功，收集结果
                                 # P3 修复：确保所有字段都是可序列化的
                                 # 【P0 关键修复】response 改为字典格式，兼容存储层要求
+                                # 【P0 关键修复 - 2026-03-07】添加 brand 和 tokens_used 字段
                                 result = {
+                                    'brand': main_brand,  # 【P0 修复】添加品牌字段
                                     'question': question,
                                     'model': model_name,
                                     'response': {  # 字典格式：{content, latency, metadata}
@@ -447,7 +518,11 @@ def execute_nxm_test(
                                     'geo_data': geo_data,
                                     'error': None,
                                     'error_type': None,
-                                    'is_objective': True  # 标记为客观回答
+                                    'is_objective': True,  # 标记为客观回答
+                                    'tokens_used': ai_result.tokens_used if hasattr(ai_result, 'tokens_used') and ai_result.tokens_used > 0 else 0,  # 【P1 修复】添加 tokens_used
+                                    'prompt_tokens': (ai_result.metadata or {}).get('prompt_tokens', 0) if hasattr(ai_result, 'metadata') else 0,  # 【P1 修复】
+                                    'completion_tokens': (ai_result.metadata or {}).get('completion_tokens', 0) if hasattr(ai_result, 'metadata') else 0,  # 【P1 修复】
+                                    'cached_tokens': (ai_result.metadata or {}).get('cached_tokens', 0) if hasattr(ai_result, 'metadata') else 0  # 【P1 修复】
                                 }
                                 results.append(result)
                         else:
@@ -458,7 +533,9 @@ def execute_nxm_test(
                             # P0-4 修复：收集失败结果（保证报告完整）
                             # P3 修复：确保所有字段都是可序列化的
                             # 【P0 关键修复】response 改为字典格式，兼容存储层要求
+                            # 【P0 关键修复 - 2026-03-07】添加 brand 和 tokens_used 字段
                             result = {
+                                'brand': main_brand,  # 【P0 修复】添加品牌字段
                                 'question': question,
                                 'model': model_name,
                                 'response': {  # 字典格式：{content, latency, metadata}
@@ -469,10 +546,55 @@ def execute_nxm_test(
                                 'geo_data': None,
                                 'error': str(ai_result.error_message),
                                 'error_type': str(ai_result.error_type.value) if hasattr(ai_result, 'error_type') and ai_result.error_type else 'unknown',
-                                'is_objective': True  # 标记为客观回答
+                                'is_objective': True,  # 标记为客观回答
+                                'tokens_used': 0,  # 【P1 修复】失败时无 token 消耗
+                                'prompt_tokens': 0,
+                                'completion_tokens': 0,
+                                'cached_tokens': 0
                             }
                             results.append(result)
-                        
+
+                        # 【P0-VALIDATE】字段完整性验证（关键！）
+                        try:
+                            from wechat_backend.validators import ResultValidator
+                            validator = ResultValidator(strict_mode=False)  # 非严格模式，仅记录日志
+                            is_valid, errors, warnings = validator.validate(result, execution_id)
+                            
+                            # 记录验证结果（结构化日志）
+                            validation_context = {
+                                **task_context,
+                                'event': 'result_validated',
+                                'is_valid': is_valid,
+                                'error_count': len(errors),
+                                'warning_count': len(warnings),
+                                'brand': result.get('brand', 'MISSING'),
+                                'tokens_used': result.get('tokens_used', 'MISSING')
+                            }
+                            
+                            if not is_valid:
+                                api_logger.error(
+                                    f"[NxM] ❌ 结果验证失败：{errors[0] if errors else '未知错误'}",
+                                    extra={**validation_context, 'errors': errors}
+                                )
+                            elif warnings:
+                                api_logger.warning(
+                                    f"[NxM] ⚠️ 结果验证通过但有警告：{warnings[0]}",
+                                    extra={**validation_context, 'warnings': warnings}
+                                )
+                            else:
+                                api_logger.debug(
+                                    f"[NxM] ✅ 结果验证通过",
+                                    extra={
+                                        **validation_context,
+                                        'message': f"brand={result.get('brand')}, tokens_used={result.get('tokens_used')}"
+                                    }
+                                )
+                        except Exception as validate_err:
+                            api_logger.error(
+                                f"[NxM] ❌ 字段验证异常：{validate_err}",
+                                extra={**task_context, 'event': 'result_validation_failed'}
+                            )
+
                         # M003 改造：实时持久化维度结果
                         # 原有问题：结果仅在内存中，服务重启后丢失
                         # 改造后：每个维度结果立即保存到数据库，支持进度查询和历史追溯
@@ -669,6 +791,21 @@ def execute_nxm_test(
                     # 降级：返回空聚合结果
                     aggregated = []
 
+                # 【P0-TRACE】记录执行完成汇总日志（结构化）
+                api_logger.info(
+                    f"[NxM] 🎉 执行完成",
+                    extra={
+                        **log_context,
+                        'event': 'nxm_execution_completed',
+                        'total_tasks': total_tasks,
+                        'completed_tasks': len(deduplicated),
+                        'success_rate': f"{len(deduplicated) / total_tasks:.2%}" if total_tasks > 0 else 'N/A',
+                        'quality_score': quality_score.get('overall_score', 0) if quality_score else 0,
+                        'has_brand_analysis': brand_analysis is not None,
+                        'trace_id': trace_id
+                    }
+                )
+
                 # P3 修复：保存测试汇总记录到 test_records 表
                 # 这是历史记录功能的数据源
                 try:
@@ -761,17 +898,59 @@ def execute_nxm_test(
                 api_logger.error(f"[NxM] 执行完全失败：{execution_id}, 无有效结果")
                 scheduler.fail_execution("未获取任何有效结果")
 
-                # 返回失败结果
+                # 【P0 修复 - 2026-03-07】即使失败也返回执行元数据，让用户看到发生了什么
+                # 获取执行日志（如果调度器支持）
+                execution_log = []
+                if hasattr(scheduler, 'get_execution_log'):
+                    execution_log = scheduler.get_execution_log()
+                elif hasattr(scheduler, 'task_results'):
+                    # 从任务结果构建日志
+                    for task_id, task_result in getattr(scheduler, 'task_results', {}).items():
+                        execution_log.append({
+                            'task_id': task_id,
+                            'status': 'failed',
+                            'error': task_result.get('error', '未知错误') if isinstance(task_result, dict) else str(task_result),
+                            'timestamp': datetime.now().isoformat()
+                        })
+
+                # 返回失败结果（但包含元数据）
                 return {
                     'success': False,
                     'execution_id': execution_id,
+                    'status': 'failed',  # 明确状态
                     'error': '所有 AI 调用均失败，未获取任何有效结果',
+                    'error_details': {  # 新增：详细错误信息
+                        'type': 'all_ai_calls_failed',
+                        'message': '所有 AI 调用均失败，未获取任何有效结果',
+                        'suggestion': '请检查 AI 平台配置（API Key、模型名称）或网络设置，然后重新运行诊断',
+                        'possible_causes': [
+                            'AI 平台 API Key 无效或已过期',
+                            'AI 平台服务不可用',
+                            '网络连接异常',
+                            '所有模型的配额均已用尽'
+                        ]
+                    },
                     'formula': f"{len(raw_questions)} 问题 × {len(selected_models)} 模型 = {total_tasks} 次请求",
                     'total_tasks': total_tasks,
                     'completed_tasks': 0,
+                    'completion_rate': 0,
                     'results': [],
                     'aggregated': [],
-                    'quality_score': None
+                    'quality_score': None,
+                    # 【P0 修复】返回执行元数据，让用户看到配置和日志
+                    'execution_metadata': {
+                        'selected_models': selected_models,  # 使用的 AI 模型
+                        'custom_questions': raw_questions,   # 诊断问题
+                        'main_brand': main_brand,            # 主品牌
+                        'competitor_brands': competitor_brands if 'competitor_brands' in locals() else [],
+                        'execution_log': execution_log,      # 执行日志
+                        'failure_reason': 'all_ai_calls_failed',
+                        'timestamp': datetime.now().isoformat()
+                    },
+                    # 兼容性字段
+                    'selected_models': selected_models,
+                    'custom_questions': raw_questions,
+                    'brand_name': main_brand
                 }
 
         except Exception as e:

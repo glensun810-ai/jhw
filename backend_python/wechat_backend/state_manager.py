@@ -27,8 +27,19 @@ from dataclasses import dataclass, asdict
 from wechat_backend.logging_config import api_logger, db_logger
 from wechat_backend.diagnosis_report_repository import save_diagnosis_report, DiagnosisReportRepository
 
-# P0 修复：导入字段转换器
-from utils.field_converter import convert_response_to_camel
+# P0 修复：导入字段转换器（使用相对导入）
+try:
+    from utils.field_converter import convert_response_to_camel
+except ImportError:
+    # 如果在 wechat_backend 包内，尝试相对导入
+    try:
+        from ..utils.field_converter import convert_response_to_camel
+    except ImportError:
+        # 如果都失败，使用备用方案
+        api_logger.warning("field_converter 导入失败，使用备用转换函数")
+        def convert_response_to_camel(data):
+            """备用转换函数"""
+            return data
 
 
 class StateChangeType(Enum):
@@ -85,15 +96,19 @@ class DiagnosisStateManager:
         # 【阶段二新增】状态快照（用于回滚）
         self.state_snapshots: Dict[str, Dict[str, Any]] = {}
 
-        # 【P0 关键修复 - 2026-03-05】优化清理配置，防止内存泄漏
-        # 修复前：30 分钟清理一次，完成后保留 30 分钟 -> 内存积累严重
-        # 修复后：5 分钟清理一次，完成后保留 10 分钟 -> 内存稳定
-        self.cleanup_interval_seconds = 300  # 5 分钟清理一次（从 1800 秒降低）
-        self.completed_state_ttl_seconds = 600  # 完成后保留 10 分钟（从 1800 秒降低）
+        # 【P0 关键修复 - 2026-03-08】优化清理配置，防止内存泄漏
+        # 修复前：5 分钟清理一次，完成后保留 10 分钟 -> 内存积累仍存在
+        # 修复后：3 分钟清理一次，完成后保留 5 分钟 -> 内存更稳定
+        # 配置依据：诊断任务平均耗时 30-60 秒，前端轮询间隔 3 秒，5 分钟 TTL 足够
+
+        self.cleanup_interval_seconds = 180  # 3 分钟清理一次（从 300 秒降低）
+        self.completed_state_ttl_seconds = 300  # 完成后保留 5 分钟（从 600 秒降低）
         self.last_cleanup_time = datetime.now()
-        
-        # 【P0 新增】内存限制和监控
-        self.max_memory_items = 1000  # 最大内存项目数，超过时触发紧急清理
+
+        # 【P0 优化 - 2026-03-08】降低内存限制，防止大对象占用
+        # 修复前：1000 项 -> 可能占用数 GB 内存（假设每项 1-5MB）
+        # 修复后：500 项 -> 最大占用减半，触发紧急清理更频繁
+        self.max_memory_items = 500  # 最大内存项目数（从 1000 降低）
         self.cleanup_count = 0  # 累计清理次数
         self.total_cleaned_count = 0  # 累计清理项目数
         self.emergency_cleanup_count = 0  # 紧急清理次数
@@ -196,57 +211,62 @@ class DiagnosisStateManager:
 
         参数：
             record: 状态变更记录
+
+        【P0 紧急修复 - 2026-03-06】修复连接泄漏：使用上下文管理器确保连接归还
         """
         try:
             from wechat_backend.database_connection_pool import get_db_pool
-            
-            conn = get_db_pool().get_connection()
-            cursor = conn.cursor()
-            
-            # 创建状态变更历史表（如果不存在）
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS diagnosis_state_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    execution_id TEXT NOT NULL,
-                    change_type TEXT NOT NULL,
-                    old_status TEXT,
-                    old_stage TEXT,
-                    old_progress INTEGER,
-                    new_status TEXT,
-                    new_stage TEXT,
-                    new_progress INTEGER,
-                    timestamp TEXT NOT NULL,
-                    user_id TEXT NOT NULL,
-                    reason TEXT,
-                    error_message TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # 插入记录
-            cursor.execute('''
-                INSERT INTO diagnosis_state_history 
-                (execution_id, change_type, old_status, old_stage, old_progress,
-                 new_status, new_stage, new_progress, timestamp, user_id, reason, error_message)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                record.execution_id,
-                record.change_type,
-                record.old_status,
-                record.old_stage,
-                record.old_progress,
-                record.new_status,
-                record.new_stage,
-                record.new_progress,
-                record.timestamp,
-                record.user_id,
-                record.reason,
-                record.error_message
-            ))
-            
-            conn.commit()
-            db_logger.debug(f"[StateManager] 状态变更已持久化：{record.execution_id}")
-            
+            from wechat_backend.diagnosis_report_repository import DiagnosisReportRepository
+
+            # 【P0 修复】使用上下文管理器，确保连接归还
+            repo = DiagnosisReportRepository()
+            with repo.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # 创建状态变更历史表（如果不存在）
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS diagnosis_state_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        execution_id TEXT NOT NULL,
+                        change_type TEXT NOT NULL,
+                        old_status TEXT,
+                        old_stage TEXT,
+                        old_progress INTEGER,
+                        new_status TEXT,
+                        new_stage TEXT,
+                        new_progress INTEGER,
+                        timestamp TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        reason TEXT,
+                        error_message TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+
+                # 插入记录
+                cursor.execute('''
+                    INSERT INTO diagnosis_state_history
+                    (execution_id, change_type, old_status, old_stage, old_progress,
+                     new_status, new_stage, new_progress, timestamp, user_id, reason, error_message)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    record.execution_id,
+                    record.change_type,
+                    record.old_status,
+                    record.old_stage,
+                    record.old_progress,
+                    record.new_status,
+                    record.new_stage,
+                    record.new_progress,
+                    record.timestamp,
+                    record.user_id,
+                    record.reason,
+                    record.error_message
+                ))
+
+                conn.commit()
+                db_logger.debug(f"[StateManager] 状态变更已持久化：{record.execution_id}")
+
         except Exception as e:
             # 数据库失败不影响主流程，只记录日志
             db_logger.warning(f"[StateManager] 持久化状态变更失败：{e}")

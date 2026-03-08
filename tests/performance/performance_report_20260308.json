@@ -1,0 +1,108 @@
+{
+  "test_date": "2026-03-08T09:12:34.483648",
+  "total_tests": 4,
+  "passed_tests": 4,
+  "failed_tests": 0,
+  "total_duration_ms": 975.55,
+  "results": [
+    {
+      "test_name": "并发诊断能力测试",
+      "success": true,
+      "duration_ms": 241.78695678710938,
+      "metrics": {
+        "concurrent_tasks": 10,
+        "successful_tasks": 10,
+        "failed_tasks": 0,
+        "avg_task_duration_ms": 196.53799533843994,
+        "max_task_duration_ms": 241.4860725402832,
+        "min_task_duration_ms": 151.15118026733398,
+        "tasks_per_second": 41.35872394806178
+      },
+      "error": null
+    },
+    {
+      "test_name": "数据库连接池稳定性测试",
+      "success": true,
+      "duration_ms": 234.27104949951172,
+      "metrics": {
+        "max_connections": 20,
+        "total_requests": 100,
+        "successful_requests": 100,
+        "timeout_count": 0,
+        "avg_connection_time_ms": 46.034748554229736,
+        "connection_reuse_rate": 80.0,
+        "leak_detected": false,
+        "final_active_connections": 0,
+        "final_available_connections": 20
+      },
+      "error": null
+    },
+    {
+      "test_name": "内存使用稳定性测试",
+      "success": true,
+      "duration_ms": 446.22802734375,
+      "metrics": {
+        "test_duration_ms": 446.22802734375,
+        "initial_memory_kb": 0.0,
+        "peak_memory_kb": 21.73,
+        "final_memory_kb": 17.1,
+        "memory_growth_kb": 17.1,
+        "memory_growth_percent": 0,
+        "gc_collections": 0,
+        "objects_allocated": 2000,
+        "memory_stable": true
+      },
+      "error": null
+    },
+    {
+      "test_name": "API 响应时间测试",
+      "success": true,
+      "duration_ms": 53.26676368713379,
+      "metrics": {
+        "total_requests": 50,
+        "successful_requests": 50,
+        "avg_response_time_ms": 44.4,
+        "min_response_time_ms": 37.0,
+        "max_response_time_ms": 52.77,
+        "p50_response_time_ms": 44.47,
+        "p95_response_time_ms": 52.73,
+        "p99_response_time_ms": 52.77,
+        "requests_per_second": 938.67,
+        "response_time_stable": true
+      },
+      "error": null
+    }
+  ],
+  "summary": {
+    "test_date": "2026-03-08T09:12:34.483648",
+    "end_date": "2026-03-08T09:12:35.459818",
+    "total_tests": 4,
+    "passed_tests": 4,
+    "failed_tests": 0,
+    "pass_rate": "100.0%",
+    "total_duration_ms": 975.55,
+    "total_duration_seconds": 0.98,
+    "backend_available": true,
+    "concurrent_capacity": {
+      "tasks": 10,
+      "success_rate": "100.0%",
+      "tasks_per_second": 41.36
+    },
+    "connection_pool": {
+      "leak_detected": false,
+      "reuse_rate": "80.0%",
+      "avg_connection_time_ms": 46.03
+    },
+    "memory": {
+      "stable": true,
+      "growth_percent": "0%",
+      "peak_memory_kb": 21.73
+    },
+    "api_response": {
+      "avg_ms": 44.4,
+      "p95_ms": 52.73,
+      "p99_ms": 52.77,
+      "requests_per_second": 938.67
+    }
+  }
+}

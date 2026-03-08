@@ -31,8 +31,8 @@ class TestDataConsistency:
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         from wechat_backend.v2.repositories.diagnosis_repository import DiagnosisRepository
         
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
-        repo = DiagnosisRepository(test_db_path)
+        diagnosis_service = DiagnosisService()
+        repo = DiagnosisRepository()
         
         exec_id = setup_completed_diagnosis['execution_id']
         
@@ -68,8 +68,8 @@ class TestDataConsistency:
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         from wechat_backend.v2.repositories.diagnosis_result_repository import DiagnosisResultRepository
         
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
-        result_repo = DiagnosisResultRepository(test_db_path)
+        diagnosis_service = DiagnosisService()
+        result_repo = DiagnosisResultRepository()
         
         exec_id = setup_completed_diagnosis['execution_id']
         
@@ -109,10 +109,7 @@ class TestDataConsistency:
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         from wechat_backend.v2.services.report_stub_service import ReportStubService
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=flaky_ai_adapter
-        )
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断（部分会失败）
         await diagnosis_service.start_diagnosis(
@@ -151,9 +148,9 @@ class TestDataConsistency:
         exec_id = setup_completed_diagnosis['execution_id']
         
         # 获取各服务数据
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
-        log_repo = APICallLogRepository(test_db_path)
-        result_repo = DiagnosisResultRepository(test_db_path)
+        diagnosis_service = DiagnosisService()
+        log_repo = APICallLogRepository()
+        result_repo = DiagnosisResultRepository()
         
         report = await diagnosis_service.get_report(exec_id)
         logs = log_repo.get_by_execution_id(exec_id)
@@ -176,11 +173,8 @@ class TestDataConsistency:
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         from wechat_backend.v2.repositories.diagnosis_repository import DiagnosisRepository
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=mock_ai_adapter
-        )
-        repo = DiagnosisRepository(test_db_path)
+        diagnosis_service = DiagnosisService()
+        repo = DiagnosisRepository()
         
         # 发起诊断
         await diagnosis_service.start_diagnosis(
@@ -221,7 +215,7 @@ class TestDataConsistency:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
+        diagnosis_service = DiagnosisService()
         exec_id = setup_completed_diagnosis['execution_id']
         
         # 获取报告

@@ -187,6 +187,61 @@ class DiagnosisTransaction:
 
     # ========== 事务操作方法 ==========
 
+    # 【P1 修复 - 2026-03-07】数据完整性验证方法
+    def _validate_results_batch(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        验证结果数据完整性
+        
+        参数:
+            results: 结果列表
+            
+        返回:
+            验证通过的结果列表
+            
+        【P1 修复 - 2026-03-07】确保 brand 字段存在且不为空
+        """
+        REQUIRED_FIELDS = ['brand', 'question', 'model', 'response']
+        validated_results = []
+        
+        for idx, result in enumerate(results):
+            # 检查必要字段
+            missing_fields = []
+            for field in REQUIRED_FIELDS:
+                if field not in result or result[field] is None:
+                    missing_fields.append(field)
+            
+            # 检查 brand 字段是否为空字符串
+            if 'brand' in result and result['brand'] == '':
+                missing_fields.append('brand(empty)')
+            
+            if missing_fields:
+                db_logger.warning(
+                    f"[Transaction] ⚠️ 结果数据缺失字段：execution_id={self.execution_id}, "
+                    f"index={idx}, brand={result.get('brand', 'N/A')}, "
+                    f"缺失字段={missing_fields}"
+                )
+                # 跳过缺失必要字段的结果
+                continue
+            
+            # 验证通过，添加到结果列表
+            validated_results.append(result)
+        
+        # 记录验证结果
+        total = len(results)
+        valid = len(validated_results)
+        if valid < total:
+            db_logger.warning(
+                f"[Transaction] ⚠️ 数据完整性验证：{self.execution_id}, "
+                f"总数={total}, 有效={valid}, 无效={total - valid}"
+            )
+        else:
+            db_logger.info(
+                f"[Transaction] ✅ 数据完整性验证通过：{self.execution_id}, "
+                f"总数={total}"
+            )
+        
+        return validated_results
+
     def create_report(
         self,
         user_id: str,
@@ -298,6 +353,7 @@ class DiagnosisTransaction:
         批量添加诊断结果（事务操作）
 
         【P0 修复 - 2026-03-05】支持分批提交，减少连接持有时间
+        【P1 修复 - 2026-03-07】添加数据完整性验证，确保 brand 等字段存在
 
         参数:
             report_id: 报告 ID
@@ -309,12 +365,15 @@ class DiagnosisTransaction:
         """
         self._init_dependencies()
 
+        # 【P1 修复 - 2026-03-07】数据完整性验证
+        validated_results = self._validate_results_batch(results)
+
         # 【P0 修复】分批执行
         all_result_ids = []
-        total_batches = (len(results) + batch_size - 1) // batch_size if results else 0
+        total_batches = (len(validated_results) + batch_size - 1) // batch_size if validated_results else 0
 
-        for i in range(0, len(results), batch_size):
-            batch = results[i:i + batch_size]
+        for i in range(0, len(validated_results), batch_size):
+            batch = validated_results[i:i + batch_size]
             batch_num = (i // batch_size) + 1
 
             # 执行批量添加（每批独立提交）

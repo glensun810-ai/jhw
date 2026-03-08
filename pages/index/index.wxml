@@ -205,10 +205,12 @@
       </view>
     </view>
 
-    <!-- 主操作按钮 - Step 6: 完全使用 appState -->
+<!-- 主操作按钮 - 【McKinsey PM 优化 - 2026-03-07】极简主义设计 -->
+    <!-- 核心理念：单一价值主张，流畅体验，减少认知负荷 -->
     <view class="main-action-section">
-      <!-- 状态 2: 诊断按钮（完全使用 appState） -->
-      <button class="scan-button {{hasLastReport ? 'hidden' : ''}}"
+      <!-- 诊断按钮：根据状态动态显示文本 -->
+      <!-- 状态流转：开始诊断 → 诊断中... → 重新诊断 -->
+      <button class="scan-button"
               bindtap="startBrandTest"
               disabled="{{appState === 'testing'}}">
         <view class="button-content">
@@ -218,36 +220,21 @@
               诊断中... {{testProgress}}%
             </block>
             <block wx:elif="{{appState === 'completed'}}">
-              重新诊断
-            </block>
-            <block wx:elif="{{appState === 'error'}}">
-              AI品牌战略诊断
+              🔄 重新诊断
             </block>
             <block wx:else>
-              AI品牌战略诊断
+              🚀 开始诊断
             </block>
           </text>
         </view>
       </button>
 
-      <!-- 状态 3: 诊断完成（当次）- 完全使用 appState -->
-      <view class="completed-actions {{appState === 'completed' && !hasLatestDiagnosis ? '' : 'hidden'}}">
-        <view class="completed-badge">
-          <text class="badge-icon">✅</text>
-          <text class="badge-text">诊断已完成</text>
-          <text class="badge-time" wx:if="{{completedTime}}">{{completedTime}}</text>
-        </view>
-
-        <view class="completed-buttons">
-          <button class="btn-primary-view" bindtap="viewReport">
-            <text class="btn-icon">📊</text>
-            <text class="btn-text">查看本次报告</text>
-          </button>
-
-          <button class="btn-secondary-retry" bindtap="retryDiagnosis">
-            <text class="btn-icon">🔄</text>
-            <text class="btn-text">重新诊断</text>
-          </button>
+      <!-- 诊断完成反馈提示：视觉反馈 + 自动跳转引导 -->
+      <!-- 行为：显示 0.5 秒后自动跳转到报告页，无需用户手动操作 -->
+      <view class="completion-toast {{appState === 'completed' ? 'visible' : 'hidden'}}">
+        <view class="toast-content">
+          <text class="toast-icon">✅</text>
+          <text class="toast-text">诊断完成，正在加载报告...</text>
         </view>
       </view>
     </view>
@@ -264,27 +251,6 @@
       wx:if="{{appState === 'testing' || appState === 'completed' || reportData}}">
     </analysis-card>
 
-    <!-- Zone B: 维度雷达 (The Analyst View) -->
-    <!-- 新增：综合分析图表组件 -->
-    <!-- Step 6: 使用 appState 控制 loading -->
-    <analysis-charts
-      radar-data="{{scoreData}}"
-      trend-data="{{trendChartData}}"
-      loading="{{appState === 'testing'}}"
-      wx:if="{{reportData}}">
-    </analysis-charts>
-
-
-
-    <!-- Debug 区域：显示后端返回的原始 JSON -->
-    <view class="debug-section" wx:if="{{debugJson && isTesting}}">
-      <view class="debug-header">
-        <text class="debug-title">Debug 信息</text>
-      </view>
-      <view class="debug-content">
-        <text class="debug-json">{{debugJson}}</text>
-      </view>
-    </view>
 
     <!-- 配置管理入口 -->
     <view class="config-manager-link-section" wx:if="{{!isTesting}}">

@@ -77,7 +77,7 @@ class AnalysisTask:
     completed_at: Optional[datetime] = None
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
-    timeout_seconds: int = 180  # 【P0 修复 - 2026-03-05】默认 3 分钟超时，与 submit_analysis_task 默认值一致
+    timeout_seconds: int = 300  # 【P0 修复 - 2026-03-07】增加到 5 分钟超时，避免品牌分析超时失败
 
 
 class BackgroundServiceManager:
@@ -87,7 +87,10 @@ class BackgroundServiceManager:
     管理所有后台清理任务和分析任务，避免资源竞争和数据库锁定问题
     """
 
-    def __init__(self, max_workers: int = 4, max_queue_size: int = 100):
+    def __init__(self, max_workers: int = 12, max_queue_size: int = 200):
+        # 【P0 修复 - 2026-03-07】增加线程池和队列大小，提升并发处理能力
+        # max_workers: 从 4 增加到 12，提升并发分析任务处理能力
+        # max_queue_size: 从 100 增加到 200，减少队列满拒绝
         self._tasks: Dict[str, ScheduledTask] = {}
         self._analysis_tasks: Dict[str, AnalysisTask] = {}  # 分析任务队列
         self._status = ServiceStatus.STOPPED
@@ -95,11 +98,9 @@ class BackgroundServiceManager:
         self._stop_event = threading.Event()
         self._lock = threading.RLock()
 
-        # 【P0 修复 - 2026-03-05】线程池限制
-        # max_workers: 最大工作线程数（默认 4，避免过多并发写入数据库）
-        # max_queue_size: 最大队列长度（默认 100，防止内存耗尽）
-        self.max_workers = max_workers
-        self.max_queue_size = max_queue_size
+        # 【P0 修复 - 2026-03-07】线程池限制
+        self.max_workers = max_workers  # 12 个工作线程
+        self.max_queue_size = max_queue_size  # 200 队列大小
 
         # 线程池用于执行分析任务
         # 【P0 修复 - 2026-03-05】Python 3.14 兼容性修复
@@ -372,23 +373,24 @@ class BackgroundServiceManager:
         execution_id: str,
         task_type: str,
         payload: Dict[str, Any],
-        timeout_seconds: int = 180,
+        timeout_seconds: int = 300,  # 【P0 修复 - 2026-03-07】增加到 5 分钟超时
         priority: int = 5  # 【P0 新增】优先级 1-10，数字越小优先级越高
     ) -> str:
         """
         提交分析任务到后台队列（P0 增强版 - 修复队列溢出）
 
-        【P0 关键修复 - 2026-03-05】
+        【P0 关键修复 - 2026-03-07】
         1. 队列满时三级降级策略
         2. 支持任务优先级（1-10）
         3. 自动清理旧任务腾空间
         4. 高优先级任务同步执行
+        5. 超时时间增加到 300 秒（5 分钟），避免品牌分析超时
 
         Args:
             execution_id: 执行 ID
             task_type: 任务类型 (brand_analysis/competitive_analysis/statistics)
             payload: 任务参数
-            timeout_seconds: 任务超时时间（秒），默认 180 秒（3 分钟）
+            timeout_seconds: 任务超时时间（秒），默认 300 秒（5 分钟）
             priority: 任务优先级（1-10，数字越小优先级越高，默认 5）
 
         Returns:
@@ -491,11 +493,14 @@ class BackgroundServiceManager:
             self._analysis_tasks[task_id] = task_record
             self._queue_current_size = len(self._analysis_tasks)
 
+        # 提交到线程池执行
         future = self._executor.submit(self._execute_analysis_task, task_id)
 
         api_logger.info(
-            f"[BackgroundService] 提交分析任务：{task_id}, "
-            f"type={task_type}, priority={priority}, 队列大小={self._queue_current_size}/{self.max_queue_size}"
+            f"[BackgroundService] ✅ 分析任务已提交：{task_id}, "
+            f"type={task_type}, priority={priority}, "
+            f"队列大小={self._queue_current_size}/{self.max_queue_size}, "
+            f"executor=ThreadPoolExecutor"
         )
 
         return task_id
@@ -620,6 +625,11 @@ class BackgroundServiceManager:
             task_type = task.task_type
             payload = task.payload
 
+            api_logger.info(
+                f"[BackgroundService] ▶️ 开始执行任务：{task_id}, "
+                f"type={task_type}, thread={threading.current_thread().name}"
+            )
+
             if task_type == 'brand_analysis':
                 result = self._execute_brand_analysis(payload)
             elif task_type == 'competitive_analysis':
@@ -635,7 +645,10 @@ class BackgroundServiceManager:
                 task.result = result
                 task.completed_at = datetime.now()
 
-            api_logger.info(f"[BackgroundService] 分析任务完成：{task_id}, type={task.task_type}")
+            api_logger.info(
+                f"[BackgroundService] ✅ 分析任务完成：{task_id}, "
+                f"type={task.task_type}, thread={threading.current_thread().name}"
+            )
 
         except TimeoutError as e:
             api_logger.error(f"[BackgroundService] 分析任务超时：{task_id}, error={e}")
@@ -675,14 +688,17 @@ class BackgroundServiceManager:
         try:
             from .brand_analysis_service import BrandAnalysisService
 
+            # 从 payload 中获取 execution_id（如果存在）
+            execution_id = payload.get('execution_id', 'unknown')
             results = payload.get('results', [])
             user_brand = payload.get('user_brand', '')
             competitor_brands = payload.get('competitor_brands', [])
             user_selected_models = payload.get('user_selected_models', [])  # 【P0 修复】获取用户选择的模型
 
             api_logger.info(
-                f"[BackgroundService] 🚀 品牌分析任务开始：user_brand={user_brand}, "
-                f"results_count={len(results)}, competitor_count={len(competitor_brands)}, "
+                f"[BackgroundService] 🚀 品牌分析任务开始：execution_id={execution_id}, "
+                f"user_brand={user_brand}, results_count={len(results)}, "
+                f"competitor_count={len(competitor_brands)}, "
                 f"user_selected_models={user_selected_models}"
             )
 
@@ -696,12 +712,13 @@ class BackgroundServiceManager:
             service = BrandAnalysisService(user_selected_models=user_selected_models)
             api_logger.info(f"[BackgroundService] 调用 BrandAnalysisService.analyze_brand_mentions")
 
-            # 【P0 新增】记录分析开始时间
+            # 【P0 新增】记录分析开始时间，传递 execution_id
             analysis_start = datetime.now()
             analysis_result = service.analyze_brand_mentions(
                 results=results,
                 user_brand=user_brand,
-                competitor_brands=competitor_brands
+                competitor_brands=competitor_brands,
+                execution_id=execution_id  # 【P2 修复】传递 execution_id
             )
             analysis_duration = (datetime.now() - analysis_start).total_seconds()
 
@@ -989,8 +1006,9 @@ _manager_lock = threading.Lock()
 _services_initialized = False  # P0-20260302: 防止重复初始化
 
 
-def get_background_service_manager(max_workers: int = 4) -> BackgroundServiceManager:
+def get_background_service_manager(max_workers: int = 12) -> BackgroundServiceManager:
     """获取全局后台服务管理器（单例模式）"""
+    # 【P0 修复 - 2026-03-07】默认线程池从 4 增加到 12
     global _service_manager
     if _service_manager is None:
         with _manager_lock:

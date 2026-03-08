@@ -1,11 +1,22 @@
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Add backend_python to path for direct execution
 _backend_root = Path(__file__).parent.parent
 if str(_backend_root) not in sys.path:
     sys.path.insert(0, str(_backend_root))
+
+# =============================================================================
+# 加载 .env 配置文件（确保 API Key 等环境变量可用）
+# =============================================================================
+_env_file = _backend_root.parent / '.env'
+if _env_file.exists():
+    load_dotenv(_env_file)
+    print(f"✅ 已加载配置文件：{_env_file}")
+else:
+    print(f"⚠️  未找到配置文件：{_env_file}")
 
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
@@ -68,8 +79,15 @@ except Exception as e:
 # AI Platform Health Check - 防止平台消失问题复发
 try:
     from wechat_backend.ai_adapters.platform_health_monitor import run_startup_health_check
+    from wechat_backend.ai_adapters.factory import AIAdapterFactory
 
     app_logger.info("=== AI Platform Health Check ===")
+    
+    # 【P1 修复 - 2026-03-07】新增 API Key 配置验证
+    app_logger.info("--- API Key 配置验证 ---")
+    api_keys_ok = AIAdapterFactory.check_and_log_api_keys()
+    
+    # 原有的平台健康检查
     health_results = run_startup_health_check()
 
     if health_results:
@@ -88,6 +106,13 @@ try:
                 app_logger.info("✅ AI Platform health check passed with minor warnings")
         else:
             app_logger.info(f"✅ AI Platform health check passed! (status={status})")
+    
+    # 综合健康状态
+    if api_keys_ok:
+        app_logger.info("✅ API Key 配置检查通过")
+    else:
+        app_logger.warning("⚠️  部分 API Key 未配置，诊断功能可能受限")
+        
 except Exception as e:
     app_logger.error(f"AI Platform health check failed: {e}")
     import traceback
@@ -307,56 +332,72 @@ from wechat_backend.monitoring.monitoring_config import initialize_monitoring
 initialize_monitoring()
 
 def warm_up_adapters():
-    """预热所有已注册的API适配器"""
+    """
+    预热所有已注册的 API 适配器（P0 优化 - 2026-03-07）
+    
+    【P0 优化】仅预热已配置且有 API Key 的适配器
+    - 减少不必要的 API 调用
+    - 降低配额消耗
+    - 减少日志噪音
+    """
     from wechat_backend.logging_config import api_logger
     from wechat_backend.ai_adapters.factory import AIAdapterFactory
 
-    api_logger.info("Starting adapter warm-up...")
+    api_logger.info("=== Adapter Warm-up Started ===")
 
-    # List of adapters to warm up
     adapters_to_warm = ['doubao', 'deepseek', 'qwen', 'chatgpt', 'gemini', 'zhipu', 'wenxin']
+    
+    warmed_up = []
+    skipped = []
+    failed = []
 
     for adapter_name in adapters_to_warm:
         try:
-            # Try to create a minimal instance for health check
-            # We'll use a dummy API key for the warm-up, as the actual key will be validated later
-            from config import Config  # P0-1 修复
-            # P0-1 修复：直接使用 Config 类
+            from config import Config
             api_key = Config.get_api_key(adapter_name)
 
-            if api_key:
-                # P1-HEALTH-1 修复：豆包使用 DoubaoPriorityAdapter，自动选择可用模型
-                if adapter_name == 'doubao':
-                    try:
-                        from wechat_backend.ai_adapters.doubao_priority_adapter import DoubaoPriorityAdapter
-                        adapter = DoubaoPriorityAdapter(api_key)
-                        selected_model = adapter.get_selected_model()
-                        if selected_model:
-                            api_logger.info(f"Adapter {adapter_name} health check completed with model: {selected_model}")
-                        else:
-                            api_logger.warning(f"Adapter {adapter_name} created but no model available")
-                        continue  # 跳过普通适配器的健康检查
-                    except Exception as priority_err:
-                        api_logger.warning(f"Adapter {adapter_name} PriorityAdapter failed: {priority_err}, falling back to standard adapter")
-                
-                # Create adapter with actual API key if available
-                adapter = AIAdapterFactory.create(adapter_name, api_key)
+            if not api_key:
+                skipped.append(adapter_name)
+                api_logger.info(f"Adapter {adapter_name} not configured, skipping warm-up")
+                continue
 
-                # If the adapter has a health check method, call it
-                if hasattr(adapter, '_health_check'):
-                    adapter._health_check()
-                    api_logger.info(f"Adapter {adapter_name} health check completed")
-                else:
-                    api_logger.info(f"Adapter {adapter_name} created successfully (no health check method)")
+            warmed_up.append(adapter_name)
+            
+            if adapter_name == 'doubao':
+                try:
+                    from wechat_backend.ai_adapters.doubao_priority_adapter import DoubaoPriorityAdapter
+                    adapter = DoubaoPriorityAdapter(api_key)
+                    selected_model = adapter.get_selected_model()
+                    if selected_model:
+                        api_logger.info(f"Adapter {adapter_name} health check completed with model: {selected_model}")
+                    else:
+                        api_logger.warning(f"Adapter {adapter_name} created but no model available")
+                    continue
+                except Exception as priority_err:
+                    api_logger.warning(f"Adapter {adapter_name} PriorityAdapter failed: {priority_err}")
+
+            adapter = AIAdapterFactory.create(adapter_name, api_key)
+
+            if hasattr(adapter, '_health_check'):
+                adapter._health_check()
+                api_logger.info(f"Adapter {adapter_name} health check completed")
             else:
-                api_logger.warning(f"Adapter {adapter_name} has no API key configured, skipping warm-up")
+                api_logger.info(f"Adapter {adapter_name} created successfully")
 
         except Exception as e:
+            failed.append(adapter_name)
             api_logger.warning(f"Adapter {adapter_name} warm-up failed: {e}")
 
-    api_logger.info("Adapter warm-up completed")
-
-
+    api_logger.info("=== Adapter Warm-up Summary ===")
+    if warmed_up:
+        api_logger.info(f"Warmed up ({len(warmed_up)}): {', '.join(warmed_up)}")
+    if skipped:
+        api_logger.info(f"Skipped ({len(skipped)}): {', '.join(skipped)}")
+    if failed:
+        api_logger.warning(f"Failed ({len(failed)}): {', '.join(failed)}")
+    
+    total = len(adapters_to_warm)
+    api_logger.info(f"Warm-up Complete: {len(warmed_up)}/{total} adapters warmed up")
 # Warm up adapters in a background thread after app initialization
 import threading
 threading.Thread(target=warm_up_adapters, daemon=True).start()

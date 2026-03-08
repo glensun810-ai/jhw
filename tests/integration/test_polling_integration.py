@@ -31,10 +31,7 @@ class TestPollingIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=mock_ai_adapter
-        )
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断
         await diagnosis_service.start_diagnosis(
@@ -82,9 +79,9 @@ class TestPollingIntegration:
             if 3 <= call_count <= 5:
                 raise Exception("网络连接失败")
             
-            return await DiagnosisService(db_path=test_db_path).get_status(exec_id)
+            return await DiagnosisService().get_status(exec_id)
         
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
+        diagnosis_service = DiagnosisService()
         
         await diagnosis_service.start_diagnosis(
             execution_id=sample_execution_id,
@@ -146,10 +143,7 @@ class TestPollingIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(
-            db_path=test_db_path,
-            ai_adapter=mock_ai_adapter
-        )
+        diagnosis_service = DiagnosisService()
         
         await diagnosis_service.start_diagnosis(
             execution_id=sample_execution_id,
@@ -187,7 +181,7 @@ class TestPollingIntegration:
         
         from wechat_backend.v2.services.diagnosis_service import DiagnosisService
         
-        diagnosis_service = DiagnosisService(db_path=test_db_path)
+        diagnosis_service = DiagnosisService()
         
         # 发起诊断
         await diagnosis_service.start_diagnosis(
@@ -199,7 +193,7 @@ class TestPollingIntegration:
         await asyncio.sleep(2)
         
         # 模拟页面刷新（创建新服务实例）
-        new_service = DiagnosisService(db_path=test_db_path)
+        new_service = DiagnosisService()
         
         # 获取状态（应能继续）
         status = await new_service.get_status(sample_execution_id)

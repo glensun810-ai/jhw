@@ -1,525 +1,337 @@
+#!/usr/bin/env python3
 """
-API 响应类型定义
+诊断结果类型定义模块
 
-与 OpenAPI 规范保持一致，用于：
-1. 类型提示
-2. 契约测试
-3. 数据验证
+提供强类型定义和运行时验证，确保诊断结果字段完整性。
 
-作者：系统架构组
-日期：2026-03-01
-版本：1.0
+设计原则：
+1. 使用 TypedDict 定义必填字段
+2. 提供运行时验证函数
+3. 在开发和测试环境启用严格验证
+
+@author: 系统架构组
+@date: 2026-03-07
+@version: 1.0.0
 """
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import TypedDict, Optional, Dict, Any, List, Literal
 from datetime import datetime
-from enum import Enum
 
 
-# ==================== 枚举类型 ====================
-
-class ReportStatus(str, Enum):
-    """报告状态"""
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-class ReportStage(str, Enum):
-    """报告阶段"""
-    INIT = "init"
-    AI_FETCHING = "ai_fetching"
-    INTELLIGENCE_ANALYZING = "intelligence_analyzing"
-    COMPLETED = "completed"
-    FAILED = "failed"
+class GeoData(TypedDict, total=False):
+    """GEO 数据结构（可选字段）"""
+    rank: int
+    sentiment: float
+    url: str
+    title: str
+    snippet: str
+    platform: str
+    _error: Optional[str]
 
 
-class QualityLevel(str, Enum):
-    """质量等级"""
-    VERY_LOW = "very_low"
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    VERY_HIGH = "very_high"
+class ResponseContent(TypedDict, required=True):
+    """AI 响应内容结构"""
+    content: Optional[str]
+    latency: Optional[float]
+    metadata: Dict[str, Any]
 
 
-class SentimentLabel(str, Enum):
-    """情感标签"""
-    POSITIVE = "positive"
-    NEUTRAL = "neutral"
-    NEGATIVE = "negative"
-
-
-class ErrorStatus(str, Enum):
-    """错误状态"""
-    NOT_FOUND = "not_found"
-    FAILED = "failed"
-    TIMEOUT = "timeout"
-    NO_RESULTS = "no_results"
-    ERROR = "error"
-
-
-class HealthStatus(str, Enum):
-    """健康状态"""
-    HEALTHY = "healthy"
-    DEGRADED = "degraded"
-    UNHEALTHY = "unhealthy"
-
-
-# ==================== 数据类 ====================
-
-@dataclass
-class GeoData:
-    """GEO 分析数据"""
-    brand_mentioned: bool = False
-    rank: int = -1
-    sentiment: float = 0.0
-    cited_sources: List[str] = field(default_factory=list)
-    keywords: List[Dict[str, Any]] = field(default_factory=list)
-
-
-@dataclass
-class Response:
-    """AI 响应"""
-    content: str = ""
-    latency: float = 0.0
-
-
-@dataclass
-class Result:
-    """诊断结果"""
-    id: Optional[int] = None
-    brand: str = ""
-    question: str = ""
-    model: str = ""
-    response: Optional[Response] = None
-    geo_data: Optional[GeoData] = None
-    quality_score: float = 0.0
-    quality_level: QualityLevel = QualityLevel.MEDIUM
-
-
-@dataclass
-class Analysis:
-    """分析数据"""
-    competitive_analysis: Dict[str, Any] = field(default_factory=dict)
-    brand_scores: Dict[str, Any] = field(default_factory=dict)
-    semantic_drift: Dict[str, Any] = field(default_factory=dict)
-    source_purity: Dict[str, Any] = field(default_factory=dict)
-    recommendations: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class BrandDistribution:
-    """品牌分布"""
-    data: Dict[str, int] = field(default_factory=dict)
-    total_count: int = 0
-
-
-@dataclass
-class SentimentDistribution:
-    """情感分布"""
-    data: Dict[str, int] = field(default_factory=dict)
-    total_count: int = 0
-
-
-@dataclass
-class Keyword:
-    """关键词"""
-    word: str = ""
-    count: int = 0
-    sentiment: float = 0.0
-    sentiment_label: SentimentLabel = SentimentLabel.NEUTRAL
-
-
-@dataclass
-class Meta:
-    """元数据"""
-    data_schema_version: str = "1.0"
-    server_version: str = "2.0.0"
-    retrieved_at: str = field(default_factory=lambda: datetime.now().isoformat())
-
-
-@dataclass
-class ValidationDetails:
-    """验证详情"""
-    report_valid: bool = True
-    results_valid: bool = True
-    analysis_valid: bool = True
-    aggregation_valid: bool = True
-    checksum_valid: bool = True
-
-
-@dataclass
-class Validation:
-    """验证信息"""
-    is_valid: bool = True
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
-    quality_issues: List[str] = field(default_factory=list)
-    quality_score: int = 100
-    details: Optional[ValidationDetails] = None
-
-
-@dataclass
-class QualityHints:
-    """质量提示"""
-    has_low_quality_results: bool = False
-    has_partial_analysis: bool = False
-    warnings: List[str] = field(default_factory=list)
-
-
-@dataclass
-class ErrorInfo:
-    """错误信息"""
-    status: ErrorStatus = ErrorStatus.ERROR
-    message: str = ""
-    suggestion: str = ""
-    stage: Optional[str] = None
-
-
-@dataclass
-class PartialInfo:
-    """部分结果信息"""
-    is_partial: bool = False
-    progress: int = 0
-    stage: str = ""
-    message: str = ""
-    suggestion: str = ""
-
-
-@dataclass
-class Report:
-    """报告主数据"""
-    id: Optional[int] = None
-    execution_id: str = ""
-    user_id: str = ""
-    brand_name: str = ""
-    status: ReportStatus = ReportStatus.PENDING
-    progress: int = 0
-    stage: ReportStage = ReportStage.INIT
-    is_completed: bool = False
-    created_at: str = ""
-    completed_at: Optional[str] = None
-    checksum: Optional[str] = None
-
-
-@dataclass
-class FullReportResponse:
-    """完整报告响应"""
-    report: Report
-    results: List[Result] = field(default_factory=list)
-    analysis: Analysis = field(default_factory=Analysis)
-    brand_distribution: BrandDistribution = field(default_factory=BrandDistribution)
-    sentiment_distribution: SentimentDistribution = field(default_factory=SentimentDistribution)
-    keywords: List[Keyword] = field(default_factory=list)
-    meta: Meta = field(default_factory=Meta)
-    validation: Validation = field(default_factory=Validation)
-    quality_hints: QualityHints = field(default_factory=QualityHints)
-    error: Optional[ErrorInfo] = None
-    partial: Optional[PartialInfo] = None
+class DiagnosisResult(TypedDict, required=True):
+    """
+    诊断结果的类型定义（强制字段完整性）
     
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式（用于 JSON 序列化）"""
+    所有诊断结果必须包含以下字段，确保数据流完整性。
+    """
+    # === 必填字段 ===
+    brand: str                    # ✅ 品牌名称（核心字段）
+    question: str                 # ✅ 问题内容
+    model: str                    # ✅ 使用的 AI 模型
+    response: ResponseContent     # ✅ AI 响应内容
+    tokens_used: int              # ✅ Token 消耗量（核心字段）
+    
+    # === 可选字段 ===
+    prompt_tokens: int            # 输入 token 数
+    completion_tokens: int        # 输出 token 数
+    cached_tokens: int            # 缓存 token 数
+    geo_data: Optional[GeoData]   # GEO 数据
+    error: Optional[str]          # 错误信息
+    error_type: Optional[str]     # 错误类型
+    is_objective: bool            # 是否客观回答
+    latency: Optional[float]      # 延迟（秒）
+    timestamp: str                # 时间戳
+
+
+class DiagnosisResultPartial(TypedDict, total=False):
+    """
+    部分诊断结果（用于容错场景）
+    
+    允许字段缺失，但会在验证时标记为低质量数据。
+    """
+    brand: Optional[str]
+    question: Optional[str]
+    model: Optional[str]
+    response: Optional[Dict[str, Any]]
+    tokens_used: Optional[int]
+    prompt_tokens: Optional[int]
+    completion_tokens: Optional[int]
+    cached_tokens: Optional[int]
+    geo_data: Optional[Dict[str, Any]]
+    error: Optional[str]
+    error_type: Optional[str]
+    is_objective: Optional[bool]
+
+
+class ValidationResult(TypedDict, required=True):
+    """验证结果结构"""
+    is_valid: bool
+    errors: List[str]
+    warnings: List[str]
+    quality_score: int
+    missing_fields: List[str]
+
+
+# 字段验证配置
+VALIDATION_CONFIG = {
+    'required_fields': ['brand', 'question', 'model', 'response', 'tokens_used'],
+    'optional_fields': ['prompt_tokens', 'completion_tokens', 'cached_tokens', 'geo_data', 'error', 'error_type'],
+    'brand_min_length': 1,
+    'question_min_length': 1,
+    'tokens_min_value': 0,
+    'enable_strict_validation': True,  # 开发/测试环境启用
+}
+
+
+def validate_diagnosis_result(result: Dict[str, Any], strict: bool = True) -> ValidationResult:
+    """
+    验证诊断结果字段完整性
+    
+    参数：
+        result: 待验证的结果字典
+        strict: 是否启用严格验证（严格模式下缺少必填字段会失败）
+    
+    返回：
+        ValidationResult: 验证结果
+    
+    示例：
+        >>> result = {'brand': '特斯拉', 'question': '...', 'model': 'qwen', 'response': {...}, 'tokens_used': 100}
+        >>> validation = validate_diagnosis_result(result)
+        >>> assert validation['is_valid'] == True
+    """
+    errors = []
+    warnings = []
+    missing_fields = []
+    
+    # 1. 检查必填字段
+    for field in VALIDATION_CONFIG['required_fields']:
+        if field not in result:
+            missing_fields.append(field)
+            errors.append(f"缺少必填字段：{field}")
+        elif result[field] is None:
+            missing_fields.append(field)
+            errors.append(f"字段值为 None：{field}")
+    
+    # 2. 特别验证 brand 字段
+    if 'brand' in result and result['brand']:
+        brand = result['brand']
+        if not isinstance(brand, str):
+            errors.append(f"brand 字段类型错误：期望 str，实际 {type(brand).__name__}")
+        elif len(brand) < VALIDATION_CONFIG['brand_min_length']:
+            errors.append(f"brand 字段长度不足：'{brand}'")
+    
+    # 3. 特别验证 tokens_used 字段
+    if 'tokens_used' in result:
+        tokens = result['tokens_used']
+        if not isinstance(tokens, (int, float)):
+            errors.append(f"tokens_used 字段类型错误：期望 int，实际 {type(tokens).__name__}")
+        elif tokens < VALIDATION_CONFIG['tokens_min_value']:
+            warnings.append(f"tokens_used 值为负数：{tokens}")
+    
+    # 4. 验证 question 字段
+    if 'question' in result and result['question']:
+        question = result['question']
+        if not isinstance(question, str):
+            errors.append(f"question 字段类型错误：期望 str，实际 {type(question).__name__}")
+        elif len(question) < VALIDATION_CONFIG['question_min_length']:
+            warnings.append(f"question 字段过短")
+    
+    # 5. 验证 response 字段
+    if 'response' in result:
+        response = result['response']
+        if not isinstance(response, dict):
+            errors.append(f"response 字段类型错误：期望 dict，实际 {type(response).__name__}")
+        elif 'content' not in response:
+            warnings.append("response 缺少 content 字段")
+    
+    # 6. 检查可选字段的完整性（仅警告）
+    for field in VALIDATION_CONFIG['optional_fields']:
+        if field not in result and field not in missing_fields:
+            warnings.append(f"缺少可选字段：{field}")
+    
+    # 7. 计算质量评分
+    quality_score = _calculate_quality_score(result, missing_fields, errors, warnings)
+    
+    # 8. 严格模式下，缺少必填字段直接判定为无效
+    is_valid = len(errors) == 0
+    if strict and missing_fields:
+        is_valid = False
+    
+    return {
+        'is_valid': is_valid,
+        'errors': errors,
+        'warnings': warnings,
+        'quality_score': quality_score,
+        'missing_fields': missing_fields
+    }
+
+
+def _calculate_quality_score(
+    result: Dict[str, Any],
+    missing_fields: List[str],
+    errors: List[str],
+    warnings: List[str]
+) -> int:
+    """
+    计算数据质量评分（0-100）
+    
+    评分规则：
+    - 基础分 100 分
+    - 缺少必填字段：每个扣 20 分
+    - 有错误：每个扣 15 分
+    - 有警告：每个扣 5 分
+    - 有 geo_data：加 5 分
+    - tokens_used > 0：加 5 分
+    """
+    score = 100
+    
+    # 扣分项
+    score -= len(missing_fields) * 20
+    score -= len(errors) * 15
+    score -= len(warnings) * 5
+    
+    # 加分项
+    if result.get('geo_data'):
+        score += 5
+    if result.get('tokens_used', 0) > 0:
+        score += 5
+    
+    # 确保分数在 0-100 范围内
+    return max(0, min(100, score))
+
+
+def validate_diagnosis_results_batch(
+    results: List[Dict[str, Any]],
+    strict: bool = True,
+    min_valid_ratio: float = 0.8
+) -> Dict[str, Any]:
+    """
+    批量验证诊断结果
+    
+    参数：
+        results: 结果列表
+        strict: 是否严格验证
+        min_valid_ratio: 最小有效比例阈值
+    
+    返回：
+        包含验证统计的字典
+    
+    示例：
+        >>> batch_result = validate_diagnosis_results_batch(results, strict=True)
+        >>> assert batch_result['valid_count'] / batch_result['total_count'] >= 0.8
+    """
+    if not results:
         return {
-            'report': {
-                'id': self.report.id,
-                'execution_id': self.report.execution_id,
-                'user_id': self.report.user_id,
-                'brand_name': self.report.brand_name,
-                'status': self.report.status.value,
-                'progress': self.report.progress,
-                'stage': self.report.stage.value,
-                'is_completed': self.report.is_completed,
-                'created_at': self.report.created_at,
-                'completed_at': self.report.completed_at,
-                'checksum': self.report.checksum
-            },
-            'results': [
-                {
-                    'id': r.id,
-                    'brand': r.brand,
-                    'question': r.question,
-                    'model': r.model,
-                    'response': {'content': r.response.content, 'latency': r.response.latency} if r.response else None,
-                    'geo_data': vars(r.geo_data) if r.geo_data else None,
-                    'quality_score': r.quality_score,
-                    'quality_level': r.quality_level.value
-                }
-                for r in self.results
-            ],
-            'analysis': vars(self.analysis),
-            'brandDistribution': vars(self.brand_distribution),
-            'sentimentDistribution': vars(self.sentiment_distribution),
-            'keywords': [vars(kw) for kw in self.keywords],
-            'meta': vars(self.meta),
-            'validation': {
-                'is_valid': self.validation.is_valid,
-                'errors': self.validation.errors,
-                'warnings': self.validation.warnings,
-                'quality_issues': self.validation.quality_issues,
-                'quality_score': self.validation.quality_score,
-                'details': vars(self.validation.details) if self.validation.details else None
-            },
-            'qualityHints': vars(self.quality_hints),
-            'error': vars(self.error) if self.error else None,
-            'partial': vars(self.partial) if self.partial else None
+            'total_count': 0,
+            'valid_count': 0,
+            'invalid_count': 0,
+            'valid_ratio': 0.0,
+            'is_acceptable': True,
+            'details': []
         }
-
-
-@dataclass
-class ReportSummary:
-    """报告摘要"""
-    id: int = 0
-    execution_id: str = ""
-    brand_name: str = ""
-    status: str = ""
-    progress: int = 0
-    created_at: str = ""
-
-
-@dataclass
-class Pagination:
-    """分页信息"""
-    page: int = 1
-    limit: int = 20
-    total: int = 0
-    has_more: bool = False
-
-
-@dataclass
-class HistoryResponse:
-    """历史报告响应"""
-    reports: List[ReportSummary] = field(default_factory=list)
-    pagination: Pagination = field(default_factory=Pagination)
     
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
-        return {
-            'reports': [vars(r) for r in self.reports],
-            'pagination': vars(self.pagination)
-        }
-
-
-@dataclass
-class TaskStatusResponse:
-    """任务状态响应"""
-    execution_id: str = ""
-    status: str = ""
-    progress: int = 0
-    stage: str = ""
-    results_count: int = 0
-    total_tasks: int = 0
-    should_stop_polling: bool = False
-    detailed_results: List[Result] = field(default_factory=list)
+    valid_count = 0
+    invalid_count = 0
+    details = []
     
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
-        return {
-            'execution_id': self.execution_id,
-            'status': self.status,
-            'progress': self.progress,
-            'stage': self.stage,
-            'results_count': self.results_count,
-            'total_tasks': self.total_tasks,
-            'should_stop_polling': self.should_stop_polling,
-            'detailed_results': [
-                {
-                    'id': r.id,
-                    'brand': r.brand,
-                    'question': r.question,
-                    'model': r.model,
-                    'response': {'content': r.response.content, 'latency': r.response.latency} if r.response else None,
-                    'geo_data': vars(r.geo_data) if r.geo_data else None,
-                    'quality_score': r.quality_score,
-                    'quality_level': r.quality_level.value
-                }
-                for r in self.detailed_results
-            ]
-        }
-
-
-@dataclass
-class ValidationResponse:
-    """验证响应"""
-    is_valid: bool = True
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
-    quality_score: int = 100
-    checksum_verified: bool = False
+    for i, result in enumerate(results):
+        validation = validate_diagnosis_result(result, strict=strict)
+        
+        if validation['is_valid']:
+            valid_count += 1
+        else:
+            invalid_count += 1
+        
+        details.append({
+            'index': i,
+            'is_valid': validation['is_valid'],
+            'errors': validation['errors'],
+            'quality_score': validation['quality_score']
+        })
     
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
-        return {
-            'is_valid': self.is_valid,
-            'errors': self.errors,
-            'warnings': self.warnings,
-            'quality_score': self.quality_score,
-            'checksum_verified': self.checksum_verified
-        }
-
-
-@dataclass
-class HealthResponse:
-    """健康检查响应"""
-    status: HealthStatus = HealthStatus.HEALTHY
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    services: Dict[str, str] = field(default_factory=dict)
+    total_count = len(results)
+    valid_ratio = valid_count / total_count if total_count > 0 else 0.0
     
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
-        return {
-            'status': self.status.value,
-            'timestamp': self.timestamp,
-            'services': self.services
-        }
+    return {
+        'total_count': total_count,
+        'valid_count': valid_count,
+        'invalid_count': invalid_count,
+        'valid_ratio': valid_ratio,
+        'is_acceptable': valid_ratio >= min_valid_ratio,
+        'details': details
+    }
 
 
-# ==================== 错误响应 ====================
-
-@dataclass
-class NotFoundError:
-    """404 错误"""
-    error: str = "报告不存在"
-    execution_id: str = ""
-    suggestion: str = "请检查执行 ID 是否正确，或重新进行诊断"
+# 便捷函数：装饰器
+def require_valid_result(func):
+    """
+    装饰器：验证函数返回的结果字段完整性
     
-    def to_dict(self) -> Dict[str, Any]:
-        return vars(self)
-
-
-@dataclass
-class ServerError:
-    """500 错误"""
-    error: str = "获取报告失败"
-    message: str = ""
-    execution_id: str = ""
-    suggestion: str = "请稍后重试或联系技术支持"
+    用法：
+        @require_valid_result
+        def execute_task(...):
+            return {'brand': '...', 'question': '...', ...}
+    """
+    from functools import wraps
     
-    def to_dict(self) -> Dict[str, Any]:
-        return vars(self)
-
-
-@dataclass
-class AuthError:
-    """401 错误"""
-    error: str = "未认证"
-    message: str = "请先登录"
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        
+        # 验证单个结果
+        if isinstance(result, dict) and 'data' in result:
+            validation = validate_diagnosis_result(result['data'], strict=True)
+            if not validation['is_valid']:
+                from wechat_backend.logging_config import api_logger
+                api_logger.error(
+                    f"[字段验证] 结果验证失败：{validation['errors']}",
+                    extra={'function': func.__name__, 'result': result}
+                )
+                raise ValueError(f"诊断结果验证失败：{validation['errors']}")
+        
+        # 验证结果列表
+        elif isinstance(result, dict) and 'results' in result:
+            batch_validation = validate_diagnosis_results_batch(result['results'], strict=True)
+            if not batch_validation['is_acceptable']:
+                from wechat_backend.logging_config import api_logger
+                api_logger.error(
+                    f"[字段验证] 批量验证失败：有效率={batch_validation['valid_ratio']:.2%}",
+                    extra={'function': func.__name__, 'validation': batch_validation}
+                )
+                raise ValueError(f"批量诊断结果验证失败：有效率过低")
+        
+        return result
     
-    def to_dict(self) -> Dict[str, Any]:
-        return vars(self)
+    return wrapper
 
 
-@dataclass
-class RateLimitError:
-    """429 错误"""
-    error: str = "请求频率超限"
-    retry_after: int = 60
-    
-    def to_dict(self) -> Dict[str, Any]:
-        return vars(self)
-
-
-# ==================== 类型别名 ====================
-
-ReportDict = Dict[str, Any]
-ResultsList = List[Dict[str, Any]]
-AnalysisDict = Dict[str, Any]
-ValidationDict = Dict[str, Any]
-
-
-# ==================== 工具函数 ====================
-
-def create_empty_report(execution_id: str = "") -> FullReportResponse:
-    """创建空报告响应"""
-    return FullReportResponse(
-        report=Report(execution_id=execution_id),
-        results=[],
-        analysis=Analysis(),
-        brand_distribution=BrandDistribution(),
-        sentiment_distribution=SentimentDistribution(),
-        keywords=[],
-        validation=Validation(
-            is_valid=False,
-            errors=["报告为空"],
-            quality_score=0
-        )
-    )
-
-
-def create_error_report(
-    execution_id: str,
-    status: ErrorStatus,
-    message: str,
-    suggestion: str
-) -> FullReportResponse:
-    """创建错误报告响应"""
-    return FullReportResponse(
-        report=Report(execution_id=execution_id, status=ReportStatus.FAILED),
-        results=[],
-        analysis=Analysis(),
-        brand_distribution=BrandDistribution(),
-        sentiment_distribution=SentimentDistribution(),
-        keywords=[],
-        error=ErrorInfo(
-            status=status,
-            message=message,
-            suggestion=suggestion
-        ),
-        validation=Validation(
-            is_valid=False,
-            errors=[message],
-            quality_score=0
-        )
-    )
-
-
+# 导出公共 API
 __all__ = [
-    # 枚举
-    'ReportStatus',
-    'ReportStage',
-    'QualityLevel',
-    'SentimentLabel',
-    'ErrorStatus',
-    'HealthStatus',
-    
-    # 数据类
+    'DiagnosisResult',
+    'DiagnosisResultPartial',
     'GeoData',
-    'Response',
-    'Result',
-    'Analysis',
-    'BrandDistribution',
-    'SentimentDistribution',
-    'Keyword',
-    'Meta',
-    'Validation',
-    'ValidationDetails',
-    'QualityHints',
-    'ErrorInfo',
-    'PartialInfo',
-    'Report',
-    'FullReportResponse',
-    'ReportSummary',
-    'Pagination',
-    'HistoryResponse',
-    'TaskStatusResponse',
-    'ValidationResponse',
-    'HealthResponse',
-    
-    # 错误
-    'NotFoundError',
-    'ServerError',
-    'AuthError',
-    'RateLimitError',
-    
-    # 类型别名
-    'ReportDict',
-    'ResultsList',
-    'AnalysisDict',
-    'ValidationDict',
-    
-    # 工具函数
-    'create_empty_report',
-    'create_error_report'
+    'ResponseContent',
+    'ValidationResult',
+    'validate_diagnosis_result',
+    'validate_diagnosis_results_batch',
+    'require_valid_result',
+    'VALIDATION_CONFIG'
 ]

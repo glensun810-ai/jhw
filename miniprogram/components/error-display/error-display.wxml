@@ -1,0 +1,67 @@
+<!--
+  错误显示组件模板
+  
+  P2-4 优化：可复用组件 - 显示错误信息和操作建议
+-->
+
+<view class="error-display {{customClass}}">
+  <!-- 错误图标 -->
+  <view class="error-icon-container">
+    <text 
+      class="error-icon" 
+      style="color: {{currentConfig.iconColor}}"
+    >
+      {{currentConfig.icon}}
+    </text>
+  </view>
+  
+  <!-- 错误标题 -->
+  <view class="error-title">
+    {{fallbackInfo.title || currentConfig.title}}
+  </view>
+  
+  <!-- 错误描述 -->
+  <view class="error-description">
+    {{fallbackInfo.description || currentConfig.description}}
+  </view>
+  
+  <!-- 错误详情 -->
+  <view class="error-detail" wx:if="{{errorMessage}}">
+    <text class="error-detail-text">{{errorMessage}}</text>
+  </view>
+  
+  <!-- 操作按钮 -->
+  <view class="error-actions">
+    <!-- 自定义操作 -->
+    <block wx:if="{{fallbackInfo.actions}}">
+      <button 
+        wx:for="{{fallbackInfo.actions}}" 
+        wx:key="text"
+        class="error-action-btn"
+        data-action="{{item}}"
+        bindtap="handleAction"
+        style="background-color: {{item.type === 'primary' ? '#007aff' : '#f5f5f5'}}; color: {{item.type === 'primary' ? '#fff' : '#333'}}"
+      >
+        {{item.text}}
+      </button>
+    </block>
+    
+    <!-- 默认操作 -->
+    <block wx:else>
+      <button 
+        wx:if="{{showRetry}}" 
+        class="error-action-btn primary"
+        bindtap="handleRetry"
+      >
+        重试
+      </button>
+      
+      <button 
+        class="error-action-btn"
+        bindtap="goHome"
+      >
+        返回首页
+      </button>
+    </block>
+  </view>
+</view>

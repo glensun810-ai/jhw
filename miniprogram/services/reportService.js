@@ -13,6 +13,45 @@ import { handleApiError, logError } from '../utils/errorHandler';
 import { isFeatureEnabled } from '../config/featureFlags';
 
 /**
+ * P1-4 修复：统一错误类型定义
+ */
+const ErrorTypes = {
+  // 网络错误
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  NETWORK_TIMEOUT: 'NETWORK_TIMEOUT',
+  
+  // 数据错误
+  DATA_NOT_FOUND: 'DATA_NOT_FOUND',
+  DATA_INVALID: 'DATA_INVALID',
+  DATA_INCOMPLETE: 'DATA_INCOMPLETE',
+  
+  // 业务错误
+  BUSINESS_FAILED: 'BUSINESS_FAILED',
+  BUSINESS_TIMEOUT: 'BUSINESS_TIMEOUT',
+  BUSINESS_NO_RESULTS: 'BUSINESS_NO_RESULTS',
+  
+  // 系统错误
+  SYSTEM_ERROR: 'SYSTEM_ERROR',
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR'
+};
+
+/**
+ * P1-4 修复：错误建议映射
+ */
+const ErrorSuggestions = {
+  [ErrorTypes.NETWORK_ERROR]: '请检查网络连接后重试',
+  [ErrorTypes.NETWORK_TIMEOUT]: '网络请求超时，请检查网络后重试',
+  [ErrorTypes.DATA_NOT_FOUND]: '报告不存在或已被删除',
+  [ErrorTypes.DATA_INVALID]: '报告数据格式错误',
+  [ErrorTypes.DATA_INCOMPLETE]: '报告数据不完整，可能尚未生成完成',
+  [ErrorTypes.BUSINESS_FAILED]: '诊断执行失败，请查看错误详情',
+  [ErrorTypes.BUSINESS_TIMEOUT]: '诊断处理超时，建议减少品牌数量后重试',
+  [ErrorTypes.BUSINESS_NO_RESULTS]: '诊断未生成有效结果',
+  [ErrorTypes.SYSTEM_ERROR]: '系统内部错误，请联系技术支持',
+  [ErrorTypes.UNKNOWN_ERROR]: '未知错误，请稍后重试'
+};
+
+/**
  * 报告数据服务类
  */
 class ReportService {
@@ -22,29 +61,55 @@ class ReportService {
   constructor() {
     this.cache = new Map(); // 数据缓存
     this.cacheTimeout = 300000; // 缓存超时时间（5 分钟）
+    this.maxRetryCount = 3; // P1-4 新增：最大重试次数
+    this.retryDelay = 1000; // P1-4 新增：重试延迟（毫秒）
+    
+    // P1-5 新增：缓存监控指标
+    this.cacheStats = {
+      hits: 0,
+      misses: 0,
+      invalidations: 0,
+      expirations: 0
+    };
   }
 
   /**
    * 获取完整诊断报告
    * @param {string} executionId - 执行 ID
+   * @param {Object} options - 可选配置
+   * @param {number} options.retryCount - 重试次数
    * @returns {Promise<Object>} 报告数据
    */
-  async getFullReport(executionId) {
+  async getFullReport(executionId, options = {}) {
+    const retryCount = options.retryCount || 0;
+    
     try {
-      console.log('[ReportService] Getting full report:', executionId);
+      console.log('[ReportService] Getting full report:', executionId, `retry: ${retryCount}`);
 
-      // 检查缓存
-      const cached = this._getFromCache(executionId);
-      if (cached) {
-        console.log('[ReportService] Cache hit for:', executionId);
-        return cached;
+      // 检查缓存（首次请求才使用缓存）
+      if (retryCount === 0) {
+        const cached = this._getFromCache(executionId);
+        if (cached) {
+          console.log('[ReportService] Cache hit for:', executionId);
+          return cached;
+        }
       }
 
-      const res = await wx.cloud.callFunction({
+      // P1-4 修复：添加请求超时控制
+      const callFunctionPromise = wx.cloud.callFunction({
         name: 'getDiagnosisReport',
-        data: { executionId }
+        data: { executionId },
+        timeout: 30000 // 30 秒超时
       });
 
+      // 超时控制
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('请求超时'));
+        }, 30000);
+      });
+
+      const res = await Promise.race([callFunctionPromise, timeoutPromise]);
       const report = res.result;
 
       // P1-5 修复：处理空状态和错误状态
@@ -53,13 +118,20 @@ class ReportService {
         return this._createEmptyReportWithSuggestion('报告不存在', 'not_found');
       }
 
+      // 【P0 关键修复 - 2026-03-07】处理失败状态，返回元数据
+      if (report.status === 'failed' || (report.success === false)) {
+        console.warn('[ReportService] Report status is failed, returning metadata');
+        return this._createFailedReportWithMetadata(report);
+      }
+
       // 处理报告数据
       const processedReport = this._processReportData(report);
 
-      // P1-5 修复：检查验证信息
+      // P1-4 增强：验证错误处理
       const validation = processedReport.validation;
       if (validation && !validation.is_valid && validation.errors?.length > 0) {
         console.warn('[ReportService] Report validation failed:', validation.errors);
+        processedReport.errorType = this._classifyError(validation.errors[0]);
       }
 
       // P1-5 修复：检查质量评分
@@ -69,8 +141,10 @@ class ReportService {
         processedReport.lowQualityWarning = true;
       }
 
-      // 缓存报告
-      this._setCache(executionId, processedReport);
+      // 缓存报告（只在首次成功时缓存）
+      if (retryCount === 0) {
+        this._setCache(executionId, processedReport);
+      }
 
       console.log('[ReportService] Report fetched successfully:', executionId);
       return processedReport;
@@ -78,15 +152,153 @@ class ReportService {
       const handledError = handleApiError(error);
       logError(error, {
         context: 'getFullReport',
-        executionId: executionId
+        executionId: executionId,
+        retryCount: retryCount
       });
-      
+
+      // P1-4 修复：重试逻辑
+      const errorType = this._classifyError(error);
+      const canRetry = retryCount < this.maxRetryCount && 
+                       errorType !== ErrorTypes.DATA_NOT_FOUND &&
+                       errorType !== ErrorTypes.DATA_INVALID;
+
+      if (canRetry) {
+        console.log(`[ReportService] 准备重试：${retryCount + 1}/${this.maxRetryCount}`);
+        await new Promise(resolve => setTimeout(resolve, this.retryDelay * (retryCount + 1)));
+        return this.getFullReport(executionId, { retryCount: retryCount + 1 });
+      }
+
+      // 达到最大重试次数或不可重试错误
+      const errorMessage = this._getErrorMessage(error, errorType);
+      console.error('[ReportService] 最终失败:', errorMessage);
+
       // P1-5 修复：错误时返回空报告
       return this._createEmptyReportWithSuggestion(
-        '获取报告失败：' + (error.message || '未知错误'),
-        'error'
+        errorMessage,
+        this._getErrorTypeString(errorType)
       );
     }
+  }
+
+  /**
+   * P1-4 新增：分类错误类型
+   * @param {Error|string} error - 错误对象或消息
+   * @returns {string} 错误类型
+   */
+  _classifyError(error) {
+    const message = error.message || String(error);
+    
+    if (message.includes('不存在') || message.includes('not found')) {
+      return ErrorTypes.DATA_NOT_FOUND;
+    }
+    if (message.includes('超时') || message.includes('timeout')) {
+      return ErrorTypes.NETWORK_TIMEOUT;
+    }
+    if (message.includes('网络') || message.includes('network')) {
+      return ErrorTypes.NETWORK_ERROR;
+    }
+    if (message.includes('格式') || message.includes('invalid')) {
+      return ErrorTypes.DATA_INVALID;
+    }
+    if (message.includes('失败') || message.includes('failed')) {
+      return ErrorTypes.BUSINESS_FAILED;
+    }
+    if (message.includes('不完整') || message.includes('incomplete')) {
+      return ErrorTypes.DATA_INCOMPLETE;
+    }
+    
+    return ErrorTypes.UNKNOWN_ERROR;
+  }
+
+  /**
+   * P1-4 新增：获取错误消息
+   * @param {Error} error - 错误对象
+   * @param {string} errorType - 错误类型
+   * @returns {string} 友好的错误消息
+   */
+  _getErrorMessage(error, errorType) {
+    const baseMessage = error.message || '未知错误';
+    const suggestion = ErrorSuggestions[errorType] || '';
+    
+    if (suggestion) {
+      return `${baseMessage}。${suggestion}`;
+    }
+    return baseMessage;
+  }
+
+  /**
+   * P1-4 新增：获取错误类型字符串
+   * @param {string} errorType - 错误类型常量
+   * @returns {string} 错误类型字符串
+   */
+  _getErrorTypeString(errorType) {
+    const mapping = {
+      [ErrorTypes.NETWORK_ERROR]: 'error',
+      [ErrorTypes.NETWORK_TIMEOUT]: 'timeout',
+      [ErrorTypes.DATA_NOT_FOUND]: 'not_found',
+      [ErrorTypes.DATA_INVALID]: 'error',
+      [ErrorTypes.DATA_INCOMPLETE]: 'no_results',
+      [ErrorTypes.BUSINESS_FAILED]: 'failed',
+      [ErrorTypes.BUSINESS_TIMEOUT]: 'timeout',
+      [ErrorTypes.BUSINESS_NO_RESULTS]: 'no_results',
+      [ErrorTypes.SYSTEM_ERROR]: 'error',
+      [ErrorTypes.UNKNOWN_ERROR]: 'error'
+    };
+    return mapping[errorType] || 'error';
+  }
+
+  /**
+   * 【P0 关键修复 - 2026-03-07】创建失败报告（带元数据）
+   * @param {Object} report - 原始报告数据
+   * @returns {Object} 失败报告
+   */
+  _createFailedReportWithMetadata(report) {
+    const executionMetadata = report.execution_metadata || {};
+    const errorDetails = report.error_details || report.error || {};
+
+    return {
+      status: 'failed',
+      success: false,
+      executionId: report.execution_id || report.executionId || '',
+      error: typeof errorDetails === 'string' 
+        ? { message: errorDetails, suggestion: '请检查诊断配置' }
+        : {
+            type: errorDetails.type || 'unknown',
+            message: errorDetails.message || '诊断失败',
+            suggestion: errorDetails.suggestion || '请查看诊断详情'
+          },
+      // 元数据（让用户看到配置和日志）
+      execution_metadata: {
+        selected_models: executionMetadata.selected_models || report.selected_models || [],
+        custom_questions: executionMetadata.custom_questions || report.custom_questions || [],
+        main_brand: executionMetadata.main_brand || report.brand_name || '',
+        competitor_brands: executionMetadata.competitor_brands || [],
+        execution_log: executionMetadata.execution_log || [],
+        failure_reason: executionMetadata.failure_reason || 'unknown',
+        timestamp: executionMetadata.timestamp || new Date().toISOString()
+      },
+      // 执行统计
+      total_tasks: report.total_tasks || 0,
+      completed_tasks: report.completed_tasks || 0,
+      completion_rate: report.completion_rate || 0,
+      // 兼容性字段
+      results: [],
+      brandDistribution: { data: {}, total_count: 0 },
+      sentimentDistribution: { data: { positive: 0, neutral: 0, negative: 0 }, total_count: 0 },
+      keywords: [],
+      // 验证信息
+      validation: {
+        is_valid: false,
+        errors: [typeof errorDetails === 'string' ? errorDetails : (errorDetails.message || '诊断失败')],
+        warnings: [],
+        quality_score: 0
+      },
+      meta: {
+        generated_at: new Date().toISOString(),
+        execution_id: report.execution_id || report.executionId || '',
+        version: '2.0.0'
+      }
+    };
   }
 
   /**
@@ -103,6 +315,46 @@ class ReportService {
       'no_results': '诊断未生成有效结果，建议检查 AI 平台配置'
     };
 
+    // P1-1 增强：添加详细的降级场景信息
+    const fallbackInfo = {
+      'not_found': {
+        title: '报告不存在',
+        description: '未找到对应的诊断报告',
+        icon: 'search',
+        actions: [
+          { text: '重新诊断', type: 'navigate', url: '/pages/diagnosis/diagnosis' },
+          { text: '查看历史', type: 'navigate', url: '/pages/history/history' }
+        ]
+      },
+      'error': {
+        title: '发生错误',
+        description: '系统遇到意外错误',
+        icon: 'error',
+        actions: [
+          { text: '重试', type: 'retry' },
+          { text: '返回首页', type: 'navigate', url: '/pages/index/index' }
+        ]
+      },
+      'timeout': {
+        title: '诊断超时',
+        description: '诊断处理时间过长',
+        icon: 'time',
+        actions: [
+          { text: '继续等待', type: 'wait' },
+          { text: '查看历史', type: 'navigate', url: '/pages/history/history' }
+        ]
+      },
+      'no_results': {
+        title: '无有效结果',
+        description: '诊断未生成有效结果',
+        icon: 'warning',
+        actions: [
+          { text: '优化配置', type: 'navigate', url: '/pages/diagnosis/diagnosis' },
+          { text: '联系支持', type: 'contact' }
+        ]
+      }
+    };
+
     return {
       report: {},
       results: [],
@@ -113,13 +365,15 @@ class ReportService {
       error: {
         status: type,
         message: message,
-        suggestion: suggestions[type] || '请稍后重试'
+        suggestion: suggestions[type] || '请稍后重试',
+        fallbackInfo: fallbackInfo[type] || fallbackInfo.error
       },
       validation: {
         is_valid: false,
         errors: [message],
         warnings: [],
-        quality_score: 0
+        quality_score: 0,
+        fallbackScenarios: [type]
       },
       meta: {
         generated_at: new Date().toISOString(),
@@ -452,38 +706,129 @@ class ReportService {
   }
 
   /**
-   * 从缓存获取数据
+   * P1-5 修复：从缓存获取数据（增强版 - 支持动态超时）
    * @private
    * @param {string} key - 缓存键
+   * @param {Object} reportData - 报告数据（用于判断状态）
    * @returns {Object|null} 缓存的数据
    */
-  _getFromCache(key) {
+  _getFromCache(key, reportData = null) {
     const cached = this.cache.get(key);
     if (!cached) {
+      this.cacheStats.misses++;
       return null;
     }
 
+    // P1-5 增强：根据报告状态动态计算超时时间
+    const cacheTimeout = this._getDynamicCacheTimeout(cached.data);
+    
     // 检查是否过期
-    if (Date.now() - cached.timestamp > this.cacheTimeout) {
+    if (Date.now() - cached.timestamp > cacheTimeout) {
+      console.log('[ReportService] 缓存已过期:', key);
       this.cache.delete(key);
+      this.cacheStats.expirations++;
       return null;
     }
 
+    // P1-5 增强：检查报告状态是否需要刷新缓存
+    if (this._shouldInvalidateCache(cached.data, reportData)) {
+      console.log('[ReportService] 缓存需要刷新:', key);
+      this.cache.delete(key);
+      this.cacheStats.invalidations++;
+      return null;
+    }
+
+    this.cacheStats.hits++;
+    console.log('[ReportService] 缓存命中:', key, `剩余时间：${Math.round((cacheTimeout - (Date.now() - cached.timestamp)) / 1000)}s`);
     return cached.data;
   }
 
   /**
-   * 设置缓存
+   * P1-5 新增：根据报告状态获取动态缓存超时时间
+   * @private
+   * @param {Object} reportData - 报告数据
+   * @returns {number} 缓存超时时间（毫秒）
+   */
+  _getDynamicCacheTimeout(reportData) {
+    const status = reportData?.report?.status;
+    const stage = reportData?.report?.stage;
+    
+    // 处理中：短缓存（30 秒），需要频繁刷新
+    if (status === 'processing' || (stage && stage !== 'completed')) {
+      return 30000; // 30 秒
+    }
+    
+    // 已完成：长缓存（5 分钟）
+    if (status === 'completed') {
+      return this.cacheTimeout; // 5 分钟
+    }
+    
+    // 失败状态：中等缓存（1 分钟）
+    if (status === 'failed') {
+      return 60000; // 1 分钟
+    }
+    
+    // 默认：中等缓存（2 分钟）
+    return 120000; // 2 分钟
+  }
+
+  /**
+   * P1-5 新增：判断是否需要刷新缓存
+   * @private
+   * @param {Object} cachedData - 缓存的数据
+   * @param {Object} freshData - 新获取的数据
+   * @returns {boolean} 是否需要刷新
+   */
+  _shouldInvalidateCache(cachedData, freshData) {
+    if (!freshData) {
+      return false;
+    }
+    
+    // 检查状态变化
+    const cachedStatus = cachedData?.report?.status;
+    const freshStatus = freshData?.report?.status;
+    
+    if (cachedStatus !== freshStatus) {
+      return true;
+    }
+    
+    // 检查进度变化
+    const cachedProgress = cachedData?.report?.progress;
+    const freshProgress = freshData?.report?.progress;
+    
+    if (cachedProgress !== freshProgress && freshProgress > cachedProgress) {
+      return true;
+    }
+    
+    // 检查验证状态变化
+    const cachedValid = cachedData?.validation?.is_valid;
+    const freshValid = freshData?.validation?.is_valid;
+    
+    if (cachedValid !== freshValid) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * P1-5 修复：设置缓存（增强版 - 支持动态超时标记）
    * @private
    * @param {string} key - 缓存键
    * @param {Object} data - 缓存数据
    */
   _setCache(key, data) {
+    // P1-5 增强：记录缓存的超时时间
+    const cacheTimeout = this._getDynamicCacheTimeout(data);
+    
     this.cache.set(key, {
       data: data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      timeout: cacheTimeout // 记录超时时间
     });
 
+    console.log('[ReportService] 设置缓存:', key, `超时时间：${cacheTimeout / 1000}s`);
+    
     // 清理过期缓存
     this._cleanupCache();
   }
@@ -512,6 +857,37 @@ class ReportService {
       this.cache.clear();
     }
     console.log('[ReportService] Cache cleared');
+  }
+
+  /**
+   * P1-5 新增：获取缓存统计信息
+   * @returns {Object} 缓存统计信息
+   */
+  getCacheStats() {
+    const total = this.cacheStats.hits + this.cacheStats.misses;
+    const hitRate = total > 0 ? ((this.cacheStats.hits / total) * 100).toFixed(2) : 0;
+    
+    return {
+      hits: this.cacheStats.hits,
+      misses: this.cacheStats.misses,
+      invalidations: this.cacheStats.invalidations,
+      expirations: this.cacheStats.expirations,
+      hitRate: parseFloat(hitRate),
+      cacheSize: this.cache.size
+    };
+  }
+
+  /**
+   * P1-5 新增：重置缓存统计
+   */
+  resetCacheStats() {
+    this.cacheStats = {
+      hits: 0,
+      misses: 0,
+      invalidations: 0,
+      expirations: 0
+    };
+    console.log('[ReportService] 缓存统计已重置');
   }
 
   /**

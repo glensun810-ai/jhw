@@ -73,7 +73,8 @@ const {
   navigateToConfigManager,
   navigateToPermissionManager,
   navigateToDataManager,
-  navigateToUserGuide
+  navigateToUserGuide,
+  navigateToReportPage
 } = require('../../services/navigationService');
 
 // 初始化服务
@@ -1607,31 +1608,54 @@ Page({
    * 处理诊断完成
    * @param {Object} parsedStatus - 解析后的状态
    * @param {string} executionId - 执行 ID
+   * 【P0 关键修复 - 2026-03-07】即使无结果也允许查看报告（展示配置、日志、错误详情）
    */
-  handleDiagnosisComplete(parsedStatus, executionId) {
+  handleDiagnosisComplete: function(parsedStatus, executionId) {
     try {
-      // 【P1-2 新增】部分完成警告提示
+      // 【P0 关键修复】检查后端返回的 status 字段
+      if (parsedStatus?.status === 'failed') {
+        console.error('[handleDiagnosisComplete] 后端返回 failed 状态，跳转到报告页展示详情');
+        wx.hideLoading();
+        // 【修复】不弹出阻断式弹窗，直接跳转到报告页展示详情
+        navigateToReportPage(executionId, {
+          hasResults: false,
+          showExecutionLog: true,
+          showConfigReview: true
+        });
+        return;
+      }
+
+      // 【P0 关键修复 - 2026-03-07】即使 results.length == 0 也允许查看报告
+      const resultsToCheck = parsedStatus?.detailed_results || parsedStatus?.results || [];
+      if (!Array.isArray(resultsToCheck) || resultsToCheck.length === 0) {
+        console.error('[handleDiagnosisComplete] results.length == 0，跳转到报告页展示详情');
+        wx.hideLoading();
+        // 【修复】不弹出"无有效结果"阻断弹窗，直接跳转到报告页展示详情
+        navigateToReportPage(executionId, {
+          hasResults: false,
+          showExecutionLog: true,
+          showConfigReview: true
+        });
+        return;
+      }
+
+      // 【P1-2 新增】部分完成警告提示（非阻断式）
       if (parsedStatus.warning || parsedStatus.missing_count > 0) {
-        const resultsCount = (parsedStatus.results || []).length || (parsedStatus.detailed_results || []).length;
+        const resultsCount = resultsToCheck.length;
         const totalCount = resultsCount + (parsedStatus.missing_count || 0);
-        wx.showModal({
-          title: '诊断提示',
-          content: `诊断部分完成：已获取 ${resultsCount}/${totalCount} 个结果\n${parsedStatus.warning || '部分 AI 调用失败，已展示可用结果'}`,
-          showCancel: false,
-          confirmText: '查看结果'
+        // 改为非阻断式提示
+        wx.showToast({
+          title: `部分完成：${resultsCount}/${totalCount}`,
+          icon: 'none',
+          duration: 2000
         });
       }
 
-      // P3 修复：立即更新按钮状态，不等待异步处理
-      // Step 7: 主要使用 appState
-      this.setData({
-        appState: 'completed',
-        hasLastReport: true,
-        completedTime: this.getCompletedTimeText()
-      });
-
-      // P2 优化：先跳转结果页，再异步处理数据
-      // 保存核心数据并跳转
+      // 【P0 关键修复 - 2026-03-07】诊断完成后立即自动跳转到报告页
+      // 不再停留在首页展示按钮，用户直接在报告页查看详细结果
+      console.log('[handleDiagnosisComplete] 诊断完成，准备跳转到报告页...');
+      
+      // 保存核心数据
       const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];
       const competitiveAnalysisToSave = parsedStatus.competitive_analysis || {};
       const brandScoresToSave = competitiveAnalysisToSave.brandScores || {};
@@ -1709,10 +1733,15 @@ Page({
 
       console.log('✅ 数据已保存到本地存储');
 
-      // P2 优化：立即跳转，不等待本地数据处理完成
-      wx.navigateTo({
-        url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
-      });
+      // 【P0 关键修复 - 2026-03-07】诊断完成后 0.5 秒自动跳转到报告页
+      // 给用户短暂的完成反馈时间，然后自动跳转
+      console.log('[handleDiagnosisComplete] 诊断完成，0.5 秒后跳转到报告页...');
+      
+      setTimeout(() => {
+        wx.navigateTo({
+          url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
+        });
+      }, 500);
 
       // P2 优化：异步处理本地数据聚合（不阻塞跳转）
       // 使用 setTimeout 将计算任务放到下一个事件循环

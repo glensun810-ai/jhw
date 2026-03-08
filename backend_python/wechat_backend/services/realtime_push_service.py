@@ -155,21 +155,35 @@ class RealtimePushService:
     ) -> None:
         """
         发送完成通知
-        
+
         参数：
             execution_id: 执行 ID
             result: 结果数据
             user_openid: 用户 OpenID（用于微信通知）
+
+        【P0 紧急修复 - 2026-03-06】添加完整结果数据到消息中
         """
+        # 【P0 紧急修复】从 result 中提取完整结果数据
+        results_data = result.get('results', [])
+        detailed_results_data = result.get('detailed_results', [])
+        competitive_analysis_data = result.get('competitive_analysis', {})
+        brand_scores_data = result.get('brand_scores', {})
+
         message = {
             'progress': 100,
             'stage': 'completed',
             'status': 'success',
             'status_text': '诊断完成',
-            'results_count': len(result.get('results', [])),
-            'timestamp': datetime.now().isoformat()
+            'results_count': len(results_data),
+            'timestamp': datetime.now().isoformat(),
+            
+            # 【P0 紧急修复 - 2026-03-06】添加完整结果数据，供前端展示使用
+            'results': results_data,
+            'detailed_results': detailed_results_data,
+            'competitive_analysis': competitive_analysis_data,
+            'brand_scores': brand_scores_data
         }
-        
+
         # 1. WebSocket 推送
         ws_service = self._get_websocket_service()
         if ws_service:
