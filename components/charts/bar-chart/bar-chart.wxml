@@ -1,0 +1,46 @@
+<!--
+  柱状图组件
+  用于品牌对比等场景
+-->
+<view class="bar-chart-container">
+  <view class="chart-header" wx:if="{{title}}">
+    <text class="chart-title">{{title}}</text>
+  </view>
+  
+  <view class="chart-body">
+    <!-- Y 轴标签 -->
+    <view class="y-axis" wx:if="{{showYAxis}}">
+      <view class="y-label">{{maxValue}}</view>
+      <view class="y-label">{{Math.round(maxValue / 2)}}</view>
+      <view class="y-label">0</view>
+    </view>
+    
+    <!-- 柱状图区域 -->
+    <view class="bars-wrapper">
+      <view class="bars-container">
+        <view 
+          class="bar-item" 
+          wx:for="{{data}}" 
+          wx:key="name"
+          wx:for-item="item"
+          wx:for-index="index"
+        >
+          <view class="bar-wrapper">
+            <view 
+              class="bar-fill" 
+              style="height: {{(item.value / maxValue * 100)}}%; background: {{item.color || defaultColor}};"
+            >
+              <text class="bar-value" wx:if="{{showValue}}">{{item.value}}</text>
+            </view>
+          </view>
+          <text class="bar-label">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!data || data.length === 0}}">
+    <text class="empty-text">暂无数据</text>
+  </view>
+</view>

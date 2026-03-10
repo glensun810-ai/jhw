@@ -105,6 +105,9 @@ class DiagnosisService {
 
     console.log('[DiagnosisService] Starting progress monitoring for:', executionId);
 
+    // 【P0 优化 - 2026-03-09】开始轮询前重置 WebSocket 的永久失败标志
+    this._resetWebSocketFailure();
+
     // 优先使用 WebSocket
     if (CONFIG.ENABLE_WEBSOCKET) {
       this._connectWebSocket(executionId, callbacks);
@@ -113,6 +116,22 @@ class DiagnosisService {
     }
 
     return executionId;
+  }
+
+  /**
+   * 【P0 优化 - 2026-03-09】重置 WebSocket 的永久失败标志
+   * @private
+   */
+  _resetWebSocketFailure() {
+    try {
+      const webSocketClient = require('./webSocketClient').default;
+      if (webSocketClient && typeof webSocketClient.resetPermanentFailure === 'function') {
+        webSocketClient.resetPermanentFailure();
+        console.log('[DiagnosisService] ✅ WebSocket failure flags reset');
+      }
+    } catch (error) {
+      console.warn('[DiagnosisService] Failed to reset WebSocket failure:', error);
+    }
   }
 
   /**

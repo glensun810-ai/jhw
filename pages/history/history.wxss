@@ -142,6 +142,10 @@
   color: #f39c12;
 }
 
+.stat-value.favorite {
+  color: #e91e63;
+}
+
 .stat-label {
   font-size: 24rpx;
   color: #8c8c8c;
@@ -268,6 +272,77 @@
   border: 1rpx solid #303030;
   border-radius: 20rpx;
   padding: 14rpx 20rpx;
+}
+
+/* 导出按钮特殊样式 */
+.filter-btn.export-btn {
+  background: linear-gradient(135deg, rgba(74, 123, 255, 0.2), rgba(74, 123, 255, 0.1));
+  border-color: rgba(74, 123, 255, 0.3);
+}
+
+.filter-btn .icon {
+  font-size: 28rpx;
+}
+
+.filter-btn .btn-text {
+  font-size: 24rpx;
+  color: #e8e8e8;
+}
+
+.filter-btn:active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.3);
+}
+
+/* 筛选条件标签 */
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 16rpx 0;
+}
+
+.filter-tag {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: rgba(74, 123, 255, 0.15);
+  border: 1rpx solid rgba(74, 123, 255, 0.3);
+  border-radius: 16rpx;
+  padding: 8rpx 16rpx;
+}
+
+.filter-tag text {
+  font-size: 24rpx;
+  color: #4A7BFF;
+}
+
+.filter-tag .tag-close {
+  font-size: 28rpx;
+  color: #4A7BFF;
+  padding: 0 4rpx;
+}
+
+.filter-tag:active {
+  opacity: 0.7;
+}
+
+.filter-clear-all {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 16rpx;
+}
+
+.filter-clear-all text {
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+.filter-clear-all:active {
+  opacity: 0.6;
+}
+
+.filter-btn .btn-text {
   font-size: 26rpx;
   color: #8c8c8c;
   transition: all 0.3s ease;
@@ -310,41 +385,50 @@
 }
 
 .filter-group {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid #303030;
+  margin-bottom: 24rpx;
 }
 
 .filter-group:last-of-type {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .filter-label {
-  font-size: 28rpx;
+  display: block;
+  font-size: 26rpx;
   color: #8c8c8c;
   font-weight: 500;
+  margin-bottom: 16rpx;
 }
 
-.filter-picker {
-  flex: 1;
-  text-align: right;
+/* 筛选选项 */
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
 }
 
-.picker-display {
+.filter-option {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8rpx;
-  font-size: 28rpx;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid #303030;
+  border-radius: 12rpx;
+  padding: 12rpx 20rpx;
+  font-size: 26rpx;
   color: #e8e8e8;
-  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
-.picker-display .arrow {
-  font-size: 24rpx;
-  color: #5a5a5a;
+.filter-option.active {
+  background: rgba(74, 123, 255, 0.2);
+  border-color: #4A7BFF;
+  color: #4A7BFF;
+}
+
+.filter-option:active {
+  opacity: 0.7;
+  transform: scale(0.98);
 }
 
 .filter-actions-row {
@@ -604,6 +688,25 @@
   background: rgba(0, 229, 255, 0.15);
   border-color: rgba(0, 229, 255, 0.3);
   transform: scale(0.9);
+}
+
+/* 收藏按钮特殊样式 */
+.favorite-btn {
+  color: #8c8c8c;
+}
+
+.favorite-btn.favorited {
+  background: rgba(243, 156, 18, 0.15);
+  border-color: rgba(243, 156, 18, 0.5);
+  color: #f39c12;
+}
+
+.favorite-btn.favorited:active {
+  background: rgba(243, 156, 18, 0.25);
+}
+
+.favorite-btn .btn-icon {
+  font-size: 32rpx;
 }
 
 .btn-icon {

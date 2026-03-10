@@ -34,8 +34,8 @@ from wechat_backend.ai_adapters.factory import AIAdapterFactory
 from wechat_backend.nxm_execution_engine import execute_nxm_test, verify_nxm_execution
 from wechat_backend.question_system import QuestionManager, TestCaseGenerator
 from wechat_backend.test_engine import TestExecutor, ExecutionStrategy
-from scoring_engine import ScoringEngine
-from enhanced_scoring_engine import EnhancedScoringEngine, calculate_enhanced_scores
+from wechat_backend.scoring_engine import ScoringEngine
+from wechat_backend.enhanced_scoring_engine import EnhancedScoringEngine, calculate_enhanced_scores
 from ai_judge_module import AIJudgeClient, JudgeResult, ConfidenceLevel
 from wechat_backend.analytics.interception_analyst import InterceptionAnalyst
 from wechat_backend.analytics.monetization_service import MonetizationService, UserLevel

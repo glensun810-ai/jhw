@@ -1,0 +1,6 @@
+<!-- 问题聚合子页面 -->
+<view class="container">
+  <view class="card">
+    <text>问题聚合详情页</text>
+  </view>
+</view>

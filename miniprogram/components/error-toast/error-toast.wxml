@@ -55,25 +55,31 @@
     
     <!-- 操作按钮 -->
     <view class="error-actions">
-      <button class="error-action-btn cancel" 
-              wx:if="{{showCancel}}" 
+      <!-- 关闭按钮：始终显示，允许用户关闭 -->
+      <button class="error-action-btn close"
+              bindtap="onClose">
+        关闭
+      </button>
+      
+      <!-- 取消按钮 -->
+      <button class="error-action-btn cancel"
+              wx:if="{{showCancel}}"
               bindtap="onCancel">
         {{cancelText}}
       </button>
-      <button class="error-action-btn primary" 
-              wx:if="{{showRetry}}" 
+      
+      <!-- 重试按钮 -->
+      <button class="error-action-btn primary"
+              wx:if="{{showRetry}}"
               bindtap="onRetry">
         {{retryText}}
       </button>
-      <button class="error-action-btn primary" 
-              wx:if="{{showConfirm}}" 
+      
+      <!-- 确认按钮 -->
+      <button class="error-action-btn primary"
+              wx:if="{{showConfirm}}"
               bindtap="onConfirm">
         {{confirmText}}
-      </button>
-      <button class="error-action-btn primary" 
-              wx:if="{{!showRetry && !showConfirm}}" 
-              bindtap="onClose">
-        {{closeText}}
       </button>
     </view>
     

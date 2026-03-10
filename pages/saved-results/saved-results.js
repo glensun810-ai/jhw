@@ -224,11 +224,11 @@ Page({
   viewResult: function(e) {
     const id = e.currentTarget.dataset.id;
     const result = this.data.savedResults.find(item => item.id === id);
-    
+
     if (result) {
-      // 将结果传递到结果页面
+      // 【P0 修复 - 2026-03-09】跳转到新系统 report-v2
       wx.navigateTo({
-        url: `/pages/results/results?results=${encodeURIComponent(JSON.stringify(result.results))}&targetBrand=${encodeURIComponent(result.brandName)}&savedResultId=${id}`
+        url: `/miniprogram/pages/report-v2/report-v2?executionId=${id}`
       });
     }
   },

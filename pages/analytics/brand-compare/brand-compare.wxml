@@ -1,0 +1,6 @@
+<!-- 品牌对比子页面 -->
+<view class="container">
+  <view class="card">
+    <text>品牌对比详情页</text>
+  </view>
+</view>

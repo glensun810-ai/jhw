@@ -1,0 +1,6 @@
+<!-- 趋势分析子页面 -->
+<view class="container">
+  <view class="card">
+    <text>趋势分析详情页</text>
+  </view>
+</view>

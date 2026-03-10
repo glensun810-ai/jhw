@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "统计分析",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#121826",
+  "backgroundTextStyle": "light",
+  "usingComponents": {
+    "bar-chart": "../../components/charts/bar-chart/bar-chart",
+    "line-chart": "../../components/charts/line-chart/line-chart",
+    "radar-chart": "../../components/charts/radar-chart/radar-chart",
+    "word-cloud": "../../components/charts/word-cloud/word-cloud"
+  }
+}

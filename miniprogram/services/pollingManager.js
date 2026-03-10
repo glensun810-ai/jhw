@@ -277,6 +277,25 @@ class PollingManager {
         return;
       }
 
+      // 【P0 优化 - 2026-03-09】检测到失败状态立即停止轮询（即使 should_stop_polling=false）
+      // 防止前端在任务已失败的情况下继续轮询
+      if (statusData.status === 'failed' || statusData.status === 'timeout') {
+        console.warn(`[PollingManager] ⚠️ 检测到失败状态，立即停止轮询：${executionId}, status=${statusData.status}`);
+
+        // 调用错误回调
+        if (task.callbacks.onError) {
+          task.callbacks.onError({
+            message: statusData.error_message || '诊断任务失败',
+            status: statusData.status,
+            data: statusData,
+            type: 'TASK_FAILED'
+          });
+        }
+
+        this.stopPolling(executionId);
+        return;
+      }
+
       // 继续下一次轮询
       this._scheduleNextPoll(executionId);
 

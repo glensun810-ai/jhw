@@ -91,13 +91,13 @@ class SentimentAnalyzer:
             ... ]
             >>> analyzer.analyze(results)
             {'positive': 50.0, 'neutral': 25.0, 'negative': 25.0}
-            
+
         raises:
             AnalyticsDataError: 输入参数验证失败
         """
         # 【P1-002 修复】添加输入参数验证
         self._validate_results(results, 'analyze')
-        
+
         if not results:
             self.logger.warning("分析结果为空")
             return {
@@ -127,16 +127,22 @@ class SentimentAnalyzer:
             )
             distribution[label] = percentage
 
-        # 【P3-002 修复】结构化日志
+        # 【P2-004 优化】修复日志显示问题：明确记录数量和百分比，避免混淆
         self.logger.info("sentiment_analyzed", extra={
             'event': 'sentiment_analyzed',
             'total_count': total,
             'distribution': distribution,
+            'counts': dict(sentiment_counts),  # 添加原始数量
+            'summary': ', '.join([
+                f"{self.SENTIMENT_LABEL_CN.get(label, label)}: {sentiment_counts[label]}({distribution[label]}%)"
+                for label in self.SENTIMENT_LABELS
+            ]),
         })
         return {
             'data': distribution,
             'total_count': total,
-            'warning': None
+            'warning': None,
+            'counts': dict(sentiment_counts)  # 【P2-004 新增】同时返回原始数量
         }
     
     def analyze_by_brand(

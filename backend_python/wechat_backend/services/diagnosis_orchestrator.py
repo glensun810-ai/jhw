@@ -607,7 +607,7 @@ class DiagnosisOrchestrator:
                 # 重试失败，记录错误
                 self._error_logger.log_error(
                     error=retry_result.error,
-                    error_code=AIPlatformErrorCode.AI_PLATFORM_UNAVAILABLE.value,
+                    error_code=AIPlatformErrorCode.AI_SERVICE_UNAVAILABLE.value,
                     execution_id=self.execution_id,
                     user_id=user_id,
                     additional_info={
@@ -642,7 +642,7 @@ class DiagnosisOrchestrator:
                 api_logger.error(f"[Orchestrator] ❌ {error_msg}")
                 self._error_logger.log_error(
                     error=Exception(error_msg),
-                    error_code=AIPlatformErrorCode.AI_PLATFORM_UNAVAILABLE.value,
+                    error_code=AIPlatformErrorCode.AI_SERVICE_UNAVAILABLE.value,
                     execution_id=self.execution_id,
                     user_id=user_id,
                     additional_info={
@@ -674,7 +674,7 @@ class DiagnosisOrchestrator:
             # 【阶段七：错误处理】记录详细错误日志
             self._error_logger.log_error(
                 error=e,
-                error_code=AIPlatformErrorCode.AI_PLATFORM_UNAVAILABLE.value,
+                error_code=AIPlatformErrorCode.AI_SERVICE_UNAVAILABLE.value,
                 execution_id=self.execution_id,
                 user_id=user_id,
             )

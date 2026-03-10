@@ -1,6 +1,7 @@
 {
   "usingComponents": {
-    "base-chart": "../../components/BaseChart/index"
+    "question-wall": "../../components/report/question-wall/question-wall",
+    "source-list": "../../components/report/source-list/source-list"
   },
   "navigationBarTitleText": "诊断报告详情"
 }

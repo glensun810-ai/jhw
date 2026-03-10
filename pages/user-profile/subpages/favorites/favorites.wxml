@@ -1,0 +1,97 @@
+<!--
+  我的收藏 - 子页面
+  功能：查看和管理收藏的诊断报告
+-->
+<view class="favorites-container">
+  <!-- 空状态 -->
+  <view wx:if="{{isEmpty}}" class="empty-state">
+    <image class="empty-icon" src="/assets/icons/empty-favorites.png" mode="aspectFit" />
+    <text class="empty-title">暂无收藏</text>
+    <text class="empty-desc">收藏的诊断报告将显示在这里</text>
+    <button class="go-diagnose" bindtap="goToDiagnosis">去诊断</button>
+  </view>
+
+  <!-- 正常内容 -->
+  <view wx:else class="content">
+    <!-- 搜索栏 -->
+    <view class="search-bar">
+      <view class="search-input-wrapper">
+        <text class="search-icon">🔍</text>
+        <input 
+          class="search-input" 
+          placeholder="搜索品牌名称" 
+          placeholder-class="search-placeholder"
+          value="{{searchKeyword}}"
+          bindinput="onSearchChange"
+        />
+      </view>
+      <view class="sort-btn" bindtap="toggleSortMenu">
+        <text>排序</text>
+        <text class="sort-icon">▼</text>
+      </view>
+    </view>
+
+    <!-- 排序菜单 -->
+    <view wx:if="{{showSortMenu}}" class="sort-menu">
+      <view 
+        class="sort-item {{sortBy === 'time_desc' ? 'active' : ''}}"
+        data-value="time_desc"
+        bindtap="onSortChange"
+      >
+        最新收藏
+      </view>
+      <view 
+        class="sort-item {{sortBy === 'time_asc' ? 'active' : ''}}"
+        data-value="time_asc"
+        bindtap="onSortChange"
+      >
+        最早收藏
+      </view>
+      <view 
+        class="sort-item {{sortBy === 'score_desc' ? 'active' : ''}}"
+        data-value="score_desc"
+        bindtap="onSortChange"
+      >
+        分数最高
+      </view>
+    </view>
+
+    <!-- 收藏列表 -->
+    <scroll-view class="scroll-content" scroll-y enhanced show-scrollbar="{{false}}">
+      <view class="favorites-list">
+        <view 
+          wx:for="{{filteredFavorites}}" 
+          wx:key="executionId"
+          class="favorite-item"
+          data-execution-id="{{item.executionId}}"
+          data-brand-name="{{item.brandName}}"
+          bindtap="onViewDetail"
+        >
+          <view class="favorite-main">
+            <text class="favorite-brand">{{item.brandName}}</text>
+            <view class="favorite-meta">
+              <text class="favorite-time">收藏于 {{item.formattedTime}}</text>
+              <text wx:if="{{item.overallScore}}" class="favorite-score">{{item.overallScore}}分</text>
+            </view>
+          </view>
+          <view class="favorite-actions">
+            <button 
+              class="remove-btn" 
+              catchtap="onRemoveFavorite"
+              data-execution-id="{{item.executionId}}"
+              data-index="{{index}}"
+            >
+              取消收藏
+            </button>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-mask">
+    <view class="loading-spinner"></view>
+    <text>加载中...</text>
+  </view>
+</view>

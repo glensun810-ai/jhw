@@ -1,0 +1,89 @@
+<!--
+  雷达图组件
+  用于展示 AI 平台认知差异等多维度对比
+-->
+<view class="radar-chart-container">
+  <view class="chart-header" wx:if="{{title}}">
+    <text class="chart-title">{{title}}</text>
+  </view>
+  
+  <view class="chart-body">
+    <!-- 画布容器 -->
+    <view class="canvas-wrapper">
+      <!-- 背景网格 -->
+      <view class="radar-grid">
+        <view 
+          class="grid-level" 
+          wx:for="{{gridLevels}}" 
+          wx:key="index"
+          wx:for-item="level"
+          style="width: {{level}}%; height: {{level}}%; border-color: rgba(0,0,0,0.05);"
+        ></view>
+      </view>
+      
+      <!-- 轴线 -->
+      <view class="radar-axes">
+        <view 
+          class="axis-line" 
+          wx:for="{{axes}}" 
+          wx:key="index"
+          wx:for-item="axis"
+          wx:for-index="index"
+          style="transform: rotate({{index * (360 / axes.length)}}deg);"
+        ></view>
+      </view>
+      
+      <!-- 数据区域 -->
+      <view 
+        class="radar-data" 
+        style="{{dataStyle}}"
+      ></view>
+      
+      <!-- 数据点 -->
+      <view class="radar-points">
+        <view 
+          class="data-point" 
+          wx:for="{{points}}" 
+          wx:key="index"
+          wx:for-item="point"
+          wx:for-index="index"
+          style="left: {{point.x}}%; top: {{point.y}}%;"
+        >
+          <view class="point-circle" style="background: {{color}};"></view>
+        </view>
+      </view>
+      
+      <!-- 标签 -->
+      <view class="radar-labels">
+        <view 
+          class="label-item" 
+          wx:for="{{labels}}" 
+          wx:key="index"
+          wx:for-item="label"
+          wx:for-index="index"
+          style="{{labelStyle[index]}}"
+        >
+          {{label}}
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 数据列表 -->
+  <view class="data-list" wx:if="{{showDataList}}">
+    <view 
+      class="data-item" 
+      wx:for="{{data}}" 
+      wx:key="name"
+      wx:for-item="item"
+    >
+      <text class="item-name">{{item.name}}</text>
+      <text class="item-value">{{item.value}}</text>
+    </view>
+  </view>
+  
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!data || data.length === 0}}">
+    <text class="empty-text">暂无数据</text>
+  </view>
+</view>

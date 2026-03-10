@@ -1,0 +1,124 @@
+<!--
+  品牌维度分析页面
+  多维度品牌对比分析
+-->
+<view class="brand-analysis-container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">品牌维度分析</text>
+    <text class="page-subtitle">多品牌综合对比分析</text>
+  </view>
+
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <picker
+      class="filter-picker"
+      mode="selector"
+      range="{{metricOptions}}"
+      range-key="label"
+      value="{{metricIndex}}"
+      bindchange="onMetricChange"
+    >
+      <view class="picker-display">
+        <text class="picker-text">{{metricOptions[metricIndex].label}}</text>
+        <text class="picker-arrow">›</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 综合评分对比 -->
+  <view class="analysis-section">
+    <view class="section-header">
+      <text class="section-title">📊 综合评分对比</text>
+    </view>
+    <bar-chart
+      data="{{scoreCompareData}}"
+      title=""
+      color="#4A7BFF"
+    />
+  </view>
+
+  <!-- 声量份额对比 -->
+  <view class="analysis-section">
+    <view class="section-header">
+      <text class="section-title">📢 声量份额对比</text>
+      <text class="section-desc">各品牌在 AI 回复中的提及篇幅占比</text>
+    </view>
+    <view class="sov-chart">
+      <view
+        class="sov-segment"
+        wx:for="{{sovData}}"
+        wx:key="brand"
+        style="width: {{item.percentage}}%; background: {{item.color}};"
+      >
+        <text class="sov-label">{{item.brand}}</text>
+        <text class="sov-value">{{item.percentage}}%</text>
+      </view>
+    </view>
+    <view class="sov-list">
+      <view
+        class="sov-item"
+        wx:for="{{sovData}}"
+        wx:key="brand"
+      >
+        <view class="sov-item-info">
+          <view class="sov-dot" style="background: {{item.color}};"></view>
+          <text class="sov-brand">{{item.brand}}</text>
+        </view>
+        <text class="sov-item-value">{{item.percentage}}%</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 情感得分对比 -->
+  <view class="analysis-section">
+    <view class="section-header">
+      <text class="section-title">💝 情感得分对比</text>
+      <text class="section-desc">各品牌的情感极性得分（0-100）</text>
+    </view>
+    <view class="sentiment-list">
+      <view
+        class="sentiment-item"
+        wx:for="{{sentimentData}}"
+        wx:key="brand"
+      >
+        <view class="sentiment-header">
+          <text class="sentiment-brand">{{item.brand}}</text>
+          <text class="sentiment-value {{item.level}}">{{item.score}}分</text>
+        </view>
+        <view class="sentiment-bar">
+          <view
+            class="sentiment-fill"
+            style="width: {{item.score}}%; background: {{item.color}};"
+          ></view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 物理排名对比 -->
+  <view class="analysis-section">
+    <view class="section-header">
+      <text class="section-title">🏆 物理排名对比</text>
+      <text class="section-desc">各品牌在 AI 回复中的出现顺序</text>
+    </view>
+    <view class="ranking-list">
+      <view
+        class="ranking-item"
+        wx:for="{{rankingData}}"
+        wx:key="rank"
+      >
+        <view class="ranking-rank">
+          <text class="rank-num {{item.rank <= 3 ? 'top3' : ''}}">{{item.rank}}</text>
+        </view>
+        <view class="ranking-info">
+          <text class="ranking-brand">{{item.brand}}</text>
+          <text class="ranking-desc">平均排名 {{item.avgRank}}</text>
+        </view>
+        <view class="ranking-trend">
+          <text class="trend-icon {{item.trend}}">{{item.trendIcon}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

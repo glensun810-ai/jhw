@@ -1,0 +1,289 @@
+/* 品牌维度分析页面样式 */
+
+.brand-analysis-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a1f2e 0%, #121826 100%);
+  padding-bottom: 40rpx;
+}
+
+/* 页面头部 */
+.page-header {
+  padding: 40rpx 30rpx 30rpx;
+}
+
+.page-header .page-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #fff;
+  display: block;
+}
+
+.page-header .page-subtitle {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 8rpx;
+  display: block;
+}
+
+/* 筛选栏 */
+.filter-bar {
+  padding: 0 30rpx 30rpx;
+}
+
+.filter-picker {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.filter-picker .picker-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 20rpx;
+}
+
+.filter-picker .picker-text {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.filter-picker .picker-arrow {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* 分析区块 */
+.analysis-section {
+  margin: 0 30rpx 30rpx;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.section-header {
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.section-desc {
+  font-size: 24rpx;
+  color: #999;
+  display: block;
+}
+
+/* 声量份额图表 */
+.sov-chart {
+  display: flex;
+  height: 60rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+  margin-bottom: 20rpx;
+}
+
+.sov-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.sov-segment.min-width {
+  min-width: 60rpx;
+}
+
+.sov-label {
+  font-size: 22rpx;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.3);
+}
+
+.sov-value {
+  font-size: 20rpx;
+  color: #fff;
+  font-weight: 700;
+}
+
+.sov-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.sov-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8rpx;
+}
+
+.sov-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.sov-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+}
+
+.sov-brand {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.sov-item-value {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #4A7BFF;
+}
+
+/* 情感得分列表 */
+.sentiment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.sentiment-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.sentiment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sentiment-brand {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.sentiment-value {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.sentiment-value.excellent {
+  color: #00F5A0;
+}
+
+.sentiment-value.good {
+  color: #f39c12;
+}
+
+.sentiment-value.poor {
+  color: #e74c3c;
+}
+
+.sentiment-bar {
+  height: 16rpx;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.sentiment-fill {
+  height: 100%;
+  border-radius: 8rpx;
+  transition: width 0.5s ease;
+}
+
+/* 物理排名列表 */
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 20rpx;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 12rpx;
+}
+
+.ranking-rank {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rank-num {
+  width: 48rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #999;
+}
+
+.rank-num.top3 {
+  background: linear-gradient(135deg, #4A7BFF, #6B94FF);
+  color: #fff;
+}
+
+.ranking-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.ranking-brand {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 600;
+}
+
+.ranking-desc {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.ranking-trend {
+  width: 60rpx;
+  text-align: right;
+}
+
+.trend-icon {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.trend-icon.up {
+  color: #00F5A0;
+}
+
+.trend-icon.stable {
+  color: #999;
+}
+
+.trend-icon.down {
+  color: #e74c3c;
+}

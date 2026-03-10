@@ -71,6 +71,66 @@ def verify_wechat_signature(token, signature, timestamp, nonce):
     calculated_signature = hashlib.sha1(concatenated_str.encode('utf-8')).hexdigest()
     return calculated_signature == signature
 
+
+def decrypt_wechat_message(encrypt_msg, msg_signature, timestamp, nonce):
+    """
+    解密微信加密消息
+
+    参数：
+        encrypt_msg: 加密的消息
+        msg_signature: 消息签名
+        timestamp: 时间戳
+        nonce: 随机数
+
+    返回：
+        dict: 解密后的消息字典，包含 success 和 message 字段
+    """
+    try:
+        from Crypto.Cipher import AES
+        import base64
+        import json
+
+        # 获取 EncodingAESKey
+        encoding_aes_key = Config.WECHAT_ENCODING_AES_KEY
+        if not encoding_aes_key:
+            api_logger.error("[WechatDecrypt] ❌ EncodingAESKey 未配置")
+            return {'success': False, 'message': 'EncodingAESKey not configured'}
+
+        # 验证签名
+        params = [encoding_aes_key, timestamp, nonce, encrypt_msg]
+        params.sort()
+        concatenated_str = ''.join(params)
+        calculated_signature = hashlib.sha1(concatenated_str.encode('utf-8')).hexdigest()
+
+        if calculated_signature != msg_signature:
+            api_logger.warning(f"[WechatDecrypt] ⚠️ 签名验证失败")
+            return {'success': False, 'message': 'Invalid signature'}
+
+        # Base64 解码
+        aes_key = base64.b64decode(encoding_aes_key + '=')
+
+        # AES 解密
+        cipher = AES.new(aes_key, AES.MODE_CBC, aes_key[:16])
+        decrypted = cipher.decrypt(base64.b64decode(encrypt_msg))
+
+        # 去除 PKCS7 填充
+        pad = decrypted[-1]
+        decrypted = decrypted[:-pad]
+
+        # 去除 16 字节随机前缀
+        decrypted = decrypted[16:]
+
+        # 解析 XML/JSON 消息
+        message = decrypted.decode('utf-8')
+        api_logger.info(f"[WechatDecrypt] ✅ 消息解密成功")
+
+        return {'success': True, 'message': message}
+
+    except Exception as e:
+        api_logger.error(f"[WechatDecrypt] ❌ 解密失败：{e}")
+        return {'success': False, 'message': f'Decryption error: {str(e)}'}
+
+
 @wechat_bp.route('/wechat/verify', methods=['GET', 'POST'])
 def wechat_verify():
     """Handle WeChat server verification"""
@@ -103,7 +163,44 @@ def wechat_verify():
             return 'Verification failed', 403
     elif request.method == 'POST':
         api_logger.info("Received POST request to wechat/verify endpoint")
-        return 'success'
+        
+        # 处理加密消息
+        try:
+            # 获取微信加密参数
+            msg_signature = request.args.get('msg_signature', '')
+            timestamp = request.args.get('timestamp', '')
+            nonce = request.args.get('nonce', '')
+            encrypt_type = request.args.get('encrypt_type', '')
+            
+            # 如果有加密类型，说明是加密消息
+            if encrypt_type == 'aes':
+                import xml.etree.ElementTree as ET
+                
+                # 读取请求体
+                post_data = request.get_data()
+                api_logger.info(f"[WechatVerify] 收到加密消息：{post_data[:100]}...")
+                
+                # 解析 XML 获取加密内容
+                root = ET.fromstring(post_data)
+                encrypt_msg = root.find('Encrypt').text
+                
+                # 解密消息
+                result = decrypt_wechat_message(encrypt_msg, msg_signature, timestamp, nonce)
+                
+                if result['success']:
+                    api_logger.info(f"[WechatVerify] 解密成功：{result['message'][:100]}...")
+                    # 这里可以进一步处理解密后的消息
+                    return 'success'
+                else:
+                    api_logger.error(f"[WechatVerify] 解密失败：{result['message']}")
+                    return 'fail', 400
+            
+            # 普通消息处理
+            return 'success'
+            
+        except Exception as e:
+            api_logger.error(f"[WechatVerify] 处理 POST 请求异常：{e}")
+            return 'fail', 400
 
 @wechat_bp.route('/api/login', methods=['POST'])
 @rate_limit(limit=10, window=60, per='ip')  # 限制每个IP每分钟最多10次登录尝试
@@ -2334,8 +2431,23 @@ def get_task_status_api(task_id):
                             response_data['semantic_drift_data'] = summary.get('semantic_drift_data', {})
                             response_data['recommendation_data'] = summary.get('recommendation_data', {})
                             response_data['overall_score'] = summary.get('overall_score', 0)
-
-                            api_logger.info(f'✅ 从数据库加载 results_summary: {len(summary)} 字段')
+                            
+                            # 【P0 架构优化 - 2026-03-11】添加预计算数据（前端分层加载支持）
+                            detailed_results_list = summary.get('detailed_results', [])
+                            source_intelligence = summary.get('source_intelligence') or summary.get('source_intelligence_map')
+                            
+                            # 如果后端未返回预计算数据，现场计算
+                            if detailed_results_list and not summary.get('dimension_scores'):
+                                # 导入预计算服务
+                                from wechat_backend.services.precompute_service import precompute_diagnosis_data
+                                precomputed = precompute_diagnosis_data(detailed_results_list, source_intelligence)
+                                response_data['dimension_scores'] = precomputed['dimension_scores']
+                                # 如果 recommendation_data 为空，使用预计算
+                                if not response_data['recommendation_data']:
+                                    response_data['recommendation_data'] = precomputed['recommendation_data']
+                                response_data['quality_score'] = precomputed['quality_score']
+                            
+                            api_logger.info(f'✅ 从数据库加载 results_summary: {len(summary)} 字段，预计算数据已添加')
                         except Exception as parse_error:
                             api_logger.error(f'❌ 解析 results_summary 失败：{parse_error}')
                             # 解析失败时返回空数据，不中断整个流程

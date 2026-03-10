@@ -1615,12 +1615,29 @@ Page({
       // 【P0 关键修复】检查后端返回的 status 字段
       if (parsedStatus?.status === 'failed') {
         console.error('[handleDiagnosisComplete] 后端返回 failed 状态，跳转到报告页展示详情');
+        
+        // 【产品架构优化 - 2026-03-10】即使是失败状态也要保存记录
+        const { saveDiagnosisResult } = require('../../utils/storage-manager');
+        saveDiagnosisResult(executionId, {
+          brandName: this.data.brandName,
+          competitorBrands: this.data.competitorBrands || [],
+          selectedModels: parsedStatus.selectedModels || [],
+          customQuestions: parsedStatus.customQuestions || [],
+          completedAt: new Date().toISOString(),
+          status: 'failed',
+          overallScore: 0,
+          results: [],
+          detailedResults: [],
+          errorMessage: parsedStatus.error_message || '诊断失败'
+        });
+        
         wx.hideLoading();
         // 【修复】不弹出阻断式弹窗，直接跳转到报告页展示详情
         navigateToReportPage(executionId, {
           hasResults: false,
           showExecutionLog: true,
-          showConfigReview: true
+          showConfigReview: true,
+          brandName: this.data.brandName
         });
         return;
       }
@@ -1629,12 +1646,28 @@ Page({
       const resultsToCheck = parsedStatus?.detailed_results || parsedStatus?.results || [];
       if (!Array.isArray(resultsToCheck) || resultsToCheck.length === 0) {
         console.error('[handleDiagnosisComplete] results.length == 0，跳转到报告页展示详情');
+        
+        // 【产品架构优化 - 2026-03-10】无结果也要保存记录
+        const { saveDiagnosisResult } = require('../../utils/storage-manager');
+        saveDiagnosisResult(executionId, {
+          brandName: this.data.brandName,
+          competitorBrands: this.data.competitorBrands || [],
+          selectedModels: parsedStatus.selectedModels || [],
+          customQuestions: parsedStatus.customQuestions || [],
+          completedAt: new Date().toISOString(),
+          status: 'completed',
+          overallScore: 0,
+          results: [],
+          detailedResults: []
+        });
+        
         wx.hideLoading();
         // 【修复】不弹出"无有效结果"阻断弹窗，直接跳转到报告页展示详情
         navigateToReportPage(executionId, {
           hasResults: false,
           showExecutionLog: true,
-          showConfigReview: true
+          showConfigReview: true,
+          brandName: this.data.brandName
         });
         return;
       }
@@ -1736,10 +1769,11 @@ Page({
       // 【P0 关键修复 - 2026-03-07】诊断完成后 0.5 秒自动跳转到报告页
       // 给用户短暂的完成反馈时间，然后自动跳转
       console.log('[handleDiagnosisComplete] 诊断完成，0.5 秒后跳转到报告页...');
-      
+
+      // 【P0 修复 - 2026-03-09】统一使用新系统 report-v2，确保第一层分析结果正确展示
       setTimeout(() => {
         wx.navigateTo({
-          url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
+          url: `/miniprogram/pages/report-v2/report-v2?executionId=${executionId}`
         });
       }, 500);
 
@@ -1913,9 +1947,9 @@ Page({
         timestamp: Date.now()
       });
 
-      // 【优化】只传递 executionId 和 brandName
+      // 【P0 修复 - 2026-03-09】统一使用新系统 report-v2
       wx.navigateTo({
-        url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(this.data.brandName)}`
+        url: `/miniprogram/pages/report-v2/report-v2?executionId=${executionId}`
       });
     } else {
       wx.showToast({ title: '暂无诊断结果', icon: 'none' });
@@ -2006,21 +2040,21 @@ Page({
           latestDiagnosisInfo: null
         });
 
-        // 统一跳转到 Dashboard 页面
+        // 【P0 修复 - 2026-03-09】统一使用新系统 report-v2
         wx.navigateTo({
-          url: '/pages/report/dashboard/index?executionId=' + executionId,
+          url: '/miniprogram/pages/report-v2/report-v2?executionId=' + executionId,
           fail: (err) => {
-            console.error('跳转 Dashboard 页面失败:', err);
-            // 降级方案：跳转到结果页
+            console.error('跳转 report-v2 页面失败:', err);
+            // 降级方案：跳转到旧的结果页
             wx.navigateTo({
               url: '/pages/results/results?executionId=' + executionId + '&brandName=' + encodeURIComponent(brandName)
             });
           }
         });
       } else {
-        wx.showToast({ 
-          title: '暂无诊断结果', 
-          icon: 'none' 
+        wx.showToast({
+          title: '暂无诊断结果',
+          icon: 'none'
         });
       }
     } catch (e) {
@@ -2477,14 +2511,15 @@ Page({
         // 保存品牌名称
         wx.setStorageSync('latestTargetBrand', brandName);
         console.log('✅ 品牌名称已保存:', brandName);
-        
+
+        // 【P0 修复 - 2026-03-09】统一使用新系统 report-v2
         wx.redirectTo({
-          url: `/pages/results/results?executionId=${executionId}&brandName=${encodeURIComponent(brandName)}`,
+          url: `/miniprogram/pages/report-v2/report-v2?executionId=${executionId}`,
           success: () => {
-            console.log('✅ 诊断完成，已跳转到结果页');
+            console.log('✅ 诊断完成，已跳转到报告页');
           },
           fail: (err) => {
-            console.error('跳转到结果页失败:', err);
+            console.error('跳转到报告页失败:', err);
             wx.showToast({
               title: '请前往"我的"查看报告',
               icon: 'none'

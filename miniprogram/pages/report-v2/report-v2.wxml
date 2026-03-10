@@ -41,29 +41,29 @@
   <scroll-view class="report-content" wx:else scroll-y enhanced show-scrollbar="{{true}}">
     <!-- 标签页切换 -->
     <view class="tab-bar">
-      <view 
-        class="tab-item {{activeTab === 'overview' ? 'active' : ''}}"
+      <view
+        class="tab-item {{activeTab == 'overview' ? 'active' : ''}}"
         data-tab="overview"
         bindtap="onTabChange"
       >
         概览
       </view>
-      <view 
-        class="tab-item {{activeTab === 'brand' ? 'active' : ''}}"
+      <view
+        class="tab-item {{activeTab == 'brand' ? 'active' : ''}}"
         data-tab="brand"
         bindtap="onTabChange"
       >
         品牌分布
       </view>
-      <view 
-        class="tab-item {{activeTab === 'sentiment' ? 'active' : ''}}"
+      <view
+        class="tab-item {{activeTab == 'sentiment' ? 'active' : ''}}"
         data-tab="sentiment"
         bindtap="onTabChange"
       >
         情感分析
       </view>
-      <view 
-        class="tab-item {{activeTab === 'keywords' ? 'active' : ''}}"
+      <view
+        class="tab-item {{activeTab == 'keywords' ? 'active' : ''}}"
         data-tab="keywords"
         bindtap="onTabChange"
       >
@@ -72,21 +72,21 @@
     </view>
 
     <!-- 概览页面 -->
-    <view class="tab-content" wx:if="{{activeTab === 'overview'}}">
+    <view class="tab-content" wx:if="{{activeTab == 'overview'}}">
       <!-- 报告摘要 -->
       <view class="summary-card">
         <view class="summary-title">报告摘要</view>
         <view class="summary-stats">
           <view class="stat-item">
-            <text class="stat-value">{{brandDistribution?.total_count || 0}}</text>
+            <text class="stat-value">{{brandDistribution && brandDistribution.total_count ? brandDistribution.total_count : 0}}</text>
             <text class="stat-label">总样本数</text>
           </view>
           <view class="stat-item">
-            <text class="stat-value">{{keywords?.length || 0}}</text>
+            <text class="stat-value">{{keywords ? keywords.length : 0}}</text>
             <text class="stat-label">关键词</text>
           </view>
           <view class="stat-item">
-            <text class="stat-value">{{Object.keys(brandDistribution?.data || {}).length || 0}}</text>
+            <text class="stat-value">{{brandDistribution && brandDistribution.data ? objectKeys(brandDistribution.data) : 0}}</text>
             <text class="stat-label">涉及品牌</text>
           </view>
         </view>
@@ -95,7 +95,7 @@
       <!-- 品牌分布 -->
       <view class="section">
         <import src="../../components/brand-distribution/brand-distribution.wxml" />
-        <view 
+        <view
           class="component-wrapper"
           data="{{brandDistribution}}"
         >
@@ -139,7 +139,7 @@
     </view>
 
     <!-- 品牌分布页面 -->
-    <view class="tab-content" wx:if="{{activeTab === 'brand'}}">
+    <view class="tab-content" wx:if="{{activeTab == 'brand'}}">
       <brand-distribution
         distribution-data="{{brandDistribution}}"
         chart-type="bar"
@@ -152,7 +152,7 @@
     </view>
 
     <!-- 情感分析页面 -->
-    <view class="tab-content" wx:if="{{activeTab === 'sentiment'}}">
+    <view class="tab-content" wx:if="{{activeTab == 'sentiment'}}">
       <sentiment-chart
         distribution-data="{{sentimentDistribution}}"
         chart-type="pie"
@@ -166,9 +166,9 @@
       <view class="interpretation-card">
         <view class="card-title">情感解读</view>
         <view class="interpretation-content">
-          <text class="interpretation-text>
-            {{sentimentDistribution?.data?.positive > 50 ? '整体评价积极正面，品牌口碑良好，建议继续保持当前的品牌策略。' : 
-              sentimentDistribution?.data?.negative > 50 ? '负面评价较多，需要关注品牌形象和用户体验，及时回应负面反馈。' : 
+          <text class="interpretation-text">
+            {{sentimentDistribution && sentimentDistribution.data && sentimentDistribution.data.positive > 50 ? '整体评价积极正面，品牌口碑良好，建议继续保持当前的品牌策略。' :
+              sentimentDistribution && sentimentDistribution.data && sentimentDistribution.data.negative > 50 ? '负面评价较多，需要关注品牌形象和用户体验，及时回应负面反馈。' :
               '评价较为中性，品牌认知度有待提升，建议加强品牌传播和用户互动。'}}
           </text>
         </view>
@@ -176,7 +176,7 @@
     </view>
 
     <!-- 关键词页面 -->
-    <view class="tab-content" wx:if="{{activeTab === 'keywords'}}">
+    <view class="tab-content" wx:if="{{activeTab == 'keywords'}}">
       <keyword-cloud
         keywords-data="{{keywords}}"
         display-mode="list"

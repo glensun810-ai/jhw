@@ -1,0 +1,46 @@
+<!--
+  信源列表组件
+  展示引用信源及其信息
+-->
+<view class="source-list-container">
+  <view class="list-header" wx:if="{{title}}">
+    <text class="list-title">{{title}}</text>
+    <text class="list-count" wx:if="{{showCount}}">共 {{sources.length}} 个信源</text>
+  </view>
+  
+  <view class="list-body">
+    <scroll-view class="source-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <view class="source-list">
+        <view 
+          class="source-item" 
+          wx:for="{{sources}}" 
+          wx:key="id"
+          wx:for-item="item"
+        >
+          <view class="source-main">
+            <view class="source-header">
+              <text class="source-name">{{item.site_name || item.name}}</text>
+              <text class="source-authority {{item.authorityClass}}">{{item.authorityText}}</text>
+            </view>
+            <text class="source-url" wx:if="{{item.url}}">{{item.url}}</text>
+          </view>
+          <view class="source-stats">
+            <view class="stat-item">
+              <text class="stat-value">{{item.citation_count || 0}}</text>
+              <text class="stat-label">引用</text>
+            </view>
+            <view class="stat-item" wx:if="{{item.riskLevel}}">
+              <text class="stat-value {{item.riskClass}}">{{item.riskLevel}}</text>
+              <text class="stat-label">风险</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+    
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!sources || sources.length === 0}}">
+      <text class="empty-text">暂无信源数据</text>
+    </view>
+  </view>
+</view>

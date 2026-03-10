@@ -30,22 +30,27 @@
     </view>
   </view>
 
-  <!-- 统计信息卡片 -->
+  <!-- 统计信息卡片 - 产品架构优化版 -->
   <view class="stats-section" wx:if="{{!batchMode}}">
     <view class="stats-card">
-      <view class="stat-item">
+      <view class="stat-item" bindtap="onStatTap" data-type="total">
         <view class="stat-value primary">{{stats.total}}</view>
-        <view class="stat-label">总报告</view>
+        <view class="stat-label">总记录</view>
       </view>
       <view class="stat-divider"></view>
-      <view class="stat-item">
+      <view class="stat-item" bindtap="onStatTap" data-type="completed">
         <view class="stat-value success">{{stats.completed}}</view>
         <view class="stat-label">已完成</view>
       </view>
       <view class="stat-divider"></view>
-      <view class="stat-item">
+      <view class="stat-item" bindtap="onStatTap" data-type="average">
         <view class="stat-value warning">{{stats.averageScore}}</view>
         <view class="stat-label">平均分</view>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item" bindtap="onStatTap" data-type="favorited">
+        <view class="stat-value favorite">{{stats.favorited}}</view>
+        <view class="stat-label">收藏数</view>
       </view>
     </view>
   </view>
@@ -66,21 +71,21 @@
     </view>
   </view>
 
-  <!-- 搜索和筛选栏 -->
+  <!-- 搜索和筛选栏 - 产品架构优化版 -->
   <view class="filter-section" wx:if="{{!batchMode}}">
     <view class="search-bar">
       <view class="search-input-wrapper">
         <text class="search-icon">🔍</text>
-        <input 
-          class="search-input" 
-          placeholder="搜索品牌名称" 
+        <input
+          class="search-input"
+          placeholder="搜索品牌名称或诊断 ID"
           value="{{searchKeyword}}"
           bindinput="onSearchChange"
           confirm-type="search"
         />
       </view>
       <view class="filter-actions">
-        <button class="filter-btn {{showFilterPanel ? 'active' : ''}}" bindtap="toggleFilterPanel">
+        <button class="filter-btn" bindtap="toggleFilterPanel">
           <text class="icon">☰</text>
           <text class="btn-text">筛选</text>
         </button>
@@ -88,49 +93,152 @@
           <text class="icon">⇅</text>
           <text class="btn-text">排序</text>
         </button>
+        <button class="filter-btn export-btn" bindtap="showExportMenu">
+          <text class="icon">📥</text>
+          <text class="btn-text">导出</text>
+        </button>
       </view>
     </view>
 
-    <!-- 筛选面板 -->
+    <!-- 筛选条件标签 -->
+    <view class="filter-tags" wx:if="{{hasActiveFilters}}">
+      <view class="filter-tag" wx:if="{{filterStatus !== 'all'}}">
+        <text>{{getStatusText(filterStatus)}}</text>
+        <text class="tag-close" bindtap="clearFilter" data-type="status">×</text>
+      </view>
+      <view class="filter-tag" wx:if="{{timeRange !== 'all'}}">
+        <text>{{getTimeRangeText(timeRange)}}</text>
+        <text class="tag-close" bindtap="clearFilter" data-type="timeRange">×</text>
+      </view>
+      <view class="filter-tag" wx:if="{{filterScore !== 'all'}}">
+        <text>{{getScoreText(filterScore)}}</text>
+        <text class="tag-close" bindtap="clearFilter" data-type="score">×</text>
+      </view>
+      <view class="filter-tag" wx:if="{{favoriteStatus !== 'all'}}">
+        <text>{{favoriteStatus === 'favorited' ? '已收藏' : '未收藏'}}</text>
+        <text class="tag-close" bindtap="clearFilter" data-type="favorite">×</text>
+      </view>
+      <view class="filter-clear-all" bindtap="clearAllFilters">
+        <text>清空筛选</text>
+      </view>
+    </view>
+
+    <!-- 筛选面板 - 产品架构优化版 -->
     <view class="filter-panel" wx:if="{{showFilterPanel}}">
+      <!-- 诊断状态 -->
       <view class="filter-group">
-        <text class="filter-label">状态筛选</text>
-        <picker 
-          class="filter-picker" 
-          mode="selector" 
-          range="{{['全部', '已完成', '失败', '处理中']}}" 
-          value="{{filterStatus === 'all' ? 0 : (filterStatus === 'completed' ? 1 : (filterStatus === 'failed' ? 2 : 3))}}"
-          bindchange="onFilterStatusChange"
-        >
-          <view class="picker-display">
-            {{filterStatus === 'all' ? '全部' : (filterStatus === 'completed' ? '已完成' : (filterStatus === 'failed' ? '失败' : '处理中'))}}
-            <text class="arrow">›</text>
-          </view>
-        </picker>
+        <text class="filter-label">诊断状态</text>
+        <view class="filter-options">
+          <view 
+            class="filter-option {{filterStatus === 'all' ? 'active' : ''}}"
+            bindtap="onFilterStatusTap"
+            data-value="all"
+          >全部</view>
+          <view 
+            class="filter-option {{filterStatus === 'completed' ? 'active' : ''}}"
+            bindtap="onFilterStatusTap"
+            data-value="completed"
+          >已完成</view>
+          <view 
+            class="filter-option {{filterStatus === 'failed' ? 'active' : ''}}"
+            bindtap="onFilterStatusTap"
+            data-value="failed"
+          >失败</view>
+          <view 
+            class="filter-option {{filterStatus === 'processing' ? 'active' : ''}}"
+            bindtap="onFilterStatusTap"
+            data-value="processing"
+          >处理中</view>
+        </view>
       </view>
-      
+
+      <!-- 时间范围 -->
       <view class="filter-group">
-        <text class="filter-label">分数段</text>
-        <picker 
-          class="filter-picker" 
-          mode="selector" 
-          range="{{['全部', '优秀 (≥80)', '良好 (60-79)', '待改进 (<60)']}}" 
-          value="{{filterScore === 'all' ? 0 : (filterScore === 'excellent' ? 1 : (filterScore === 'good' ? 2 : 3))}}"
-          bindchange="onFilterScoreChange"
-        >
-          <view class="picker-display">
-            {{filterScore === 'all' ? '全部' : (filterScore === 'excellent' ? '优秀 (≥80)' : (filterScore === 'good' ? '良好 (60-79)' : '待改进 (<60)'))}}
-            <text class="arrow">›</text>
-          </view>
-        </picker>
+        <text class="filter-label">时间范围</text>
+        <view class="filter-options">
+          <view 
+            class="filter-option {{timeRange === 'all' ? 'active' : ''}}"
+            bindtap="onTimeRangeTap"
+            data-value="all"
+          >全部</view>
+          <view 
+            class="filter-option {{timeRange === 'today' ? 'active' : ''}}"
+            bindtap="onTimeRangeTap"
+            data-value="today"
+          >今天</view>
+          <view 
+            class="filter-option {{timeRange === 'last7days' ? 'active' : ''}}"
+            bindtap="onTimeRangeTap"
+            data-value="last7days"
+          >近 7 天</view>
+          <view 
+            class="filter-option {{timeRange === 'last30days' ? 'active' : ''}}"
+            bindtap="onTimeRangeTap"
+            data-value="last30days"
+          >近 30 天</view>
+          <view 
+            class="filter-option {{timeRange === 'last90days' ? 'active' : ''}}"
+            bindtap="onTimeRangeTap"
+            data-value="last90days"
+          >近 90 天</view>
+        </view>
       </view>
-      
+
+      <!-- 综合评分 -->
+      <view class="filter-group">
+        <text class="filter-label">综合评分</text>
+        <view class="filter-options">
+          <view 
+            class="filter-option {{filterScore === 'all' ? 'active' : ''}}"
+            bindtap="onFilterScoreTap"
+            data-value="all"
+          >全部</view>
+          <view 
+            class="filter-option {{filterScore === 'excellent' ? 'active' : ''}}"
+            bindtap="onFilterScoreTap"
+            data-value="excellent"
+          >80 分以上</view>
+          <view 
+            class="filter-option {{filterScore === 'good' ? 'active' : ''}}"
+            bindtap="onFilterScoreTap"
+            data-value="good"
+          >60-79 分</view>
+          <view 
+            class="filter-option {{filterScore === 'poor' ? 'active' : ''}}"
+            bindtap="onFilterScoreTap"
+            data-value="poor"
+          >60 分以下</view>
+        </view>
+      </view>
+
+      <!-- 收藏状态 -->
+      <view class="filter-group">
+        <text class="filter-label">收藏状态</text>
+        <view class="filter-options">
+          <view 
+            class="filter-option {{favoriteStatus === 'all' ? 'active' : ''}}"
+            bindtap="onFavoriteStatusTap"
+            data-value="all"
+          >全部</view>
+          <view 
+            class="filter-option {{favoriteStatus === 'favorited' ? 'active' : ''}}"
+            bindtap="onFavoriteStatusTap"
+            data-value="favorited"
+          >已收藏</view>
+          <view 
+            class="filter-option {{favoriteStatus === 'not_favorited' ? 'active' : ''}}"
+            bindtap="onFavoriteStatusTap"
+            data-value="not_favorited"
+          >未收藏</view>
+        </view>
+      </view>
+
       <view class="filter-actions-row">
-        <button class="clear-filter-btn" bindtap="clearFilters">清空筛选</button>
+        <button class="clear-filter-btn" bindtap="clearAllFilters">清空筛选</button>
       </view>
     </view>
 
-    <!-- 排序菜单 -->
+    <!-- 排序菜单 - 产品架构优化版 -->
     <view class="sort-menu" wx:if="{{showSortMenu}}">
       <view class="sort-item {{sortBy === 'time' && sortOrder === 'desc' ? 'active' : ''}}" bindtap="onSortByChange" data-value="time-desc">
         <text class="sort-icon">🕐</text>
@@ -151,6 +259,16 @@
         <text class="sort-icon">📊</text>
         <text class="sort-text">分数升序</text>
         <text class="check-mark" wx:if="{{sortBy === 'score' && sortOrder === 'asc'}}">✓</text>
+      </view>
+      <view class="sort-item {{sortBy === 'brand' && sortOrder === 'asc' ? 'active' : ''}}" bindtap="onSortByChange" data-value="brand-asc">
+        <text class="sort-icon">🏷️</text>
+        <text class="sort-text">品牌名称 (A-Z)</text>
+        <text class="check-mark" wx:if="{{sortBy === 'brand' && sortOrder === 'asc'}}">✓</text>
+      </view>
+      <view class="sort-item {{sortBy === 'brand' && sortOrder === 'desc' ? 'active' : ''}}" bindtap="onSortByChange" data-value="brand-desc">
+        <text class="sort-icon">🏷️</text>
+        <text class="sort-text">品牌名称 (Z-A)</text>
+        <text class="check-mark" wx:if="{{sortBy === 'brand' && sortOrder === 'desc'}}">✓</text>
       </view>
     </view>
   </view>
@@ -191,11 +309,23 @@
               <text class="score-label">分</text>
             </view>
             <view class="card-actions" wx:if="{{!batchMode}}">
-              <button class="action-btn" bindtap="viewDetail" data-execution-id="{{item.executionId}}" data-brand-name="{{item.brandName}}">
+              <!-- 收藏按钮 -->
+              <button 
+                class="action-btn favorite-btn {{item.isFavorited ? 'favorited' : ''}}" 
+                bindtap="toggleFavorite"
+                data-execution-id="{{item.executionId}}"
+                data-brand-name="{{item.brandName}}"
+                data-is-favorited="{{item.isFavorited}}"
+              >
+                <text class="btn-icon">★</text>
+              </button>
+              <!-- 详情按钮 -->
+              <button class="action-btn" bindtap="viewReportDetail" data-execution-id="{{item.executionId}}" data-brand-name="{{item.brandName}}">
                 <text class="btn-icon">📄</text>
               </button>
-              <button class="action-btn" bindtap="onDeleteReport" 
-                data-execution-id="{{item.executionId}}" 
+              <!-- 删除按钮 -->
+              <button class="action-btn" bindtap="onDeleteReport"
+                data-execution-id="{{item.executionId}}"
                 data-report-id="{{item.id}}"
                 data-index="{{index}}"
               >

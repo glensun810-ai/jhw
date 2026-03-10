@@ -1,15 +1,17 @@
 /**
  * P1-1 修复：统一 Storage 管理器
- * 
+ *
  * 功能：
  * 1. 统一 Storage key 命名规范
  * 2. 添加数据版本控制
  * 3. 添加数据过期检查
  * 4. 提供统一的读写接口
+ * 5. 【产品架构优化 - 2026-03-10】自动保存到诊断记录列表
  */
 
 const STORAGE_VERSION = '1.0';
-const DATA_EXPIRY_TIME = 7 * 24 * 60 * 60 * 1000; // 7 天
+const DATA_EXPIRY_TIME = 90 * 24 * 60 * 60 * 1000; // 90 天（诊断记录保留更长时间）
+const DIAGNOSIS_HISTORY_KEY = 'diagnosis_history_list'; // 诊断记录列表
 
 /**
  * Storage Key 枚举
@@ -113,11 +115,85 @@ function saveDiagnosisResult(executionId, data) {
       timestamp: storageData.timestamp
     });
 
-    console.log(`[Storage] ✅ 诊断结果已完整保存：${executionId}`);
+    // 【产品架构优化 - 2026-03-10】自动添加到诊断记录列表
+    addToDiagnosisHistory({
+      executionId: executionId,
+      brandName: storageData.brandName,
+      createdAt: storageData.completedAt || new Date().toISOString(),
+      status: 'completed',
+      overallScore: storageData.data.overallScore || 0,
+      aiModels: storageData.data.selectedModels || [],
+      questionCount: (storageData.data.customQuestions || []).length,
+      competitorCount: (storageData.data.competitorBrands || []).length,
+      timestamp: storageData.timestamp
+    });
+
+    console.log(`[Storage] ✅ 诊断结果已完整保存并添加到记录列表：${executionId}`);
     return true;
   } catch (error) {
     console.error('[Storage] 保存诊断结果失败:', error);
     return false;
+  }
+}
+
+/**
+ * 【产品架构优化 - 2026-03-10】添加到诊断记录列表
+ * @param {Object} record - 诊断记录摘要
+ */
+function addToDiagnosisHistory(record) {
+  try {
+    // 获取现有历史记录
+    let history = wx.getStorageSync(DIAGNOSIS_HISTORY_KEY) || [];
+    
+    // 检查是否已存在（避免重复添加）
+    const exists = history.some(item => item.executionId === record.executionId);
+    if (exists) {
+      console.log(`[Storage] ℹ️  记录已存在，跳过添加：${record.executionId}`);
+      return;
+    }
+    
+    // 添加到列表开头（最新的在前）
+    history.unshift(record);
+    
+    // 限制最多保存 200 条记录
+    if (history.length > 200) {
+      history = history.slice(0, 200);
+    }
+    
+    // 保存回 Storage
+    wx.setStorageSync(DIAGNOSIS_HISTORY_KEY, history);
+    
+    console.log(`[Storage] ✅ 诊断记录已添加到列表：${record.executionId}`, history.length);
+  } catch (error) {
+    console.error('[Storage] 添加到诊断记录列表失败:', error);
+  }
+}
+
+/**
+ * 【产品架构优化 - 2026-03-10】从诊断记录列表移除
+ * @param {string} executionId - 执行 ID
+ */
+function removeFromDiagnosisHistory(executionId) {
+  try {
+    let history = wx.getStorageSync(DIAGNOSIS_HISTORY_KEY) || [];
+    history = history.filter(item => item.executionId !== executionId);
+    wx.setStorageSync(DIAGNOSIS_HISTORY_KEY, history);
+    console.log(`[Storage] ✅ 诊断记录已从列表移除：${executionId}`);
+  } catch (error) {
+    console.error('[Storage] 从诊断记录列表移除失败:', error);
+  }
+}
+
+/**
+ * 【产品架构优化 - 2026-03-10】获取诊断记录列表
+ * @returns {Array} 诊断记录列表
+ */
+function getDiagnosisHistory() {
+  try {
+    return wx.getStorageSync(DIAGNOSIS_HISTORY_KEY) || [];
+  } catch (error) {
+    console.error('[Storage] 获取诊断记录列表失败:', error);
+    return [];
   }
 }
 
@@ -374,6 +450,7 @@ module.exports = {
   StorageKey,
   STORAGE_VERSION,
   DATA_EXPIRY_TIME,
+  DIAGNOSIS_HISTORY_KEY,
   saveDiagnosisResult,
   loadDiagnosisResult,
   loadLastDiagnosis,
@@ -381,5 +458,9 @@ module.exports = {
   batchClearDiagnosisResults,
   getAllLocalDiagnosisResults,
   getStorageStats,
-  cleanupExpiredData
+  cleanupExpiredData,
+  // 【产品架构优化 - 2026-03-10】新增导出
+  addToDiagnosisHistory,
+  removeFromDiagnosisHistory,
+  getDiagnosisHistory
 };

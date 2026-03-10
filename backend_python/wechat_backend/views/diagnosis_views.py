@@ -56,8 +56,8 @@ from wechat_backend.services.realtime_push_service import send_progress_sync, se
 
 from wechat_backend.question_system import QuestionManager, TestCaseGenerator
 from wechat_backend.test_engine import TestExecutor, ExecutionStrategy
-from scoring_engine import ScoringEngine
-from enhanced_scoring_engine import EnhancedScoringEngine, calculate_enhanced_scores
+from wechat_backend.scoring_engine import ScoringEngine
+from wechat_backend.enhanced_scoring_engine import EnhancedScoringEngine, calculate_enhanced_scores
 from ai_judge_module import AIJudgeClient, JudgeResult, ConfidenceLevel
 from wechat_backend.analytics.interception_analyst import InterceptionAnalyst
 from wechat_backend.analytics.monetization_service import MonetizationService, UserLevel

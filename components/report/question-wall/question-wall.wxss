@@ -1,0 +1,133 @@
+/* 问题诊断墙组件样式 */
+
+.question-wall-container {
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+}
+
+.wall-header {
+  margin-bottom: 30rpx;
+}
+
+.wall-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.wall-body {
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+/* 风险区域 */
+.risk-section {
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.risk-section.high-risk {
+  background: rgba(231, 76, 60, 0.05);
+  border: 1rpx solid rgba(231, 76, 60, 0.2);
+}
+
+.risk-section.medium-risk {
+  background: rgba(243, 156, 18, 0.05);
+  border: 1rpx solid rgba(243, 156, 18, 0.2);
+}
+
+.risk-section.suggestions {
+  background: rgba(74, 123, 255, 0.05);
+  border: 1rpx solid rgba(74, 123, 255, 0.2);
+}
+
+/* 风险头部 */
+.risk-header {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  gap: 12rpx;
+}
+
+.risk-icon {
+  font-size: 36rpx;
+}
+
+.risk-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.risk-count {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #fff;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+}
+
+.high-risk .risk-count {
+  background: #e74c3c;
+}
+
+.medium-risk .risk-count {
+  background: #f39c12;
+}
+
+.suggestions .risk-count {
+  background: #4A7BFF;
+}
+
+/* 风险列表 */
+.risk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rpx;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.risk-item {
+  display: flex;
+  flex-direction: column;
+  padding: 24rpx 20rpx;
+  background: #fff;
+  gap: 12rpx;
+}
+
+.item-text {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.5;
+}
+
+.item-source {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.suggestion-item {
+  border-left: 4rpx solid #4A7BFF;
+}
+
+.item-priority {
+  font-size: 24rpx;
+  color: #4A7BFF;
+  font-weight: 600;
+}
+
+/* 空状态 */
+.empty-state {
+  padding: 80rpx 40rpx;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}

@@ -1,0 +1,76 @@
+<!--
+  问题诊断墙组件
+  展示高/中/低风险问题
+-->
+<view class="question-wall-container">
+  <view class="wall-header" wx:if="{{title}}">
+    <text class="wall-title">{{title}}</text>
+  </view>
+  
+  <view class="wall-body">
+    <!-- 高风险问题 -->
+    <view class="risk-section high-risk" wx:if="{{highRisks && highRisks.length > 0}}">
+      <view class="risk-header">
+        <text class="risk-icon">⚠️</text>
+        <text class="risk-label">高风险问题</text>
+        <text class="risk-count">{{highRisks.length}}</text>
+      </view>
+      <view class="risk-list">
+        <view 
+          class="risk-item" 
+          wx:for="{{highRisks}}" 
+          wx:key="id"
+          wx:for-item="item"
+        >
+          <text class="item-text">{{item.text || item.description}}</text>
+          <text class="item-source" wx:if="{{item.source}}">来自：{{item.source}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 中风险问题 -->
+    <view class="risk-section medium-risk" wx:if="{{mediumRisks && mediumRisks.length > 0}}">
+      <view class="risk-header">
+        <text class="risk-icon">⚡</text>
+        <text class="risk-label">中风险问题</text>
+        <text class="risk-count">{{mediumRisks.length}}</text>
+      </view>
+      <view class="risk-list">
+        <view 
+          class="risk-item" 
+          wx:for="{{mediumRisks}}" 
+          wx:key="id"
+          wx:for-item="item"
+        >
+          <text class="item-text">{{item.text || item.description}}</text>
+          <text class="item-source" wx:if="{{item.source}}">来自：{{item.source}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 优化建议 -->
+    <view class="risk-section suggestions" wx:if="{{suggestions && suggestions.length > 0}}">
+      <view class="risk-header">
+        <text class="risk-icon">💡</text>
+        <text class="risk-label">优化建议</text>
+        <text class="risk-count">{{suggestions.length}}</text>
+      </view>
+      <view class="risk-list">
+        <view 
+          class="risk-item suggestion-item" 
+          wx:for="{{suggestions}}" 
+          wx:key="id"
+          wx:for-item="item"
+        >
+          <text class="item-text">{{item.text || item.suggestion}}</text>
+          <text class="item-priority" wx:if="{{item.priority}}">优先级：{{item.priority}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!hasContent}}">
+      <text class="empty-text">暂无诊断问题</text>
+    </view>
+  </view>
+</view>

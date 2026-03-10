@@ -1,0 +1,115 @@
+/* 趋势图组件样式 */
+
+.line-chart-container {
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+}
+
+.chart-header {
+  margin-bottom: 30rpx;
+}
+
+.chart-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.chart-body {
+  display: flex;
+  align-items: flex-end;
+  height: 300rpx;
+  margin-bottom: 20rpx;
+}
+
+/* Y 轴 */
+.y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  margin-right: 16rpx;
+}
+
+.y-label {
+  font-size: 20rpx;
+  color: #999;
+  text-align: right;
+}
+
+/* 图表区域 */
+.chart-area {
+  flex: 1;
+  height: 100%;
+  position: relative;
+}
+
+.x-axis-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1rpx;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* 折线路径 */
+.line-path {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.line-point {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.point-circle {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  border: 3rpx solid #fff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+}
+
+.point-value {
+  position: absolute;
+  top: -30rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+/* X 轴标签 */
+.x-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10rpx;
+}
+
+.x-label {
+  font-size: 22rpx;
+  color: #999;
+  text-align: center;
+}
+
+/* 空状态 */
+.empty-state {
+  padding: 100rpx 40rpx;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}

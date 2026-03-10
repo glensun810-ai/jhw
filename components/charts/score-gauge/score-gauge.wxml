@@ -1,0 +1,61 @@
+<!--
+  综合评分仪表盘组件
+  用于展示品牌综合评分的仪表盘可视化
+-->
+<view class="score-gauge-container">
+  <view class="gauge-wrapper">
+    <!-- 仪表盘背景 -->
+    <view class="gauge-bg" style="transform: rotate({{bgRotate}}deg);">
+      <view class="gauge-segment" style="background: linear-gradient(90deg, #e74c3c 0%, #f39c12 50%, #00F5A0 100%);"></view>
+    </view>
+    
+    <!-- 指针 -->
+    <view class="gauge-pointer" style="transform: rotate({{pointerRotate}}deg);">
+      <view class="pointer-tip"></view>
+      <view class="pointer-base"></view>
+    </view>
+    
+    <!-- 中心分数 -->
+    <view class="gauge-center">
+      <text class="center-score">{{score}}</text>
+      <text class="center-label">分</text>
+      <text class="center-grade {{gradeClass}}">{{grade}}</text>
+    </view>
+  </view>
+  
+  <!-- 刻度标签 -->
+  <view class="gauge-labels">
+    <view class="gauge-label">
+      <text class="label-value">0</text>
+      <text class="label-text">差</text>
+    </view>
+    <view class="gauge-label">
+      <text class="label-value">50</text>
+      <text class="label-text">中</text>
+    </view>
+    <view class="gauge-label">
+      <text class="label-value">100</text>
+      <text class="label-text">优</text>
+    </view>
+  </view>
+  
+  <!-- 评分详情 -->
+  <view class="gauge-details" wx:if="{{showDetails}}">
+    <view class="detail-item">
+      <text class="detail-label">声量份额</text>
+      <text class="detail-value">{{sovShare || 0}}%</text>
+    </view>
+    <view class="detail-item">
+      <text class="detail-label">情感得分</text>
+      <text class="detail-value">{{sentimentScore || 0}}</text>
+    </view>
+    <view class="detail-item">
+      <text class="detail-label">物理排名</text>
+      <text class="detail-value">#{{physicalRank || '-'}}</text>
+    </view>
+    <view class="detail-item">
+      <text class="detail-label">影响力</text>
+      <text class="detail-value">{{influenceScore || 0}}</text>
+    </view>
+  </view>
+</view>

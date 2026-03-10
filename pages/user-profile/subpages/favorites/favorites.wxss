@@ -1,0 +1,234 @@
+/* 我的收藏 - 子页面样式 */
+
+.favorites-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a1f2e 0%, #121826 100%);
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 40rpx;
+  text-align: center;
+}
+
+.empty-state .empty-icon {
+  width: 200rpx;
+  height: 200rpx;
+  margin-bottom: 40rpx;
+  opacity: 0.6;
+}
+
+.empty-state .empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 16rpx;
+}
+
+.empty-state .empty-desc {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.6;
+  margin-bottom: 60rpx;
+}
+
+.empty-state .go-diagnose {
+  width: 300rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: linear-gradient(135deg, #4A7BFF, #6B94FF);
+  color: #fff;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  border: none;
+}
+
+/* 内容区域 */
+.content {
+  min-height: 100vh;
+}
+
+/* 搜索栏 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 30rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.search-bar .search-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 40rpx;
+  padding: 16rpx 24rpx;
+  margin-right: 20rpx;
+}
+
+.search-bar .search-input-wrapper .search-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.search-bar .search-input-wrapper .search-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #fff;
+  background: transparent;
+}
+
+.search-bar .search-input-wrapper .search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-bar .search-input-wrapper .search-placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-bar .sort-btn {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 20rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 32rpx;
+}
+
+.search-bar .sort-btn text {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.search-bar .sort-btn .sort-icon {
+  font-size: 20rpx;
+  margin-left: 6rpx;
+}
+
+/* 排序菜单 */
+.sort-menu {
+  position: absolute;
+  top: 140rpx;
+  right: 30rpx;
+  background: rgba(30, 35, 50, 0.98);
+  border-radius: 12rpx;
+  overflow: hidden;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.sort-menu .sort-item {
+  padding: 20rpx 30rpx;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.8);
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.sort-menu .sort-item:last-child {
+  border-bottom: none;
+}
+
+.sort-menu .sort-item.active {
+  color: #4A7BFF;
+  background: rgba(74, 123, 255, 0.1);
+}
+
+/* 滚动内容 */
+.scroll-content {
+  height: calc(100vh - 200rpx);
+}
+
+/* 收藏列表 */
+.favorites-list {
+  padding: 30rpx;
+}
+
+.favorites-list .favorite-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.favorites-list .favorite-item .favorite-main {
+  flex: 1;
+}
+
+.favorites-list .favorite-item .favorite-main .favorite-brand {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.favorites-list .favorite-item .favorite-main .favorite-meta {
+  display: flex;
+  align-items: center;
+}
+
+.favorites-list .favorite-item .favorite-main .favorite-meta .favorite-time {
+  font-size: 24rpx;
+  color: #999;
+  margin-right: 20rpx;
+}
+
+.favorites-list .favorite-item .favorite-main .favorite-meta .favorite-score {
+  font-size: 26rpx;
+  color: #4A7BFF;
+  font-weight: 600;
+}
+
+.favorites-list .favorite-item .favorite-actions {
+}
+
+.favorites-list .favorite-item .favorite-actions .remove-btn {
+  font-size: 24rpx;
+  color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.1);
+  border: none;
+  border-radius: 24rpx;
+  padding: 12rpx 24rpx;
+  margin: 0;
+}
+
+/* 加载状态 */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.loading-mask .loading-spinner {
+  width: 70rpx;
+  height: 70rpx;
+  border: 5rpx solid rgba(74, 123, 255, 0.2);
+  border-top-color: #4A7BFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-mask text {
+  margin-top: 24rpx;
+  font-size: 28rpx;
+  color: #fff;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

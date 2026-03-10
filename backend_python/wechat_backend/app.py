@@ -471,11 +471,19 @@ except Exception as e:
 @rate_limit(limit=100, window=60, per='ip')  # 限制每个IP每分钟最多100个请求
 def index():
     app_logger.info("Index endpoint accessed")
-    return jsonify({
-        'message': 'WeChat Mini Program Backend Server',
-        'status': 'running',
-        'app_id': APP_ID
-    })
+    # 获取查询参数
+    signature = request.args.get('signature')
+    echostr = request.args.get('echostr', default='1.0')
+
+    # return jsonify({
+    #     'message': 'WeChat Mini Program Backend Server',
+    #     'status': 'running',
+    #     'app_id': APP_ID,
+    #     'signature': signature,
+    #     'echostr': echostr
+    # })
+
+    return echostr
 
 @app.route('/health')
 @rate_limit(limit=1000, window=60, per='ip')  # 健康检查可以更频繁

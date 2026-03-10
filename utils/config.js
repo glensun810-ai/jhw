@@ -28,7 +28,13 @@ const API_ENDPOINTS = {
     USER_JOURNEY: '/api/analytics/user-journey',
     STATISTICS: '/api/analytics/statistics',
     HEATMAP: '/api/analytics/heatmap',
-    FUNNEL: '/api/analytics/funnel'
+    FUNNEL: '/api/analytics/funnel',
+    // 【Phase 2 - 2026-03-10】新增统计分析 API
+    BRAND_COMPARE: '/api/analytics/brand-compare',
+    TREND: '/api/analytics/trend',
+    PLATFORM_COMPARE: '/api/analytics/platform-compare',
+    QUESTION_ANALYSIS: '/api/analytics/question-analysis',
+    BENCHMARK: '/api/analytics/benchmark'
   },
   AUDIT: {
     LOG: '/api/audit/log',

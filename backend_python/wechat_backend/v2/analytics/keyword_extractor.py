@@ -26,8 +26,9 @@ class KeywordExtractor:
     从 AI 回答中提取和分析关键词
     """
 
-    # 中文停用词（部分）
+    # 中文停用词（完整版）
     CHINESE_STOPWORDS = {
+        # 基础停用词
         '的', '了', '和', '是', '在', '就', '都', '而', '及', '与', '着',
         '就', '这', '那', '你', '我', '他', '她', '它', '们', '这个', '那个',
         '一个', '一些', '什么', '怎么', '如何', '为什么', '是否', '可以',
@@ -45,6 +46,31 @@ class KeywordExtractor:
         '时候', '时间', '地方', '地方', '方面', '问题', '情况', '进行',
         '开始', '继续', '结束', '完成', '已经', '曾经', '正在', '将要',
         '马上', '立刻', '顿时', '终于', '渐渐', '逐渐', '慢慢', '快快',
+        
+        # 【P2-005 新增】智能锁领域停用词
+        '智能锁', '锁', '品牌', '产品', '用户', '使用', '采用', '具有',
+        '具有', '作为', '称为', '叫做', '属于', '包括', '包含', '涵盖',
+        '主要', '一般', '通常', '一般', '来说', '而言', '来看', '来说',
+        '比较', '相对', '较为', '较', '更', '更加', '更为', '尤其', '特别',
+        '尤其', '主要', '重要', '关键', '核心', '基本', '基础', '常见',
+        '一般', '普通', '通常', '日常', '常规', '标准', '典型', '普遍',
+        
+        # 【P2-005 新增】无意义高频词
+        '一款', '一类', '一种', '一类', '一系列', '一系列', '一系列',
+        '不错', '好的', '很好', '非常好', '挺好的', '还可以', '比较好',
+        '较为', ' comparatively', '相当', '挺', '蛮', '颇', '较为',
+        '深受', '广受', '备受', '颇受', '相当', '相对', '比较', '相比',
+        '适合', '适宜', '合适', '恰当', '得当', '妥当', '适当', '适合',
+        '想要', '希望', '期望', '期待', '盼望', '渴望', '渴求', '追求',
+        '但', '却', '而', '且', '并', '且', '及', '与', '同', '和', '跟',
+        '或', '或是', '还是', '或者', '亦或', '要么', '宁可', '宁愿',
+        '与其', '不如', '毋宁', '宁可', '宁愿', '宁可', '宁可', '宁可',
+        
+        # 【P2-005 新增】冗余描述词
+        '来说', '来讲', '来看', '说来', '说来', '总的来说', '总体而言',
+        '整体来说', '综合来看', '总体而言', '总的来说', '一般来说',
+        '通常来说', '普遍来说', '多数情况下', '大多数', '大部分',
+        '一般而言', '通常而言', '普遍而言', '总体来说', '总的来看',
     }
 
     # 品牌相关关键词模式
@@ -58,16 +84,21 @@ class KeywordExtractor:
         r'专业', r'可靠', r'信任', r'口碑', r'影响',
     ]
 
-    def __init__(self, min_word_length: int = 2, max_keywords: int = 50):
+    def __init__(self, min_word_length: int = 2, max_keywords: int = 50,
+                 min_word_frequency: int = 1, enable_quality_filter: bool = True):
         """
         初始化关键词提取器
 
         参数:
             min_word_length: 最小词长
             max_keywords: 最大关键词数量
+            min_word_frequency: 最小词频（过滤低频词）【P2-005 新增】
+            enable_quality_filter: 是否启用质量过滤【P2-005 新增】
         """
         self.min_word_length = min_word_length
         self.max_keywords = max_keywords
+        self.min_word_frequency = min_word_frequency
+        self.enable_quality_filter = enable_quality_filter
         self.logger = api_logger
     
     def _validate_results(self, results: Any, method_name: str) -> None:
@@ -219,7 +250,16 @@ class KeywordExtractor:
         keywords = []
         max_count = top_n or self.max_keywords
 
-        for word, count in word_counts.most_common(max_count):
+        # 【P2-005 优化】添加质量过滤
+        for word, count in word_counts.most_common(word_counts.total()):
+            # 过滤低频词
+            if count < self.min_word_frequency:
+                continue
+            
+            # 【P2-005 新增】质量过滤：过滤无意义词汇
+            if self.enable_quality_filter and self._is_low_quality_keyword(word):
+                continue
+            
             sentiments = word_sentiments[word]
             avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0.0
 
@@ -229,8 +269,52 @@ class KeywordExtractor:
                 'sentiment': round(avg_sentiment, 3),
                 'sentiment_label': self._sentiment_to_label(avg_sentiment)
             })
+            
+            # 达到最大数量后停止
+            if len(keywords) >= max_count:
+                break
 
         return keywords
+    
+    def _is_low_quality_keyword(self, word: str) -> bool:
+        """
+        判断关键词是否为低质量词
+
+        【P2-005 新增】过滤无意义或过于宽泛的词汇
+
+        参数:
+            word: 关键词
+
+        返回:
+            是否为低质量词
+        """
+        # 1. 检查是否在停用词表中
+        if word.lower() in self.CHINESE_STOPWORDS:
+            return True
+        
+        # 2. 检查是否为过于宽泛的词（长度过短且无实际意义）
+        if len(word) <= 2 and word in {'很', '好', '的', '了', '是', '在', '有'}:
+            return True
+        
+        # 3. 检查是否为冗余描述
+        redundancy_patterns = [
+            '来说', '来讲', '来看', '总的来说', '总体而言', '整体来说',
+            '一般来说', '通常来说', '总的来说', '总的来看', '综合来看'
+        ]
+        for pattern in redundancy_patterns:
+            if pattern in word:
+                return True
+        
+        # 4. 检查是否为无意义高频词
+        meaningless_words = {
+            '一款', '一类', '一种', '不错', '好的', '很好', '非常好',
+            '挺好的', '还可以', '比较好', '较为', '相当', '挺', '蛮',
+            '深受', '广受', '备受', '颇受', '适合', '适宜', '合适'
+        }
+        if word in meaningless_words:
+            return True
+        
+        return False
     
     def extract_by_brand(
         self,

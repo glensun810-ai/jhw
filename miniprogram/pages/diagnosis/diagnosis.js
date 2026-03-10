@@ -223,10 +223,18 @@ Page({
 
   /**
    * 处理状态更新
-   * @param {Object} status 
+   * @param {Object} status
    */
   handleStatusUpdate(status) {
     console.log('[DiagnosisPage] Status update:', status);
+
+    // 【P0 优化 - 2026-03-09】检测到失败状态立即停止轮询并跳转
+    if (status.status === 'failed' || status.status === 'timeout') {
+      console.warn('[DiagnosisPage] ⚠️ 检测到失败状态，停止轮询并显示错误页面');
+      this.stopPolling();
+      this._handleFailedStatus(status);
+      return;
+    }
 
     // 记录进度历史
     const history = this.data.progressHistory;
@@ -255,6 +263,34 @@ Page({
   },
 
   /**
+   * 【P0 优化 - 2026-03-09】处理失败状态
+   * @private
+   * @param {Object} status
+   */
+  _handleFailedStatus(status) {
+    console.log('[DiagnosisPage] Handling failed status:', status);
+
+    // 【P1 修复 - 2026-03-09】显示可关闭的错误提示，允许用户查看已有结果
+    this.setData({
+      showErrorToast: true,
+      errorType: 'error',
+      errorTitle: '诊断失败',
+      errorDetail: status.error_message || '诊断过程中遇到错误，但可能已有部分结果可供查看',
+      errorCode: status.error_code || '',
+      showRetry: true,
+      showCancel: false,  // 不显示取消按钮，避免用户误操作丢失结果
+      showConfirm: true,  // 显示确认按钮
+      confirmText: '查看结果',  // 确认按钮文本
+      allowClose: true     // 允许关闭
+    });
+
+    // 更新页面标题
+    wx.setNavigationBarTitle({
+      title: '诊断失败'
+    });
+  },
+
+  /**
    * 处理完成
    * @param {Object} result
    */
@@ -279,10 +315,22 @@ Page({
 
   /**
    * 处理轮询错误
-   * @param {Object} error 
+   * @param {Object} error
    */
   handlePollingError(error) {
     console.error('[DiagnosisPage] Polling error:', error);
+
+    // 【P0 优化 - 2026-03-09】如果是任务失败错误，直接显示失败页面
+    if (error.type === 'TASK_FAILED' || error.status === 'failed') {
+      console.warn('[DiagnosisPage] ⚠️ 任务失败错误，显示失败页面');
+      this._handleFailedStatus({
+        status: error.status || 'failed',
+        error_message: error.message || '诊断任务失败',
+        error_code: error.error_code || ''
+      });
+      this.stopPolling();
+      return;
+    }
 
     this.setData({
       errorMessage: error.message || '网络错误',
@@ -301,24 +349,29 @@ Page({
 
   /**
    * 处理超时
-   * @param {Object} timeoutInfo 
+   * @param {Object} timeoutInfo
    */
   async handleTimeout(timeoutInfo) {
     console.warn('[DiagnosisPage] Task timeout:', timeoutInfo);
     this.stopPolling();
 
-    const confirmed = await showModal({
-      title: '诊断超时',
-      content: timeoutInfo.message || '诊断任务执行时间过长',
-      confirmText: '查看历史记录',
-      cancelText: '关闭'
+    // 【P1 修复 - 2026-03-09】超时不阻塞用户，显示可关闭的错误提示
+    this.setData({
+      showErrorToast: true,
+      errorType: 'timeout',
+      errorTitle: '诊断超时',
+      errorDetail: timeoutInfo.message || '诊断任务执行时间过长，但可能已有部分结果',
+      errorCode: '',
+      showRetry: true,
+      showCancel: true,
+      showConfirm: false,  // 不显示确认按钮
+      allowClose: true     // 允许关闭
     });
 
-    if (confirmed) {
-      wx.navigateTo({
-        url: '/pages/history/history'
-      });
-    }
+    // 更新页面标题
+    wx.setNavigationBarTitle({
+      title: '诊断超时'
+    });
   },
 
   /**
@@ -429,15 +482,39 @@ Page({
    */
   onRetry() {
     console.log('[DiagnosisPage] User clicked retry');
-    
+
+    // 【P0 优化 - 2026-03-09】重试前重置 WebSocket 的永久失败标志
+    const webSocketClient = require('../../services/webSocketClient').default;
+    if (webSocketClient && typeof webSocketClient.resetPermanentFailure === 'function') {
+      webSocketClient.resetPermanentFailure();
+    }
+
     // 关闭错误提示
     this.setData({
       showErrorToast: false,
       errorMessage: '',
       retryCount: 0
     });
-    
+
+    // 重新启动轮询
     this.startPolling();
+  },
+
+  /**
+   * 【P1 新增 - 2026-03-09】用户操作：确认（查看结果）
+   */
+  onConfirm() {
+    console.log('[DiagnosisPage] User clicked confirm, navigating to report');
+
+    // 关闭错误提示
+    this.setData({
+      showErrorToast: false
+    });
+
+    // 跳转到报告页面，尝试查看已有结果
+    wx.navigateTo({
+      url: `/pages/report-v2/report-v2?executionId=${this.data.executionId}`
+    });
   },
 
   /**

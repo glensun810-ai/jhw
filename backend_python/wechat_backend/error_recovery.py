@@ -476,16 +476,16 @@ class PresetRetryConfigs:
         max_delay=30.0,
         strategy=RetryStrategy.EXPONENTIAL_WITH_JITTER,
         retryable_error_codes=[
-            'AI_PLATFORM_UNAVAILABLE',
-            'AI_PLATFORM_TIMEOUT',
-            'AI_PLATFORM_RATE_LIMIT',
-            'AI_RESPONSE_INVALID',
-            'AI_RESPONSE_EMPTY',
+            'AI_SERVICE_UNAVAILABLE',
+            'AI_TIMEOUT',
+            'AI_RATE_LIMIT_EXCEEDED',
+            'AI_RESPONSE_PARSE_FAILED',
+            'AI_EMPTY_RESPONSE',
         ],
         non_retryable_error_codes=[
             'AI_API_KEY_MISSING',
             'AI_MODEL_NOT_FOUND',
-            'AI_PLATFORM_QUOTA_EXHAUSTED',
+            'AI_QUOTA_EXCEEDED',
         ]
     )
     

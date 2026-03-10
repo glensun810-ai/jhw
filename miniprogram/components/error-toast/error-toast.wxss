@@ -179,10 +179,37 @@
   display: flex;
   gap: 16rpx;
   margin-top: 24rpx;
+  flex-wrap: wrap;
 }
 
-.error-action-btn {
+/* 关闭按钮样式 - 始终显示 */
+.error-action-btn.close {
+  background-color: #f5f5f5;
+  color: #666666;
+  flex: 0 0 auto;
+  min-width: 120rpx;
+}
+
+.error-action-btn.cancel {
+  background-color: #f5f5f5;
+  color: #666666;
   flex: 1;
+}
+
+.error-action-btn.primary {
+  background-color: #1890ff;
+  color: #ffffff;
+  flex: 1;
+}
+
+.error-action-btn.danger {
+  background-color: #f44336;
+  color: #ffffff;
+  flex: 1;
+}
+
+/* 通用按钮样式 */
+.error-action-btn {
   height: 72rpx;
   display: flex;
   align-items: center;
@@ -197,21 +224,6 @@
 .error-action-btn:active {
   transform: scale(0.98);
   opacity: 0.9;
-}
-
-.error-action-btn.cancel {
-  background-color: #f5f5f5;
-  color: #666666;
-}
-
-.error-action-btn.primary {
-  background-color: #1890ff;
-  color: #ffffff;
-}
-
-.error-action-btn.danger {
-  background-color: #f44336;
-  color: #ffffff;
 }
 
 /* 倒计时关闭提示 */

@@ -4,78 +4,1559 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/2026-03-08-品牌洞察报告完整实现链路分析报告.md" afterDir="false" />
+    <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="修复env文件">
       <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/PythonProject.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PythonProject.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/api/home.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-API 响应存储完整性分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-Migration004 修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-P0 问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-P1 问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-P2 问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-P3 问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-前端报告渲染开发完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-前端报告渲染模块实现报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-前端报告渲染模块测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-前端报告渲染组件使用文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-系统功能缺陷根因分析.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-诊断逻辑需求差异分析与修复计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构后首次运行分析报告 - 更新版.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构后首次运行分析报告 - 更新说明.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构后首次运行分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构基线.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构完成总结.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构实施路线图 -2.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构实施路线图-2.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构实施路线图.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构开发 - 阶段二已完成任务检视结果.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构开发规范.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-重构项目架构师检视审核报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段一完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段一收尾完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段三 WebSocket 实时推送完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段三启动报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段三完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段二完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段二灰度测试完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段二统计算法完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-27-阶段四完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-28-AI 平台区域一致性验证功能实现.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-28-P2-5-CDN 加速配置修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-28-P2-6-数据库读写分离修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-28-P2-7-智能缓存预热修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-28-ServiceWorker 离线缓存实现报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-02-28-卡点 8 前端轮询状态无响应修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-P0 级数据库错误紧急修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-P0-数据库初始化异常修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-前端启动报错修复报告-最终版.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-前端启动报错修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-前端语法错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-启动日志问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-数据库 Schema 与代码重构修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-数据库与缓存系统修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-文心一言 APIKey 配置报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-综合问题分析修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-01-进度查询接口统一修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-BUG-002-修复实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-BUG-002-修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-BUG-002-颠覆性修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-BUG-002-验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0 轮询与状态优化修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-Phase2-WebSocket 集成实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-SSE 清理与 WebSocket 集成计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-WebSocket 集成测试验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-任务卡死修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-修复实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-前端重复轮询与后端超时修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-完整修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-数据库可见性延迟修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-P0-流程状态诊断修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-Redis 启动指南和 Flask 双重初始化修复.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-WebSocket 与 SSE 技术方案评估报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-startDiagnosis 云函数部署完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-前后端日志对比分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-后台日志深度分析修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-待优化问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-报告聚合数据断裂问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-日志分析整改报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-日志系统修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-日志问题分析与修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-最终修复指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-最终完整修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-最终实施总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-测试专家验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-系统逻辑漏洞分析与架构优化计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-系统遗留问题优化计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-紧急问题-Qwen-API 超时.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-诊断流程测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-问题验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-阶段一完成报告-DiagnosisOrchestrator 编排器实现.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-阶段三：增强后台任务管理器完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-阶段五重构诊断视图完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-阶段六：事务管理完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-02-阶段四结果验证层实现报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-P0-WebSocket 前端配置修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-P0-错误处理修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-P1+P2 修复完成总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-WebSocket 集成修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-三大问题现状分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-前端 SSE 客户端缺失修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-后端 SSE 导入清理修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-数据流双轨制修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-03-系统根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-P0-数据库完整性修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-P0-空引用崩溃修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-前端请求超时问题自检与修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-品牌诊断系统5项关键问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-品牌诊断系统关键问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-品牌诊断系统性能优化与架构升级修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-品牌诊断系统紧急问题综合修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-品牌诊断系统轮询与事务优化修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-04-最新日志问题分析与修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-CircuitBreakerResetFix.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-ErrorHandlerEnhancement.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-FlaskAppContextBugFix.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-P0-WebSocket 无限重连修复实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-P0-数据库连接池与结果保存完整修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-P0-数据库连接池修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-P0-最终修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-P0关键问题修复完成报告-第二阶段.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-事务范围与数据库连接占用问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-事务范围与数据库连接占用问题分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-优化结果验证器重试机制实现报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-后台任务超时不一致修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-数据库连接池竞争条件修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-最新运行分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-状态推导不完整问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-状态管理器内存泄漏修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-连接池监控与连接耗尽风险修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-重启和测试指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-05-错误处理增强功能实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-AI 调用 0 秒完成问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-Doubao API 429 限流根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-Doubao-API-Key-配置验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-NameError 修复与最终验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-NameError 修复最终验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-NameError 根因分析与前后端联调优化报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-WebSocket 完成消息修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-execution_id 参数修复与 DEBUG 日志启用报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-views.py 重构与 Dashboard API 修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-前端 WebSocket 和 API 调用修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-前端 WebSocket 和 API 调用排查报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-前端无有效结果错误根因分析.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-品牌诊断报告字段完整修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-品牌诊断系统完整修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-数据库连接泄漏紧急修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-最新运行完整分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-最新运行日志深度分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-最新运行日志问题分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-最新运行日志问题深度分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-最新运行验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-最终验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-诊断报告字段解析完整性分析.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-诊断报告输出失败根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-诊断系统修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-诊断结果无法显示问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-诊断运行超时问题根因分析与修复.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-进度条语义化修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-连接泄漏与后台分析日志修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-06-连接泄漏源识别与 AI 超时修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-P0 级修复完成报告-brand 字段缺失.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-P0 级修复完成报告-前后端联调打通.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-P0 预热逻辑优化实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-P0 预热逻辑优化实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-后台日志健康分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-品牌诊断报告系统端到端全链路打通修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-品牌诊断系统完整修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-端到端全链路打通方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-紧急修复-navigateToReportPage 调用错误.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-诊断失败 5Why 根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-诊断报告可见性保障修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-诊断报告可见性保障修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-诊断系统修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-诊断系统最终根因分析-brand 字段缺失.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-诊断系统根因分析-应用未重启.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-首页按钮优化与自动跳转完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-07-首页按钮体验优化方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-5.1 单元测试完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-5.3-端到端测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-5.4-性能测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-6.1-上线准备完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-P0-567 修复实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-P0-7 数据格式统一化修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-品牌洞察报告完整实现链路分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-品牌洞察报告实施计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-品牌洞察报告当前运行问题分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-08-第二阶段-P0-修复实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2026-03-09-P2-WebSocket 性能优化实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/=2.0.0" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/=4.0.0" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/AI 品牌战略诊断按钮状态确认报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/AI 平台始终显示修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/AI 平台显示 Bug 彻底修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/AIResponse 属性错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/API_CHANGE_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/APPSTATE_MIGRATION_COMPLETE_FINAL.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/APPSTATE_MIGRATION_FIX_COMPLETE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/APPSTATE_MIGRATION_STATUS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/APPSTATE_MIGRATION_TROUBLESHOOTING.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/APPSTATE_MIGRATION_VERIFICATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/APPSTATE_VERIFICATION_FIXED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BRAND_INSIGHT_COMPLETION_PLAN.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BUGFIX_DUPLICATE_REPORTS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BUG_FIX_COMPLETE_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CLEAR_CACHE_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CODE_VERIFICATION_FINAL_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPLETE_FIX_IMPLEMENTATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPREHENSIVE_ANALYSIS_AND_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPREHENSIVE_BUG_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPREHENSIVE_DATA_ISSUES_DIAGNOSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPREHENSIVE_OPTIMIZATION_CHECK_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPREHENSIVE_TEST_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPREHENSIVE_VISUAL_ANALYSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CURRENT_SYSTEM_STATUS_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DELIVERY_CHECKLIST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DIAGNOSIS_BUTTON_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DIAGNOSIS_STATUS_FIELD_MAPPING.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DOUBAO_PRIORITY_FAILOVER_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/E2E_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIELD_MAPPING.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIELD_MAPPING_AND_FIX_PLAN.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIELD_MAPPING_AND_MISSING_ANALYSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIELD_MAPPING_IMPLEMENTATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_BUG_FIX_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_DATA_ISSUES_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_DIAGNOSIS_BUTTON_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_DIAGNOSIS_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_FIX_REPORT_COMPLETE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_POLLING_FIX_VERIFICATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_RESULTS_PAGE_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_ROOT_CAUSE_ANALYSIS_AND_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_VERIFICATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIX_REPORT_401_ERROR.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIX_REPORT_FINAL.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIX_SUMMARY_2026-02-24.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FRONTEND_MODIFICATION_GUIDELINES.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FRONTEND_POLLING_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/GAP_1_AUTH_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_COMPLETE_SAVE_FINAL_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/IMPLEMENTATION_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/INTEGRATION_TEST_REPORT_2026-03-08.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LATEST_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LOG_ANALYSIS_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LOG_BASED_FAILURE_ANALYSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MIGRATION_PLAN_APPSTATE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MIGRATION_STEP1-5_COMPLETED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MISSING_FIELDS_EXECUTIVE_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P0 修复完成报告 - 最终版.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P0 问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P0-4-验证总结.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P0_FIX_COMPLETE_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P0_JUDGE_MODEL_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P1_OPTIMIZATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P2-T1_Task.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P2-T2_Task.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P2-T3_Task.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P2-T4_Task.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P2_OPTIMIZATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P3_OPTIMIZATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PERFORMANCE_OPTIMIZATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PROJECT_EXECUTIVE_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PR_DESCRIPTION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/REFACTOR_DIAGNOSIS_BUTTON.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/RELEASE_NOTES_v3.0.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/REPORT_ID_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/RESULTS_PAGE_DATA_ISSUES_ANALYSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROOT_CAUSE_ANALYSIS_FINAL.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Redis 安装指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SHOULD_STOP_POLLING_COMPLETION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SHOULD_STOP_POLLING_UNIFIED_IMPLEMENTATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/STATE_MACHINE_ANALYSIS_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TEST_ISSUES_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/URGENT_FIX_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/VISUAL_ANALYSIS_INDEX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_advanced_analytics.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_advanced_analytics_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_brand_test_debug.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_cancel_button.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_cancel_method.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_cancel_style.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_completed_banner.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_completed_banner_styles.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_input_styles.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_knowledge_base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_network_style.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_polling_method.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_progress_methods.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_results_summary_query.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_stage_style.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_use_last_method.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/add_warning_style.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/analyze_architecture.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_output.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_all_backend_fixes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_complete_p0_2_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_diagnosis_results_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_final_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_fix_precise.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_nxm_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_p0_2_competitor_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_p0_2_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_p0_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_p0_fix_final.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_p1_3_patch.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_p1_data_persistence_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_p1_fix_part2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_p1_supplement.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_success_timer_cancel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_timeout_protection.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_timer_cancel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/apply_views_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/architecture_verification_2.0.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_07829a44-c0b8-468e-8edf-66bcddfdd741_20260225_134410.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_07829a44-c0b8-468e-8edf-66bcddfdd741_20260225_134428.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_07829a44-c0b8-468e-8edf-66bcddfdd741_20260225_134450.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_07829a44-c0b8-468e-8edf-66bcddfdd741_20260225_134513.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_839d6dd6-decf-4224-a452-404f987ecb2d_20260225_034219.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_839d6dd6-decf-4224-a452-404f987ecb2d_20260225_034311.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_839d6dd6-decf-4224-a452-404f987ecb2d_20260225_034406.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_839d6dd6-decf-4224-a452-404f987ecb2d_20260225_034459.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_a2d39c01-1318-455e-9f63-539a51cee10f_20260225_025306.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_a2d39c01-1318-455e-9f63-539a51cee10f_20260225_025332.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_a2d39c01-1318-455e-9f63-539a51cee10f_20260225_025412.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_a2d39c01-1318-455e-9f63-539a51cee10f_20260225_025439.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_a2d39c01-1318-455e-9f63-539a51cee10f_20260225_025500.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_a2d39c01-1318-455e-9f63-539a51cee10f_20260225_025523.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_a2d39c01-1318-455e-9f63-539a51cee10f_20260225_025625.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_a2d39c01-1318-455e-9f63-539a51cee10f_20260225_025647.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_aeda4390-e7a3-4090-b980-ecc303070773_20260225_183047.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_aeda4390-e7a3-4090-b980-ecc303070773_20260225_183114.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_aeda4390-e7a3-4090-b980-ecc303070773_20260225_183232.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_aeda4390-e7a3-4090-b980-ecc303070773_20260225_183255.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_test-exec-002_20260225_011214.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/audit_logs/emergency_test-exec-002_20260225_012929.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/=4.0.0" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/AIResponse 序列化修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/AI_Platform_Integration_Plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/AI_平台消失问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/BUG-003 修复验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/Bug 修复完成总结.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/Bug 修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/INTEGRATION_PLAN_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/Phase1_DeepSeek_Implementation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/Phase2_Qwen_Implementation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/Phase3_Zhipu_Implementation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/analyze_ai_logs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/analyze_doubao_failures.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/analyze_doubao_performance.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/analyze_doubao_responses.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/apply_diagnosis_graceful_degradation_patch.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/apply_indexes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/apply_p0_2_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/benchmark_performance.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/check_cors.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/check_doubao_config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/cleanup_report.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/clear_circuit_breaker_states.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/comprehensive_test_suite.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/config_manager_demo.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/database.db-shm" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database.db-shm" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/database.db-wal" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database.db-wal" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/database.db.backup.20260223_181936" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/database.db.corrupted" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_ai_response_parsing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_analysis_timeout.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_boundary_detailed.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_boundary_logic.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_case_sensitivity.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_detailed_analysis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_in_depth_analysis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_issue_summary.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_jieba_segmentation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_monitor_workflow.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_new_boundary_check.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_overlap_names.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_rank_analyzer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_rank_analyzer_detailed.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_ranking_extraction.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_unique_keywords.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_unique_keywords_detailed.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_unlisted_detection.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debug_word_count.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/debugging_plan/frontend_backend_flow_analysis.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/deepseek_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/demo/IMPLEMENTATION_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/demo/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/demo/competitive_demo.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/demo/demo_main.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/demo/main_demo.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/diagnose_adapter_registration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/diagnose_all_platforms.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/diagnose_doubao_api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/diagnose_startup.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/diagnosis_reports_view.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/00_AI Coding元指令.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/20 秒极速响应优化方案_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-10_21-51-功能实现清单.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-10_22-40-功能实现清单.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-11_10_33功能清单_v1.1.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-11_11_28产品与设计优化方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-13_00-22整体功能开发计划" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-13_02-15基础设施升维完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-13_详细开发进展计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-25_代码改造方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-25_品牌诊断端到端闭环分析与改进报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-25_品牌诊断系统架构重构方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/2026-02-25_品牌诊断系统重构实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/AI Coding Plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/AI_Adapter_Implementation_Summary.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/API_Interface_Documentation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/COMPREHENSIVE_API_DOCUMENTATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/Competitive_Analysis_Implementation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/FUNCTIONALITY_DEVELOPMENT_PROGRESS_LIST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/Git 提交与生产部署指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/M001-M003_Code_Review_Report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/M001-M003_实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/M001-M006_改造实施总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/M004-M005_实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/M006_前端错误_UI_实施指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/MVP_E2E_Test_Plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/OpenAPI_Spec_v2.0.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/P0 优化实施完成报告_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/P0 优化实施计划_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/P0 优化最终完成报告_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/P0 优化集成与性能测试报告_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/Source_Weight_Semantic_Drift_Implementation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/ai_judge_fix_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/comprehensive_development_plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/comprehensive_security_performance_reliability_improvements_summary.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/development_plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/doubao_api_error_analysis.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/doubao_api_implementation_summary.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/doubao_api_integration.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/doubao_api_integration_complete.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/doubao_api_setup_guide.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/doubao_brand_diagnosis_integration_complete.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/final_launch_fix_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/fix_optimization_summary.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/frontend_backend_fix_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/import_error_fix_summary.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/log_analysis_optimization.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/network_security_improvement_plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/optimization_implementation_summary.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/product_design_and_ui_optimization_plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/production_deployment_checklist.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/refactoring_analysis_pain_points.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/security_improvement_summary.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/sql_injection_protection_fix_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/sql_protection_scenario_fix_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/technical_solution.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/threading_timeout_fix_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/version_history_cruise_recommendation.docx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/version_history_cruise_recommendation.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/version_history_cruise_recommendation.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/version_history_cruise_recommendation2.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/version_history_market_intelligence2.docx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/version_history_market_intelligence2.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/信源透视_影响力图谱与全域关联_功能更新记录.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/前端小程序优化功能清单.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/品牌洞察报告数据完整性修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/品牌诊断报告_完整详细版_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/品牌诊断结果保存完整性修复报告_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/多平台适配器重构_契约守护与智能任务分发_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/小程序前端代码实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/小程序前端组件实现示例.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/待实现功能清单-前端UIUX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/待实现功能清单-后端核心.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/待实现功能清单-架构与商业化.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/情报枢纽_自动化报告与高管视角_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/模块4.1_执行闭环_智能任务分发_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/模块4.2_契约守护_Provider抽象化_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/模块4.2_执行闭环_智能任务分发_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/模块4.3_契约守护_Provider抽象化_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/模块4.3_执行闭环_智能任务分发_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/测试报告_20260225.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/深度问题分析与彻底优化方案_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/灰度发布配置与实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/真实数据测试验证报告_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/端到端测试报告_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/紧急修复验证报告_20260306.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/诊断报告数据查看器使用文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/豆包多模型优先级配置指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/资产联动_内容适配性分析_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/需求说明书v0.1.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/需求说明书v0.2.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/项目完成报告_20260225.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/项目验收报告_20260225.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/docs/预测引擎_认知趋势模拟_功能文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/e2e_functional_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/e2e_functional_test_clean.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/enhanced_scoring_engine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/execute_integration_plan.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/final_circuit_breaker_verification.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/final_patch.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/final_validation_complete.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/final_verification.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/final_verification_complete.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/fix_blueprint_imports.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/fix_database_connection_pool.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/fix_ds_p0_execution_id.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/fix_empty_brand_name.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/fix_monitoring_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/fix_nxm_engine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/fix_report_aggregation_issue.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/fix_results_save_and_background_analysis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/flask_api_integration_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/flask_api_offline_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/frontend_test_report_20260225_233913.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/ai_clients/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/ai_clients/base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/ai_clients/deepseek_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/ai_clients/factory.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/api/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/api/v1/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/api/v1/ai_platform_routes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/api/v1/api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/api/v1/report_routes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/api/v1/test_routes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/config/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/config/settings.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/core/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/core/exceptions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/core/logging.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/database/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/main.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/models/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/question_system/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/question_system/question_templates.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/question_system/test_case_generator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/reporting/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/reporting/report_generator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/requirements.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/schemas/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/schemas/test_schemas.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/scoring/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/scoring/evaluator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/test_engine/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/test_engine/executor.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/test_engine/progress_tracker.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/test_engine/scheduler.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/tests/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/gco_validator/utils/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/generate_report_summary.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/geo_prompt_builder.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/legacy_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/legacy_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/run.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/test_e2e_diagnosis.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/test_e2e_diagnosis.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/test_state_manager_memory_leak_fix.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/test_state_manager_memory_leak_fix.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/unified_logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/unified_logging/unified_logger.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_timeout.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_timeout.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/migrate_004_add_api_response_fields.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/migrate_execution_id.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/migrate_to_v3.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/misunderstanding_analyzer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/optimize_database_schema.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/performance_report_20260225_234116.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/precise_security_verification.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/prompt13_optimizer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/prompt13_optimizer_enhanced.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/pytest.ini" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/qa-diagnostics/plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/qa-diagnostics/post_fix_test_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/qa-diagnostics/real_test_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/qa-diagnostics/reports/latest_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/qa-diagnostics/storage_and_deadlock_fix_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/qa-diagnostics/test_execution_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/qa-diagnostics/test_plan_brand_diagnosis.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/quick_db_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/qwen-code" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/remove_redundant_endpoints.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/report_9b892873-1293-467e-8cef-dd9c78f985e2.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/reset_circuit_breakers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/scoring_engine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/setup_doubao_secure.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/simple_api_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/simple_test_impact_calculator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/simple_verify_deepseek.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/start_mvp_servers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/sync_logic.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_adapter_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_ai_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_ai_judge_client.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_ai_judge_client_simple.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_ai_platforms.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_alert_logic.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_all_platforms.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_api_keys.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_api_response.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_api_response_storage.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_app_run_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_asset_intelligence_engine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_backend_connection.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_background_service_queue_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_basic_security.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_brand_strengthening_logic.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_circuit_breaker_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_circuit_breaker_integration_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_competitive_analyzer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_comprehensive_diagnosis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_comprehensive_infrastructure_upgrade.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_comprehensive_scenarios.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_config_loading.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_cruise_system.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_data_flow_validation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_database_connection_pool_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_database_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_database_health.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_database_id_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_declining_trend_prediction.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_deepseek_actual_call.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_deepseek_api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_deepseek_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_deepseek_import.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_deepseek_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_deepseek_provider.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_deepseek_r1_reasoning.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_digital_asset_protection.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_direct_api_calls.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_doubao_429_switch.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_doubao_verification.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_e2e_diagnosis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_e2e_response_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_edge_cases.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_enhanced_circuit_breaker.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_enhanced_features.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_enhanced_logging.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_enhanced_scoring.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_enhanced_source_aggregator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_existing_functionality.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_factory_import.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_fault_tolerance.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_final_verification.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_fix_verification.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_fixed_adapters.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_frontend_backend_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_frontend_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_full_diagnosis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_full_validation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_health_check_warmup.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_impact_calculator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_import_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_infrastructure_upgrade.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_integration_basic.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_logging.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_market_intelligence_service.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_missing_data_scenarios.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_negative_sources_extraction.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_nxm_p0_refactor.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_nxm_refactored.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_orchestrator_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p0_2_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p0_3_competitor_extraction.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p0_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p0_p1_optimizations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p1_2_multi_model.py.obsolete" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p1_3_websocket.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p1_4_prompt_optimization.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p2_2_redis_cache.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_p2_4_message_queue.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_performance_benchmark.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_platform_mapping.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_prediction_engine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_prediction_standalone.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_process_aggregate_results.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_project.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_provider_abstraction.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_provider_implementation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_qwen_provider.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_rank_analyzer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_real_ai_diagnosis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_real_api_calls.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_real_api_calls_updated.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_recommendation_comprehensive.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_recommendation_generator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_recommendations_endpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_report_20260225_233146.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_report_20260225_233537.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_report_20260225_235808.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_report_20260226_004934.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_report_data_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_report_generator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_report_test_1772777864.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_reports/brand_insight_test_report_20260222_031245.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_reports/brand_insight_test_report_20260222_034332.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_reports/brand_insight_test_report_20260222_034440.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_reports/flask_api_offline_test_report_20260222_035702.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_reports/flask_api_offline_test_report_20260222_035947.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_reports/flask_api_offline_test_report_20260222_040002.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_reports/flask_api_offline_test_report_20260222_040031.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_response_content_extraction.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_results_page_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_scenario_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_scoring_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_security_mechanisms.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_semantic_gap_analysis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_serial_execution.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_simple_asset_engine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_single_model_and_priority.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_source_aggregator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_sql_protection_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_startup.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_state_manager_memory_leak_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_system_health.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_three_optimizations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_three_platforms.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_url_join.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_webhook_core_functionality.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_webhook_functionality.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_websocket_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_websocket_parallel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_websocket_performance.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_websocket_static.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_workflow_basic.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_workflow_manager.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_workflow_retry_mechanism.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_workflow_simple.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/test_zhipu_e2e.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/Analysis_and_Recommendations.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/GEO_System_Test_Plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/Test_Report_Template.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/benchmark_performance.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/conftest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/performance/load_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/quick_smoke_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/quick_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/run_full_e2e_tests.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_adapters/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_api/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_api_contract.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_api_depth.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_brand_diagnosis_system.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_config_center.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_data_aggregation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_diagnosis_orchestrator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_e2e_connectivity.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_e2e_full_flow.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_execution_report.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_geo_api_comprehensive.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_integration_full.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_integration_p0.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_integrations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_lifecycle.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_performance_p0.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_real_data_e2e.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_security_improvements.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_services/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_services/test_background_service_manager.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_startup.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_state_manager_enhanced.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_tracing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/test_unified_logging.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/unit/test_core_modules.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/unit/test_phase_result.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/verify_optimizations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/tests/verify_p2_optimizations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/config_loader.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/entry.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/integrations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/lifecycle.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/middleware.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/tracing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/unified_logging/unified_logger.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/update_ai_adapters.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/update_all_adapters.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/update_nxm_engine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/update_platform_status_api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/utils/ai_response_cleanup_scheduler.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/utils/ai_response_logger_enhanced.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/utils/ai_response_logger_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/validate_ai_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/validate_implementation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/validate_modules.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/validate_rank_analyzer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_auth_fix_complete.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_database_paths.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_deepseek_implementation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_doubao_config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_doubao_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_execution_id.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_implementation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_qwen_implementation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_qwen_provider_standalone.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/verify_system_comprehensive.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/view_ai_responses.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/view_ai_responses_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/view_diagnosis_reports.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/view_diagnosis_reports_html.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/API_INTEGRATION_PATCH.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/database_connection_pool.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/database_connection_pool.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_repository.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_repository.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_storage.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_storage.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_codes.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_codes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_logger.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_handler.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_recovery.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_recovery.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/multi_model_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/multi_model_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_concurrent_engine_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_concurrent_engine_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_execution_engine.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/security/auth_enhanced.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/security/auth_enhanced.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/background_service_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/background_service_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/brand_analysis_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/brand_analysis_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/multi_model_executor.py.backup" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_concurrent_engine_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/realtime_persistence_original.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_orchestrator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_orchestrator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_transaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_transaction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/realtime_push_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/realtime_push_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/report_aggregator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/report_aggregator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/state_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/state_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/types.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/types.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/sync/sync_storage.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/sync/sync_storage.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/v2/analytics/keyword_extractor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/v2/analytics/keyword_extractor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/v2/analytics/sentiment_analyzer.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/v2/analytics/sentiment_analyzer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/admin_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/admin_views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/analytics_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/analytics_views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views_v2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/report_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/report_views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/sync_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/sync_views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.js" beforeDir="false" afterPath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/user_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/user_views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/修复方案 - 区分任务失败和结果质量低.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/单模型调用重构完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/品牌诊断完整闭环修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/品牌诊断完整闭环修复验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/品牌诊断报告数据流与存储架构审计报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/品牌诊断报告数据流转审计报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/平台配置缺失优雅降级修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/当前诊断问题分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/数字资产保护审计报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/诊断流程 API 接口梳理与优化报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/豆包多模型故障转移修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/金牌测试工程师复测报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/金牌测试工程师测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/.env.backup" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/base_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/base_provider.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/chatgpt_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/deepseek_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/deepseek_provider.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/deepseek_r1_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/domestic_providers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/doubao_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/doubao_adapter_fixed.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/doubao_priority_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/doubao_provider.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/enhanced_base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/enhanced_factory.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/erniebot_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/factory.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/gemini_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/geo_parser.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/manager.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/mock_providers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/platform_balancer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/provider_factory.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/qwen_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/qwen_provider.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/sync_providers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/workflow_manager.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/adapters_backup/zhipu_adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/run.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/views_backup/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/views_backup/admin_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/views_backup/analytics_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/views_backup/audit_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/views_backup/diagnosis_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/views_backup/report_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/views_backup/sync_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backup/code/views_backup/user_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bfg.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/check-data-integration.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/check-pages.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/check-rank-statistics.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/check-real-data.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/check_db_status.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/check_implementation_status.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/clean-cache.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/clean-wechat-cache.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/clean_duplicate_save.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/clean_nxm_redundancy.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/cleanup_p2_3_report.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/clear-wechat-cache.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/clear_wechat_cache.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/complete_diagnostics_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/comprehensive_fix_verification_report.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/comprehensive_system_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/conftest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_backups/results_20260225.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug_401_error.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/demo_enhanced_logging.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deploy/diagnosis-monitoring.service" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deploy/logrotate.conf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deploy_production.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/diagnose_results_page.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/01_interface_audit_summary.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/02_interface_implementation_details.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-14_AI_Platform_Integration_Completion_Report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-14_AI_Platform_Integration_Quick_Start.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-14_GEO_System_Interface_Audit_Report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-15_Frontend_Backend_Integration_Fix_Report.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_NxM 执行引擎重构实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_UX_OPTIMIZATION_CONSULTING_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_三项优化功能实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_前端展示空缺分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_前端页面空缺与 Bug 分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_品牌诊断系统后台功能完整梳理报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_数据库安全与性能审核报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_模块一_P0 后端确定性重构实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_模块三_P1 交互视觉进化实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_模块三_P1 交互视觉进化收官增强实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_模块二_P1 战略聚合引擎增强实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_模块二_P1 战略聚合引擎深度重构实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_模块四_P1 系统鲁棒性收官增强实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_模块四_P1 系统鲁棒性重构实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-20_诊断进度系统全面审核报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_AI 响应日志保存机制增强实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_AI 平台默认选择优化修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_ECharts 组件缺失与首页渲染死锁修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_Flask 后台服务器重启报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_Flask 启动错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_Flask 路由冲突修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_GEO 品牌诊断报告导出功能完善计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_GEO 品牌诊断报告导出功能实施总结.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_NxM 引擎 ModuleNotFoundError 修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P0 紧急修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P0-1 用户注册流程实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P0-2_Token 刷新机制实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P0-3 用户资料管理实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P1 级空缺修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P1 高优先级修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P1-1 数据同步功能实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P1-3 报告导出功能实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P1-4 报告详情页完善实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P1-6 数据可视化图表实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P1-7 批量操作功能实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P1-8 审计日志系统实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P2 中优先级修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P2 级优化项修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P2-1 管理后台实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_P2-2 使用分析实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_ROI 卡片点击跳转修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_ROI 详情页 WXML 编译错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_WXML 可选链语法修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_WXML 条件渲染指令链条修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_index.js TypeError 防御性修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_index.js onLoad 空引用报错修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_index.js 模块缺失错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_reportRealtimeAction 兼容性报错修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_交互设计与视觉优化修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_前后端功能差异对账表.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_前端页面空缺与 Bug 状态分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_后端核心引擎导入修复验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_启动诊断 config.estimate null 引用修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_品牌 GEO 战略研判系统 v2.0 商业闭环与社交裂变实施方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_系统架构盘点与路线图 (v2.0 更新版).md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_系统架构盘点与路线图.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_项目功能走查与实施规划报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-21_首页输入处理函数修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_AI 响应日志 V3 实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_API 轮询 404 问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_API 轮询 404 问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_P0 级重构完成总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_P0_views.py 重构自检报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_P1 级重构完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_P1 级重构最终报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_P1 级重构阶段性报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_P2 级重构完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_P2 级重构进度报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_database_core.py_ImportError 修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_index.js 模块化重构最终执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_index.js 渐进式重构技术方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_index.js 重构阶段性执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_三角色深度诊断与重构实施方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_上线前专项测试计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_前端显示 0 分问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_前端状态管理优化完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_后端 API 修复指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_后端 API 修复最终方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_后端服务层重构完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌 AI 诊断系统全栈深度架构审计报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌洞察报告 0 分根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌洞察报告 0 分问题深度根因分析报告 v2.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌洞察报告 0 分问题深度根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌洞察报告修复进展报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌洞察报告完整修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌洞察报告完整修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌洞察报告最终修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_品牌洞察报告最终修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_小程序代码更新操作指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_战略战局中心删除完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_战略战局中心页面产品价值分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_战略战局中心页面修复与完整测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_战略战局中心页面必要性分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_技术重构方案执行摘要.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_技术重构方案计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_数据存储架构优化执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_数据存储架构盘点及优化升级报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_数据库优化完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_数据源真实性深度审计报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_核心业务数据未存储根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_测试执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_测试覆盖率提升完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_测试覆盖率提升阶段 2 完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_端到端测试验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_结果页 0 分问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_结果页字段数据源深度分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_结果页数据加载失败修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_结果页数据加载失败根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_结果页数据加载失败系统级修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_诊断报告数据需求与存储交叉验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_诊断测试运行结果分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-22_负面信源真实性修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_Bug 修复_cachedBrandScores 未定义.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P0 修复参数传递链路可视化.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P0 级第一阶段修复执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P0+P1 级 Bug 修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P0_诊断功能根因修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P0_轮询超时根因修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P1 级第二阶段修复执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P1-1_统一 Storage 数据格式修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P1-3_简化 selectedModels 格式修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P2 级优化修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_P2 级优化执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_api-test-404 错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_全栈修复完成总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_全栈修复最终验收报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_全栈修复部署总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_全栈性能优化总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_全栈架构与参数调用关系总览.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_商用发布差距分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_商用发布最终验收报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_完整测试计划 v2.0.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_性能瓶颈分析与优化方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_数据存储与交互专项修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_数据存储与交互专项审计报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_数据存储与交互专项审计报告_审核意见.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_架构自检与问题盘点报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_架构自检与问题盘点报告_2.0.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_测试缺口分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_生产环境日志分析_遗留 Bug 梳理.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_系统全面 Bug 排查报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_遗留 Bug 紧急修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_阶段 1 执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_阶段 2 执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_阶段 3 执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_阶段 3 执行报告_部分.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_阶段 4 执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_阶段 5 执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_阶段 5_最终测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_项目全盘架构梳理与优化方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-23_项目架构可视化总览.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P0 级问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P0 级问题修复指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P0 级问题立即修复指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P0-001_路由重复修复指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P0-2 竞品遍历功能修复状态报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P0-P1 级 Bug 彻底修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P0-P1 级问题立即修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P1 级 Bug 剩余问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P1 级问题修复状态报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_P2 级问题优化完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_results.js 重复声明错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_修复执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_前端模块导入错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_变量重复声明问题全面排查与修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_启动语法错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_启动错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告修复完成验收报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告字段实现状态与完善计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告完善实施计划执行报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告完整字段盘点报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告最终修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告最终修复完成报告_v5.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告系统全面测试审核报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告语法修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告输出问题深度分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告遗留问题全面盘点报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告遗留问题盘点与完善实施计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告问题彻底修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌洞察报告高优先级问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_品牌诊断运行失败根因分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_模块导入路径错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_用户手册.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_短期修复（1 个月）完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_系统全面测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_系统全面验收报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_脚本替换语法错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_脚本替换错误紧急修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_诊断失败但结果存在的根因修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_诊断失败问题全面审核与增强修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_诊断失败问题最终修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_语法错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_运行失败根因分析报告_v2.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_项目 Bug 彻底修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_项目代码 Bug 审核与修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_项目代码全面 Bug 审核报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_项目代码全面评估报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_项目代码深度评估报告（多角色联合）v2.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-24_项目最终全面评估报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-27_指令 A 实施验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-27_第一周闭环疏通期实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P0-1诊断逻辑设计错误修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P0-DIAG-诊断执行完全失败修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P0-REPORT-报告验证失败修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P0-STATE-状态管理器数据库更新修复验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P1-CACHE-缓存预热内存缓存导入修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P1-HEALTH-豆包健康检查修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P2-3 无用代码清理完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P2-4 消息队列实现完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P2-5-CDN 加速配置实现报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P2-6-数据库读写分离实现报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-P2-7-智能缓存预热实现报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-品牌诊断端到端流程问题与缺失功能分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-品牌诊断端到端流程问题与缺失功能分析报告（最新版）.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-数据库索引创建失败修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-诊断流程卡点深度分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-02-28-遗留问题分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-01-P0 级品牌战略洞察报告查看问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-01-P1 级品牌战略洞察报告查看问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-01-P2 级品牌战略洞察报告 API 规范化修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-01-品牌战略洞察报告查看问题深度分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-01_前后端联调状态报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-02-P0 级立即修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-02-startDiagnosis 云函数部署指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-02-品牌战略洞察报告查看问题最新日志分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-02-品牌诊断轮询失效根因修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-02-品牌诊断轮询问题当前状态与验证指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-04-品牌诊断系统关键问题诊断报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/2026-03-04-阶段一报告聚合器实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/AI 响应日志 N*M 对应关系诊断报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/AI 平台市场切换逻辑优化完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/AI 平台矩阵选择模块测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/AI_ADAPTER_LOG_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/BUG-NEW-001_修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/BUG-NEW-002_异步引擎集成方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/BUGFIX_NONE_ATTRIBUTE_ERROR.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/CODE_QUALITY_IMPROVEMENT_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/COMPREHENSIVE_ISSUE_LIST_AND_FIX_PLAN.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/DIAGNOSIS_REPORT_GUARANTEE_REVIEW.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/Dashboard 页面 UI 绑定测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/EXECUTIVE_SUMMARY_FIX_PLAN.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/GEO系统重构方案-v0.1.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/GEO诊断系统全栈诊断重构线路图.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/HISTORY_PAGE_UI_OPTIMIZATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/HOME_PAGE_REPORT_ENTRY_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/MONITORING_DEPLOYMENT_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/N*M 矩阵模式修复实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0 紧急修复实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0-001_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0-002_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0-003_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0-004_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0-1_测试结果前端展示_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0-2_评分结果展示_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0-3_竞争分析展示_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0_QUICK_FIX_CHECKLIST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0_异步队列日志系统实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P0_统一日志配置中心实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P1 重要修复实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P1-1_语义偏移可视化_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P1-2_信源纯净度展示_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P1-3_优化建议列表_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P1_REGRESSION_TEST_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P1_日志生命周期管理实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P1_结构化日志 + 链路追踪实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P2-1_历史趋势图_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P2-2_雷达图对比_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P2-3_关键词云_修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P2_OPTIMIZATION_TEST_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/P2_外部服务集成实施完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/PAGE_REGISTRATION_FINAL_FIX_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/PERFORMANCE_OPTIMIZATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/PRODUCTION_CONFIG_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/REGRESSION_TEST_PLAN.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/REGRESSION_TEST_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/SUBMISSION_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/TASK_STATUS_API.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/TEST_EXECUTIVE_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/TEST_PLAN.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/TEST_REPORT_AND_ISSUES.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/WEBSOCKET_STABILITY_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ai_responses.jsonl 日志保存问题修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ai_responses.jsonl 日志及时性与完整性分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ai_responses.jsonl 日志问题最终修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/architecture_analysis.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/architecture_verification_2.0.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/errorlog.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/final_verification_report.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/preproduction_checklist.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/rollback_plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/xcx_api_docs.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/全链路集成与防御测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/前端 Dashboard 对接实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/前端日志优化实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/前端状态管理使用指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/前端错误修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/功能清单_结果统计分析呈现.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/后端功能盘点与前后端连通性分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/异步队列日志系统使用指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/微信开发者工具缓存清理指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/性能优化实现文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/情报流水线组件开发文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/数据处理层单元测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/日志技术架构诊断与优化报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/本地历史记录功能实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/系统全面差距分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/系统执行流程深度分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/综合修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/诊断流程可视化分析.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/详情页专项测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包 API Key 映射问题修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包 API 响应日志诊断报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包日志双路径问题修复实施报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包日志双路径问题诊断与修复.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包日志缺失最终诊断报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包日志缺失根因修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包日志缺失根因分析.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包旧部署点清理报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包部署点 ID 二次修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/豆包部署点 ID 映射问题修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/路径引用错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/部署和运维手册.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/错误日志配置文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/页面注册问题彻底修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/页面注册问题彻底修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/页面注册问题彻底修复验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/页面注册问题最终修复总结.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/页面注册问题最终修复报告_全局分析版.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/页面注册问题最终修复指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/页面过渡动画使用文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/首页导航页面验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/首页用户输入保存功能 - 严格检查与补充修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/首页用户输入保存功能深度分析与修复方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/高优先级 Bug 修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/高优先级 Bug 修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/高优先级 Bug 修复指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/高优先级 Bug 修复进度报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/高优先级差距修复总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/e2e_integration_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/edit_views_db.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/edit_views_precise.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/edit_views_sed.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/final_verification.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix-request.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_404_polling.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_ai_platforms_display.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_airesponse_serialization.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_all_data_issues.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_appstate_sync.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_appstate_sync_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_backend_api_final.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_backend_status_api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_backend_status_api_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_bug_new_001.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_code_errors.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_comprehensive_diagnosis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_database_connection.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_diagnosis_entry.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_doubao_bugs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_doubao_priority_failover.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_doubao_response_handling.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_except_indentation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_fallback_data.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_high_priority_bugs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_indentation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_indentation_p0_2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_index_complete.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_index_js.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_integration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_p0_2_final.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_p0_2_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_polling_check.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_polling_timeout_root_cause.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_realtime_persistence.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_remove_detail_page.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_results_onload.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_results_page_data.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_results_page_load.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_save_diagnosis_results.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_scheduler.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_setinterval_bug.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_source_intelligence_empty_state.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_sqlite_wal_mode.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_stage_failed_error.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_task_status_service.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fix_view_detailed_results.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend_polling_fix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend_progress_poller.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend_step1_polling.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend_step2_wxml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend_step3_wxss.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/generate_field_audit_report.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/git_sync_push.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_advanced_analytics.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p13.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p13_css.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p13_js.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p21_css.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p21_js.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p21_wxml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p22_css.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p22_js.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p22_wxml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p23_css.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p23_js.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/insert_p23_wxml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/integrate_all_tools.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/integrate_input_home.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/integrate_progress_tools.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/integrate_stage_estimator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/integrate_task_writer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/integrate_time_estimator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal_function_map.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/manual_fix_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/SERVICE_WORKER_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-toast/error-toast.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/error-toast/error-toast.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-toast/error-toast.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/error-toast/error-toast.wxss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/services/reportService.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/reportService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/diagnosisService.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/diagnosisService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/pollingManager.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/pollingManager.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modify_executor_for_aggregator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/modify_executor_for_persistence.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/modify_executor_for_realtime.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/modify_home_wxml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/modify_views_for_aggregator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/modify_views_for_realtime.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/monitoring_daemon.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/optimize_polling.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/optimize_progress_bar.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/example-brand-test/example-brand-test.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/example-brand-test/example-brand-test.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/index/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/index/index.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/results/results.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/results/results.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/results/results.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/results/results.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server_output.log" beforeDir="false" afterPath="$PROJECT_DIR$/server_output.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/brandTestService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/brandTestService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index_副本.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/results/results-quality.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/results/results.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/results/results.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/results/results.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/results/results.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/results/results_refactored.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/saved-results/saved-results.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/saved-results/saved-results.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/patch_views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/patches/frontend-polling-fix.patch.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/patches/index_storage_patch.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/performance_benchmark.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/phase2_commit_msg.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project.private.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/project.private.config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/quick_db_check.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/rebuild-project.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/rebuild-wechat-project-final.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/rebuild-wechat-project.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/refactor_phase5.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_auto_tests.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_phase1_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_phase2_tests.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_phase3_tests.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_phase4_tests.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/DEPLOYMENT_CHECKLIST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/add_detailed_platform_hint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/add_platform_summary_style.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/check_logger_usage.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/check_syntax_issues.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/cleanup_deprecated_code.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/cleanup_historical_errors.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/cleanup_results_js.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/cleanup_test_data.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/commit_p0_optimization.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/deploy_production.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/emergency_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/end_to_end_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/final_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/fix_all_ai_platform_issues.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/fix_bare_except.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/fix_debug_logs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/fix_results_syntax.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/fix_test_api_changes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/fix_test_api_changes_final.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/fix_test_api_changes_v2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/generate-docs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/gray_release.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/gray_release_v2.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/monitoring_data/final_checks/checklist_history.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/check_environment.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/final_check.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/reports/generate_report.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/test_cases/test_compatibility.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/test_cases/test_functional.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/test_cases/test_performance.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/test_cases/test_rollback.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/test_cases/test_stability.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/preproduction/validate_stage1.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/quick_verify.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/rewrite_ai_section.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/rollback.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/rollback_v2.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/simplify_platform_hint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/test_doubao.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/test_e2e_api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/update_platform_hint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/update_switch_logic.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/update_wxml_hint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/update_wxss_hint_style.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/verify-frontend-imports.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/secrets.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/server_output.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/backgroundDiagnosisService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/backgroundDiagnosisService.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/navigationService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/navigationService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/taskStatusService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/taskStatusService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/conftest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_concurrent_scenarios.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_concurrent_scenarios.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_data_consistency.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_data_consistency.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_data_persistence_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_data_persistence_integration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_diagnosis_flow.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_diagnosis_flow.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_error_scenarios.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_error_scenarios.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_polling_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_polling_integration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_report_stub_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_report_stub_integration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_state_machine_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_state_machine_integration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/test_timeout_integration.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration/test_timeout_integration.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup_env.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple_selftest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple_token_check.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/start_services.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/static_code_check.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step1_integrate_progress_manager.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step2_optimize_polling.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step3_ui_optimization.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step3b_add_detail_style.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step6_8_complete_migration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step6_migrate_wxml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step7_8_final.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step7_8_migrate_js.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/step7_8_precise.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/strategic_war_room_demo.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/strategic_war_room_mockup.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/system_diagnostics_and_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/HEAD" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/config" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/description" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/filter-repo/already_ran" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/filter-repo/changed-refs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/filter-repo/commit-map" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/filter-repo/first-changed-commits" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/filter-repo/ref-map" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/filter-repo/suboptimal-issues" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/applypatch-msg.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/commit-msg.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/fsmonitor-watchman.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/post-update.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/pre-applypatch.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/pre-commit.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/pre-merge-commit.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/pre-push.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/pre-rebase.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/pre-receive.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/prepare-commit-msg.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/push-to-checkout.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/sendemail-validate.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/hooks/update.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/info/exclude" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/info/refs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/objects/info/commit-graph" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/objects/info/packs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/objects/pack/pack-139e25e013a62d0277629fe0d7cf8ea94de4a709.bitmap" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/objects/pack/pack-139e25e013a62d0277629fe0d7cf8ea94de4a709.idx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/objects/pack/pack-139e25e013a62d0277629fe0d7cf8ea94de4a709.pack" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/objects/pack/pack-139e25e013a62d0277629fe0d7cf8ea94de4a709.rev" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/packed-refs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/refs/remotes/origin/main" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp-repo/refs/tags/v0.5.0" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_aggregator_logic.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_ai_platforms_always_show.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_brand_diagnosis_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_complete_flow.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_corrected_nxm.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_data_sync.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_diagnosis_button_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_diagnosis_quick.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_diagnosis_visibility_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_doubao_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_e2e_report_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_env_configuration.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_fix_verification.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_frequency_optimization.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_gap1_auth_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_judge_model_config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_nxm_selftest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_performance.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_registration_flow.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_token_refresh.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_user_profile.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/REGION_CONSISTENCY_TEST_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/comprehensive_fix_verification.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/comprehensive_test_plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/run-tests.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/scripts/smoke_test_startup.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-brandTestService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-data-validation-fix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-dataLoaderService.test.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-dataProcessorService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-page-utils.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-pages-index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-pages-results.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-report.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-taskStatusService.test.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test-utils.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_report_comprehensive.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/update_progress_method.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/update_wxml_display.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/update_wxml_network.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/update_wxml_stage.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/upgrade_logger_v3.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/debug_manager.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify-path-fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_all_fixes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_backend_imports.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_complete_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_database_schema.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_fixes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_p0_error_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_p1_diagnosis.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_p1_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_pool_monitoring_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_pool_monitoring_p2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_timeout_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_token_config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_transaction_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/verify_websocket_fix.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/事务范围修复-分步骤实施方案.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/全部清除”。因为" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/冗余代码清理报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/前端轮询结果获取失败修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/后台日志分析与系统问题诊断报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/后台问题修复完成报告 - 最终版.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/后台问题完整修复指南.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/启动报错彻底修复计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌对比图表可视化优化报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告前端修复完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化-Day1 完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化-Day2-3 完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化-Day4 完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化-Day5 完成报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化-Day8 上线部署报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化-测试报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化-测试用例.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化-项目总结报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化产品交付文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化项目启动会纪要.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化项目实施计划.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告存储架构优化项目状态看板.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告完整性修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/品牌诊断报告数据源优化产品交付文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/完整修复报告（最终版）.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/报告输出完整性审计报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/数字资产保护系统产品交付文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/数据库 UNIQUE constraint 错误修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/最新日志问题分析修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/最终修复总结.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/核心结果保障机制产品交付文档.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/清除缓存" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/端到端流程完整性审计报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/系统启动检查清单.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/诊断失败报错分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/诊断按钮状态同步修复验证报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/诊断按钮状态无法更新修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/诊断结果展示失败修复报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/豆包 API 配额状态核实报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/验证报告-P0-1-AI 空内容约束冲突.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/验证报告-P0-2-数据库连接泄漏.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/验证报告-P0-3-诊断结果未保存.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/验证报告-P0-4-execution_store-内存泄漏.md" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -88,7 +1569,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="20740" />
+    <option name="cachedIndexableFilesCount" value="20810" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -112,6 +1593,18 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="ROOT_SYNC" value="SYNC" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;glensun810-ai&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/glensun810-ai/jhw.git&quot;,
+    &quot;accountId&quot;: &quot;99a9af8a-789f-40e6-b1c5-c732f900c732&quot;
+  }
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
@@ -129,6 +1622,7 @@
     &quot;Flask 服务器.Flask (backend_python/run.py).executor&quot;: &quot;Run&quot;,
     &quot;Python.live.executor&quot;: &quot;Run&quot;,
     &quot;Python.run.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python.view_database.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
@@ -140,7 +1634,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.tabs&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;,
     &quot;wxn.project&quot;: &quot;true&quot;
   }
@@ -195,8 +1689,32 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="view_database" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PythonProject" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/view_database.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.view_database" />
         <item itemvalue="Python.live" />
       </list>
     </recent_temporary>
@@ -244,10 +1762,23 @@
       <workItem from="1772724811833" duration="1685000" />
       <workItem from="1772757851719" duration="33456000" />
     </task>
+    <task id="LOCAL-00001" summary="修复env文件">
+      <option name="closed" value="true" />
+      <created>1772954885589</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1772954885589</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="修复env文件" />
+    <option name="LAST_COMMIT_MESSAGE" value="修复env文件" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

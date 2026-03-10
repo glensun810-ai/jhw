@@ -1,0 +1,116 @@
+/* 柱状图组件样式 */
+
+.bar-chart-container {
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+}
+
+.chart-header {
+  margin-bottom: 30rpx;
+}
+
+.chart-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.chart-body {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Y 轴 */
+.y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 300rpx;
+  margin-right: 16rpx;
+}
+
+.y-label {
+  font-size: 20rpx;
+  color: #999;
+  text-align: right;
+}
+
+/* 柱状图区域 */
+.bars-wrapper {
+  flex: 1;
+  height: 300rpx;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bars-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  padding: 20rpx 0;
+}
+
+.bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  margin: 0 8rpx;
+}
+
+.bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  width: 100%;
+}
+
+.bar-fill {
+  width: 100%;
+  max-width: 80rpx;
+  border-radius: 8rpx 8rpx 0 0;
+  transition: height 0.5s ease;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8rpx;
+  position: relative;
+  min-height: 20rpx;
+}
+
+.bar-value {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.3);
+}
+
+.bar-label {
+  font-size: 22rpx;
+  color: #666;
+  margin-top: 12rpx;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100rpx;
+}
+
+/* 空状态 */
+.empty-state {
+  padding: 100rpx 40rpx;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}

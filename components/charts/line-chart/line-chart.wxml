@@ -1,0 +1,62 @@
+<!--
+  趋势图组件
+  用于展示声量份额、情感得分等随时间变化的趋势
+-->
+<view class="line-chart-container">
+  <view class="chart-header" wx:if="{{title}}">
+    <text class="chart-title">{{title}}</text>
+  </view>
+  
+  <view class="chart-body">
+    <!-- Y 轴标签 -->
+    <view class="y-axis" wx:if="{{showYAxis}}">
+      <view class="y-label">{{maxValue}}</view>
+      <view class="y-label">{{Math.round(maxValue / 2)}}</view>
+      <view class="y-label">0</view>
+    </view>
+    
+    <!-- 图表区域 -->
+    <view class="chart-area">
+      <!-- X 轴 -->
+      <view class="x-axis-line"></view>
+      
+      <!-- 折线 -->
+      <view class="line-path">
+        <view 
+          class="line-point" 
+          wx:for="{{points}}" 
+          wx:key="index"
+          wx:for-item="point"
+          wx:for-index="index"
+          style="left: {{point.x}}%; top: {{point.y}}%;"
+        >
+          <view class="point-circle" style="background: {{color}};"></view>
+          <view class="point-value" wx:if="{{showValue}}">{{point.value}}</view>
+        </view>
+      </view>
+      
+      <!-- 连接线 -->
+      <svg class="line-connector" wx:if="{{false}}">
+        <!-- SVG 连线需要特殊处理 -->
+      </svg>
+    </view>
+  </view>
+  
+  <!-- X 轴标签 -->
+  <view class="x-labels" wx:if="{{labels && labels.length > 0}}">
+    <view 
+      class="x-label" 
+      wx:for="{{labels}}" 
+      wx:key="index"
+      wx:for-item="label"
+      style="width: {{100 / labels.length}}%;"
+    >
+      {{label}}
+    </view>
+  </view>
+  
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!data || data.length === 0}}">
+    <text class="empty-text">暂无趋势数据</text>
+  </view>
+</view>

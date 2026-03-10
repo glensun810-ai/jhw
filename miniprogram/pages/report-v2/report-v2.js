@@ -557,18 +557,18 @@ Page({
     console.warn('[ReportPageV2] 诊断超时:', timeoutInfo);
     this.stopListening();
 
-    const confirmed = await showModal({
-      title: '诊断超时',
-      content: timeoutInfo.message || '诊断任务执行时间过长',
-      confirmText: '查看历史记录',
-      cancelText: '关闭'
+    // 【P1 修复 - 2026-03-09】超时不阻塞用户，显示可关闭的错误提示
+    this.setData({
+      showErrorToast: true,
+      errorType: 'timeout',
+      errorTitle: '诊断超时',
+      errorDetail: timeoutInfo.message || '诊断任务执行时间过长，但可能已有部分结果可供查看',
+      errorCode: '',
+      showRetry: true,
+      showCancel: false,
+      showConfirm: false,
+      allowClose: true
     });
-
-    if (confirmed) {
-      wx.navigateTo({
-        url: '/pages/history/history'
-      });
-    }
   },
 
   /**
@@ -772,6 +772,20 @@ Page({
       pollingManager.stopAllPolling();
       this.setData({ isPolling: false });
       this.startListening();
+    }
+  },
+
+  /**
+   * 辅助函数：获取对象的键数量（WXML 中使用）
+   * @param {Object} obj - 对象
+   * @returns {number} 键数量
+   */
+  objectKeys(obj) {
+    if (!obj) return 0;
+    try {
+      return Object.keys(obj).length;
+    } catch (e) {
+      return 0;
     }
   }
 });

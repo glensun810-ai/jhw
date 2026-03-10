@@ -1,0 +1,125 @@
+<!--
+  时间维度分析页面
+  品牌随时间变化的趋势分析
+-->
+<view class="time-analysis-container">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="page-title">时间维度分析</text>
+    <text class="page-subtitle">品牌发展趋势追踪</text>
+  </view>
+
+  <!-- 品牌选择 -->
+  <view class="brand-selector">
+    <picker
+      class="brand-picker"
+      mode="selector"
+      range="{{brandOptions}}"
+      range-key="label"
+      value="{{brandIndex}}"
+      bindchange="onBrandChange"
+    >
+      <view class="picker-display">
+        <text class="picker-icon">🏷️</text>
+        <text class="picker-text">{{brandOptions[brandIndex].label}}</text>
+        <text class="picker-arrow">›</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 时间范围选择 -->
+  <view class="time-range-tabs">
+    <view
+      class="tab-item {{timeRange === item.value ? 'active' : ''}}"
+      wx:for="{{timeRangeOptions}}"
+      wx:key="value"
+      wx:for-item="item"
+      bindtap="onTimeRangeChange"
+      data-value="{{item.value}}"
+    >
+      {{item.label}}
+    </view>
+  </view>
+
+  <!-- 评分趋势 -->
+  <view class="analysis-section">
+    <view class="section-header">
+      <text class="section-title">📈 评分趋势</text>
+      <text class="section-desc">品牌综合评分随时间变化</text>
+    </view>
+    <line-chart
+      data="{{scoreTrendData}}"
+      title=""
+      color="#00F5A0"
+    />
+  </view>
+
+  <!-- 声量趋势 -->
+  <view class="analysis-section">
+    <view class="section-header">
+      <text class="section-title">📢 声量趋势</text>
+      <text class="section-desc">品牌曝光度变化趋势</text>
+    </view>
+    <view class="volume-chart">
+      <view
+        class="volume-bar"
+        wx:for="{{volumeData}}"
+        wx:key="date"
+        style="height: {{item.height}}%;"
+      >
+        <text class="volume-value">{{item.value}}</text>
+      </view>
+      <view class="volume-labels">
+        <text
+          class="volume-label"
+          wx:for="{{volumeData}}"
+          wx:key="date"
+          wx:for-item="item"
+        >
+          {{item.label}}
+        </text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 情感趋势 -->
+  <view class="analysis-section">
+    <view class="section-header">
+      <text class="section-title">💝 情感趋势</text>
+      <text class="section-desc">用户情感倾向变化</text>
+    </view>
+    <view class="sentiment-trend">
+      <view
+        class="sentiment-point"
+        wx:for="{{sentimentTrendData}}"
+        wx:key="date"
+        style="left: {{item.x}}%; bottom: {{item.y}}%;"
+      >
+        <view class="point-circle {{item.level}}"></view>
+        <view class="point-tooltip" wx:if="{{showTooltip}}">
+          <text>{{item.date}}</text>
+          <text>{{item.score}}分</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 排名趋势 -->
+  <view class="analysis-section">
+    <view class="section-header">
+      <text class="section-title">🏆 排名趋势</text>
+      <text class="section-desc">行业排名变化</text>
+    </view>
+    <view class="ranking-trend-chart">
+      <view
+        class="ranking-line"
+        wx:for="{{rankingTrendData}}"
+        wx:key="date"
+        style="left: {{item.x}}%; bottom: {{item.y}}%;"
+      >
+        <view class="ranking-dot"></view>
+        <text class="ranking-value">{{item.rank}}</text>
+      </view>
+    </view>
+  </view>
+</view>

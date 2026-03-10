@@ -1,0 +1,236 @@
+/* 时间维度分析页面样式 */
+
+.time-analysis-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a1f2e 0%, #121826 100%);
+  padding-bottom: 40rpx;
+}
+
+/* 页面头部 */
+.page-header {
+  padding: 40rpx 30rpx 30rpx;
+}
+
+.page-header .page-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #fff;
+  display: block;
+}
+
+.page-header .page-subtitle {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 8rpx;
+  display: block;
+}
+
+/* 品牌选择器 */
+.brand-selector {
+  padding: 0 30rpx 30rpx;
+}
+
+.brand-picker {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.brand-picker .picker-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 20rpx;
+}
+
+.brand-picker .picker-icon {
+  font-size: 32rpx;
+}
+
+.brand-picker .picker-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.brand-picker .picker-arrow {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* 时间范围 Tabs */
+.time-range-tabs {
+  display: flex;
+  gap: 16rpx;
+  padding: 0 30rpx 30rpx;
+}
+
+.time-range-tabs .tab-item {
+  flex: 1;
+  padding: 16rpx;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
+}
+
+.time-range-tabs .tab-item.active {
+  background: rgba(74, 123, 255, 0.2);
+  color: #4A7BFF;
+  font-weight: 600;
+}
+
+/* 分析区块 */
+.analysis-section {
+  margin: 0 30rpx 30rpx;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.section-header {
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.section-desc {
+  font-size: 24rpx;
+  color: #999;
+  display: block;
+}
+
+/* 声量图表 */
+.volume-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.volume-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 200rpx;
+  gap: 8rpx;
+}
+
+.volume-bar {
+  flex: 1;
+  background: linear-gradient(180deg, #4A7BFF, #6B94FF);
+  border-radius: 8rpx 8rpx 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8rpx;
+  min-height: 20rpx;
+  transition: height 0.5s ease;
+}
+
+.volume-value {
+  font-size: 20rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.volume-labels {
+  display: flex;
+  justify-content: space-around;
+  gap: 8rpx;
+}
+
+.volume-label {
+  flex: 1;
+  text-align: center;
+  font-size: 20rpx;
+  color: #999;
+}
+
+/* 情感趋势 */
+.sentiment-trend {
+  position: relative;
+  height: 200rpx;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8rpx;
+}
+
+.sentiment-point {
+  position: absolute;
+  transform: translate(-50%, 50%);
+}
+
+.point-circle {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 50%;
+  border: 3rpx solid #fff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+}
+
+.point-circle.excellent {
+  background: #00F5A0;
+}
+
+.point-circle.good {
+  background: #f39c12;
+}
+
+.point-circle.poor {
+  background: #e74c3c;
+}
+
+.point-tooltip {
+  position: absolute;
+  top: -60rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+/* 排名趋势 */
+.ranking-trend-chart {
+  position: relative;
+  height: 200rpx;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8rpx;
+}
+
+.ranking-line {
+  position: absolute;
+  transform: translate(-50%, 50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.ranking-dot {
+  width: 16rpx;
+  height: 16rpx;
+  background: #4A7BFF;
+  border-radius: 50%;
+  border: 3rpx solid #fff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+}
+
+.ranking-value {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #4A7BFF;
+}

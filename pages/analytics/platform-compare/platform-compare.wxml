@@ -1,0 +1,6 @@
+<!-- AI 平台对比子页面 -->
+<view class="container">
+  <view class="card">
+    <text>AI 平台对比详情页</text>
+  </view>
+</view>

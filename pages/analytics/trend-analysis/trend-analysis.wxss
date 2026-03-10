@@ -1,0 +1,15 @@
+.container {
+  padding: 30rpx;
+}
+
+.container .card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  text-align: center;
+}
+
+.container .card text {
+  font-size: 28rpx;
+  color: #333;
+}

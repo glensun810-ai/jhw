@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "品牌维度分析",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#121826",
+  "usingComponents": {
+    "bar-chart": "../../../components/charts/bar-chart/bar-chart"
+  }
+}

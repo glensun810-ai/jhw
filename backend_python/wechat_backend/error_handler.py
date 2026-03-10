@@ -50,7 +50,7 @@ ERROR_REGISTRY = {
     },
     
     # AI 平台相关错误
-    'AI_PLATFORM_UNAVAILABLE': {
+    'AI_SERVICE_UNAVAILABLE': {
         'message': 'AI 平台暂时不可用',
         'suggestion': ['请稍后重试', '尝试更换其他 AI 模型', '检查 AI 平台状态'],
         'http_status': 503
@@ -195,7 +195,7 @@ def handle_ai_platform_error(error, platform_name='AI 平台'):
         )
     elif 'connection' in error_msg or 'network' in error_msg:
         return create_error_response(
-            error_code='AI_PLATFORM_UNAVAILABLE',
+            error_code='AI_SERVICE_UNAVAILABLE',
             message=f'{platform_name}连接失败',
             original_error=error
         )
@@ -213,7 +213,7 @@ def handle_ai_platform_error(error, platform_name='AI 平台'):
         )
     else:
         return create_error_response(
-            error_code='AI_PLATFORM_UNAVAILABLE',
+            error_code='AI_SERVICE_UNAVAILABLE',
             message=f'{platform_name}暂时不可用',
             original_error=error
         )

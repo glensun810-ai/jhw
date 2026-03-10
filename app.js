@@ -5,7 +5,9 @@ App({
     serverUrl: 'http://127.0.0.1:5001', // 后端服务器地址（使用 5001 避免与 macOS Control Center 冲突）
     deviceId: null, // 设备 ID，用于日志追踪
     errorToast: null, // 全局错误提示组件引用
-    wsClient: null // 【P0 关键修复 - 2026-03-06】WebSocket 客户端单例
+    wsClient: null, // 【P0 关键修复 - 2026-03-06】WebSocket 客户端单例
+    // 页面状态缓存（内存）
+    pageStateCache: {}
   },
 
   onLaunch: function () {
@@ -28,6 +30,24 @@ App({
 
     // 【P0 关键修复 - 2026-03-06】初始化 WebSocket 客户端单例
     this.initWebSocketClient();
+
+    // 【产品架构优化 - 2026-03-10】初始化页面状态管理
+    this.initPageStateManagement();
+  },
+
+  /**
+   * 【产品架构优化 - 2026-03-10】初始化页面状态管理
+   * 清理过期的页面状态
+   */
+  initPageStateManagement: function() {
+    try {
+      const pageStateService = require('./services/pageStateService');
+      // 清理过期状态
+      pageStateService.clearAllStates();
+      console.log('✅ 页面状态管理已初始化');
+    } catch (error) {
+      console.error('❌ 页面状态管理初始化失败:', error);
+    }
   },
 
   /**
@@ -380,5 +400,87 @@ App({
         callback(result);
       }
     });
+  },
+
+  /**
+   * 【产品架构优化 - 2026-03-10】保存页面状态（全局方法）
+   * @param {string} pageKey - 页面标识
+   * @param {object} state - 状态数据
+   */
+  savePageState: function(pageKey, state) {
+    // 同时保存到内存和 Storage
+    this.globalData.pageStateCache[pageKey] = state;
+    
+    try {
+      const pageStateService = require('./services/pageStateService');
+      pageStateService.saveState(pageKey, state);
+    } catch (error) {
+      console.error('❌ 保存页面状态失败:', error);
+    }
+  },
+
+  /**
+   * 【产品架构优化 - 2026-03-10】获取页面状态（全局方法）
+   * @param {string} pageKey - 页面标识
+   * @returns {object|null} 状态数据
+   */
+  getPageState: function(pageKey) {
+    // 优先从内存获取，没有则从 Storage 获取
+    if (this.globalData.pageStateCache[pageKey]) {
+      return this.globalData.pageStateCache[pageKey];
+    }
+    
+    try {
+      const pageStateService = require('./services/pageStateService');
+      return pageStateService.getState(pageKey);
+    } catch (error) {
+      console.error('❌ 获取页面状态失败:', error);
+      return null;
+    }
+  },
+
+  /**
+   * 【产品架构优化 - 2026-03-10】清除页面状态
+   * @param {string} pageKey - 页面标识
+   */
+  clearPageState: function(pageKey) {
+    // 清除内存缓存
+    delete this.globalData.pageStateCache[pageKey];
+    
+    try {
+      const pageStateService = require('./services/pageStateService');
+      pageStateService.clearState(pageKey);
+    } catch (error) {
+      console.error('❌ 清除页面状态失败:', error);
+    }
+  },
+
+  /**
+   * 【产品架构优化 - 2026-03-10】获取最新诊断结果
+   * @returns {object|null} 诊断结果
+   */
+  getLatestDiagnosis: function() {
+    try {
+      return wx.getStorageSync('latestDiagnosis') || null;
+    } catch (error) {
+      console.error('❌ 获取最新诊断失败:', error);
+      return null;
+    }
+  },
+
+  /**
+   * 【产品架构优化 - 2026-03-10】保存最新诊断结果
+   * @param {object} diagnosis - 诊断结果
+   */
+  saveLatestDiagnosis: function(diagnosis) {
+    try {
+      wx.setStorageSync('latestDiagnosis', {
+        ...diagnosis,
+        savedAt: Date.now()
+      });
+      console.log('✅ 最新诊断结果已保存');
+    } catch (error) {
+      console.error('❌ 保存最新诊断失败:', error);
+    }
   }
 })

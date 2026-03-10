@@ -4,12 +4,12 @@
     "pages/mvp-index/mvp-index",
     "pages/mvp-results/mvp-results",
     "pages/mvp-platform-selector/mvp-platform-selector",
-    "pages/results/results",
     "pages/report/dashboard/index",
     "pages/report/history/index",
     "pages/report/raw-data/raw-data",
     "pages/report/roi-detail/roi-detail",
     "pages/report/source-graph/detail",
+    "miniprogram/pages/report-v2/report-v2",
     "pages/history/history",
     "pages/history-detail/history-detail",
     "pages/config-manager/config-manager",
@@ -18,6 +18,7 @@
     "pages/login/login",
     "pages/register/register",
     "pages/user-profile/user-profile",
+    "pages/user-profile/subpages/favorites/favorites",
     "pages/public-history/public-history",
     "pages/personal-history/personal-history",
     "pages/permission-manager/permission-manager",
@@ -29,7 +30,12 @@
     "pages/admin/system/system",
     "pages/admin/logs/logs",
     "pages/admin/analytics/analytics",
-    "pages/admin/audit-logs/audit-logs"
+    "pages/admin/audit-logs/audit-logs",
+    "pages/analytics/analytics",
+    "pages/analytics/brand-compare/brand-compare",
+    "pages/analytics/trend-analysis/trend-analysis",
+    "pages/analytics/platform-compare/platform-compare",
+    "pages/analytics/question-analysis/question-analysis"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -49,11 +55,11 @@
       },
       {
         "pagePath": "pages/history/history",
-        "text": "历史记录"
+        "text": "诊断记录"
       },
       {
-        "pagePath": "pages/saved-results/saved-results",
-        "text": "收藏报告"
+        "pagePath": "pages/analytics/analytics",
+        "text": "统计分析"
       },
       {
         "pagePath": "pages/user-profile/user-profile",

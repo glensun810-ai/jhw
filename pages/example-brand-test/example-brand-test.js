@@ -190,10 +190,10 @@ Page({
               duration: 2000
             });
 
-            // 跳转到结果页面
+            // 【P0 修复 - 2026-03-09】跳转到新系统 report-v2
             setTimeout(() => {
               wx.navigateTo({
-                url: `/pages/results/results?executionId=${executionId}`
+                url: `/miniprogram/pages/report-v2/report-v2?executionId=${executionId}`
               });
             }, 1500);
           }

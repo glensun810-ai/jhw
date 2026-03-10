@@ -97,9 +97,51 @@ class SyncStorageManager:
             cursor = conn.cursor()
             cursor.execute(CREATE_SYNC_RESULTS_TABLE)
             cursor.execute(CREATE_SYNC_METADATA_TABLE)
+            
+            # P0 修复：为现有表添加 test_date 列（如果不存在）
+            # 注意：必须在创建索引之前执行，因为索引依赖 test_date 列
+            self._add_missing_columns(cursor)
+            
+            # 创建索引（在列迁移之后）
             for index_sql in CREATE_SYNC_RESULTS_INDEXES:
                 cursor.execute(index_sql)
+            
             api_logger.info('同步数据存储表初始化完成')
+    
+    def _add_missing_columns(self, cursor):
+        """为现有表添加缺失的列（数据库迁移）"""
+        # 检查 sync_results 表的所有列
+        cursor.execute("PRAGMA table_info(sync_results)")
+        columns = {row[1] for row in cursor.fetchall()}
+        
+        # 定义期望的列
+        expected_columns = [
+            'result_id', 'user_id', 'brand_name', 'ai_models_used',
+            'questions_used', 'overall_score', 'total_tests',
+            'results_summary', 'detailed_results', 'test_date',
+            'sync_timestamp', 'created_at', 'updated_at', 'is_deleted'
+        ]
+        
+        # 添加缺失的列
+        for column in expected_columns:
+            if column not in columns:
+                api_logger.info(f'正在为 sync_results 表添加 {column} 列...')
+                if column == 'is_deleted':
+                    cursor.execute(f"ALTER TABLE sync_results ADD COLUMN {column} INTEGER DEFAULT 0")
+                elif column in ('overall_score', 'total_tests'):
+                    cursor.execute(f"ALTER TABLE sync_results ADD COLUMN {column} REAL DEFAULT 0")
+                else:
+                    cursor.execute(f"ALTER TABLE sync_results ADD COLUMN {column} TEXT")
+                api_logger.info(f'✅ sync_results 表 {column} 列已添加')
+        
+        # 检查 sync_metadata 表是否有 last_cleanup 列
+        cursor.execute("PRAGMA table_info(sync_metadata)")
+        metadata_columns = {row[1] for row in cursor.fetchall()}
+        
+        if 'last_cleanup' not in metadata_columns:
+            api_logger.info('正在为 sync_metadata 表添加 last_cleanup 列...')
+            cursor.execute("ALTER TABLE sync_metadata ADD COLUMN last_cleanup TEXT")
+            api_logger.info('✅ sync_metadata 表结构已更新')
     
     def save_result(self, user_id: str, result: Dict[str, Any]) -> bool:
         """

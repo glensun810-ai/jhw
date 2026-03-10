@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "时间维度分析",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#121826",
+  "usingComponents": {
+    "line-chart": "../../../components/charts/line-chart/line-chart"
+  }
+}
