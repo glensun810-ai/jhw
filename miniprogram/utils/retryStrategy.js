@@ -1,6 +1,6 @@
 /**
  * 重试策略工具
- * 
+ *
  * 提供各种重试算法：
  * 1. 固定间隔
  * 2. 线性递增
@@ -8,7 +8,7 @@
  * 4. 带抖动的指数退避
  */
 
-export const RetryStrategy = {
+const RetryStrategy = {
   /**
    * 固定间隔
    * @param {number} attempt - 当前重试次数
@@ -52,7 +52,7 @@ export const RetryStrategy = {
   exponentialWithJitter: (attempt, baseDelay = 2000, maxDelay = 30000) => {
     const exponentialDelay = baseDelay * Math.pow(2, attempt);
     const cappedDelay = Math.min(exponentialDelay, maxDelay);
-    
+
     // 添加 ±10% 的随机抖动
     const jitter = cappedDelay * 0.1 * (Math.random() * 2 - 1);
     return Math.max(0, Math.round(cappedDelay + jitter));
@@ -94,7 +94,7 @@ export const RetryStrategy = {
     } = config;
 
     const strategyFn = RetryStrategy[strategy] || RetryStrategy.exponentialWithJitter;
-    
+
     if (strategy === 'adaptive') {
       return strategyFn(attempt, baseDelay, maxDelay, lastStatus?.progress);
     }
@@ -126,3 +126,6 @@ export const RetryStrategy = {
     return true;
   }
 };
+
+// 导出（CommonJS 语法，兼容微信小程序）
+module.exports = { RetryStrategy };

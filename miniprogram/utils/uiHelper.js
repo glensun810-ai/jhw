@@ -4,17 +4,17 @@
  * 提供常用的 UI 交互辅助函数
  */
 
-import { handleApiError, ErrorCodes, ErrorMessages } from './errorHandler';
+const { handleApiError, ErrorCodes, ErrorMessages } = require('./errorHandler');
 
 /**
  * 显示成功提示
  * @param {Object} options - 选项
  */
-export function showToast(options) {
+function showToast(options) {
   const defaultOptions = {
     icon: 'success',
-    duration: 2000,
-    mask: true
+    duration: 1500,  // 【修复 - 2026-03-12】默认 1.5 秒自动消失
+    mask: false      // 【修复 - 2026-03-12】不显示遮罩层，允许用户操作
   };
 
   wx.showToast({
@@ -28,9 +28,9 @@ export function showToast(options) {
  * @param {Object} error - 错误对象
  * @param {Object} options - 选项
  */
-export function showErrorToast(error, options = {}) {
+function showErrorToast(error, options = {}) {
   const handled = handleApiError(error);
-  
+
   const defaultOptions = {
     title: handled.message,
     icon: 'none',
@@ -42,7 +42,7 @@ export function showErrorToast(error, options = {}) {
     ...defaultOptions,
     ...options
   });
-  
+
   return handled;
 }
 
@@ -50,7 +50,7 @@ export function showErrorToast(error, options = {}) {
  * 显示警告提示
  * @param {Object} options - 选项
  */
-export function showWarningToast(options) {
+function showWarningToast(options) {
   const defaultOptions = {
     title: options.title || '警告',
     icon: 'none',
@@ -65,13 +65,15 @@ export function showWarningToast(options) {
 }
 
 /**
- * 显示加载提示
+ * 显示加载中
  * @param {string} title - 加载提示文本
  * @param {Object} options - 选项
  */
-export function showLoading(title = '加载中...', options = {}) {
+function showLoading(title = '加载中...', options = {}) {
   const defaultOptions = {
     title,
+    icon: 'loading',
+    duration: 60000,
     mask: true
   };
 
@@ -84,121 +86,101 @@ export function showLoading(title = '加载中...', options = {}) {
 /**
  * 隐藏加载中
  */
-export function hideLoading() {
+function hideLoading() {
   wx.hideLoading();
-}
-
-/**
- * 显示模态对话框
- * @param {Object} options - 选项
- * @returns {Promise<boolean>} 用户是否确认
- */
-export function showModal(options) {
-  const defaultOptions = {
-    title: '提示',
-    showCancel: true,
-    confirmText: '确定',
-    cancelText: '取消',
-    confirmColor: '#1890ff',
-    cancelColor: '#999999'
-  };
-
-  return new Promise((resolve, reject) => {
-    wx.showModal({
-      ...defaultOptions,
-      ...options,
-      success: (res) => {
-        resolve(res.confirm);
-      },
-      fail: reject
-    });
-  });
-}
-
-/**
- * 显示错误模态框
- * @param {Object} error - 错误对象
- * @param {Object} options - 选项
- * @returns {Promise<boolean>} 用户是否确认重试
- */
-export async function showErrorModal(error, options = {}) {
-  const handled = handleApiError(error);
-  
-  const result = await showModal({
-    title: handled.title || '发生错误',
-    content: handled.message,
-    confirmText: options.retryText || '重试',
-    cancelText: options.cancelText || '取消',
-    showCancel: options.showRetry !== false,
-    confirmColor: options.showRetry !== false ? '#1890ff' : '#f44336'
-  });
-  
-  return result;
 }
 
 /**
  * 显示确认对话框
  * @param {Object} options - 选项
- * @returns {Promise<boolean>} 用户是否确认
+ * @returns {Promise} 用户选择结果
  */
-export async function showConfirm(options) {
-  return showModal({
-    ...options,
-    showCancel: true
-  });
-}
-
-/**
- * 显示输入框
- * @param {Object} options - 选项
- * @returns {Promise<string>} 用户输入的内容
- */
-export function showInput(options = {}) {
-  const defaultOptions = {
-    title: '请输入',
-    placeholder: '',
-    editable: true
-  };
-
+function showModal(options) {
   return new Promise((resolve, reject) => {
+    const defaultOptions = {
+      title: options.title || '提示',
+      content: options.content || '',
+      showCancel: true,
+      cancelText: '取消',
+      cancelColor: '#999999',
+      confirmText: '确定',
+      confirmColor: '#4A7BFF'
+    };
+
     wx.showModal({
       ...defaultOptions,
       ...options,
       success: (res) => {
-        if (res.confirm && res.content) {
-          resolve(res.content);
-        } else {
-          resolve(null);
+        if (res.confirm) {
+          resolve({ confirmed: true });
+        } else if (res.cancel) {
+          resolve({ confirmed: false, cancel: true });
         }
       },
-      fail: reject
+      fail: (err) => {
+        reject(err);
+      }
     });
   });
 }
 
 /**
- * 显示动作面板
- * @param {Array} items - 选项列表
+ * 显示输入对话框
  * @param {Object} options - 选项
- * @returns {Promise<number>} 选中的索引
+ * @returns {Promise} 用户输入结果
  */
-export function showActionSheet(items, options = {}) {
-  const defaultOptions = {
-    itemList: items,
-    itemColor: '#333333'
-  };
-
+function showInput(options = {}) {
   return new Promise((resolve, reject) => {
+    const defaultOptions = {
+      title: options.title || '输入',
+      editable: true,
+      placeholderText: options.placeholder || '',
+      defaultValue: options.defaultValue || '',
+      confirmText: '确定',
+      cancelText: '取消'
+    };
+
+    wx.showModal({
+      ...defaultOptions,
+      ...options,
+      success: (res) => {
+        if (res.confirm && res.content) {
+          resolve({ confirmed: true, value: res.content });
+        } else if (res.cancel) {
+          resolve({ confirmed: false, cancel: true });
+        } else {
+          resolve({ confirmed: false });
+        }
+      },
+      fail: (err) => {
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
+ * 显示操作菜单
+ * @param {Array<string>} items - 菜单项
+ * @param {Object} options - 选项
+ * @returns {Promise} 用户选择结果
+ */
+function showActionSheet(items, options = {}) {
+  return new Promise((resolve, reject) => {
+    const defaultOptions = {
+      itemList: items,
+      itemColor: '#4A7BFF'
+    };
+
     wx.showActionSheet({
       ...defaultOptions,
       ...options,
       success: (res) => {
-        resolve(res.tapIndex);
+        resolve({ tappedIndex: res.tapIndex, tappedItem: items[res.tapIndex] });
       },
       fail: (err) => {
-        // 用户取消不视为错误
         if (err.errMsg && err.errMsg.includes('cancel')) {
-          resolve(-1);
+          resolve({ tappedIndex: -1, cancel: true });
         } else {
           reject(err);
         }
@@ -208,133 +190,162 @@ export function showActionSheet(items, options = {}) {
 }
 
 /**
- * 显示导航提示
+ * 显示带导航的 Toast
  * @param {Object} options - 选项
  */
-export function showNavigateToast(options) {
+function showNavigateToast(options) {
   const defaultOptions = {
-    title: '跳转中...',
-    icon: 'loading',
-    duration: 1500
+    title: options.title || '操作成功',
+    icon: 'success',
+    duration: 2000,
+    url: null
   };
 
+  const mergedOptions = { ...defaultOptions, ...options };
+
   wx.showToast({
-    ...defaultOptions,
-    ...options
+    title: mergedOptions.title,
+    icon: mergedOptions.icon,
+    duration: mergedOptions.duration,
+    mask: true,
+    success: () => {
+      if (mergedOptions.url) {
+        setTimeout(() => {
+          wx.navigateTo({ url: mergedOptions.url });
+        }, mergedOptions.duration);
+      }
+    }
   });
 }
 
 /**
- * 格式化时间
+ * 格式化时间（秒 -> MM:SS）
  * @param {number} seconds - 秒数
- * @returns {string} 格式化后的时间文本
+ * @returns {string} 格式化后的时间
  */
-export function formatTime(seconds) {
-  if (seconds < 60) {
-    return `${seconds}秒`;
-  }
-
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-
-  if (minutes < 60) {
-    return `${minutes}分${remainingSeconds}秒`;
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return `${hours}小时${remainingMinutes}分`;
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 /**
- * 格式化进度百分比
- * @param {number} progress - 进度值（0-100）
- * @returns {string} 格式化后的进度文本
+ * 格式化进度（小数 -> 百分比）
+ * @param {number} progress - 进度（0-1）
+ * @returns {string} 格式化后的进度
  */
-export function formatProgress(progress) {
-  const value = Math.min(100, Math.max(0, progress));
-  return `${value.toFixed(0)}%`;
+function formatProgress(progress) {
+  return `${Math.round(progress * 100)}%`;
 }
 
 /**
- * 显示进度提示
- * @param {Object} status - 状态对象
+ * 显示进度 Toast
+ * @param {string} status - 状态
  */
-export function showProgressToast(status) {
-  const progress = status?.progress || 0;
-  const stage = status?.stage || status?.status_text || '处理中';
+function showProgressToast(status) {
+  let title = '';
+  let icon = 'none';
+
+  switch (status) {
+    case 'pending':
+      title = '等待开始...';
+      icon = 'loading';
+      break;
+    case 'running':
+      title = '正在处理...';
+      icon = 'loading';
+      break;
+    case 'completed':
+      title = '处理完成！';
+      icon = 'success';
+      break;
+    case 'failed':
+      title = '处理失败';
+      icon = 'none';
+      break;
+    default:
+      title = '处理中...';
+      icon = 'loading';
+  }
 
   wx.showToast({
-    title: `${stage} ${progress}%`,
-    icon: 'none',
-    duration: 1500
+    title,
+    icon,
+    duration: status === 'completed' ? 2000 : 60000,
+    mask: true
   });
 }
 
 /**
- * 复制文本到剪贴板
+ * 复制到剪贴板
  * @param {string} text - 要复制的文本
- * @returns {Promise<boolean>} 是否成功
  */
-export function copyToClipboard(text) {
+function copyToClipboard(text) {
   return new Promise((resolve, reject) => {
     wx.setClipboardData({
       data: text,
       success: () => {
-        showToast({
+        wx.showToast({
           title: '已复制到剪贴板',
-          icon: 'success'
+          icon: 'success',
+          duration: 2000
         });
-        resolve(true);
+        resolve();
       },
-      fail: reject
+      fail: (err) => {
+        reject(err);
+      }
     });
   });
 }
 
 /**
- * 显示顶部提示条
+ * 显示顶部提示
  * @param {Object} options - 选项
  */
-export function showTopTip(options) {
+function showTopTip(options) {
   const {
     title = '',
     duration = 2000,
     type = 'info' // info, success, warning, error
   } = options;
 
-  // 创建提示元素
-  const tipId = 'toptip_' + Date.now();
+  const colors = {
+    info: '#1890ff',
+    success: '#52c41a',
+    warning: '#faad14',
+    error: '#f5222d'
+  };
+
+  // 使用页面 data 中的 topTip 组件
   const pages = getCurrentPages();
-  const currentPage = pages[pages.length - 1];
-  
-  if (currentPage) {
-    const pageData = currentPage.data || {};
-    const topTips = pageData.topTips || [];
-    
-    topTips.push({
-      id: tipId,
-      title,
-      type,
-      show: true
-    });
-    
-    currentPage.setData({ topTips });
-    
-    // 自动消失
-    setTimeout(() => {
-      const newTips = topTips.filter(tip => tip.id !== tipId);
-      currentPage.setData({ topTips: newTips });
-    }, duration);
+  if (pages.length > 0) {
+    const currentPage = pages[pages.length - 1];
+    if (currentPage.setData) {
+      currentPage.setData({
+        topTip: {
+          show: true,
+          title,
+          type,
+          color: colors[type]
+        }
+      });
+
+      setTimeout(() => {
+        currentPage.setData({
+          'topTip.show': false
+        });
+      }, duration);
+    }
   }
 }
 
 /**
- * 显示成功提示（快捷方法）
+ * 显示成功提示
  * @param {string} title - 提示文本
  */
-export function showSuccess(title = '操作成功') {
-  showToast({
+function showSuccess(title = '操作成功') {
+  wx.showToast({
     title,
     icon: 'success',
     duration: 2000
@@ -342,31 +353,63 @@ export function showSuccess(title = '操作成功') {
 }
 
 /**
- * 显示网络错误提示
+ * 显示网络错误
  */
-export function showNetworkError() {
-  showErrorToast({
-    code: ErrorCodes.NETWORK_ERROR,
-    message: ErrorMessages[ErrorCodes.NETWORK_ERROR]
+function showNetworkError() {
+  wx.showToast({
+    title: '网络连接失败',
+    icon: 'none',
+    duration: 2500
   });
 }
 
 /**
- * 显示超时错误提示
+ * 显示超时错误
  */
-export function showTimeoutError() {
-  showErrorToast({
-    code: ErrorCodes.TIMEOUT,
-    message: ErrorMessages[ErrorCodes.TIMEOUT]
+function showTimeoutError() {
+  wx.showToast({
+    title: '请求超时，请重试',
+    icon: 'none',
+    duration: 2500
   });
 }
 
 /**
- * 显示权限错误提示
+ * 显示授权错误
+ * @param {string} message - 错误消息
  */
-export function showAuthError(message) {
-  showErrorToast({
-    code: ErrorCodes.UNAUTHORIZED,
-    message: message || ErrorMessages[ErrorCodes.UNAUTHORIZED]
+function showAuthError(message) {
+  wx.showModal({
+    title: '需要授权',
+    content: message || '请先登录',
+    showCancel: false,
+    confirmText: '去登录',
+    success: (res) => {
+      if (res.confirm) {
+        wx.navigateTo({ url: '/pages/login/login' });
+      }
+    }
   });
 }
+
+// 导出（CommonJS 语法，兼容微信小程序）
+module.exports = {
+  showToast,
+  showErrorToast,
+  showWarningToast,
+  showLoading,
+  hideLoading,
+  showModal,
+  showInput,
+  showActionSheet,
+  showNavigateToast,
+  formatTime,
+  formatProgress,
+  showProgressToast,
+  copyToClipboard,
+  showTopTip,
+  showSuccess,
+  showNetworkError,
+  showTimeoutError,
+  showAuthError
+};

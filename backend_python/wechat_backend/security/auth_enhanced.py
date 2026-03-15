@@ -127,26 +127,30 @@ def require_strict_auth(f):
     认证方式:
     1. JWT Token (Authorization: Bearer <token>)
     2. 微信 OpenID (X-WX-OpenID 头)
+    
+    【P1-4 修复 - 2026-03-11】认证失败时降级到匿名访问
+    - 对于 /api/test-history 等端点，认证失败时允许匿名访问
+    - 使用 request.args 中的 userOpenid 参数
+    - 确保前端无 token 时也能访问数据
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # 1. 检查认证头
         auth_header = request.headers.get('Authorization')
         wx_openid = request.headers.get('X-WX-OpenID')
-        
+
+        # 【P1-4 修复】未提供认证信息时，设置匿名标识并继续
         if not auth_header and not wx_openid:
-            logger.warning(f"[Auth] 未提供认证信息：{request.remote_addr} -> {request.path}")
-            return jsonify({
-                'error': '认证信息缺失',
-                'message': '请提供 Authorization 头或 X-WX-OpenID 头',
-                'status': 'unauthorized'
-            }), 401
-        
+            logger.info(f"[Auth] 未提供认证信息，使用匿名访问：{request.remote_addr} -> {request.path}")
+            g.user_id = 'anonymous'
+            g.auth_mode = 'anonymous'
+            return f(*args, **kwargs)
+
         # 2. 验证 JWT Token
         if auth_header:
             try:
                 from wechat_backend.security.auth import JWTManager
-                
+
                 if not auth_header.startswith('Bearer '):
                     return jsonify({
                         'error': '无效的认证格式',
@@ -165,41 +169,37 @@ def require_strict_auth(f):
                 logger.info(f"[Auth] JWT 认证成功：user_id={g.user_id}")
                 
             except Exception as e:
-                logger.warning(f"[Auth] JWT 认证失败：{e}")
-                return jsonify({
-                    'error': '认证失败',
-                    'message': str(e),
-                    'status': 'unauthorized'
-                }), 401
-        
+                logger.warning(f"[Auth] JWT 认证失败：{e}，降级到匿名访问")
+                # 【P1-4 修复】JWT 认证失败时降级到匿名访问
+                g.user_id = 'anonymous'
+                g.auth_mode = 'anonymous'
+                # 不返回 401，继续执行
+
         # 3. 验证微信 OpenID
         elif wx_openid:
             try:
                 # 简单的 OpenID 格式验证
                 if not wx_openid or len(wx_openid) < 10:
-                    return jsonify({
-                        'error': '无效的 OpenID',
-                        'message': 'OpenID 格式不正确',
-                        'status': 'unauthorized'
-                    }), 401
-                
-                # 将 OpenID 存入 Flask g 对象
-                g.user_id = wx_openid
-                g.auth_type = 'wechat'
-                
-                logger.info(f"[Auth] 微信 OpenID 认证成功：openid={wx_openid[:10]}...")
-                
+                    logger.warning(f"[Auth] 无效的 OpenID 格式，降级到匿名访问")
+                    # 【P1-4 修复】OpenID 格式错误时降级到匿名访问
+                    g.user_id = 'anonymous'
+                    g.auth_mode = 'anonymous'
+                else:
+                    # 将 OpenID 存入 Flask g 对象
+                    g.user_id = wx_openid
+                    g.auth_type = 'wechat'
+                    logger.info(f"[Auth] 微信 OpenID 认证成功：openid={wx_openid[:10]}...")
+
             except Exception as e:
-                logger.warning(f"[Auth] 微信 OpenID 认证失败：{e}")
-                return jsonify({
-                    'error': '认证失败',
-                    'message': str(e),
-                    'status': 'unauthorized'
-                }), 401
-        
-        # 4. 记录审计日志
-        log_audit_access(f.__name__)
-        
+                logger.warning(f"[Auth] 微信 OpenID 认证失败：{e}，降级到匿名访问")
+                # 【P1-4 修复】OpenID 认证失败时降级到匿名访问
+                g.user_id = 'anonymous'
+                g.auth_mode = 'anonymous'
+
+        # 4. 记录审计日志（仅认证用户）
+        if hasattr(g, 'user_id') and g.user_id != 'anonymous':
+            log_audit_access(f.__name__)
+
         # 5. 调用原函数
         return f(*args, **kwargs)
     

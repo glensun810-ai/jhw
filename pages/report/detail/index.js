@@ -1,94 +1,44 @@
-/**
- * 问题深度诊断详情页 - 页面逻辑
- * 
- * 核心功能：
- * 1. 按问题索引加载特定问题的所有模型结果
- * 2. 模型切换对比
- * 3. 分片渲染（Chunked Rendering）防止大文本卡顿
- * 4. 归因分析与信源追踪
- */
+// pages/report/detail/index.js
+// P21 修复版 - 从 API 加载诊断详情
 
 const app = getApp();
+var API_BASE_URL = app.globalData.apiBaseUrl || 'http://127.0.0.1:5001';
 
 Page({
   data: {
-    // 问题数据
     questionIndex: 0,
     questionText: '',
-    
-    // 模型结果
     modelResults: [],
     currentModelIndex: 0,
     currentModelData: null,
-    
-    // 分片渲染
     renderedText: '',
     isRendering: false,
     renderTimer: null,
-    
-    // 状态
     loading: true,
-    loadError: null
+    loadError: null,
+    executionId: null,
+    reportData: null,
+    brandName: '',
+    competitorBrands: [],
+    statistics: {},
+    analysis: {}
   },
 
-  /**
-   * 页面加载
-   */
   onLoad: function(options) {
-    try {
-      this.setData({ loading: true, loadError: null });
-      
-      const qIndex = parseInt(options.index) || 0;
-      
-      // 从全局存储获取数据
-      const lastReport = app.globalData.lastReport;
-      
-      if (!lastReport || !lastReport.raw) {
-        this.setData({
-          loading: false,
-          loadError: '未找到报告数据，请重新执行测试'
-        });
-        return;
-      }
-      
-      const rawData = lastReport.raw;
-      
-      // 过滤出该问题下的所有模型结果
-      const resultsForThisQ = rawData.filter(r => r.question_id == qIndex);
-      
-      if (!resultsForThisQ || resultsForThisQ.length === 0) {
-        this.setData({
-          loading: false,
-          loadError: '未找到该问题的诊断数据'
-        });
-        return;
-      }
-      
-      // 设置页面数据
-      this.setData({
-        questionIndex: qIndex,
-        questionText: resultsForThisQ[0]?.question_text || '未知问题',
-        modelResults: resultsForThisQ,
-        currentModelIndex: 0,
-        currentModelData: resultsForThisQ[0],
-        loading: false
-      });
-      
-      // 开始分片渲染
-      this.startChunkedRendering(resultsForThisQ[0].content);
-      
-    } catch (error) {
-      console.error('加载诊断详情失败:', error);
+    console.log('[Detail] 页面加载，options:', options);
+    this.setData({ loading: true, loadError: null });
+
+    if (options && options.executionId) {
+      console.log('[Detail] 从 API 加载:', options.executionId);
+      this.loadDiagnosisFromAPI(options.executionId);
+    } else {
       this.setData({
         loading: false,
-        loadError: '加载失败：' + error.message
+        loadError: '缺少 executionId 参数'
       });
     }
   },
 
-  /**
-   * 页面卸载时清理定时器
-   */
   onUnload: function() {
     if (this.data.renderTimer) {
       clearInterval(this.data.renderTimer);
@@ -96,41 +46,110 @@ Page({
     }
   },
 
-  /**
-   * 分片渲染逻辑：防止大文本导致页面卡顿
-   * 每 40ms 渲染 300 字，保持流畅体验
-   */
+  loadDiagnosisFromAPI: function(executionId) {
+    var that = this;
+    console.log('[Detail] 开始加载诊断详情:', executionId);
+    
+    wx.request({
+      url: API_BASE_URL + '/api/diagnosis/history/' + executionId + '/detail',
+      method: 'GET',
+      data: { userOpenid: app.globalData.userOpenid || 'anonymous' },
+      timeout: 30000,
+      success: function(res) {
+        console.log('[Detail] API 响应:', res.data);
+        
+        if (res.statusCode === 200 && res.data && res.data.success) {
+          var data = res.data.data;
+          var report = data.report;
+          var results = data.results || [];
+          var analysis = data.analysis || {};
+          var statistics = data.statistics || {};
+          
+          console.log('[Detail] 数据提取:', {
+            reportId: report ? report.id : 'null',
+            resultsCount: results.length,
+            brandName: report ? report.brand_name : 'null'
+          });
+          
+          if (results.length > 0) {
+            var firstQuestion = results[0].question || '';
+            var resultsForFirstQ = [];
+            for (var i = 0; i < results.length; i++) {
+              if (results[i].question === firstQuestion) {
+                resultsForFirstQ.push(results[i]);
+              }
+            }
+            
+            console.log('[Detail] 第一个问题的结果数:', resultsForFirstQ.length);
+            
+            that.setData({
+              executionId: executionId,
+              reportData: report,
+              brandName: report ? report.brand_name : '未知品牌',
+              competitorBrands: report ? report.competitor_brands : [],
+              statistics: statistics,
+              analysis: analysis,
+              questionText: firstQuestion,
+              modelResults: resultsForFirstQ,
+              currentModelIndex: 0,
+              currentModelData: resultsForFirstQ[0],
+              loading: false
+            });
+            
+            if (resultsForFirstQ[0]) {
+              var content = resultsForFirstQ[0].response_content || resultsForFirstQ[0].content || '';
+              that.startChunkedRendering(content);
+            }
+            
+            wx.showToast({ title: '加载成功', icon: 'success' });
+          } else {
+            that.setData({
+              loading: false,
+              loadError: '暂无诊断结果'
+            });
+          }
+        } else {
+          that.setData({
+            loading: false,
+            loadError: '数据加载失败：' + (res.data ? res.data.error : '未知错误')
+          });
+        }
+      },
+      fail: function(error) {
+        console.error('[Detail] API 请求失败:', error);
+        that.setData({
+          loading: false,
+          loadError: '网络请求失败，请检查网络连接'
+        });
+      }
+    });
+  },
+
   startChunkedRendering: function(fullText) {
-    // 清理之前的定时器
+    var that = this;
+    
     if (this.data.renderTimer) {
       clearInterval(this.data.renderTimer);
     }
     
-    this.setData({ 
-      renderedText: '', 
-      isRendering: true 
-    });
+    this.setData({ renderedText: '', isRendering: true });
     
-    let index = 0;
-    const chunkSize = 300; // 每片 300 字
-    const interval = 40;   // 40ms 渲染一次
+    var index = 0;
+    var chunkSize = 300;
+    var interval = 40;
     
-    const timer = setInterval(() => {
+    var timer = setInterval(function() {
       if (index >= fullText.length) {
         clearInterval(timer);
-        this.setData({ isRendering: false });
+        that.setData({ isRendering: false });
         return;
       }
       
-      // 获取下一个片段
-      const nextChunk = fullText.substring(index, index + chunkSize);
+      var nextChunk = fullText.substring(index, index + chunkSize);
+      var formattedChunk = that.formatText(nextChunk);
       
-      // 格式化文本（处理换行和空格）
-      const formattedChunk = this.formatText(nextChunk);
-      
-      // 追加到已渲染内容
-      this.setData({
-        renderedText: this.data.renderedText + formattedChunk
+      that.setData({
+        renderedText: that.data.renderedText + formattedChunk
       });
       
       index += chunkSize;
@@ -139,47 +158,32 @@ Page({
     this.data.renderTimer = timer;
   },
 
-  /**
-   * 格式化文本：转换为 rich-text 可读的 HTML
-   */
   formatText: function(text) {
     if (!text) return '';
-    
     return text
-      .replace(/\n/g, '<br/>')      // 换行符转<br/>
-      .replace(/\s/g, '&nbsp;')     // 空格转&nbsp;
-      .replace(/<br\/>\s*<br\/>/g, '<br/><br/>'); // 合并多余换行
+      .replace(/\n/g, '<br/>')
+      .replace(/\s/g, '&nbsp;')
+      .replace(/<br\/>\s*<br\/>/g, '<br/><br/>');
   },
 
-  /**
-   * 切换模型
-   */
   switchModel: function(e) {
-    const index = e.currentTarget.dataset.index;
+    var index = e.currentTarget.dataset.index;
+    if (index === this.data.currentModelIndex) return;
     
-    if (index === this.data.currentModelIndex) {
-      return; // 已经是当前模型，无需切换
-    }
-    
-    const modelData = this.data.modelResults[index];
-    
+    var modelData = this.data.modelResults[index];
     this.setData({
       currentModelIndex: index,
       currentModelData: modelData
     });
     
-    // 重新分片渲染新模型的内容
-    this.startChunkedRendering(modelData.content);
-    
-    // 轻微震动反馈
+    var content = modelData.response_content || modelData.content || '';
+    this.startChunkedRendering(content);
     wx.vibrateShort({ type: 'light' });
   },
 
-  /**
-   * 复制内容
-   */
   copyContent: function() {
-    const content = this.data.currentModelData?.content;
+    var content = this.data.currentModelData ? 
+      (this.data.currentModelData.response_content || this.data.currentModelData.content) : null;
     
     if (!content) {
       wx.showToast({ title: '无内容可复制', icon: 'none' });
@@ -188,69 +192,67 @@ Page({
     
     wx.setClipboardData({
       data: content,
-      success: () => {
-        wx.showToast({ title: '已复制', icon: 'success' });
-      }
+      success: function() { wx.showToast({ title: '已复制', icon: 'success' }); }
     });
   },
 
-  /**
-   * 分享分析
-   */
-  shareAnalysis: function() {
-    wx.showShareMenu({
-      withShareTicket: true,
-      menus: ['shareAppMessage', 'shareTimeline']
+  viewBrandAnalysis: function() {
+    var analysis = this.data.analysis;
+    if (!analysis || !analysis.brandAnalysis) {
+      wx.showToast({ title: '暂无品牌分析数据', icon: 'none' });
+      return;
+    }
+    wx.showModal({
+      title: '品牌分析',
+      content: JSON.stringify(analysis.brandAnalysis, null, 2),
+      showCancel: false,
+      confirmText: '关闭'
     });
+  },
+
+  viewTop3Brands: function() {
+    var top3 = this.data.analysis ? this.data.analysis.top3Brands : [];
+    if (!top3 || top3.length === 0) {
+      wx.showToast({ title: '暂无 Top3 品牌数据', icon: 'none' });
+      return;
+    }
     
-    wx.showToast({ title: '点击右上角分享', icon: 'none' });
-  },
-
-  /**
-   * 重新加载
-   */
-  retry: function() {
-    this.onLoad({ index: this.data.questionIndex });
-  },
-
-  /**
-   * 页面分享 - 发送给好友
-   */
-  onShareAppMessage: function() {
-    const brandName = this.data.currentModelData?.main_brand || '品牌';
-    const questionText = this.data.questionText?.substring(0, 20) || '问题诊断';
-    const rank = this.data.currentModelData?.geo_data?.rank || -1;
+    var content = '';
+    for (var i = 0; i < top3.length; i++) {
+      content += (i + 1) + '. ' + top3[i].name + '\n   理由：' + top3[i].reason + '\n\n';
+    }
     
-    return {
-      title: `${brandName} GEO 诊断 - ${questionText}（排名：${rank > 0 ? '#' + rank : '未上榜'}）`,
-      path: `/pages/report/dashboard/index`
-    };
+    wx.showModal({
+      title: 'Top3 品牌排名',
+      content: content,
+      showCancel: false,
+      confirmText: '关闭'
+    });
   },
 
-  /**
-   * 页面分享 - 分享到朋友圈
-   */
-  onShareTimeline: function() {
-    const brandName = this.data.currentModelData?.main_brand || '品牌';
-    const rank = this.data.currentModelData?.geo_data?.rank || -1;
+  viewStatistics: function() {
+    var stats = this.data.statistics;
+    if (!stats) {
+      wx.showToast({ title: '暂无统计信息', icon: 'none' });
+      return;
+    }
     
-    return {
-      title: `${brandName} GEO 品牌诊断报告 - 排名#${rank > 0 ? rank : '未上榜'}`,
-      query: '',
-      imageUrl: ''
-    };
+    var content = '总结果数：' + (stats.total_results || 0) + '\n' +
+      '问题数：' + (stats.total_questions || 0) + '\n' +
+      'AI 平台：' + (stats.platforms || []).join(', ');
+    
+    wx.showModal({
+      title: '诊断统计',
+      content: content,
+      showCancel: false,
+      confirmText: '关闭'
+    });
   },
 
-  /**
-   * 下拉刷新
-   */
-  onPullDownRefresh: function() {
-    this.onLoad({ index: this.data.questionIndex })
-      .then(() => {
-        wx.stopPullDownRefresh();
-      })
-      .catch(() => {
-        wx.stopPullDownRefresh();
-      });
+  goBack: function() {
+    wx.navigateBack({
+      delta: 1,
+      fail: function() { wx.switchTab({ url: '/pages/index/index' }); }
+    });
   }
 });

@@ -1543,6 +1543,14 @@ Page({
       ];
     }
 
+    // 【Bug 修复 - 2026-03-12】保存 AI 平台数据快照，防止诊断过程中丢失
+    this._aiModelsSnapshot = {
+      domesticAiModels: JSON.parse(JSON.stringify(domesticAiModels)),
+      overseasAiModels: JSON.parse(JSON.stringify(overseasAiModels)),
+      selectedMarketTab: this.data.selectedMarketTab
+    };
+    console.log('[Bug 修复] AI 平台快照已保存:', this._aiModelsSnapshot);
+
     // 【P2 新增】保存用户选择的 AI 平台偏好
     this.saveUserPlatformPreferences();
 
@@ -1612,6 +1620,17 @@ Page({
    */
   handleDiagnosisComplete: function(parsedStatus, executionId) {
     try {
+      // 【Bug 修复 - 2026-03-12】恢复 AI 平台数据快照
+      if (this._aiModelsSnapshot) {
+        console.log('[Bug 修复] 恢复 AI 平台快照:', this._aiModelsSnapshot);
+        this.setData({
+          domesticAiModels: this._aiModelsSnapshot.domesticAiModels,
+          overseasAiModels: this._aiModelsSnapshot.overseasAiModels,
+          selectedMarketTab: this._aiModelsSnapshot.selectedMarketTab
+        });
+        this._aiModelsSnapshot = null;
+      }
+
       // 【P0 关键修复】检查后端返回的 status 字段
       if (parsedStatus?.status === 'failed') {
         console.error('[handleDiagnosisComplete] 后端返回 failed 状态，跳转到报告页展示详情');
@@ -1633,18 +1652,29 @@ Page({
         
         wx.hideLoading();
         // 【修复】不弹出阻断式弹窗，直接跳转到报告页展示详情
+        // 【P0-2 修复 - 2026-03-11】确保 brandName 正确传递
+        const currentBrandName = this.data.brandName || brandName || '未知品牌';
+        console.log('[handleDiagnosisComplete] 准备跳转，executionId:', executionId, 'brandName:', currentBrandName);
+        
         navigateToReportPage(executionId, {
           hasResults: false,
           showExecutionLog: true,
           showConfigReview: true,
-          brandName: this.data.brandName
+          brandName: currentBrandName
         });
         return;
       }
 
       // 【P0 关键修复 - 2026-03-07】即使 results.length == 0 也允许查看报告
       const resultsToCheck = parsedStatus?.detailed_results || parsedStatus?.results || [];
-      if (!Array.isArray(resultsToCheck) || resultsToCheck.length === 0) {
+      
+      // 【P0 关键修复 - 2026-03-11】检查是否为聚合报告数据结构（有 brandScores 等但无 results 数组）
+      const hasAggregatedData = parsedStatus?.brandScores || 
+                                 parsedStatus?.competitive_analysis || 
+                                 parsedStatus?.quality_score ||
+                                 (parsedStatus?.status === 'completed' && parsedStatus?.progress === 100);
+      
+      if ((!Array.isArray(resultsToCheck) || resultsToCheck.length === 0) && !hasAggregatedData) {
         console.error('[handleDiagnosisComplete] results.length == 0，跳转到报告页展示详情');
         
         // 【产品架构优化 - 2026-03-10】无结果也要保存记录
@@ -1663,11 +1693,15 @@ Page({
         
         wx.hideLoading();
         // 【修复】不弹出"无有效结果"阻断弹窗，直接跳转到报告页展示详情
+        // 【P0-2 修复 - 2026-03-11】确保 brandName 正确传递
+        const currentBrandName = this.data.brandName || '未知品牌';
+        console.log('[handleDiagnosisComplete] results.length == 0，准备跳转，executionId:', executionId, 'brandName:', currentBrandName);
+        
         navigateToReportPage(executionId, {
           hasResults: false,
           showExecutionLog: true,
           showConfigReview: true,
-          brandName: this.data.brandName
+          brandName: currentBrandName
         });
         return;
       }
@@ -1687,11 +1721,14 @@ Page({
       // 【P0 关键修复 - 2026-03-07】诊断完成后立即自动跳转到报告页
       // 不再停留在首页展示按钮，用户直接在报告页查看详细结果
       console.log('[handleDiagnosisComplete] 诊断完成，准备跳转到报告页...');
-      
+
       // 保存核心数据
+      // 【P0 关键修复 - 2026-03-11】优先使用 detailed_results，如果没有则使用 results，如果都没有则为空数组
       const resultsToSave = parsedStatus.detailed_results || parsedStatus.results || [];
+      
+      // 【P0 关键修复 - 2026-03-11】竞争分析数据可能直接在根路径或嵌套在 competitive_analysis 中
       const competitiveAnalysisToSave = parsedStatus.competitive_analysis || {};
-      const brandScoresToSave = competitiveAnalysisToSave.brandScores || {};
+      const brandScoresToSave = competitiveAnalysisToSave.brandScores || parsedStatus.brandScores || {};
 
       // 【P0 关键修复】保存完整的详细诊断结果，与结果页面展示完全一致
       const saveSuccess = saveDiagnosisResult(executionId, {
@@ -1701,42 +1738,42 @@ Page({
         selectedModels: parsedStatus.selectedModels || [],
         customQuestions: parsedStatus.customQuestions || [],
         completedAt: new Date().toISOString(),
-        
+
         // 详细诊断结果
         results: resultsToSave || [],
         detailedResults: parsedStatus.detailed_results || [],
-        
-        // 竞争分析
-        competitiveAnalysis: parsedStatus.competitive_analysis || {},
-        brandScores: (parsedStatus.competitive_analysis || {}).brandScores || {},
-        firstMentionByPlatform: (parsedStatus.competitive_analysis || {}).firstMentionByPlatform || [],
-        interceptionRisks: (parsedStatus.competitive_analysis || {}).interceptionRisks || [],
-        competitorComparisonData: (parsedStatus.competitive_analysis || {}).competitorComparisonData || [],
-        
+
+        // 竞争分析 - 【P0 修复 - 2026-03-11】支持多种数据结构
+        competitiveAnalysis: competitiveAnalysisToSave,
+        brandScores: brandScoresToSave,
+        firstMentionByPlatform: competitiveAnalysisToSave.firstMentionByPlatform || parsedStatus.firstMentionByPlatform || [],
+        interceptionRisks: competitiveAnalysisToSave.interceptionRisks || parsedStatus.interceptionRisks || [],
+        competitorComparisonData: competitiveAnalysisToSave.competitorComparisonData || parsedStatus.competitorComparisonData || [],
+
         // 语义偏移分析
         semanticDriftData: parsedStatus.semantic_drift_data || null,
         semanticContrastData: (parsedStatus.semantic_drift_data || {}).semanticContrastData || null,
-        
+
         // 信源纯净度
         sourcePurityData: parsedStatus.source_purity_data || null,
         sourceIntelligenceMap: (parsedStatus.source_purity_data || {}).sourceIntelligenceMap || null,
-        
+
         // 优化建议
         recommendationData: parsedStatus.recommendation_data || null,
         priorityRecommendations: (parsedStatus.recommendation_data || {}).priorityRecommendations || [],
         actionItems: (parsedStatus.recommendation_data || {}).actionItems || [],
-        
-        // 质量评分
+
+        // 质量评分 - 【P0 修复 - 2026-03-11】支持根路径或嵌套结构
         qualityScore: parsedStatus.quality_score || {},
-        overallScore: (parsedStatus.quality_score || {}).overall_score || 0,
-        dimensionScores: (parsedStatus.quality_score || {}).dimension_scores || {},
-        
+        overallScore: (parsedStatus.quality_score || {}).overall_score || (parsedStatus.quality_score || {}).overallScore || 0,
+        dimensionScores: (parsedStatus.quality_score || {}).dimension_scores || (parsedStatus.quality_score || {}).dimensionScores || {},
+
         // 模型性能统计
         modelPerformanceStats: parsedStatus.model_performance_stats || [],
-        
+
         // 响应时间统计
         responseTimeStats: parsedStatus.response_time_stats || {},
-        
+
         // 原始数据（用于完整还原）
         rawResponse: parsedStatus
       });
@@ -1770,30 +1807,26 @@ Page({
       // 给用户短暂的完成反馈时间，然后自动跳转
       console.log('[handleDiagnosisComplete] 诊断完成，0.5 秒后跳转到报告页...');
 
-      // 【P0 修复 - 2026-03-09】统一使用新系统 report-v2，确保第一层分析结果正确展示
-      setTimeout(() => {
-        wx.navigateTo({
-          url: `/miniprogram/pages/report-v2/report-v2?executionId=${executionId}`
-        });
-      }, 500);
+      // 【P0 关键修复 - 2026-03-11】先处理数据，再跳转，确保报告页有数据可用
+      // 数据处理（同步执行，确保跳转前有数据）
+      let dashboardData = null;
+      let processedReportData = null;
 
-      // P2 优化：异步处理本地数据聚合（不阻塞跳转）
-      // 使用 setTimeout 将计算任务放到下一个事件循环
-      setTimeout(() => {
-        try {
-          // 【关键修复】直接使用 detailed_results 数组
-          const rawResults = parsedStatus.detailed_results || parsedStatus.results || [];
+      try {
+        // 【关键修复】直接使用 detailed_results 数组
+        const rawResults = parsedStatus.detailed_results || parsedStatus.results || [];
 
-          console.log('[异步数据处理] 原始结果数量:', rawResults.length);
+        console.log('[数据处理] 原始结果数量:', rawResults.length);
 
+        if (rawResults && rawResults.length > 0) {
           // 生成看板数据（直接传入数组）
-          const dashboardData = generateDashboardData(rawResults, {
+          dashboardData = generateDashboardData(rawResults, {
             brandName: this.data.brandName,
             competitorBrands: this.data.competitorBrands
           });
 
           // 处理报告数据（用于其他图表）
-          const processedReportData = processReportData({
+          processedReportData = processReportData({
             results: rawResults,
             detailed_results: rawResults,
             semantic_drift_data: parsedStatus.semantic_drift_data,
@@ -1801,6 +1834,7 @@ Page({
             competitive_analysis: parsedStatus.competitive_analysis
           });
 
+          // 更新当前页面数据
           this.setData({
             reportData: processedReportData,
             trendChartData: generateTrendChartData(processedReportData),
@@ -1811,7 +1845,60 @@ Page({
             dashboardData: dashboardData
           });
 
-          console.log('✅ 异步数据处理完成');
+          // 【P0 关键修复 - 2026-03-11】保存到全局变量，供报告页使用
+          const app = getApp();
+          if (app && app.globalData) {
+            app.globalData.pendingReport = {
+              executionId: executionId,
+              dashboardData: dashboardData,
+              processedReportData: processedReportData,
+              rawResults: rawResults,
+              timestamp: Date.now()
+            };
+            console.log('[ReportData] ✅ 数据已保存到 globalData.pendingReport');
+          }
+
+          console.log('✅ 数据处理完成');
+        } else {
+          console.warn('[数据处理] ⚠️ 没有可用的原始结果数据');
+        }
+      } catch (error) {
+        console.error('数据处理失败:', error);
+        // 数据处理失败不影响跳转
+      }
+
+      // 【P0 修复 - 2026-03-09】统一使用新系统 report-v2，确保第一层分析结果正确展示
+      setTimeout(() => {
+        wx.navigateTo({
+          url: `/miniprogram/pages/report-v2/report-v2?executionId=${executionId}`
+        });
+      }, 500);
+
+      // P2 优化：异步处理备用数据（不阻塞跳转）
+      // 使用 setTimeout 将计算任务放到下一个事件循环，作为备用方案
+      setTimeout(() => {
+        try {
+          // 如果之前数据处理失败，再试一次
+          if (!dashboardData) {
+            const rawResults = parsedStatus.detailed_results || parsedStatus.results || [];
+            if (rawResults && rawResults.length > 0) {
+              const backupDashboardData = generateDashboardData(rawResults, {
+                brandName: this.data.brandName,
+                competitorBrands: this.data.competitorBrands
+              });
+              
+              const app = getApp();
+              if (app && app.globalData && !app.globalData.pendingReport) {
+                app.globalData.pendingReport = {
+                  executionId: executionId,
+                  dashboardData: backupDashboardData,
+                  rawResults: rawResults,
+                  timestamp: Date.now()
+                };
+                console.log('[ReportData] ✅ 备用数据已保存到 globalData.pendingReport');
+              }
+            }
+          }
         } catch (error) {
           console.error('异步数据处理失败:', error);
         }
@@ -1919,11 +2006,22 @@ Page({
     // Step 1: 确保隐藏加载框
     wx.hideLoading();
 
+    // 【Bug 修复 - 2026-03-12】错误时也恢复 AI 平台数据
+    if (this._aiModelsSnapshot) {
+      console.log('[Bug 修复] 诊断错误，恢复 AI 平台快照');
+      this.setData({
+        domesticAiModels: this._aiModelsSnapshot.domesticAiModels,
+        overseasAiModels: this._aiModelsSnapshot.overseasAiModels,
+        selectedMarketTab: this._aiModelsSnapshot.selectedMarketTab
+      });
+      this._aiModelsSnapshot = null;
+    }
+
     // 使用统一异常拦截器处理
     const friendlyError = this.handleException(error, '诊断启动');
 
     // P3 修复：确保按钮状态正确重置
-    this.setData({ 
+    this.setData({
       isTesting: false,
       testCompleted: false  // 明确设置为 false
     });

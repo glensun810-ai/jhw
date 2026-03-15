@@ -592,17 +592,96 @@ class DiagnosisResultRepository:
         first_choice = choices[0] if choices else {}
         message = first_choice.get('message', {})
 
+        # 【P0 关键修复 - 2026-03-13 第 11 次】使用 AI 结果中提取的品牌，而不是主品牌
+        # 优先使用 extracted_brand 字段（从 AI 响应中提取的品牌）
+        brand = result.get('extracted_brand', '')
+        
+        # 【调试日志】记录 result 字典的键和值（使用 INFO 级别确保日志可见）
+        api_logger.info(
+            f"[调试] add() 方法：execution_id={execution_id}, "
+            f"result_keys={list(result.keys())}, "
+            f"result['brand']={result.get('brand')}, "
+            f"result['extracted_brand']={result.get('extracted_brand')}, "
+            f"brand 变量初始值={brand}"
+        )
+
+        # 如果 extracted_brand 不存在，尝试从 brand 字段获取
+        if not brand or not str(brand).strip():
+            brand = result.get('brand', '')
+        
+        # 如果还是为空，使用多层推断策略（第 10 次修复的逻辑）
+        if not brand or not str(brand).strip():
+            # 尝试 1: 从其他字段推断品牌名称
+            brand = result.get('brand_name', '') or result.get('target_brand', '')
+            
+            # 尝试 2: 如果还是为空，使用问题中的品牌名称
+            if not brand or not str(brand).strip():
+                question = result.get('question', '')
+                if question:
+                    import re
+                    match = re.search(r'分析\s*(.+?)\s*品牌', question)
+                    if match:
+                        brand = match.group(1).strip()
+                    
+                    if not brand or not str(brand).strip():
+                        match = re.search(r'^(.+?)\s*(?:vs|对比 | 与)', question)
+                        if match:
+                            brand = match.group(1).strip()
+            
+            # 尝试 3: 从 response_content 提取
+            if not brand or not str(brand).strip():
+                response_content = result.get('response_content', '')
+                if response_content and isinstance(response_content, str):
+                    match = re.search(r'(?:品牌 | 分析 | 对比)[:：]?\s*([^\s,，.]+)', response_content)
+                    if match:
+                        brand = match.group(1).strip()
+            
+            # 最终兜底：使用 'Unknown'
+            if not brand or not str(brand).strip():
+                brand = 'Unknown'
+                db_logger.error(
+                    f"❌ [P0 修复 - 第 11 次] 所有品牌推断都失败，使用 'Unknown': "
+                    f"execution_id={execution_id}, result_keys={list(result.keys())}"
+                )
+            else:
+                db_logger.warning(
+                    f"⚠️ [P0 修复 - 第 11 次] brand 字段为空，已推断：execution_id={execution_id}, "
+                    f"original_brand={result.get('brand', '')}, inferred_brand={brand}"
+                )
+        else:
+            # 使用了 extracted_brand，记录日志
+            db_logger.info(
+                f"✅ [P0 修复 - 第 11 次] 使用 extracted_brand：execution_id={execution_id}, "
+                f"extracted_brand={brand}, main_brand={result.get('brand', '')}"
+            )
+
         # 【P0 修复】处理 AI 返回内容为空的情况
-        # 如果 AI 响应为空或 None，使用占位符文本，避免 NOT NULL 约束冲突
         response_content = response.get('content', '') if isinstance(response, dict) else ''
         if not response_content or not response_content.strip():
-            # 检查是否有错误信息
             error_msg = result.get('error', '')
             if error_msg:
                 response_content = f"AI 响应失败：{error_msg}"
             else:
                 response_content = "生成失败，请重试"
-            db_logger.warning(f"[P0 修复] AI 返回空内容，使用占位符：execution_id={execution_id}, brand={result.get('brand', '')}, question={result.get('question', '')}")
+            db_logger.warning(f"[P0 修复] AI 返回空内容，使用占位符：execution_id={execution_id}, brand={brand}")
+
+        # 【P0 关键修复 - 第 11 次】获取原始 AI 响应和提取信息
+        raw_response = result.get('raw_response', '') or result.get('response_content', '')
+        extraction_method = result.get('extraction_method', 'nxm_parallel_v3_brand_extraction')
+        platform = result.get('platform', '')
+        if not platform and result.get('model'):
+            # 从模型名称推断平台
+            model_name = result.get('model', '').lower()
+            if 'deepseek' in model_name:
+                platform = 'deepseek'
+            elif 'doubao' in model_name:
+                platform = 'doubao'
+            elif 'qwen' in model_name:
+                platform = 'qwen'
+            elif 'gemini' in model_name:
+                platform = 'gemini'
+            elif 'chatgpt' in model_name or 'gpt' in model_name:
+                platform = 'chatgpt'
 
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -614,20 +693,21 @@ class DiagnosisResultRepository:
                     geo_data,
                     quality_score, quality_level, quality_details,
                     status, error_message,
-                    raw_response, response_metadata,
+                    raw_response, extracted_brand, extraction_method, platform,
+                    response_metadata,
                     tokens_used, prompt_tokens, completion_tokens, cached_tokens,
                     finish_reason, request_id, model_version, reasoning_content,
                     api_endpoint, service_tier,
                     retry_count, is_fallback,
                     created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 report_id,
                 execution_id,
-                result.get('brand', ''),
+                brand,  # 【P0 关键修复 - 第 11 次】使用提取的品牌
                 result.get('question', ''),
                 result.get('model', ''),
-                response_content,  # 使用处理后的内容
+                response_content,
                 response.get('latency') if isinstance(response, dict) else None,
                 json.dumps(result.get('geo_data', {}), ensure_ascii=False),
                 result.get('quality_score', 0),
@@ -635,9 +715,11 @@ class DiagnosisResultRepository:
                 json.dumps(result.get('quality_details', {}), ensure_ascii=False),
                 result.get('status', 'success'),
                 result.get('error'),
-                # API 响应完整字段（Migration 004）
-                json.dumps(metadata, ensure_ascii=False),  # raw_response
-                json.dumps(usage, ensure_ascii=False),     # response_metadata
+                raw_response if raw_response else json.dumps({'content': response_content}, ensure_ascii=False),  # raw_response
+                result.get('extracted_brand', brand),  # extracted_brand
+                extraction_method,  # extraction_method
+                platform,  # platform
+                json.dumps(metadata, ensure_ascii=False),     # response_metadata
                 usage.get('total_tokens', 0),
                 usage.get('prompt_tokens', 0),
                 usage.get('completion_tokens', 0),
@@ -833,7 +915,7 @@ class DiagnosisResultRepository:
     def _insert_result(self, cursor, report_id: int, execution_id: str,
                       result: Dict[str, Any]) -> int:
         """
-        插入单个结果（内部方法）
+        插入单个结果（内部方法 - 完整字段版）
 
         参数:
             cursor: 数据库游标
@@ -859,49 +941,78 @@ class DiagnosisResultRepository:
 
         # 【P0-1 修复 - 2026-03-08】AI 空内容检测和占位符处理
         response_content = response.get('content', '')
-        
+
         # 检查 AI 响应内容是否为空
         if not response_content or response_content.strip() == "":
             # 使用占位符替代空内容
             response_content = "[AI 未返回有效内容，已记录空响应]"
             quality_score = 0
             sentiment = 'neutral'
-            
+
             # 记录警告日志
             api_logger.warning(
                 f"[ResultRepository] AI 空内容检测：brand={brand}, "
                 f"question={question[:50]}..., model={model}, "
                 f"execution_id={execution_id}"
             )
-            
+
             # 在 quality_details 中记录空内容标记
             if not quality_details:
                 quality_details = {}
             quality_details['empty_content'] = True
             quality_details['empty_reason'] = 'AI 未返回有效内容'
 
-        # 插入数据库
+        # 【P0 关键修复 - 2026-03-13 第 12 次】添加缺失的字段
+        # 从 result 中提取完整字段
+        raw_response = result.get('raw_response', '') or json.dumps({'content': response_content}, ensure_ascii=False)
+        extracted_brand = result.get('extracted_brand', brand)
+        extraction_method = result.get('extraction_method', 'nxm_parallel_v3_brand_extraction')
+        platform = result.get('platform', '')
+
+        # 推断 platform（如果未提供）
+        if not platform and model:
+            model_name = model.lower()
+            if 'deepseek' in model_name:
+                platform = 'deepseek'
+            elif 'doubao' in model_name:
+                platform = 'doubao'
+            elif 'qwen' in model_name:
+                platform = 'qwen'
+            elif 'gemini' in model_name:
+                platform = 'gemini'
+            elif 'chatgpt' in model_name or 'gpt' in model_name:
+                platform = 'chatgpt'
+
+        # 插入数据库（完整字段 - 匹配当前 database schema）
         cursor.execute('''
             INSERT INTO diagnosis_results (
                 report_id, execution_id,
                 brand, question, model,
-                quality_score, sentiment,
                 response_content, response_latency,
-                geo_data, quality_details,
+                geo_data,
+                quality_score, quality_level, quality_details,
+                status, error_message,
+                raw_response, extracted_brand, extraction_method, platform,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             report_id,
             execution_id,
             brand,
             question,
             model,
-            quality_score,
-            sentiment,
             response_content,
             response.get('latency', 0),
             json.dumps(geo_data, ensure_ascii=False),
+            quality_score,
+            result.get('quality_level', 'unknown'),
             json.dumps(quality_details, ensure_ascii=False),
+            result.get('status', 'success'),
+            result.get('error'),
+            raw_response,
+            extracted_brand,
+            extraction_method,
+            platform,
             now
         ))
 
@@ -927,7 +1038,23 @@ class DiagnosisResultRepository:
             return result[0] if result else 0
 
     def get_by_execution_id(self, execution_id: str) -> List[Dict[str, Any]]:
-        """根据执行 ID 获取所有结果"""
+        """
+        根据执行 ID 获取所有结果（增强版 - 2026-03-13）
+
+        【P0 关键修复】确保返回完整字段，包括：
+        1. 原始响应数据（raw_response）
+        2. 提取的品牌信息（extracted_brand）
+        3. Token 统计（tokens_used, prompt_tokens, completion_tokens, cached_tokens）
+        4. API 响应详情（finish_reason, request_id, model_version, reasoning_content）
+        5. API 信息（api_endpoint, service_tier）
+        6. 重试信息（retry_count, is_fallback）
+
+        参数:
+            execution_id: 执行 ID
+
+        返回:
+            results: 完整的结果列表
+        """
         with self.get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -936,24 +1063,96 @@ class DiagnosisResultRepository:
                 WHERE execution_id = ?
                 ORDER BY brand, question, model
             ''', (execution_id,))
-            
+
             results = []
             for row in cursor.fetchall():
                 item = dict(row)
+                
                 # 解析 JSON 字段
-                item['geo_data'] = json.loads(item['geo_data'])
-                item['quality_details'] = json.loads(item['quality_details'])
-                # 构建 response 对象
+                try:
+                    item['geo_data'] = json.loads(item['geo_data']) if item.get('geo_data') else {}
+                except Exception as e:
+                    db_logger.warning(f"解析 geo_data 失败：{e}")
+                    item['geo_data'] = {}
+                
+                try:
+                    item['quality_details'] = json.loads(item['quality_details']) if item.get('quality_details') else {}
+                except Exception as e:
+                    db_logger.warning(f"解析 quality_details 失败：{e}")
+                    item['quality_details'] = {}
+                
+                # 解析 response_metadata（新增）
+                try:
+                    if item.get('response_metadata'):
+                        item['response_metadata'] = json.loads(item['response_metadata'])
+                    else:
+                        item['response_metadata'] = {}
+                except Exception as e:
+                    db_logger.warning(f"解析 response_metadata 失败：{e}")
+                    item['response_metadata'] = {}
+                
+                # 构建 response 对象（保持向后兼容）
                 item['response'] = {
                     'content': item['response_content'],
-                    'latency': item['response_latency']
+                    'latency': item.get('response_latency'),
+                    'metadata': item.get('response_metadata', {}),
+                    'usage': {
+                        'total_tokens': item.get('tokens_used', 0),
+                        'prompt_tokens': item.get('prompt_tokens', 0),
+                        'completion_tokens': item.get('completion_tokens', 0),
+                        'cached_tokens': item.get('cached_tokens', 0)
+                    },
+                    'choices': [{
+                        'finish_reason': item.get('finish_reason', 'stop'),
+                        'message': {
+                            'content': item['response_content'],
+                            'reasoning_content': item.get('reasoning_content', '')
+                        }
+                    }],
+                    'request_id': item.get('request_id'),
+                    'model': item.get('model_version'),
+                    'api_endpoint': item.get('api_endpoint'),
+                    'service_tier': item.get('service_tier', 'default')
                 }
+                
+                # 添加元数据字段到顶层（方便访问）
+                item['tokens_used'] = item.get('tokens_used', 0)
+                item['prompt_tokens'] = item.get('prompt_tokens', 0)
+                item['completion_tokens'] = item.get('completion_tokens', 0)
+                item['cached_tokens'] = item.get('cached_tokens', 0)
+                item['finish_reason'] = item.get('finish_reason', 'stop')
+                item['request_id'] = item.get('request_id')
+                item['model_version'] = item.get('model_version')
+                item['reasoning_content'] = item.get('reasoning_content', '')
+                item['api_endpoint'] = item.get('api_endpoint')
+                item['service_tier'] = item.get('service_tier', 'default')
+                item['retry_count'] = item.get('retry_count', 0)
+                item['is_fallback'] = bool(item.get('is_fallback', False))
+                
                 results.append(item)
-            
+
+            if results:
+                db_logger.info(
+                    f"[get_by_execution_id] ✅ 获取结果：execution_id={execution_id}, "
+                    f"count={len(results)}, brands={len(set(r.get('brand', '') for r in results))}"
+                )
+            else:
+                db_logger.warning(f"[get_by_execution_id] ⚠️ 结果为空：execution_id={execution_id}")
+
             return results
     
     def get_by_report_id(self, report_id: int) -> List[Dict[str, Any]]:
-        """根据报告 ID 获取所有结果"""
+        """
+        根据报告 ID 获取所有结果（增强版 - 2026-03-13）
+
+        【P0 关键修复】确保返回完整字段（与 get_by_execution_id 保持一致）
+
+        参数:
+            report_id: 报告 ID
+
+        返回:
+            results: 完整的结果列表
+        """
         with self.get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -962,18 +1161,74 @@ class DiagnosisResultRepository:
                 WHERE report_id = ?
                 ORDER BY brand, question, model
             ''', (report_id,))
-            
+
             results = []
             for row in cursor.fetchall():
                 item = dict(row)
-                item['geo_data'] = json.loads(item['geo_data'])
-                item['quality_details'] = json.loads(item['quality_details'])
+                
+                # 解析 JSON 字段
+                try:
+                    item['geo_data'] = json.loads(item['geo_data']) if item.get('geo_data') else {}
+                except Exception as e:
+                    db_logger.warning(f"解析 geo_data 失败：{e}")
+                    item['geo_data'] = {}
+                
+                try:
+                    item['quality_details'] = json.loads(item['quality_details']) if item.get('quality_details') else {}
+                except Exception as e:
+                    db_logger.warning(f"解析 quality_details 失败：{e}")
+                    item['quality_details'] = {}
+                
+                # 解析 response_metadata（新增）
+                try:
+                    if item.get('response_metadata'):
+                        item['response_metadata'] = json.loads(item['response_metadata'])
+                    else:
+                        item['response_metadata'] = {}
+                except Exception as e:
+                    db_logger.warning(f"解析 response_metadata 失败：{e}")
+                    item['response_metadata'] = {}
+                
+                # 构建 response 对象（保持向后兼容）
                 item['response'] = {
                     'content': item['response_content'],
-                    'latency': item['response_latency']
+                    'latency': item.get('response_latency'),
+                    'metadata': item.get('response_metadata', {}),
+                    'usage': {
+                        'total_tokens': item.get('tokens_used', 0),
+                        'prompt_tokens': item.get('prompt_tokens', 0),
+                        'completion_tokens': item.get('completion_tokens', 0),
+                        'cached_tokens': item.get('cached_tokens', 0)
+                    },
+                    'choices': [{
+                        'finish_reason': item.get('finish_reason', 'stop'),
+                        'message': {
+                            'content': item['response_content'],
+                            'reasoning_content': item.get('reasoning_content', '')
+                        }
+                    }],
+                    'request_id': item.get('request_id'),
+                    'model': item.get('model_version'),
+                    'api_endpoint': item.get('api_endpoint'),
+                    'service_tier': item.get('service_tier', 'default')
                 }
+                
+                # 添加元数据字段到顶层（方便访问）
+                item['tokens_used'] = item.get('tokens_used', 0)
+                item['prompt_tokens'] = item.get('prompt_tokens', 0)
+                item['completion_tokens'] = item.get('completion_tokens', 0)
+                item['cached_tokens'] = item.get('cached_tokens', 0)
+                item['finish_reason'] = item.get('finish_reason', 'stop')
+                item['request_id'] = item.get('request_id')
+                item['model_version'] = item.get('model_version')
+                item['reasoning_content'] = item.get('reasoning_content', '')
+                item['api_endpoint'] = item.get('api_endpoint')
+                item['service_tier'] = item.get('service_tier', 'default')
+                item['retry_count'] = item.get('retry_count', 0)
+                item['is_fallback'] = bool(item.get('is_fallback', False))
+                
                 results.append(item)
-            
+
             return results
 
 

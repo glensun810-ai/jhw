@@ -304,17 +304,35 @@ class WebSocketClient {
   /**
    * 处理接收到的消息
    * @private
-   * @param {string} data - 消息数据
+   * @param {string|Object|ArrayBuffer} data - 消息数据
    */
   _handleMessage(data) {
     try {
-      const message = JSON.parse(data);
+      // 【P0 关键修复 - 2026-03-13】处理多种数据格式
+      // 微信小程序可能返回 ArrayBuffer、对象或字符串
+      let message;
+      
+      if (data instanceof ArrayBuffer) {
+        // ArrayBuffer 需要转换为字符串
+        const decoder = new TextDecoder('utf-8');
+        const text = decoder.decode(data);
+        message = JSON.parse(text);
+      } else if (typeof data === 'string') {
+        // 字符串需要 JSON 解析
+        message = JSON.parse(data);
+      } else if (typeof data === 'object' && data !== null) {
+        // 已经是对象，直接使用
+        message = data;
+      } else {
+        console.warn('[WebSocket] 未知数据格式:', typeof data);
+        return;
+      }
 
       // 【P0 修复 - 2026-03-05】检查后端是否返回失败状态
       if (message.data?.status === 'failed' || message.event === 'failed') {
         console.error('[WebSocket] ❌ 后端返回失败状态，停止重连:', message.data);
         this._isPermanentFailure = true;  // 标记为永久失败
-        
+
         // 调用错误回调
         if (this.callbacks.onError) {
           this.callbacks.onError({
@@ -323,7 +341,7 @@ class WebSocketClient {
             data: message.data
           });
         }
-        
+
         // 直接降级到轮询，不再重连
         this._setState(ConnectionState.FALLBACK);
         this._cleanupForFallback();
@@ -372,10 +390,11 @@ class WebSocketClient {
           break;
 
         default:
-          console.warn('[WebSocket] 未知消息类型:', message.type);
+          // 未知事件类型，但不报错，可能是新类型
+          console.log('[WebSocket] 收到消息:', message.event || message.type, message.data);
       }
     } catch (error) {
-      console.error('[WebSocket] 解析消息失败:', error);
+      console.error('[WebSocket] 解析消息失败:', error, '原始数据:', data);
     }
   }
 
@@ -419,11 +438,21 @@ class WebSocketClient {
    */
   _cleanupForFallback() {
     console.log('[WebSocket] 执行降级前清理...');
-    
+
+    // 【P1 修复 - 2026-03-11】0. 通知 diagnosisService 停止监听，防止回调冲突
+    if (this.callbacks.onBeforeFallback) {
+      try {
+        this.callbacks.onBeforeFallback();
+        console.log('[WebSocket] ✅ 已通知 diagnosisService 停止监听');
+      } catch (err) {
+        console.warn('[WebSocket] ⚠️ onBeforeFallback 回调失败:', err);
+      }
+    }
+
     // 1. 停止所有计时器
     this._stopHeartbeat();
     this._stopHealthCheck();
-    
+
     // 2. 关闭 WebSocket 连接
     if (this.socket) {
       console.log('[WebSocket] 移除事件监听器...');
@@ -432,7 +461,7 @@ class WebSocketClient {
       this.socket.onMessage = null;
       this.socket.onClose = null;
       this.socket.onError = null;
-      
+
       // 关闭连接
       console.log('[WebSocket] 关闭 WebSocket 连接...');
       try {
@@ -442,7 +471,7 @@ class WebSocketClient {
       }
       this.socket = null;
     }
-    
+
     // 3. 清空回调，防止继续触发（保留 onFallback）
     console.log('[WebSocket] 清空回调函数...');
     const onFallback = this.callbacks.onFallback;  // 保留 onFallback
@@ -454,7 +483,7 @@ class WebSocketClient {
       onStateChange: null,
       onFallback: onFallback  // 保留，因为它即将被调用
     };
-    
+
     // 4. 重置连接状态
     this.state = ConnectionState.FALLBACK;
     
@@ -802,13 +831,14 @@ class WebSocketClient {
   }
 }
 
-// 导出单例
-export default new WebSocketClient();
+// 导出单例（CommonJS 语法，兼容微信小程序）
+module.exports = new WebSocketClient();
+module.exports.default = module.exports; // 兼容 .default 导入方式
 
 /**
  * 使用示例:
  *
- * import webSocketClient from './services/webSocketClient';
+ * const webSocketClient = require('./webSocketClient');
  *
  * // 连接
  * webSocketClient.connect(executionId, {

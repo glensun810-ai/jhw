@@ -218,37 +218,247 @@ def execute_nxm_batch_task(
 )
 def check_failed_tasks() -> Dict[str, Any]:
     """
-    检查失败的任务并尝试恢复
+    检查失败的任务并尝试恢复（P0-03 修复版 - 2026-03-14）
+    
+    核心功能:
+    1. 查询状态为 running 但超过超时时间的任务
+    2. 查询状态为 retry 的任务
+    3. 尝试重新提交这些任务
+    4. 发送失败通知
 
     返回:
         检查结果
     """
     api_logger.info("[Celery] 开始检查失败的任务")
-
-    # TODO: 实现失败任务检查和恢复逻辑
-    # 1. 查询状态为 running 但超过超时时间的任务
-    # 2. 查询状态为 retry 的任务
-    # 3. 尝试重新提交这些任务
-
-    return {
-        'status': 'completed',
-        'checked_count': 0,
-        'recovered_count': 0
-    }
+    
+    from datetime import datetime, timedelta
+    from wechat_backend.models import DiagnosisReport
+    
+    current_time = datetime.now()
+    timeout_threshold = current_time - timedelta(minutes=15)  # 超过 15 分钟的任务视为卡死
+    
+    checked_count = 0
+    recovered_count = 0
+    failed_count = 0
+    
+    try:
+        # 1. 查询状态为 running 但超过超时时间的任务
+        api_logger.info(f"[Celery] 查询超时任务（阈值：{timeout_threshold}）")
+        
+        timeout_tasks = DiagnosisReport.query.filter(
+            DiagnosisReport.status.in_(['running', 'processing']),
+            DiagnosisReport.updated_at < timeout_threshold
+        ).limit(50).all()
+        
+        api_logger.info(f"[Celery] 发现 {len(timeout_tasks)} 个超时任务")
+        
+        for task in timeout_tasks:
+            checked_count += 1
+            execution_id = task.execution_id
+            
+            try:
+                api_logger.warning(
+                    f"[Celery] 发现超时任务：{execution_id}, "
+                    f"运行时长={(current_time - task.updated_at).total_seconds() / 60:.1f}分钟"
+                )
+                
+                # 标记为失败
+                task.status = 'failed'
+                task.progress = 0
+                task.stage = 'timeout'
+                task.error_message = f'任务执行超时（超过 15 分钟无更新）'
+                task.updated_at = current_time
+                
+                from wechat_backend.database_connection_pool import db
+                db.session.commit()
+                
+                # 发送失败通知
+                send_task_failure_notification(
+                    execution_id, 
+                    f'任务执行超时（超过 15 分钟无更新）'
+                )
+                
+                # 尝试恢复 - 重新提交任务
+                try:
+                    # 获取原始任务参数
+                    original_params = json.loads(task.selected_models or '{}')
+                    
+                    # 异步重试任务
+                    retry_failed_task.delay(
+                        execution_id=execution_id,
+                        original_params={
+                            'brand_list': json.loads(task.brand_name or '[]'),
+                            'selected_models': original_params if isinstance(original_params, list) else [],
+                            'custom_questions': []
+                        }
+                    )
+                    
+                    recovered_count += 1
+                    api_logger.info(f"[Celery] ✅ 已重新提交任务：{execution_id}")
+                    
+                except Exception as retry_err:
+                    api_logger.error(
+                        f"[Celery] ❌ 重试失败：{execution_id}, error={retry_err}"
+                    )
+                    failed_count += 1
+                    
+            except Exception as task_err:
+                api_logger.error(f"[Celery] 处理超时任务失败：{execution_id}, error={task_err}")
+                failed_count += 1
+        
+        # 2. 查询状态为 retry 的任务
+        api_logger.info("[Celery] 查询 retry 状态任务")
+        
+        retry_tasks = DiagnosisReport.query.filter(
+            DiagnosisReport.status == 'retry'
+        ).limit(50).all()
+        
+        api_logger.info(f"[Celery] 发现 {len(retry_tasks)} 个 retry 状态任务")
+        
+        for task in retry_tasks:
+            checked_count += 1
+            execution_id = task.execution_id
+            
+            try:
+                api_logger.info(f"[Celery] 处理 retry 任务：{execution_id}")
+                
+                # 直接重试
+                retry_failed_task.delay(
+                    execution_id=execution_id,
+                    original_params={
+                        'brand_list': json.loads(task.brand_name or '[]'),
+                        'selected_models': json.loads(task.selected_models or '[]'),
+                        'custom_questions': []
+                    }
+                )
+                
+                recovered_count += 1
+                
+            except Exception as retry_err:
+                api_logger.error(f"[Celery] 处理 retry 任务失败：{execution_id}, error={retry_err}")
+                failed_count += 1
+        
+        # 3. 汇总结果
+        result = {
+            'status': 'completed',
+            'checked_count': checked_count,
+            'recovered_count': recovered_count,
+            'failed_count': failed_count,
+            'timeout_tasks': len(timeout_tasks),
+            'retry_tasks': len(retry_tasks),
+            'check_time': current_time.isoformat()
+        }
+        
+        api_logger.info(f"[Celery] ✅ 任务检查完成：{result}")
+        
+        return result
+        
+    except Exception as e:
+        api_logger.error(f"[Celery] 检查失败任务异常：{e}", exc_info=True)
+        
+        return {
+            'status': 'error',
+            'error': str(e),
+            'checked_count': checked_count,
+            'recovered_count': recovered_count,
+            'failed_count': failed_count
+        }
 
 
 def send_task_failure_notification(execution_id: str, error_message: str):
     """
-    发送任务失败通知
+    发送任务失败通知（P0-01/P0-03 修复版 - 2026-03-14）
+    
+    功能:
+    1. 记录失败日志
+    2. 发送微信模板消息（生产环境）
+    3. 发送系统告警
 
     参数:
         execution_id: 执行 ID
         error_message: 错误信息
     """
-    # TODO: 实现通知逻辑（邮件、短信等）
+    import os
+    
+    # 1. 记录失败日志
     api_logger.warning(
-        f"[通知] 诊断任务失败：{execution_id}, 错误：{error_message}"
+        f"[任务失败通知] execution_id={execution_id}, 错误：{error_message}"
     )
+    
+    try:
+        # 2. 获取任务信息
+        from wechat_backend.models import DiagnosisReport
+        task = DiagnosisReport.query.filter_by(execution_id=execution_id).first()
+        
+        if not task:
+            api_logger.warning(f"[通知] 任务不存在：{execution_id}")
+            return
+        
+        # 3. 获取用户信息
+        user_openid = task.user_openid if hasattr(task, 'user_openid') else None
+        
+        if not user_openid:
+            api_logger.warning(f"[通知] 无法获取用户 OpenID：{execution_id}")
+            return
+        
+        # 4. 生产环境：发送微信模板消息
+        env = os.getenv('FLASK_ENV', 'development')
+        
+        if env == 'production':
+            try:
+                from wechat_backend.wechat_push import WechatPush
+                from wechat_backend.config_loader import wechat_config
+                
+                appid = wechat_config.get('appid', '')
+                secret = wechat_config.get('appsecret', '')
+                
+                if appid and secret:
+                    push_client = WechatPush(appid=appid, secret=secret)
+                    
+                    # 发送模板消息
+                    template_data = {
+                        'thing1': {'value': '诊断任务失败'},
+                        'thing2': {'value': error_message[:20]},  # 限制长度
+                        'time3': {'value': datetime.now().strftime('%Y-%m-%d %H:%M:%S')},
+                        'thing4': {'value': '请检查后重试'}
+                    }
+                    
+                    push_client.send_template_message(
+                        openid=user_openid,
+                        template_id='YOUR_TEMPLATE_ID',  # 需配置实际模板 ID
+                        page='pages/diagnosis/diagnosis',
+                        data=template_data
+                    )
+                    
+                    api_logger.info(f"[通知] ✅ 微信模板消息已发送：{execution_id}")
+                    
+            except Exception as wechat_err:
+                api_logger.error(f"[通知] 微信消息发送失败：{wechat_err}")
+        
+        # 5. 发送系统告警（开发/生产环境都发送）
+        try:
+            from wechat_backend.monitoring.enhanced_alert_manager import get_alert_manager
+            
+            alert_manager = get_alert_manager()
+            alert_manager.send_alert(
+                alert_type='task_failure',
+                severity='warning',
+                title=f'诊断任务失败：{execution_id}',
+                message=f'用户：{user_openid[:8]}..., 错误：{error_message}',
+                context={
+                    'execution_id': execution_id,
+                    'brand_name': task.brand_name,
+                    'error_message': error_message
+                }
+            )
+            
+            api_logger.info(f"[通知] ✅ 系统告警已发送：{execution_id}")
+            
+        except Exception as alert_err:
+            api_logger.error(f"[通知] 系统告警发送失败：{alert_err}")
+            
+    except Exception as e:
+        api_logger.error(f"[通知] 发送失败通知异常：{e}", exc_info=True)
 
 
 @celery_app.task(

@@ -7,7 +7,7 @@
 /**
  * 错误代码枚举
  */
-export const ErrorCodes = {
+const ErrorCodes = {
   NETWORK_ERROR: 'NETWORK_ERROR',
   TIMEOUT: 'TIMEOUT',
   TASK_NOT_FOUND: 'TASK_NOT_FOUND',
@@ -24,7 +24,7 @@ export const ErrorCodes = {
 /**
  * 错误类型映射
  */
-export const ErrorTypes = {
+const ErrorTypes = {
   [ErrorCodes.NETWORK_ERROR]: 'network',
   [ErrorCodes.TIMEOUT]: 'timeout',
   [ErrorCodes.TASK_NOT_FOUND]: 'business',
@@ -41,7 +41,7 @@ export const ErrorTypes = {
 /**
  * 错误消息映射（用户友好的默认消息）
  */
-export const ErrorMessages = {
+const ErrorMessages = {
   [ErrorCodes.NETWORK_ERROR]: '网络连接失败，请检查网络设置',
   [ErrorCodes.TIMEOUT]: '请求超时，请稍后重试',
   [ErrorCodes.TASK_NOT_FOUND]: '诊断任务不存在',
@@ -58,7 +58,7 @@ export const ErrorMessages = {
 /**
  * 错误标题映射
  */
-export const ErrorTitles = {
+const ErrorTitles = {
   [ErrorCodes.NETWORK_ERROR]: '网络连接失败',
   [ErrorCodes.TIMEOUT]: '请求超时',
   [ErrorCodes.TASK_NOT_FOUND]: '任务不存在',
@@ -77,7 +77,7 @@ export const ErrorTitles = {
  * @param {Object} error - 错误对象
  * @returns {Object} 处理后的错误信息
  */
-export function handleApiError(error) {
+function handleApiError(error) {
   console.error('API Error:', error);
 
   // 提取错误信息
@@ -192,7 +192,7 @@ export function handleApiError(error) {
  * @param {Object} options - 选项
  * @returns {Object} 处理后的错误信息
  */
-export function showError(error, options = {}) {
+function showError(error, options = {}) {
   const handled = handleApiError(error);
 
   wx.showToast({
@@ -211,7 +211,7 @@ export function showError(error, options = {}) {
  * @param {Object} error - 错误对象
  * @param {Object} context - 上下文信息
  */
-export function logError(error, context = {}) {
+function logError(error, context = {}) {
   const errorInfo = {
     timestamp: new Date().toISOString(),
     message: error?.message || 'Unknown error',
@@ -239,7 +239,7 @@ export function logError(error, context = {}) {
   }
 
   console.error('Error logged:', errorInfo);
-  
+
   // 保存错误到本地（用于问题排查）
   saveErrorToLocal(errorInfo);
 }
@@ -248,17 +248,17 @@ export function logError(error, context = {}) {
  * 保存错误到本地存储
  * @param {Object} errorInfo - 错误信息
  */
-export function saveErrorToLocal(errorInfo) {
+function saveErrorToLocal(errorInfo) {
   try {
     const key = 'recent_errors';
     const errors = wx.getStorageSync(key) || [];
     errors.unshift(errorInfo);
-    
+
     // 只保留最近 50 条错误
     if (errors.length > 50) {
       errors.splice(50);
     }
-    
+
     wx.setStorageSync(key, errors);
   } catch (e) {
     console.error('Failed to save error to local:', e);
@@ -269,7 +269,7 @@ export function saveErrorToLocal(errorInfo) {
  * 获取当前页面名称
  * @returns {string} 页面名称
  */
-export function getCurrentPageName() {
+function getCurrentPageName() {
   const pages = getCurrentPages();
   if (pages.length > 0) {
     const currentPage = pages[pages.length - 1];
@@ -283,7 +283,7 @@ export function getCurrentPageName() {
  * @param {Object} error - 错误对象
  * @returns {boolean} 是否可重试
  */
-export function isRetryableError(error) {
+function isRetryableError(error) {
   if (!error) return false;
 
   const nonRetryableCodes = [
@@ -307,7 +307,7 @@ export function isRetryableError(error) {
  * @param {Object} error - 错误对象
  * @returns {string} 错误描述
  */
-export function getErrorDetail(error) {
+function getErrorDetail(error) {
   if (!error) return '未知错误';
 
   if (error.message) {
@@ -331,14 +331,14 @@ export function getErrorDetail(error) {
  * @param {boolean} includeDetail - 是否包含详情
  * @returns {string} 友好的错误消息
  */
-export function getFriendlyMessage(error, includeDetail = false) {
+function getFriendlyMessage(error, includeDetail = false) {
   const handled = handleApiError(error);
   let message = handled.message;
-  
+
   if (includeDetail && handled.raw?.detail) {
     message += ' (' + handled.raw.detail + ')';
   }
-  
+
   return message;
 }
 
@@ -347,7 +347,7 @@ export function getFriendlyMessage(error, includeDetail = false) {
  * @param {Array} errors - 错误数组
  * @returns {Array} 处理后的错误数组
  */
-export function handleBatchErrors(errors) {
+function handleBatchErrors(errors) {
   return errors.map(error => handleApiError(error));
 }
 
@@ -358,7 +358,7 @@ export function handleBatchErrors(errors) {
  * @param {Object} detail - 详细信息
  * @returns {Object} 错误对象
  */
-export function createError(code, message, detail = {}) {
+function createError(code, message, detail = {}) {
   return {
     code,
     message,
@@ -366,3 +366,21 @@ export function createError(code, message, detail = {}) {
     timestamp: new Date().toISOString()
   };
 }
+
+// 导出（CommonJS 语法，兼容微信小程序）
+module.exports = {
+  ErrorCodes,
+  ErrorTypes,
+  ErrorMessages,
+  ErrorTitles,
+  handleApiError,
+  showError,
+  logError,
+  saveErrorToLocal,
+  getCurrentPageName,
+  isRetryableError,
+  getErrorDetail,
+  getFriendlyMessage,
+  handleBatchErrors,
+  createError
+};

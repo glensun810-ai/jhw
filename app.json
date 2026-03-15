@@ -5,6 +5,7 @@
     "pages/mvp-results/mvp-results",
     "pages/mvp-platform-selector/mvp-platform-selector",
     "pages/report/dashboard/index",
+    "pages/report/detail/index",
     "pages/report/history/index",
     "pages/report/raw-data/raw-data",
     "pages/report/roi-detail/roi-detail",

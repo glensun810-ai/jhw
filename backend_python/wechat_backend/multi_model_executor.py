@@ -23,13 +23,20 @@ from legacy_config import Config
 
 class SingleModelExecutor:
     """
-    单模型执行器
-    
+    单模型执行器（增强版 - 2026-03-13 第 16 次修复）
+
     核心原则：
     1. 用户选择哪个模型就使用哪个模型
-    2. 不进行自动故障转移到其他模型
-    3. 失败时直接返回错误，由上层决定如何处理
+    2. 【P0 关键修复】API Key 错误时自动故障转移到其他已配置的平台
+    3. 故障转移优先级：DeepSeek → 豆包 → 通义千问
     """
+
+    # 故障转移优先级列表
+    FAILOVER_PRIORITY = [
+        'deepseek',  # 首选：DeepSeek（性价比高）
+        'doubao',    # 次选：豆包（稳定性好）
+        'qwen',      # 第三：通义千问（备用）
+    ]
 
     def __init__(self, timeout_seconds: int = 30):
         """
@@ -48,12 +55,12 @@ class SingleModelExecutor:
         q_idx: int = None
     ) -> Tuple[AIResponse, str]:
         """
-        执行单模型调用
-        
+        执行单模型调用（增强版 - 支持故障转移）
+
         策略：
-        1. 只调用用户指定的模型
-        2. 失败时直接返回错误
-        3. 不自动尝试其他模型
+        1. 优先调用用户指定的模型
+        2. 【P0 关键修复】API Key 错误时自动故障转移到其他平台
+        3. 故障转移优先级：DeepSeek → 豆包 → 通义千问
 
         参数：
             prompt: 提示词
@@ -70,48 +77,117 @@ class SingleModelExecutor:
             f"[SingleModel] 调用模型 {model_name}: {log_context}"
         )
 
-        try:
-            # 【P0 紧急修复 - 2026-03-06】提取平台名称，支持 doubao-xxx, deepseek-xxx 等格式
-            platform_name = model_name.split('-')[0] if '-' in model_name else model_name
-            if not Config.is_api_key_configured(platform_name):
-                api_logger.warning(
-                    f"[SingleModel] 模型 {model_name} (平台：{platform_name}) 未配置 API Key: {log_context}"
-                )
-                return AIResponse(
-                    success=False,
-                    error_message=f"模型 {model_name} 未配置 API Key",
-                    error_type=AIErrorType.INVALID_API_KEY,
-                    model=model_name
-                ), model_name
+        # 【P0 关键修复】构建故障转移列表
+        failover_models = self._build_failover_list(model_name)
 
-            # 创建 AI 客户端
-            client = AIAdapterFactory.create(model_name)
-
-            # 调用模型
-            result = client.send_prompt(prompt)
-
-            # 记录结果
-            if result and result.success:
-                api_logger.info(
-                    f"[SingleModel] ✅ 模型 {model_name} 调用成功：{log_context}"
-                )
-            else:
-                api_logger.warning(
-                    f"[SingleModel] ❌ 模型 {model_name} 调用失败：{result.error_message if result else 'No response'}: {log_context}"
-                )
-
-            return result, model_name
-
-        except Exception as e:
-            api_logger.error(
-                f"[SingleModel] ❌ 模型 {model_name} 异常：{e}: {log_context}"
+        # 按优先级尝试每个模型
+        for attempt_idx, attempt_model in enumerate(failover_models):
+            attempt_msg = f"尝试 #{attempt_idx + 1}"
+            api_logger.info(
+                f"[SingleModel] {attempt_msg} {attempt_model}: {log_context}"
             )
-            return AIResponse(
-                success=False,
-                error_message=str(e),
-                model=model_name,
-                error_type=self._identify_error_type(e)
-            ), model_name
+
+            try:
+                # 提取平台名称，支持 doubao-xxx, deepseek-xxx 等格式
+                platform_name = attempt_model.split('-')[0] if '-' in attempt_model else attempt_model
+                if not Config.is_api_key_configured(platform_name):
+                    api_logger.warning(
+                        f"[SingleModel] {attempt_msg} {attempt_model} (平台：{platform_name}) 未配置 API Key，跳过"
+                    )
+                    continue  # 尝试下一个模型
+
+                # 创建 AI 客户端
+                client = AIAdapterFactory.create(attempt_model)
+
+                # 调用模型
+                result = client.send_prompt(prompt)
+
+                # 记录结果
+                if result and result.success:
+                    api_logger.info(
+                        f"[SingleModel] ✅ {attempt_msg} {attempt_model} 调用成功：{log_context}"
+                    )
+                    return result, attempt_model
+                else:
+                    # 模型返回失败响应
+                    error_msg = result.error_message if result else 'No response'
+                    error_type = result.error_type if result else AIErrorType.UNKNOWN_ERROR
+
+                    # 【P0 关键】如果是 API Key 错误，立即尝试下一个模型
+                    if error_type == AIErrorType.INVALID_API_KEY:
+                        api_logger.warning(
+                            f"[SingleModel] ⚠️ {attempt_msg} {attempt_model} API Key 无效，尝试下一个模型"
+                        )
+                        continue  # 尝试下一个模型
+                    else:
+                        # 其他错误直接返回
+                        api_logger.warning(
+                            f"[SingleModel] ❌ {attempt_msg} {attempt_model} 调用失败：{error_type.value} - {error_msg}"
+                        )
+                        return result, attempt_model
+
+            except Exception as e:
+                error_str = str(e).lower()
+                is_api_key_error = any(kw in error_str for kw in ['api key', 'authentication', '401', 'invalid'])
+
+                # 【P0 关键】如果是 API Key 错误，尝试下一个模型
+                if is_api_key_error:
+                    api_logger.warning(
+                        f"[SingleModel] ⚠️ {attempt_msg} {attempt_model} API Key 错误：{e}，尝试下一个模型"
+                    )
+                    continue  # 尝试下一个模型
+                else:
+                    # 其他异常直接返回
+                    api_logger.error(
+                        f"[SingleModel] ❌ {attempt_msg} {attempt_model} 异常：{e}: {log_context}"
+                    )
+                    return AIResponse(
+                        success=False,
+                        error_message=str(e),
+                        model=attempt_model,
+                        error_type=self._identify_error_type(e)
+                    ), attempt_model
+
+        # 【P0 关键修复】所有模型都失败，返回详细错误
+        api_logger.error(
+            f"[SingleModel] ❌ 所有 {len(failover_models)} 个模型调用失败：{log_context}"
+        )
+
+        return AIResponse(
+            success=False,
+            error_message=f"所有 AI 平台调用失败（已尝试：{', '.join(failover_models)}）",
+            model=model_name,
+            error_type=AIErrorType.SERVICE_UNAVAILABLE
+        ), model_name
+
+    def _build_failover_list(self, primary_model: str) -> List[str]:
+        """
+        【P0 新增 - 2026-03-13】构建故障转移列表
+
+        参数：
+            primary_model: 用户选择的主模型
+
+        返回：
+            List[str]: 故障转移模型列表
+        """
+        # 提取主模型的平台名称
+        primary_platform = primary_model.split('-')[0] if '-' in primary_model else primary_model
+
+        # 构建故障转移列表：主模型 + 其他已配置的平台
+        failover_list = [primary_model]  # 首先尝试用户选择的模型
+
+        # 按优先级添加其他平台
+        for platform in self.FAILOVER_PRIORITY:
+            if platform != primary_platform:
+                # 检查该平台是否已配置
+                if Config.is_api_key_configured(platform):
+                    failover_list.append(platform)
+
+        api_logger.info(
+            f"[SingleModel] 故障转移列表：{failover_list}"
+        )
+
+        return failover_list
 
     def _identify_error_type(self, exception: Exception) -> AIErrorType:
         """

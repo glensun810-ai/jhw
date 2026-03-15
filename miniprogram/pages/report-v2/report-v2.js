@@ -59,7 +59,25 @@ Page({
     connectionState: ConnectionState.IDLE,
     // P1-6 新增：超时时间
     pollingTimeout: 300000, // 5 分钟
-    pollingStartTime: null
+    pollingStartTime: null,
+    // 【P0 修复 - 2026-03-13】页面卸载标志
+    _isPageUnloaded: false
+  },
+
+  /**
+   * 【P0 修复 - 2026-03-13】安全的 setData 方法
+   * 防止在页面卸载后调用 setData
+   * @param {Object} data 要设置的数据
+   * @param {Function} callback 回调函数
+   */
+  safeSetData(data, callback) {
+    if (this._isPageUnloaded) {
+      console.warn('[ReportPageV2] ⚠️ 页面已卸载，跳过 setData');
+      if (callback) callback();
+      return;
+    }
+    
+    this.setData(data, callback);
   },
 
   /**
@@ -80,8 +98,21 @@ Page({
    */
   onUnload() {
     console.log('[ReportPageV2] onUnload, cleaning up...');
+    
+    // 标记页面已卸载，防止后续 setData
+    this._isPageUnloaded = true;
+    
+    // 停止所有监听和定时器
     this.stopListening();
     this.stopElapsedTimer();
+    
+    // 清理可能的延迟回调
+    if (this._pendingTimeout) {
+      clearTimeout(this._pendingTimeout);
+      this._pendingTimeout = null;
+    }
+    
+    console.log('[ReportPageV2] ✅ Cleanup completed');
   },
 
   /**
@@ -105,48 +136,251 @@ Page({
    * @param {Object} options
    */
   async initPage(options) {
+    console.log('[ReportPageV2] initPage, executionId:', options.executionId);
+
     // 设置加载状态，显示骨架屏
     this.setData({ isLoading: true });
 
     try {
-      // 如果是新发起的诊断
-      if (options.executionId) {
-        console.log('[ReportPageV2] New diagnosis with executionId:', options.executionId);
+      // 【P0 关键修复 - 2026-03-13 第 15 次】多数据源降级加载策略
+      
+      // 尝试 1: 检查全局变量（诊断刚完成）
+      const app = getApp();
+      if (app && app.globalData && app.globalData.pendingReport) {
+        const pendingReport = app.globalData.pendingReport;
+        
+        if (pendingReport.executionId === options.executionId && pendingReport.saved) {
+          console.log('[ReportPageV2] ✅ [尝试 1] 全局变量匹配，直接加载数据');
+          this._loadFromGlobalData(pendingReport);
+          return;  // 成功则不再执行后续
+        }
+      }
+
+      // 尝试 2: 检查 Storage 备份
+      const storageData = this._loadFromStorage(options.executionId);
+      if (storageData && storageData.saved) {
+        console.log('[ReportPageV2] ✅ [尝试 2] Storage 备份可用，加载数据');
+        this._loadFromStorageData(storageData);
+        return;  // 成功则不再执行后续
+      }
+
+      // 尝试 3: 从 API 获取
+      console.log('[ReportPageV2] ⏳ [尝试 3] 从 API 获取报告...');
+      this.setData({ 
+        dataSource: 'api',
+        executionId: options.executionId,
+        reportId: options.reportId
+      });
+      
+      await this._loadFromAPI(options.executionId);
+      
+    } catch (error) {
+      console.error('[ReportPageV2] ❌ 所有数据源加载失败:', error);
+      this._handleLoadError(error);
+    }
+  },
+
+  /**
+   * 【P0 新增】从 globalData 加载
+   */
+  _loadFromGlobalData(pendingReport) {
+    this.setData({
+      executionId: pendingReport.executionId,
+      brandDistribution: pendingReport.dashboardData?.brandDistribution || {},
+      sentimentDistribution: pendingReport.dashboardData?.sentimentDistribution || {},
+      keywords: pendingReport.dashboardData?.keywords || [],
+      brandScores: pendingReport.dashboardData?.brandScores || {},
+      isLoading: false,
+      hasError: false,
+      dataSource: 'globalData'
+    });
+    console.log('[ReportPageV2] ✅ 从 globalData 加载成功');
+  },
+
+  /**
+   * 【P0 新增】从 Storage 加载
+   */
+  _loadFromStorageData(storageData) {
+    this.setData({
+      executionId: storageData.executionId,
+      brandDistribution: storageData.dashboardData?.brandDistribution || {},
+      sentimentDistribution: storageData.dashboardData?.sentimentDistribution || {},
+      keywords: storageData.dashboardData?.keywords || [],
+      brandScores: storageData.dashboardData?.brandScores || {},
+      isLoading: false,
+      hasError: false,
+      dataSource: 'storage'
+    });
+    console.log('[ReportPageV2] ✅ 从 Storage 加载成功');
+  },
+
+  /**
+   * 【P0 新增】从 Storage 加载辅助方法
+   */
+  _loadFromStorage(executionId) {
+    try {
+      const key = `diagnosis_result_${executionId}`;
+      const data = wx.getStorageSync(key);
+      return data || null;
+    } catch (error) {
+      console.warn('[ReportPageV2] ⚠️ Storage 加载失败:', error);
+      return null;
+    }
+  },
+
+  /**
+   * 【P0 新增】从 API 加载（增强版 - 2026-03-13 第 18 次）
+   */
+  async _loadFromAPI(executionId) {
+    try {
+      const report = await diagnosisService.getFullReport(executionId);
+
+      // 【P0 关键修复 - 第 18 次】即使有部分成功标志，也展示数据
+      if (report && report.brandDistribution) {
         this.setData({
-          executionId: options.executionId,
-          reportId: options.reportId
+          brandDistribution: report.brandDistribution,
+          sentimentDistribution: report.sentimentDistribution,
+          keywords: report.keywords,
+          brandScores: report.brandScores,
+          isLoading: false,
+          hasError: false,
+          dataSource: 'api',
+          // 显示部分成功提示
+          hasPartialData: report.partialSuccess || report.hasPartialData || false,
+          qualityWarnings: report.qualityWarnings || report.validationWarnings || []
         });
 
-        await this.startListening();
+        console.log('[ReportPageV2] ✅ 从 API 加载成功:', {
+          hasPartialData: this.data.hasPartialData,
+          warningsCount: (report.qualityWarnings || []).length
+        });
+
+        // 【P0 关键】如果有警告，显示提示但不阻止使用
+        if (this.data.hasPartialData || (report.qualityWarnings?.length > 0)) {
+          this._showPartialDataWarning(report.qualityWarnings);
+        }
+      } else {
+        // 真的没有数据
+        throw new Error('报告数据完全为空');
       }
-      // 如果是查看历史诊断
-      else if (options.reportId) {
-        console.log('[ReportPageV2] History report with reportId:', options.reportId);
-        await this.loadHistoryReport(options.reportId);
-      }
-      // 尝试恢复未完成的任务
-      else {
-        console.log('[ReportPageV2] Trying to restore pending task');
-        const pending = await diagnosisService.restorePendingTask();
-        if (pending) {
-          console.log('[ReportPageV2] Restored pending task:', pending);
-          this.setData({
-            executionId: pending.executionId,
-            reportId: pending.reportId
-          });
-          await this.startListening();
+    } catch (error) {
+      console.error('[ReportPageV2] ❌ API 加载失败:', error);
+      this._handleLoadError(error);
+    }
+  },
+
+  /**
+   * 【P0 新增 - 第 18 次】显示部分成功警告
+   */
+  _showPartialDataWarning(warnings) {
+    showModal({
+      title: '数据不完整提示',
+      content: `诊断数据部分成功，但已有结果可供查看。\n\n` +
+               `提示：${warnings?.join('\n') || '数据可能存在缺失'}\n\n` +
+               `建议：\n` +
+               `1. 点击"查看结果"查看已有数据\n` +
+               `2. 点击"重新诊断"获取完整报告`,
+      showCancel: true,
+      confirmText: '查看结果',
+      cancelText: '重新诊断',
+      success: (res) => {
+        if (res.confirm) {
+          // 查看结果，关闭对话框
         } else {
-          console.log('[ReportPageV2] No pending task, navigating back');
+          // 重新诊断
+          wx.navigateTo({
+            url: '/pages/diagnosis/diagnosis'
+          });
+        }
+      }
+    });
+  },
+
+  /**
+   * 【P0 新增 - 2026-03-13】分类错误类型
+   * @param {Error} error - 错误对象
+   * @returns {string} 错误类型
+   * @private
+   */
+  _classifyError(error) {
+    if (!error) return 'unknown';
+    
+    const msg = error.message || '';
+    const code = error.code || '';
+    
+    // 网络错误
+    if (msg.includes('timeout') || msg.includes('超时')) {
+      return 'timeout';
+    }
+    if (msg.includes('无法连接') || msg.includes('fail')) {
+      return 'network';
+    }
+    // API 错误
+    if (code === 'REPORT_ERROR' || msg.includes('获取报告失败')) {
+      return 'api';
+    }
+    // 数据错误
+    if (msg.includes('数据') || msg.includes('report')) {
+      return 'data';
+    }
+    // 默认未知错误
+    return 'unknown';
+  },
+
+  /**
+   * 【P0 新增】处理加载错误（增强版 - 2026-03-13 第 18 次）
+   */
+  _handleLoadError(error) {
+    // 【P0 关键】先检查是否有缓存数据
+    const cachedData = this._loadFromStorage(this.data.executionId);
+
+    if (cachedData && cachedData.saved) {
+      console.log('[ReportPageV2] ⚠️ API 加载失败，但有 Storage 备份');
+
+      // 使用 Storage 数据
+      this._loadFromStorageData(cachedData);
+
+      // 显示降级提示
+      this._showFallbackWarning('使用缓存数据');
+      return;
+    }
+
+    // 真的没有数据，显示错误
+    this.setData({
+      isLoading: false,
+      hasError: true,
+      errorMessage: error.message || '数据加载失败',
+      errorType: this._classifyError(error)
+    });
+
+    showModal({
+      title: '数据加载失败',
+      content: `无法加载报告数据：${error.message}\n\n` +
+               `建议：\n` +
+               `1. 点击"重试"重新加载\n` +
+               `2. 点击"返回"重新开始诊断`,
+      showCancel: true,
+      confirmText: '重试',
+      cancelText: '返回',
+      success: (res) => {
+        if (res.confirm) {
+          this.initPage({ executionId: this.data.executionId });
+        } else {
           wx.navigateBack();
         }
       }
-    } catch (error) {
-      console.error('[ReportPageV2] Initialization error:', error);
-      this.handleError(error);
-    } finally {
-      // 数据加载完成，隐藏骨架屏
-      this.setData({ isLoading: false });
-    }
+    });
+  },
+
+  /**
+   * 【P0 新增 - 第 18 次】显示降级提示
+   */
+  _showFallbackWarning(reason) {
+    showToast({
+      title: `${reason}，已加载缓存数据`,
+      icon: 'none',
+      duration: 2000
+    });
   },
 
   /**
@@ -320,7 +554,7 @@ Page({
    */
   handleWebSocketConnected() {
     console.log('[ReportPageV2] WebSocket 已连接');
-    
+
     // P1-6 简化：使用统一状态机
     this.setData({
       isWebSocketConnected: true,
@@ -328,11 +562,12 @@ Page({
       connectionState: ConnectionState.CONNECTED
     });
 
-    showToast({
-      title: '实时推送已连接',
-      icon: 'success',
-      duration: 1500
-    });
+    // 【修复 - 2026-03-12】移除 Toast 提示，避免阻挡用户操作
+    // showToast({
+    //   title: '实时推送已连接',
+    //   icon: 'success',
+    //   duration: 1500
+    // });
   },
 
   /**
@@ -530,7 +765,7 @@ Page({
    * @param {Object} result
    */
   handleComplete(result) {
-    console.log('[ReportPageV2] 诊断完成:', result);
+    console.log('[ReportPageV2] 诊断完成');
     this.stopListening();
 
     // P1-6 简化：使用统一状态机
@@ -543,9 +778,23 @@ Page({
       duration: 2000
     });
 
-    // 刷新当前页面数据
+    // 【P0 关键修复 - 2026-03-11】立即从全局变量或 Storage 加载数据
     setTimeout(() => {
-      this.loadReportData(this.data.executionId);
+      const app = getApp();
+      if (app && app.globalData && app.globalData.pendingReport) {
+        const pendingReport = app.globalData.pendingReport;
+        this.setData({
+          brandDistribution: pendingReport.dashboardData?.brandDistribution || {},
+          sentimentDistribution: pendingReport.dashboardData?.sentimentDistribution || {},
+          keywords: pendingReport.dashboardData?.keywords || [],
+          brandScores: pendingReport.dashboardData?.brandScores || {},
+          hasError: false,
+          dataSource: 'globalData'
+        });
+        console.log('[ReportPageV2] ✅ 从全局变量加载数据');
+      } else {
+        this.loadReportData(this.data.executionId);
+      }
     }, 1500);
   },
 
@@ -573,20 +822,128 @@ Page({
 
   /**
    * 加载历史报告
-   * @param {string} reportId
+   * @param {string} reportId - 报告 ID 或 executionId
    */
   async loadHistoryReport(reportId) {
     console.log('[ReportPageV2] 加载历史报告:', reportId);
+    
+    // 【死循环修复 - 2026-03-14】防止重复加载
+    if (this._isLoadingHistory) {
+      console.warn('[ReportPageV2] ⚠️ 正在加载中，跳过重复请求');
+      return;
+    }
+    
     showLoading('加载中...');
+    this._isLoadingHistory = true;
 
     try {
-      // 【修复】加载历史报告数据并在当前页面显示
-      await this.loadReportData(null, reportId);
+      // 1. 检查全局变量（可能已从 diagnosis.js 传递）
+      const app = getApp();
+      if (app && app.globalData && app.globalData.pendingReport) {
+        const pendingReport = app.globalData.pendingReport;
+        if (pendingReport.executionId === reportId && pendingReport.isHistory) {
+          console.log('[ReportPageV2] ✅ 从全局变量加载历史数据');
+          this.setData({
+            brandDistribution: pendingReport.dashboardData?.brandDistribution || {},
+            sentimentDistribution: pendingReport.dashboardData?.sentimentDistribution || {},
+            keywords: pendingReport.dashboardData?.keywords || [],
+            brandScores: pendingReport.dashboardData?.brandScores || {},
+            isHistoryData: true,
+            hasError: false,
+            dataSource: 'globalData'
+          });
+          hideLoading();
+          this._isLoadingHistory = false;
+          return;
+        }
+      }
+
+      // 2. 从云函数加载
+      console.log('[ReportPageV2] 从云函数加载历史报告');
+      const reportService = require('../../../services/reportService');
+      const report = await reportService.getFullReport(reportId);
+
+      if (report && report.brandDistribution && report.brandDistribution.data) {
+        console.log('[ReportPageV2] ✅ 云函数加载成功');
+        this.setData({
+          brandDistribution: report.brandDistribution || {},
+          sentimentDistribution: report.sentimentDistribution || {},
+          keywords: report.keywords || [],
+          brandScores: report.brandScores || {},
+          isHistoryData: true,
+          hasError: false,
+          dataSource: 'cloudFunction'
+        });
+
+        // 缓存到 Storage
+        wx.setStorageSync(`history_report_${reportId}`, {
+          executionId: report.executionId || reportId,
+          dashboardData: {
+            brandDistribution: report.brandDistribution,
+            sentimentDistribution: report.sentimentDistribution,
+            keywords: report.keywords,
+            brandScores: report.brandScores
+          },
+          rawResults: report.results || [],
+          timestamp: Date.now(),
+          expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 天后过期
+        });
+        console.log('[ReportPageV2] ✅ 数据已缓存到 Storage');
+
+        hideLoading();
+        this._isLoadingHistory = false;
+      } else {
+        console.warn('[ReportPageV2] ⚠️ 云函数返回数据不完整');
+        throw new Error('报告数据不完整');
+      }
     } catch (error) {
-      console.error('[ReportPageV2] 加载历史报告失败:', error);
-      this.handleError(error);
-    } finally {
+      console.error('[ReportPageV2] ❌ 加载历史报告失败:', error);
       hideLoading();
+      this._isLoadingHistory = false;
+
+      // 尝试从 Storage 加载备份
+      const cachedData = wx.getStorageSync(`history_report_${reportId}`);
+      if (cachedData && cachedData.dashboardData) {
+        console.log('[ReportPageV2] ⚠️ 从 Storage 备份加载');
+        this.setData({
+          brandDistribution: cachedData.dashboardData.brandDistribution || {},
+          sentimentDistribution: cachedData.dashboardData.sentimentDistribution || {},
+          keywords: cachedData.dashboardData.keywords || [],
+          brandScores: cachedData.dashboardData.brandScores || {},
+          isHistoryData: true,
+          fromBackup: true,
+          hasError: false,
+          dataSource: 'storage'
+        });
+      } else {
+        this.setData({
+          hasError: true,
+          errorType: 'load_history_failed',
+          errorMessage: error.message || '加载失败',
+          errorDetail: '历史报告加载失败，请检查网络或稍后重试'
+        });
+
+        // 【死循环修复 - 2026-03-14】使用页面导航而非递归调用
+        wx.showModal({
+          title: '加载失败',
+          content: error.message || '无法加载历史报告，请稍后重试',
+          showCancel: true,
+          confirmText: '重试',
+          cancelText: '返回',
+          success: (res) => {
+            if (res.confirm) {
+              // 【修复】使用页面重新加载而非递归调用
+              const pages = getCurrentPages();
+              const currentPage = pages[pages.length - 1];
+              if (currentPage && currentPage.options && currentPage.options.executionId) {
+                currentPage.onLoad(currentPage.options);
+              }
+            } else {
+              wx.navigateBack();
+            }
+          }
+        });
+      }
     }
   },
 
@@ -596,51 +953,248 @@ Page({
    * @param {string} reportId - 报告 ID（可选）
    */
   async loadReportData(executionId, reportId) {
-    console.log('[ReportPageV2] 加载报告数据:', { executionId, reportId });
+    console.log('[ReportPageV2] 加载报告数据，id:', executionId || reportId);
 
     try {
-      // 使用 reportService 获取完整报告
-      const reportService = require('../../services/reportService').default;
-      
       const id = executionId || this.data.executionId;
-      
+
       if (!id) {
         throw new Error('缺少执行 ID');
       }
 
       showLoading('加载报告中...');
 
-      // 获取完整报告
-      const report = await reportService.getFullReport(id);
+      let report = null;
+      let dataSource = 'unknown';
 
-      console.log('[ReportPageV2] 报告数据:', report);
-
-      // 检查是否有错误
-      if (report.error) {
-        this.setData({
-          hasError: true,
-          errorMessage: report.error.message || '加载报告失败'
-        });
-        showToast({
-          title: report.error.message,
-          icon: 'none'
-        });
-        return;
+      // Step 1: 检查全局变量
+      const app = getApp();
+      if (app && app.globalData && app.globalData.pendingReport) {
+        const pendingReport = app.globalData.pendingReport;
+        if (pendingReport.executionId === id) {
+          report = {
+            brandDistribution: pendingReport.dashboardData?.brandDistribution || {},
+            sentimentDistribution: pendingReport.dashboardData?.sentimentDistribution || {},
+            keywords: pendingReport.dashboardData?.keywords || [],
+            brandScores: pendingReport.dashboardData?.brandScores || {},
+            status: 'completed',
+            progress: 100,
+            stage: 'completed'
+          };
+          dataSource = 'globalData';
+        }
       }
+
+      // Step 2: 从云函数获取
+      if (!report || !report.brandDistribution || Object.keys(report.brandDistribution).length === 0) {
+        console.log('[ReportPageV2] 从云函数获取报告，executionId:', id);
+        const reportService = require('../../../services/reportService');
+        const cloudReport = await reportService.getFullReport(id);
+
+        console.log('[ReportPageV2] 云函数返回报告:', {
+          hasCloudReport: !!cloudReport,
+          hasBrandDistribution: !!(cloudReport?.brandDistribution),
+          brandDistributionKeys: cloudReport?.brandDistribution ? Object.keys(cloudReport.brandDistribution) : [],
+          hasSentimentDistribution: !!(cloudReport?.sentimentDistribution),
+          hasKeywords: !!(cloudReport?.keywords),
+          keywordsLength: cloudReport?.keywords?.length || 0,
+          hasBrandScores: !!(cloudReport?.brandScores),
+          validation: cloudReport?.validation,
+          error: cloudReport?.error
+        });
+
+        if (cloudReport && cloudReport.brandDistribution && Object.keys(cloudReport.brandDistribution).length > 0) {
+          report = {
+            brandDistribution: cloudReport.brandDistribution || {},
+            sentimentDistribution: cloudReport.sentimentDistribution || {},
+            keywords: cloudReport.keywords || [],
+            brandScores: cloudReport.brandScores || {},
+            status: cloudReport.status || 'completed',
+            progress: cloudReport.progress || 100,
+            stage: cloudReport.stage || 'completed'
+          };
+          dataSource = 'cloudFunction';
+        } else if (cloudReport?.error) {
+          // 【P0 关键修复 - 2026-03-12】云函数返回错误时也要记录
+          console.warn('[ReportPageV2] 云函数返回错误:', cloudReport.error);
+        }
+      }
+
+      // Step 3: 从 Storage 读取备份
+      if (!report || !report.brandDistribution || Object.keys(report.brandDistribution).length === 0) {
+        const storageKey = 'diagnosis_result_' + id;
+        const storageData = wx.getStorageSync(storageKey);
+
+        if (storageData && storageData.executionId === id) {
+          report = {
+            brandDistribution: storageData.data?.brandDistribution || {},
+            sentimentDistribution: storageData.data?.sentimentDistribution || {},
+            keywords: storageData.data?.keywords || [],
+            brandScores: storageData.data?.brandScores || {},
+            status: 'completed',
+            progress: 100,
+            stage: 'completed'
+          };
+          dataSource = 'storage';
+        }
+      }
+
+      hideLoading();
+
+      // 检查是否获取到有效数据
+      // 【P0 关键修复 - 2026-03-12 第 10 次】修改验证逻辑，支持_debug_info 兜底
+      // 之前只检查 data 和 total_count，但如果后端返回_debug_info 说明计算过，可以重建数据
+      const hasBrandDistribution = report?.brandDistribution && (
+        // 条件 1: data 非空且有数据
+        (report.brandDistribution.data && Object.keys(report.brandDistribution.data).length > 0) ||
+        // 条件 2: total_count > 0（即使 data 为空，也可能是后端计算逻辑问题）
+        (report.brandDistribution.total_count && report.brandDistribution.total_count > 0) ||
+        // 条件 3: 【新增 - 第 10 次】即使 data 和 total_count 都为 0，但有_debug_info 说明后端计算过
+        (report.brandDistribution._debug_info && 
+         report.brandDistribution._debug_info.distribution_keys && 
+         report.brandDistribution._debug_info.distribution_keys.length > 0)
+      );
+
+      // 【P0 关键修复 - 2026-03-12 第 10 次】增强错误日志，帮助排查问题
+      let rebuiltFromDebugInfo = false;  // 标记是否从 debug_info 重建
+      
+      if (!report || !hasBrandDistribution) {
+        // 【P0 关键修复 - 2026-03-12 第 10 次】检查是否有_debug_info 可用于重建
+        const debugInfo = report?.brandDistribution?._debug_info;
+        
+        if (debugInfo && debugInfo.distribution_keys && debugInfo.distribution_keys.length > 0) {
+          console.warn('[ReportPageV2] ⚠️ 品牌分布数据异常，但有 distribution_keys，尝试重建...');
+          
+          // 使用 debug 信息重建品牌分布
+          const reconstructedData = {};
+          debugInfo.distribution_keys.forEach(brand => {
+            reconstructedData[brand] = 0;  // 计数为 0，但至少显示品牌
+          });
+          
+          report.brandDistribution.data = reconstructedData;
+          report.brandDistribution.total_count = 0;
+          
+          console.log('[ReportPageV2] ✅ 使用_debug_info 重建品牌分布:', reconstructedData);
+          
+          // 标记已重建，跳过错误处理
+          rebuiltFromDebugInfo = true;
+        } else if (!report) {
+          console.error('[ReportPageV2] ❌ 报告对象为空');
+          this.setData({
+            hasError: true,
+            errorMessage: '未找到诊断数据，建议重新诊断'
+          });
+          showToast({
+            title: '未找到诊断数据',
+            icon: 'none',
+            duration: 3000
+          });
+          return;
+        }
+
+        const resultCount = report?.results?.length || 0;
+
+        console.error('[ReportPageV2] ❌ 数据无效，详细检查:', {
+          hasReport: !!report,
+          hasBrandDistribution,
+          brandDistribution: report?.brandDistribution,
+          brandDistribution_data: report?.brandDistribution?.data,
+          brandDistribution_total_count: report?.brandDistribution?.total_count,
+          results_count: resultCount,
+          keywords_count: report?.keywords?.length || 0,
+          sentimentDistribution: report?.sentimentDistribution
+        });
+
+        // 【P0 关键修复 - 2026-03-12 第 8 次】区分不同错误类型，给出不同提示
+        let errorMessage = '未找到诊断结果数据';
+        let errorType = 'no_data';
+
+        if (report?.error) {
+          console.error('[ReportPageV2] 后端返回错误:', report.error);
+          errorMessage = report.error.message || report.error || '后端返回错误';
+          errorType = 'backend_error';
+        } else if (resultCount === 0) {
+          // results 为 0，说明 AI 调用全部失败
+          console.error('[ReportPageV2] ⚠️ AI 调用全部失败');
+          errorMessage = 'AI 诊断未返回有效结果，建议优化配置后重试';
+          errorType = 'no_ai_results';
+        } else if (resultCount < 4) {
+          // 数据不足（少于 4 个样本）- 显示部分数据 + 警告
+          console.warn('[ReportPageV2] ⚠️ 数据不足，显示部分数据:', resultCount);
+          this.setData({
+            hasError: false,
+            showPartialData: true,
+            partialMessage: `当前只有 ${resultCount} 个有效样本（建议至少 4 个），报告可能不完整`,
+            brandDistribution: report.brandDistribution || {},
+            sentimentDistribution: report.sentimentDistribution || {},
+            keywords: report.keywords || [],
+            results: report.results || []
+          });
+          // 继续执行后续逻辑，显示部分数据
+          // fall through to success path
+        } else {
+          // 其他情况
+          errorMessage = '诊断数据异常，请联系技术支持';
+          errorType = 'data_error';
+        }
+
+        // 如果不是部分数据的情况，显示错误
+        // 【P0 关键修复 - 第 10 次】如果已从 debug_info 重建，跳过错误处理
+        if (!rebuiltFromDebugInfo && (resultCount >= 4 || resultCount === 0 || report?.error)) {
+          this.setData({
+            hasError: true,
+            errorMessage: errorMessage,
+            errorType: errorType,
+            noData: true
+          });
+
+          // 显示错误提示（根据错误类型显示不同文案）
+          const toastMessages = {
+            'no_data': '未找到诊断数据',
+            'backend_error': '后端返回错误',
+            'data_error': '数据异常',
+            'no_ai_results': 'AI 未返回结果'
+          };
+          showToast({
+            title: toastMessages[errorType] || '未找到诊断数据',
+            icon: 'none',
+            duration: 3000
+          });
+          return;
+        }
+        
+        // 【P0 关键修复 - 第 10 次】如果从 debug_info 重建，显示警告但不报错
+        if (rebuiltFromDebugInfo) {
+          console.warn('[ReportPageV2] ⚠️ 使用 debug_info 重建数据，显示部分数据');
+          this.setData({
+            hasError: false,
+            showPartialData: true,
+            partialMessage: '数据尚未完全生成，显示品牌列表（计数为 0）',
+            brandDistribution: report.brandDistribution || {},
+            sentimentDistribution: report.sentimentDistribution || {},
+            keywords: report.keywords || [],
+            results: report.results || []
+          });
+          // 继续执行，显示重建后的数据
+        }
+      }
+
+      console.log('[ReportPageV2] 数据加载成功，来源:', dataSource);
 
       // 更新页面数据
       this.setData({
         brandDistribution: report.brandDistribution || {},
         sentimentDistribution: report.sentimentDistribution || {},
         keywords: report.keywords || [],
-        status: { status: 'completed', progress: 100, stage: 'completed' },
+        brandScores: report.brandScores || {},
+        status: { status: report.status, progress: report.progress, stage: report.stage },
         lastUpdateTime: new Date().toLocaleTimeString(),
-        hasError: false
+        hasError: false,
+        dataSource: dataSource
       });
-
-      console.log('[ReportPageV2] 报告数据加载成功');
     } catch (error) {
       console.error('[ReportPageV2] 加载报告数据失败:', error);
+      hideLoading();
       this.setData({
         hasError: true,
         errorMessage: '加载报告失败：' + (error.message || '未知错误')
@@ -649,8 +1203,6 @@ Page({
         title: '加载报告失败',
         icon: 'none'
       });
-    } finally {
-      hideLoading();
     }
   },
 
@@ -661,6 +1213,12 @@ Page({
     this.stopElapsedTimer();
 
     this.elapsedTimer = setInterval(() => {
+      // 安全检查：页面已卸载则停止计时器
+      if (this._isPageUnloaded) {
+        this.stopElapsedTimer();
+        return;
+      }
+      
       this.setData({
         elapsedTime: this.data.elapsedTime + 1
       });
@@ -787,5 +1345,166 @@ Page({
     } catch (e) {
       return 0;
     }
+  },
+
+  /**
+   * 【修复 - 2026-03-12】标签页切换事件处理
+   * @param {Object} e - 事件对象
+   */
+  onTabChange(e) {
+    const tab = e.currentTarget.dataset.tab;
+    if (!tab) return;
+
+    console.log('[ReportPageV2] 切换标签页:', tab);
+    wx.vibrateShort({ type: 'light' });
+    this.setData({ activeTab: tab });
+  },
+
+  /**
+   * 【修复 - 2026-03-12】返回首页事件处理
+   */
+  onGoHome() {
+    console.log('[ReportPageV2] 返回首页');
+    wx.vibrateShort({ type: 'light' });
+    wx.navigateBack({ delta: 1 });
+  },
+
+  /**
+   * 【修复 - 2026-03-12】导出报告事件处理
+   */
+  exportReport() {
+    console.log('[ReportPageV2] 导出报告');
+    wx.vibrateShort({ type: 'light' });
+
+    wx.showActionSheet({
+      itemList: ['导出 PDF', '导出图片', '分享报告'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          this.exportToPDF();
+        } else if (res.tapIndex === 1) {
+          this.exportToImage();
+        } else if (res.tapIndex === 2) {
+          this.shareReport();
+        }
+      }
+    });
+  },
+
+  /**
+   * 导出为 PDF
+   */
+  exportToPDF() {
+    console.log('[ReportPageV2] 导出 PDF');
+    wx.showToast({
+      title: '正在生成 PDF...',
+      icon: 'loading',
+      duration: 2000
+    });
+
+    // TODO: 实现 PDF 导出逻辑
+    setTimeout(() => {
+      wx.showToast({
+        title: 'PDF 导出功能开发中',
+        icon: 'none'
+      });
+    }, 2000);
+  },
+
+  /**
+   * 导出为图片
+   */
+  exportToImage() {
+    console.log('[ReportPageV2] 导出图片');
+    wx.showToast({
+      title: '正在生成图片...',
+      icon: 'loading',
+      duration: 2000
+    });
+
+    // TODO: 实现图片导出逻辑
+    setTimeout(() => {
+      wx.showToast({
+        title: '图片导出功能开发中',
+        icon: 'none'
+      });
+    }, 2000);
+  },
+
+  /**
+   * 分享报告
+   */
+  shareReport() {
+    console.log('[ReportPageV2] 分享报告');
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ['shareAppMessage', 'shareTimeline']
+    });
+  },
+
+  /**
+   * 【修复 - 2026-03-12】刷新报告事件处理
+   */
+  refreshReport() {
+    console.log('[ReportPageV2] 刷新报告');
+    wx.vibrateShort({ type: 'light' });
+
+    this.setData({ isRefreshing: true });
+
+    // 重新加载报告数据
+    this.loadReportData(this.data.executionId)
+      .finally(() => {
+        this.setData({ isRefreshing: false });
+      });
+  },
+
+  /**
+   * 【修复 - 2026-03-12】分享报告事件处理
+   */
+  onShareReport() {
+    console.log('[ReportPageV2] 分享报告');
+    wx.vibrateShort({ type: 'light' });
+    this.shareReport();
+  },
+
+  /**
+   * 品牌分布点击事件
+   * @param {Object} e - 事件对象
+   */
+  onBrandDistributionTap(e) {
+    console.log('[ReportPageV2] 品牌分布点击:', e.detail);
+    wx.showToast({
+      title: '品牌：' + (e.detail?.brand || '未知'),
+      icon: 'none'
+    });
+  },
+
+  /**
+   * 情感分布点击事件
+   * @param {Object} e - 事件对象
+   */
+  onSentimentTap(e) {
+    console.log('[ReportPageV2] 情感分布点击:', e.detail);
+    const sentiment = e.detail?.sentiment;
+    const titles = {
+      positive: '正面情感',
+      negative: '负面情感',
+      neutral: '中性情感'
+    };
+    wx.showToast({
+      title: titles[sentiment] || '情感分析',
+      icon: 'none'
+    });
+  },
+
+  /**
+   * 关键词点击事件
+   * @param {Object} e - 事件对象
+   */
+  onKeywordTap(e) {
+    console.log('[ReportPageV2] 关键词点击:', e.detail);
+    wx.showToast({
+      title: '关键词：' + (e.detail?.word || '未知'),
+      icon: 'none'
+    });
   }
 });

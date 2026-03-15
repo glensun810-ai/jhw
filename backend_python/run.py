@@ -185,7 +185,7 @@ if __name__ == '__main__':
         print("   使用默认日志配置")
 
     # 直接运行时的配置 - 使用 5001 端口（5000 可能被 macOS Control Center 占用）
-    default_port = int(os.environ.get('PORT', 5001))
+    default_port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_DEBUG', '1').lower() in ('1', 'true', 'yes')
 
     # 【P4 修复 - 2026-03-07】自动解决端口占用问题
@@ -198,6 +198,25 @@ if __name__ == '__main__':
 
     # 【P0-DB-INIT-001 修复】禁用 reloader 避免双进程竞争导致数据库初始化异常
     # 保留 debug=True 用于开发调试，但 use_reloader=False 防止重启动器产生子进程
+    
+    # 【WebSocket 修复 - 2026-03-11】先启动 WebSocket 服务
+    print("🚀 启动 WebSocket 服务...")
+    from wechat_backend.app import start_websocket_server
+    websocket_started = start_websocket_server()
+    if websocket_started:
+        print("✅ WebSocket 服务已启动在端口 8765")
+    else:
+        print("⚠️  WebSocket 服务启动失败，使用降级模式")
+    
+    # 【P0-WebSocket 修复】启动 WebSocket 服务器
+    print(f"🚀 Starting Flask app on port {port}...")
+    app.run(
+        debug=debug,
+        host='0.0.0.0',
+        port=port,
+        use_reloader=False,  # 禁用 reloader 避免双进程竞争
+        threaded=True        # 启用多线程处理请求
+    )
     app.run(
         host='127.0.0.1',
         port=port,

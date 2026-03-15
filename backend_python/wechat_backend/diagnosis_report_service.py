@@ -13,6 +13,7 @@
 """
 
 import json
+import time
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from wechat_backend.logging_config import db_logger, api_logger
@@ -320,24 +321,60 @@ class DiagnosisReportService:
                 except Exception as e:
                     db_logger.error(f"时间解析失败：execution_id={execution_id}, 错误：{e}")
 
-        # 2. 获取结果明细
-        try:
-            results = self.result_repo.get_by_execution_id(execution_id)
-        except Exception as e:
-            db_logger.error(f"查询结果失败：execution_id={execution_id}, 错误：{e}")
-            results = []
-
+        # 2. 获取结果明细（增强版 - 支持重试）
+        max_retries = 3
+        retry_delay = 1.0  # 秒
+        
+        for attempt in range(max_retries):
+            try:
+                results = self.result_repo.get_by_execution_id(execution_id)
+                
+                # 【P0 关键修复 - 2026-03-12 第 10 次】如果 results 为空，等待后重试
+                if not results or len(results) == 0:
+                    if attempt < max_retries - 1:
+                        db_logger.warning(
+                            f"⚠️ [重试] results 为空，{retry_delay}秒后重试：{execution_id} "
+                            f"(尝试 {attempt + 1}/{max_retries})"
+                        )
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # 指数退避
+                        continue
+                    else:
+                        db_logger.error(
+                            f"❌ [重试失败] results 始终为空：{execution_id}, "
+                            f"重试 {max_retries} 次后放弃"
+                        )
+                else:
+                    db_logger.info(
+                        f"✅ [重试成功] 获取到 results：{execution_id}, "
+                        f"数量={len(results)}, 尝试={attempt + 1}"
+                    )
+                
+                break  # 成功获取，退出重试循环
+                
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    db_logger.warning(f"查询结果失败，重试：{execution_id}, 错误={e}")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    db_logger.error(f"查询结果失败，放弃：{execution_id}, 错误={e}")
+                    results = []
+                    break
+        
         # P1-1 降级方案：结果为空时的处理
         if not results or len(results) == 0:
-            db_logger.warning(f"报告结果为空：{execution_id}")
+            db_logger.warning(f"报告结果为空（重试后仍然为空）：{execution_id}")
+            
             # 检查是否有部分结果（可能正在执行中）
             progress = report.get('progress', 0)
             if progress > 0 and progress < 100:
                 return self._create_partial_fallback_report(execution_id, report, progress)
-            # 完全无结果
+            
+            # 完全无结果，创建包含元数据的降级报告
             return self._create_fallback_report(
                 execution_id,
-                '诊断已完成，但未生成有效结果',
+                '诊断已完成，但未生成有效结果。可能原因：AI 调用失败或数据保存失败',
                 'no_results',
                 report
             )
@@ -352,14 +389,62 @@ class DiagnosisReportService:
         # P1-1 降级方案：分析数据缺失时提供默认值
         analysis_data = self._ensure_complete_analysis(analysis, execution_id)
 
-        # 4. 计算品牌分布
-        brand_distribution = self._calculate_brand_distribution(results)
+        # 【P0 关键修复 - 2026-03-12 第 4 次】检查结果是否为空
+        # WAL 检查点后结果应该始终有数据，如果为空说明有真正的问题
+        if not results or len(results) == 0:
+            db_logger.error(
+                f"❌ 报告结果为空：execution_id={execution_id}, "
+                f"WAL 检查点后仍然为空，说明数据未正确保存！"
+            )
+            # 创建详细的错误报告，帮助排查问题
+            return self._create_fallback_report(
+                execution_id,
+                f'诊断执行完成但未生成有效结果。可能原因：1) AI 调用返回空数据 2) 数据库保存失败 3) WAL 检查点失败',
+                'no_results',
+                report
+            )
+
+        # 4. 计算品牌分布（传递预期品牌列表用于完整性检查）
+        # 构建完整的品牌列表：主品牌 + 竞品
+        expected_brands = [report.get('brand_name', '')] if report.get('brand_name') else []
+        if report.get('competitor_brands'):
+            expected_brands.extend(report.get('competitor_brands', []))
+
+        brand_distribution = self._calculate_brand_distribution(results, expected_brands)
 
         # 5. 计算情感分布
         sentiment_distribution = self._calculate_sentiment_distribution(results)
 
         # 6. 提取关键词
         keywords = self._extract_keywords(results)
+
+        # 【P0 关键修复 - 2026-03-12 第 7 次】验证计算结果是否为空
+        # 如果为空，记录详细错误日志用于排查
+        if not brand_distribution.get('data') or brand_distribution.get('total_count', 0) == 0:
+            db_logger.error(
+                f"❌ [数据验证失败] execution_id={execution_id}, "
+                f"brandDistribution.data={brand_distribution.get('data')}, "
+                f"brandDistribution.total_count={brand_distribution.get('total_count')}, "
+                f"results_count={len(results)}, "
+                f"results_sample={results[:3] if results else '[]'}"  # 记录前 3 条结果用于排查
+            )
+            # 这是异常情况，需要排查为什么 results 有数据但品牌分布为空
+            # 可能原因：1) 所有 brand 字段为空 2) results 本身就是空的
+
+        if not sentiment_distribution.get('data') or sentiment_distribution.get('total_count', 0) == 0:
+            db_logger.warning(
+                f"⚠️ [数据验证警告] execution_id={execution_id}, "
+                f"sentimentDistribution.data={sentiment_distribution.get('data')}, "
+                f"sentimentDistribution.total_count={sentiment_distribution.get('total_count')}, "
+                f"results_count={len(results)}"
+            )
+
+        if not keywords or len(keywords) == 0:
+            db_logger.warning(
+                f"⚠️ [数据验证警告] execution_id={execution_id}, "
+                f"keywords_count={len(keywords)}, "
+                f"results_count={len(results)}"
+            )
 
         # P1-1 降级方案：验证数据质量，添加警告信息
         validation = self._validate_report_data(report, results, analysis_data)
@@ -878,32 +963,113 @@ class DiagnosisReportService:
 
         return scenarios
 
-    def _calculate_brand_distribution(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _calculate_brand_distribution(
+        self,
+        results: List[Dict[str, Any]],
+        expected_brands: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
-        计算品牌分布数据
+        计算品牌分布数据（增强版 - 支持少样本和空数据兜底）
 
         参数:
             results: 结果列表
+            expected_brands: 预期的品牌列表（可选，用于检测数据完整性）
 
         返回:
             {
                 data: {品牌名：数量，...},
-                total_count: 总数
+                total_count: 总数，
+                success_rate: 成功率（如果有 expected_brands）,
+                quality_warning: 质量警告（如果数据不完整）,
+                _debug_info: 调试信息（用于前端降级）
             }
         """
         distribution = {}
+        valid_results_count = 0
+
         for result in results:
             # P0 修复：检查结果是否为 None
             if not result:
                 continue
+
+            # 【P0 关键修复 - 2026-03-13 第 11 次】优先使用 extracted_brand（从 AI 响应中提取的品牌）
+            brand = result.get('extracted_brand') if result else None
             
-            # P0 修复：安全获取 brand
-            brand = result.get('brand', 'Unknown') if result else 'Unknown'
+            # 如果 extracted_brand 不存在，使用 brand 字段
+            if not brand or not str(brand).strip():
+                brand = result.get('brand') if result else None
+            
+            # 如果还是为空，使用 'Unknown'
+            if not brand or not str(brand).strip():
+                brand = 'Unknown'
+                db_logger.warning(f"[品牌分布] 发现空 brand，已替换为 'Unknown': result={result}")
+
             distribution[brand] = distribution.get(brand, 0) + 1
+            valid_results_count += 1
+
+        total_count = sum(distribution.values())
+
+        # 【P0 关键修复 - 2026-03-12 第 10 次】如果 results 为空，使用 expected_brands 创建兜底数据
+        if not results or len(results) == 0:
+            db_logger.warning(
+                f"⚠️ [品牌分布] results 为空，使用 expected_brands 创建兜底数据："
+                f"expected_brands={expected_brands}"
+            )
+
+            # 使用预期品牌创建空分布
+            if expected_brands:
+                for brand in expected_brands:
+                    if brand and str(brand).strip():
+                        distribution[brand] = 0
+
+            # 如果 expected_brands 也为空，使用 'Unknown'
+            if not distribution:
+                distribution['Unknown'] = 0
+
+            total_count = 0
+            db_logger.info(
+                f"[品牌分布] 兜底数据创建完成：distribution={distribution}"
+            )
+
+        # 【P0 关键修复】如果 total_count 为 0 但 distribution 有数据，至少返回数据
+        if total_count == 0 and distribution:
+            db_logger.warning(
+                f"⚠️ [品牌分布] total_count 为 0 但 distribution 有数据，返回空分布："
+                f"distribution={distribution}"
+            )
+
+        # 检测数据不足
+        quality_warning = None
+        if expected_brands and len(distribution) < len(expected_brands):
+            missing = set(expected_brands) - set(distribution.keys())
+            quality_warning = f"数据不完整：缺失品牌 {missing}"
+            db_logger.warning(
+                f"[品牌分布] 数据不完整：expected={expected_brands}, "
+                f"actual={list(distribution.keys())}, missing={missing}"
+            )
+
+        # 计算成功率
+        success_rate = None
+        if expected_brands and len(expected_brands) > 0:
+            success_rate = total_count / len(expected_brands) if len(expected_brands) > 0 else None
 
         return {
             'data': distribution,
-            'total_count': sum(distribution.values())
+            'total_count': total_count,
+            'success_rate': success_rate,
+            'quality_warning': quality_warning,
+            # 【P0 关键修复 - 第 10 次】添加调试信息，便于前端降级
+            '_debug_info': {
+                'results_count': len(results) if results else 0,
+                'valid_results_count': valid_results_count,
+                'expected_brands_count': len(expected_brands) if expected_brands else 0,
+                'distribution_keys': list(distribution.keys()),
+                'has_data': bool(distribution),
+                'total_count': total_count,
+                # 【P0 关键修复 - 第 11 次】添加 extracted_brand 统计
+                'extracted_brand_count': sum(1 for r in results if r.get('extracted_brand')),
+                'extraction_success_rate': sum(1 for r in results if r.get('extracted_brand')) / len(results) if results else 0
+            }
         }
 
     def _calculate_sentiment_distribution(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -926,10 +1092,10 @@ class DiagnosisReportService:
             if not result:
                 db_logger.warning('发现 None 结果，跳过情感分析')
                 continue
-            
+
             # P0 修复：安全获取 geo_data，确保默认为空字典
             geo_data = result.get('geo_data') or {}
-            
+
             # P0 修复：安全获取 sentiment 值
             sentiment = geo_data.get('sentiment', 0) if geo_data else 0
 
@@ -947,7 +1113,7 @@ class DiagnosisReportService:
 
     def _extract_keywords(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        提取关键词
+        提取关键词（增强版 - 支持从 responseContent 中提取）
 
         参数:
             results: 结果列表
@@ -962,11 +1128,9 @@ class DiagnosisReportService:
             # P0 修复：检查结果是否为 None
             if not result:
                 continue
-            
-            # P0 修复：安全获取 geo_data
+
+            # 方式 1: 从 geo_data.keywords 提取
             geo_data = result.get('geo_data') or {}
-            
-            # P0 修复：安全获取 keywords
             extracted_keywords = geo_data.get('keywords', []) if geo_data else []
 
             if extracted_keywords and isinstance(extracted_keywords, list):
@@ -975,6 +1139,46 @@ class DiagnosisReportService:
                     if word and word not in seen:
                         keywords.append(kw if isinstance(kw, dict) else {'word': kw, 'count': 1})
                         seen.add(word)
+
+            # 方式 2: 如果 geo_data 为空，从 responseContent 中提取关键词（P0 修复 - 2026-03-11）
+            if not extracted_keywords:
+                response_content = result.get('response_content') or result.get('responseContent')
+                if response_content and isinstance(response_content, str):
+                    # 从 JSON 片段中提取 top3_brands
+                    try:
+                        # 尝试从 responseContent 中提取 JSON 部分
+                        import re
+                        json_match = re.search(r'\{.*?"top3_brands".*?\}', response_content, re.DOTALL)
+                        if json_match:
+                            json_str = json_match.group()
+                            json_data = json.loads(json_str)
+                            top3 = json_data.get('top3_brands', [])
+                            if top3 and isinstance(top3, list):
+                                for brand in top3:
+                                    if isinstance(brand, dict):
+                                        word = brand.get('name', '')
+                                        if word and word not in seen:
+                                            keywords.append({'word': word, 'count': 1, 'source': 'top3_brands'})
+                                            seen.add(word)
+                                        # 也提取 reason 中的关键词
+                                        reason = brand.get('reason', '')
+                                        if reason:
+                                            # 简单分词（中文按字符，英文按空格）
+                                            if any('\u4e00' <= c <= '\u9fff' for c in reason):
+                                                # 中文：简单提取 2-4 字短语
+                                                for i in range(len(reason) - 1):
+                                                    phrase = reason[i:i+2]
+                                                    if phrase not in seen and len(phrase) >= 2:
+                                                        keywords.append({'word': phrase, 'count': 1, 'source': 'reason'})
+                                                        seen.add(phrase)
+                                            else:
+                                                # 英文：按空格分词
+                                                for word in reason.split():
+                                                    if len(word) > 3 and word not in seen:
+                                                        keywords.append({'word': word, 'count': 1, 'source': 'reason'})
+                                                        seen.add(word)
+                    except Exception as e:
+                        db_logger.debug(f"从 responseContent 提取关键词失败：{e}")
 
         return keywords
 
@@ -1027,16 +1231,16 @@ class DiagnosisReportService:
             'warnings': warnings
         }
     
-    def get_user_history(self, user_id: str, page: int = 1, 
+    def get_user_history(self, user_id: str, page: int = 1,
                         limit: int = 20) -> Dict[str, Any]:
         """
         获取用户历史
-        
+
         参数:
             user_id: 用户 ID
             page: 页码
             limit: 每页数量
-        
+
         返回:
             {
                 reports: 报告列表
@@ -1046,17 +1250,275 @@ class DiagnosisReportService:
         offset = (page - 1) * limit
         reports = self.report_repo.get_user_history(user_id, limit, offset)
 
-        # P0 修复：转换为 camelCase
-        return convert_response_to_camel({
+        # P21 修复：计算 health_score 并返回 snake_case 格式
+        for report in reports:
+            # 根据 status 和 progress 计算 health_score
+            if report.get('status') == 'completed':
+                report['health_score'] = 100
+            elif report.get('status') == 'failed':
+                report['health_score'] = 0
+            else:
+                report['health_score'] = report.get('progress', 0)
+
+        return {
             'reports': reports,
             'pagination': {
                 'page': page,
                 'limit': limit,
-                'total': len(reports),  # 实际应该查询总数
+                'total': len(reports),
                 'has_more': len(reports) == limit
             }
-        })
-    
+        }
+
+    def get_history_report(self, execution_id: str) -> Optional[Dict[str, Any]]:
+        """
+        获取历史报告（增强版 - 2026-03-13）
+
+        专为历史报告查看优化：
+        1. 优先从数据库读取，不触发新的诊断
+        2. 包含完整的元数据（品牌、时间、状态等）
+        3. 即使部分数据缺失，也返回可用的最大数据集
+        4. 强化本地缓存友好的数据格式
+        5. 【P0 关键修复】支持从 DiagnosisResult 表重建完整数据
+
+        参数:
+            execution_id: 执行 ID
+
+        返回:
+            完整的报告数据，包含 brandDistribution, sentimentDistribution, keywords 等
+        """
+        db_logger.info(f"[HistoryReport] 开始获取历史报告：{execution_id}")
+
+        # 1. 获取报告主数据
+        try:
+            report = self.report_repo.get_by_execution_id(execution_id)
+        except Exception as e:
+            db_logger.error(f"[HistoryReport] 查询报告失败：{e}")
+            return self._create_fallback_report(
+                execution_id,
+                f'数据库查询失败：{str(e)}',
+                'database_error'
+            )
+
+        if not report:
+            db_logger.warning(f"[HistoryReport] 报告不存在：{execution_id}")
+            return self._create_fallback_report(execution_id, '报告不存在', 'not_found')
+
+        if not isinstance(report, dict):
+            db_logger.error(f"[HistoryReport] 报告格式错误：type={type(report)}")
+            return self._create_fallback_report(
+                execution_id,
+                '报告数据格式错误',
+                'invalid_format'
+            )
+
+        # 2. 获取结果明细
+        try:
+            results = self.result_repo.get_by_execution_id(execution_id)
+        except Exception as e:
+            db_logger.error(f"[HistoryReport] 查询结果失败：{e}")
+            results = []
+
+        # 3. 结果为空时的处理
+        # 【P0 关键修复 - 2026-03-13 第 15 次补充】尝试从 DiagnosisResult 表重建数据
+        if not results or len(results) == 0:
+            db_logger.warning(f"[HistoryReport] ⚠️ 结果数据为空：{execution_id}")
+
+            # 尝试 1: 从 DiagnosisResult ORM 模型重建（使用 SQLAlchemy）
+            try:
+                from wechat_backend.models import DiagnosisResult
+                db_results = DiagnosisResult.query.filter_by(execution_id=execution_id).all()
+
+                if db_results:
+                    db_logger.info(
+                        f"[HistoryReport] ✅ [尝试 1] 从 DiagnosisResult ORM 重建数据：{len(db_results)} 条"
+                    )
+
+                    # 转换为字典格式（包含完整字段）
+                    results = []
+                    for r in db_results:
+                        result_dict = {
+                            'id': r.id,
+                            'execution_id': r.execution_id,
+                            'brand': r.brand,
+                            'extracted_brand': r.extracted_brand,
+                            'question': r.question,
+                            'model': r.model,
+                            'response_content': r.response_content,
+                            'response_latency': r.response_latency,
+                            'status': r.status,
+                            'error_message': r.error_message,
+                            'quality_score': r.quality_score,
+                            'quality_level': r.quality_level,
+                            'created_at': r.created_at.isoformat() if r.created_at else None,
+                            'updated_at': r.updated_at.isoformat() if r.updated_at else None
+                        }
+                        
+                        # 解析 JSON 字段
+                        try:
+                            result_dict['geo_data'] = json.loads(r.geo_data) if r.geo_data else {}
+                        except:
+                            result_dict['geo_data'] = {}
+                        
+                        try:
+                            result_dict['quality_details'] = json.loads(r.quality_details) if r.quality_details else {}
+                        except:
+                            result_dict['quality_details'] = {}
+                        
+                        # 添加 response 对象（保持向后兼容）
+                        result_dict['response'] = {
+                            'content': r.response_content,
+                            'latency': r.response_latency
+                        }
+                        
+                        results.append(result_dict)
+
+                    db_logger.info(
+                        f"[HistoryReport] ✅ [尝试 1] 重建完成：results_count={len(results)}"
+                    )
+            except Exception as rebuild_err:
+                db_logger.error(
+                    f"[HistoryReport] ❌ [尝试 1] ORM 重建失败：{rebuild_err}"
+                )
+                results = []
+
+            # 尝试 2: 如果 ORM 方式失败，直接使用 SQL 查询
+            if not results or len(results) == 0:
+                try:
+                    db_logger.info(f"[HistoryReport] ⏳ [尝试 2] 使用 SQL 直接查询...")
+                    
+                    from wechat_backend.database_connection_pool import get_db_pool
+                    pool = get_db_pool()
+                    conn = pool.get_connection()
+                    conn.row_factory = sqlite3.Row
+                    
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            SELECT * FROM diagnosis_results
+                            WHERE execution_id = ?
+                            ORDER BY brand, question, model
+                        """, (execution_id,))
+                        
+                        db_rows = cursor.fetchall()
+                        
+                        if db_rows:
+                            db_logger.info(
+                                f"[HistoryReport] ✅ [尝试 2] 从 diagnosis_results SQL 重建数据：{len(db_rows)} 条"
+                            )
+                            
+                            for row in db_rows:
+                                item = dict(row)
+                                
+                                # 解析 JSON 字段
+                                try:
+                                    item['geo_data'] = json.loads(item['geo_data']) if item.get('geo_data') else {}
+                                except:
+                                    item['geo_data'] = {}
+                                
+                                try:
+                                    item['quality_details'] = json.loads(item['quality_details']) if item.get('quality_details') else {}
+                                except:
+                                    item['quality_details'] = {}
+                                
+                                # 构建 response 对象
+                                item['response'] = {
+                                    'content': item['response_content'],
+                                    'latency': item.get('response_latency')
+                                }
+                                
+                                results.append(item)
+                            
+                            db_logger.info(
+                                f"[HistoryReport] ✅ [尝试 2] 重建完成：results_count={len(results)}"
+                            )
+                    finally:
+                        pool.return_connection(conn)
+                        
+                except Exception as sql_err:
+                    db_logger.error(
+                        f"[HistoryReport] ❌ [尝试 2] SQL 重建失败：{sql_err}"
+                    )
+                    results = []
+
+            # 检查报告状态
+            if report.get('status') == 'failed':
+                return self._create_fallback_report(
+                    execution_id,
+                    '诊断执行失败',
+                    'failed',
+                    report
+                )
+
+            # 如果重建后仍然为空，返回部分数据
+            if not results or len(results) == 0:
+                db_logger.warning(
+                    f"[HistoryReport] ⚠️ 所有重建尝试都失败，返回部分数据"
+                )
+                return self._create_partial_fallback_report(
+                    execution_id,
+                    report,
+                    report.get('progress', 0)
+                )
+            else:
+                db_logger.info(
+                    f"[HistoryReport] ✅ 重建成功，继续构建完整报告"
+                )
+
+        # 4. 计算品牌分布（传递预期品牌列表用于完整性检查）
+        # 构建完整的品牌列表：主品牌 + 竞品
+        expected_brands = [report.get('brand_name', '')] if report.get('brand_name') else []
+        if report.get('competitor_brands'):
+            expected_brands.extend(report.get('competitor_brands', []))
+
+        brand_distribution = self._calculate_brand_distribution(results, expected_brands)
+
+        # 5. 计算情感分布
+        sentiment_distribution = self._calculate_sentiment_distribution(results)
+
+        # 6. 提取关键词
+        keywords = self._extract_keywords(results)
+
+        # 7. 构建完整报告（历史报告优化版）
+        full_report = {
+            'execution_id': execution_id,
+            'report_id': report.get('report_id'),
+            'brand_name': report.get('brand_name', ''),
+            'competitor_brands': report.get('competitor_brands', []),
+            'selected_models': report.get('selected_models', []),
+            'status': report.get('status', 'completed'),
+            'progress': report.get('progress', 100),
+            'stage': report.get('stage', 'completed'),
+            'is_completed': report.get('is_completed', False),
+            'created_at': report.get('created_at', ''),
+            'completed_at': report.get('completed_at', ''),
+            
+            # 核心展示数据
+            'brandDistribution': brand_distribution,
+            'sentimentDistribution': sentiment_distribution,
+            'keywords': keywords,
+            
+            # 明细数据
+            'results': results,
+            'detailed_results': results,  # 兼容前端期望
+            
+            # 元数据
+            'meta': {
+                'result_count': len(results),
+                'brand_count': len(set(r.get('brand', '') for r in results if r.get('brand'))),
+                'model_count': len(set(r.get('model', '') for r in results if r.get('model'))),
+                'data_version': '1.0',
+                'is_history': True  # 标记为历史数据
+            }
+        }
+
+        db_logger.info(
+            f"[HistoryReport] ✅ 历史报告获取成功：{execution_id}, "
+            f"results={len(results)}, brands={full_report['meta']['brand_count']}"
+        )
+
+        return full_report
+
     def update_progress(self, execution_id: str, progress: int, stage: str) -> bool:
         """
         更新诊断进度

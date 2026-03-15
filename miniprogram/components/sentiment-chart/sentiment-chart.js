@@ -103,11 +103,9 @@ Component({
    */
   lifetimes: {
     attached() {
-      console.log('[SentimentChart] Component attached');
       this._processData();
     },
     detached() {
-      console.log('[SentimentChart] Component detached');
     }
   },
 
@@ -120,7 +118,6 @@ Component({
      * @private
      */
     _onDataChange(newVal) {
-      console.log('[SentimentChart] Data changed:', newVal);
       this._processData();
     },
 
@@ -194,7 +191,6 @@ Component({
         errorMessage: ''
       });
 
-      console.log('[SentimentChart] Data processed:', chartData);
     },
 
     /**
@@ -248,7 +244,6 @@ Component({
       const { index } = event.currentTarget.dataset;
       const sentiment = this.data.chartData[index];
 
-      console.log('[SentimentChart] Sentiment tapped:', sentiment);
 
       this.triggerEvent('sentimentTap', {
         sentiment: sentiment.key,
@@ -272,7 +267,6 @@ Component({
      * 刷新数据
      */
     refresh() {
-      console.log('[SentimentChart] Refreshing data');
       this._processData();
     },
 

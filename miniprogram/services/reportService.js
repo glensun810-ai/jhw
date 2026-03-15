@@ -80,105 +80,126 @@ class ReportService {
    * @param {number} options.retryCount - 重试次数
    * @returns {Promise<Object>} 报告数据
    */
-  async getFullReport(executionId, options = {}) {
-    const retryCount = options.retryCount || 0;
-    
-    try {
-      console.log('[ReportService] Getting full report:', executionId, `retry: ${retryCount}`);
+  getFullReport(executionId, options) {
+    var that = this;
+    options = options || {};
+    var retryCount = options.retryCount || 0;
+    var maxRetryCount = 3;
 
-      // 检查缓存（首次请求才使用缓存）
-      if (retryCount === 0) {
-        const cached = this._getFromCache(executionId);
-        if (cached) {
-          console.log('[ReportService] Cache hit for:', executionId);
-          return cached;
-        }
+    console.log('[ReportService] Getting full report:', executionId, 'retry: ' + retryCount + '/' + maxRetryCount);
+
+    // 检查缓存（首次请求才使用缓存）
+    if (retryCount === 0) {
+      var cached = that._getFromCache(executionId);
+      if (cached) {
+        console.log('[ReportService] Cache hit for:', executionId);
+        return Promise.resolve(cached);
       }
-
-      // P1-4 修复：添加请求超时控制
-      const callFunctionPromise = wx.cloud.callFunction({
-        name: 'getDiagnosisReport',
-        data: { executionId },
-        timeout: 30000 // 30 秒超时
-      });
-
-      // 超时控制
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('请求超时'));
-        }, 30000);
-      });
-
-      const res = await Promise.race([callFunctionPromise, timeoutPromise]);
-      const report = res.result;
-
-      // P1-5 修复：处理空状态和错误状态
-      if (!report) {
-        console.warn('[ReportService] Report is empty');
-        return this._createEmptyReportWithSuggestion('报告不存在', 'not_found');
-      }
-
-      // 【P0 关键修复 - 2026-03-07】处理失败状态，返回元数据
-      if (report.status === 'failed' || (report.success === false)) {
-        console.warn('[ReportService] Report status is failed, returning metadata');
-        return this._createFailedReportWithMetadata(report);
-      }
-
-      // 处理报告数据
-      const processedReport = this._processReportData(report);
-
-      // P1-4 增强：验证错误处理
-      const validation = processedReport.validation;
-      if (validation && !validation.is_valid && validation.errors?.length > 0) {
-        console.warn('[ReportService] Report validation failed:', validation.errors);
-        processedReport.errorType = this._classifyError(validation.errors[0]);
-      }
-
-      // P1-5 修复：检查质量评分
-      const qualityScore = validation?.quality_score;
-      if (qualityScore !== undefined && qualityScore < 60) {
-        console.warn('[ReportService] Low quality report:', qualityScore);
-        processedReport.lowQualityWarning = true;
-      }
-
-      // 缓存报告（只在首次成功时缓存）
-      if (retryCount === 0) {
-        this._setCache(executionId, processedReport);
-      }
-
-      console.log('[ReportService] Report fetched successfully:', executionId);
-      return processedReport;
-    } catch (error) {
-      const handledError = handleApiError(error);
-      logError(error, {
-        context: 'getFullReport',
-        executionId: executionId,
-        retryCount: retryCount
-      });
-
-      // P1-4 修复：重试逻辑
-      const errorType = this._classifyError(error);
-      const canRetry = retryCount < this.maxRetryCount && 
-                       errorType !== ErrorTypes.DATA_NOT_FOUND &&
-                       errorType !== ErrorTypes.DATA_INVALID;
-
-      if (canRetry) {
-        console.log(`[ReportService] 准备重试：${retryCount + 1}/${this.maxRetryCount}`);
-        await new Promise(resolve => setTimeout(resolve, this.retryDelay * (retryCount + 1)));
-        return this.getFullReport(executionId, { retryCount: retryCount + 1 });
-      }
-
-      // 达到最大重试次数或不可重试错误
-      const errorMessage = this._getErrorMessage(error, errorType);
-      console.error('[ReportService] 最终失败:', errorMessage);
-
-      // P1-5 修复：错误时返回空报告
-      return this._createEmptyReportWithSuggestion(
-        errorMessage,
-        this._getErrorTypeString(errorType)
-      );
     }
-  }
+
+    // 开发环境：HTTP 直连后端
+    var envVersion = that._getEnvVersion();
+    if (envVersion === 'develop' || envVersion === 'trial') {
+      return that._getFullReportViaHttp(executionId);
+    }
+
+    // 生产环境：使用云函数
+    var callFunctionPromise = wx.cloud.callFunction({
+      name: 'getDiagnosisReport',
+      data: { executionId: executionId },
+      timeout: 15000
+    }).then(function(res) {
+      if (!res || !res.result) {
+        console.error('[ReportService] 云函数返回为空:', res);
+        throw new Error('云函数返回为空');
+      }
+      return res;
+    });
+
+    var timeoutPromise = new Promise(function(_, reject) {
+      setTimeout(function() {
+        reject(new Error('请求超时'));
+      }, 15000);
+    });
+
+    return Promise.race([callFunctionPromise, timeoutPromise])
+      .then(function(res) {
+        var result = res.result;
+        if (!result) {
+          throw new Error('云函数返回 result 为空');
+        }
+
+        var report = result.data || result;
+        var hasPartialData = result.hasPartialData || false;
+        var warnings = result.warnings || [];
+
+        console.log('[ReportService] 云函数返回:', {
+          success: result.success,
+          hasPartialData: hasPartialData,
+          warnings: warnings,
+          hasReport: !!report
+        });
+
+        // 检查报告是否为空
+        if (!report) {
+          return that._createEmptyReportWithSuggestion('报告不存在', 'not_found');
+        }
+
+        // 处理失败状态
+        if (report.status === 'failed' || report.success === false) {
+          return that._createFailedReportWithMetadata(report);
+        }
+
+        // 有部分成功标志，继续处理
+        if (hasPartialData) {
+          console.warn('[ReportService] 数据不完整，但继续处理:', warnings);
+          report.partialSuccess = true;
+          report.qualityWarnings = warnings;
+        }
+
+        // 处理报告数据
+        var processedReport = that._processReportData(report);
+
+        // 验证失败也返回数据
+        if (processedReport.validation && !processedReport.validation.is_valid) {
+          console.warn('[ReportService] 验证失败，但保留数据');
+          processedReport.hasValidationWarnings = true;
+        }
+
+        // 缓存报告
+        if (retryCount === 0) {
+          that._setCache(executionId, processedReport);
+        }
+
+        console.log('[ReportService] Report fetched:', executionId);
+        return processedReport;
+      })
+      .catch(function(error) {
+        console.error('[ReportService] 获取报告失败:', error);
+
+        var errorType = that._classifyError(error);
+        var canRetry = retryCount < maxRetryCount &&
+                       errorType !== 'DATA_NOT_FOUND' &&
+                       errorType !== 'DATA_INVALID';
+
+        if (canRetry) {
+          var retryDelay = 1000 * (retryCount + 1);
+          console.log('[ReportService] ' + retryDelay + 'ms 后重试');
+          
+          return new Promise(function(resolve) {
+            setTimeout(function() {
+              resolve(that.getFullReport(executionId, { retryCount: retryCount + 1 }));
+            }, retryDelay);
+          });
+        }
+
+        // 达到最大重试次数或不可重试错误
+        var errorMessage = that._getErrorMessage(error, errorType);
+        console.error('[ReportService] 最终失败:', errorMessage);
+
+        return that._createEmptyReportWithSuggestion(errorMessage, that._getErrorTypeString(errorType));
+      });
+  },
 
   /**
    * P1-4 新增：分类错误类型
@@ -245,6 +266,67 @@ class ReportService {
       [ErrorTypes.UNKNOWN_ERROR]: 'error'
     };
     return mapping[errorType] || 'error';
+  }
+
+  /**
+   * 【P0 关键修复 - 2026-03-07】创建失败报告（带元数据）
+   * @param {Object} report - 原始报告数据
+   * @returns {Object} 失败报告
+   */
+  _createFailedReportWithMetadata(report) {
+    const executionMetadata = report.execution_metadata || {};
+    const errorDetails = report.error_details || report.error || {};
+
+    return {
+      status: 'failed',
+      success: false,
+      executionId: report.execution_id || report.executionId || '',
+      error: typeof errorDetails === 'string'
+
+  /**
+   * 【死循环修复 - 2026-03-14】HTTP 直连后端获取报告（开发环境）
+   * @param {string} executionId - 执行 ID
+   * @returns {Promise<Object>} 报告数据
+   * @private
+   */
+  _getFullReportViaHttp(executionId) {
+    var API_BASE_URL = 'http://localhost:5001';
+
+    return new Promise(function(resolve, reject) {
+      console.log('[ReportService] HTTP 直连后端:', executionId);
+
+      wx.request({
+        url: API_BASE_URL + '/api/diagnosis/report/' + executionId,
+        method: 'GET',
+        header: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000,
+        success: function(res) {
+          var result = res.data;
+          console.log('[ReportService] HTTP 响应:', result);
+
+          if (!result) {
+            reject(new Error('HTTP 返回为空'));
+            return;
+          }
+
+          if (result.error_code || result.error) {
+            var error = new Error(result.error_message || result.error || '获取报告失败');
+            error.code = result.error_code || 'REPORT_ERROR';
+            reject(error);
+            return;
+          }
+
+          var report = result.data || result;
+          resolve(report);
+        },
+        fail: function(error) {
+          console.error('[ReportService] HTTP 获取报告失败:', error);
+          reject(error);
+        }
+      });
+    });
   }
 
   /**
@@ -388,46 +470,50 @@ class ReportService {
    * @param {string} executionId - 执行 ID
    * @returns {Promise<Object>} 品牌分布数据
    */
-  async getBrandDistribution(executionId) {
-    try {
+  getBrandDistribution(executionId) {
+    var that = this;
+    return new Promise(function(resolve, reject) {
       console.log('[ReportService] Getting brand distribution:', executionId);
 
-      const report = await this.getFullReport(executionId);
-      return report.brandDistribution || {
-        data: {},
-        total_count: 0,
-        warning: '暂无品牌分布数据'
-      };
-    } catch (error) {
-      console.error('[ReportService] Get brand distribution failed:', error);
-      throw error;
-    }
-  }
+      that.getFullReport(executionId).then(function(report) {
+        resolve(report.brandDistribution || {
+          data: {},
+          total_count: 0,
+          warning: '暂无品牌分布数据'
+        });
+      }).catch(function(error) {
+        console.error('[ReportService] Get brand distribution failed:', error);
+        reject(error);
+      });
+    });
+  },
 
   /**
    * 获取情感分布数据
    * @param {string} executionId - 执行 ID
    * @returns {Promise<Object>} 情感分布数据
    */
-  async getSentimentDistribution(executionId) {
-    try {
+  getSentimentDistribution(executionId) {
+    var that = this;
+    return new Promise(function(resolve, reject) {
       console.log('[ReportService] Getting sentiment distribution:', executionId);
 
-      const report = await this.getFullReport(executionId);
-      return report.sentimentDistribution || {
-        data: {
-          positive: 0,
-          neutral: 0,
-          negative: 0
-        },
-        total_count: 0,
-        warning: '暂无情感分布数据'
-      };
-    } catch (error) {
-      console.error('[ReportService] Get sentiment distribution failed:', error);
-      throw error;
-    }
-  }
+      that.getFullReport(executionId).then(function(report) {
+        resolve(report.sentimentDistribution || {
+          data: {
+            positive: 0,
+            neutral: 0,
+            negative: 0
+          },
+          total_count: 0,
+          warning: '暂无情感分布数据'
+        });
+      }).catch(function(error) {
+        console.error('[ReportService] Get sentiment distribution failed:', error);
+        reject(error);
+      });
+    });
+  },
 
   /**
    * 获取关键词数据
@@ -435,42 +521,45 @@ class ReportService {
    * @param {number} topN - 返回前 N 个关键词
    * @returns {Promise<Array>} 关键词列表
    */
-  async getKeywords(executionId, topN = 50) {
-    try {
+  getKeywords(executionId, topN) {
+    var that = this;
+    topN = topN || 50;
+    return new Promise(function(resolve, reject) {
       console.log('[ReportService] Getting keywords:', executionId);
 
-      const report = await this.getFullReport(executionId);
-      const keywords = report.keywords || [];
-
-      // 返回前 N 个关键词
-      return keywords.slice(0, topN);
-    } catch (error) {
-      console.error('[ReportService] Get keywords failed:', error);
-      throw error;
-    }
-  }
+      that.getFullReport(executionId).then(function(report) {
+        var keywords = report.keywords || [];
+        resolve(keywords.slice(0, topN));
+      }).catch(function(error) {
+        console.error('[ReportService] Get keywords failed:', error);
+        reject(error);
+      });
+    });
+  },
 
   /**
    * 获取趋势对比数据
    * @param {string} executionId - 执行 ID
    * @returns {Promise<Object>} 趋势对比数据
    */
-  async getTrendAnalysis(executionId) {
-    try {
+  getTrendAnalysis(executionId) {
+    var that = this;
+    return new Promise(function(resolve, reject) {
       console.log('[ReportService] Getting trend analysis:', executionId);
 
-      const report = await this.getFullReport(executionId);
-      return report.trendAnalysis || {
-        current: {},
-        historical: {},
-        trend: {},
-        warning: '暂无趋势对比数据'
-      };
-    } catch (error) {
-      console.error('[ReportService] Get trend analysis failed:', error);
-      throw error;
-    }
-  }
+      that.getFullReport(executionId).then(function(report) {
+        resolve(report.trendAnalysis || {
+          current: {},
+          historical: {},
+          trend: {},
+          warning: '暂无趋势对比数据'
+        });
+      }).catch(function(error) {
+        console.error('[ReportService] Get trend analysis failed:', error);
+        reject(error);
+      });
+    });
+  },
 
   /**
    * 获取竞品对比数据
@@ -478,22 +567,24 @@ class ReportService {
    * @param {string} mainBrand - 主品牌名称
    * @returns {Promise<Object>} 竞品对比数据
    */
-  async getCompetitorAnalysis(executionId, mainBrand) {
-    try {
+  getCompetitorAnalysis(executionId, mainBrand) {
+    var that = this;
+    return new Promise(function(resolve, reject) {
       console.log('[ReportService] Getting competitor analysis:', executionId);
 
-      const report = await this.getFullReport(executionId);
-      return report.competitorAnalysis || {
-        main_brand: mainBrand,
-        main_brand_share: 0,
-        competitor_shares: {},
-        rank: 0,
-        total_competitors: 0
-      };
-    } catch (error) {
-      console.error('[ReportService] Get competitor analysis failed:', error);
-      throw error;
-    }
+      that.getFullReport(executionId).then(function(report) {
+        resolve(report.competitorAnalysis || {
+          main_brand: mainBrand,
+          main_brand_share: 0,
+          competitor_shares: {},
+          rank: 0,
+          total_competitors: 0
+        });
+      }).catch(function(error) {
+        console.error('[ReportService] Get competitor analysis failed:', error);
+        reject(error);
+      });
+    });
   }
 
   /**
@@ -985,5 +1076,7 @@ class ReportService {
   }
 }
 
-// 导出单例
-export default new ReportService();
+// 导出单例（CommonJS 语法，兼容微信小程序）
+const reportServiceInstance = new ReportService();
+module.exports = reportServiceInstance;
+module.exports.default = reportServiceInstance; // 兼容 .default 导入方式

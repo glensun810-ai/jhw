@@ -1,17 +1,16 @@
 /**
- * 情感分布组件样式
+ * 情感分布组件样式 - 深色科技主题
  *
  * 支持饼图和环形图两种展示方式
  * 包含情感概览和详细统计
  */
 
-/* 组件容器 */
+/* 组件容器 - 深色透明背景 */
 .sentiment-chart {
-  background-color: #ffffff;
+  background: transparent;  /* 删除浅色背景 */
   border-radius: 12rpx;
   padding: 24rpx;
   margin: 16rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
 }
 
 /* 标题栏 */
@@ -21,13 +20,13 @@
   align-items: center;
   margin-bottom: 24rpx;
   padding-bottom: 16rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
 }
 
 .title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #333333;
+  color: #e8e8e8;
 }
 
 .actions {
@@ -38,15 +37,16 @@
 
 .total-count {
   font-size: 24rpx;
-  color: #999999;
+  color: #8c8c8c;
 }
 
 .toggle-btn {
   font-size: 24rpx;
-  color: #1890ff;
+  color: #00E5FF;
   padding: 8rpx 16rpx;
-  background-color: #f0f5ff;
+  background-color: rgba(0, 229, 255, 0.1);
   border-radius: 8rpx;
+  border: 1rpx solid rgba(0, 229, 255, 0.3);
 }
 
 /* 加载状态 */
@@ -61,8 +61,8 @@
 .loading-spinner {
   width: 48rpx;
   height: 48rpx;
-  border: 4rpx solid #f0f0f0;
-  border-top-color: #1890ff;
+  border: 4rpx solid rgba(255, 255, 255, 0.1);
+  border-top-color: #00E5FF;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -76,7 +76,7 @@
 .loading-text {
   margin-top: 16rpx;
   font-size: 28rpx;
-  color: #999999;
+  color: #8c8c8c;
 }
 
 /* 空状态 */
@@ -97,7 +97,7 @@
 .empty-text {
   margin-top: 16rpx;
   font-size: 28rpx;
-  color: #999999;
+  color: #8c8c8c;
 }
 
 /* 图表容器 */
@@ -200,12 +200,12 @@
 .center-total {
   font-size: 44rpx;
   font-weight: 700;
-  color: #333333;
+  color: #e8e8e8;
 }
 
 .center-label {
   font-size: 24rpx;
-  color: #999999;
+  color: #8c8c8c;
   margin-top: 8rpx;
 }
 
@@ -234,13 +234,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 16rpx;
-  background-color: #f8f9fa;
+  background-color: rgba(255, 255, 255, 0.05);
   border-radius: 8rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
 }
 
 .detail-item:active {
-  background-color: #e9ecef;
+  background-color: rgba(255, 255, 255, 0.1);
   transform: scale(0.98);
 }
 
@@ -256,7 +257,7 @@
 
 .detail-name {
   font-size: 28rpx;
-  color: #333333;
+  color: #e8e8e8;
 }
 
 .detail-right {
@@ -270,7 +271,7 @@
 .detail-bar {
   flex: 1;
   height: 16rpx;
-  background-color: #e9ecef;
+  background-color: rgba(255, 255, 255, 0.1);
   border-radius: 8rpx;
   overflow: hidden;
 }
@@ -291,7 +292,7 @@
 .detail-value {
   font-size: 28rpx;
   font-weight: 600;
-  color: #333333;
+  color: #e8e8e8;
   min-width: 80rpx;
   text-align: right;
 }
@@ -300,14 +301,14 @@
 .description-section {
   margin-top: 24rpx;
   padding: 20rpx;
-  background-color: #f8f9fa;
+  background-color: rgba(255, 255, 255, 0.05);
   border-radius: 8rpx;
-  border-left: 4rpx solid #1890ff;
+  border-left: 4rpx solid #00E5FF;
 }
 
 .description-text {
   font-size: 26rpx;
-  color: #666666;
+  color: #8c8c8c;
   line-height: 1.6;
 }
 
@@ -317,7 +318,7 @@
   align-items: center;
   padding: 16rpx;
   margin-top: 16rpx;
-  background-color: #fff7e6;
+  background-color: rgba(250, 173, 20, 0.1);
   border-radius: 8rpx;
   border-left: 4rpx solid #faad14;
 }
@@ -328,7 +329,7 @@
 
 .warning-text {
   font-size: 24rpx;
-  color: #fa8c16;
+  color: #faad14;
 }
 
 /* 响应式调整 */

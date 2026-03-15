@@ -9,8 +9,9 @@
  */
 
 // 开发环境配置
+// 【P0 修复 - 2026-03-11】端口从 5000 修改为 5001，与后端 main.py 保持一致
 const DEV_CONFIG = {
-  API_BASE_URL: 'http://localhost:5000',
+  API_BASE_URL: 'http://localhost:5001',
   API_TIMEOUT: 30000,
   API_RETRY_COUNT: 3
 };
@@ -31,7 +32,7 @@ const CURRENT_CONFIG = IS_DEV ? DEV_CONFIG : PROD_CONFIG;
 /**
  * API 配置对象
  */
-export const APIConfig = {
+const APIConfig = {
   // API 基础地址
   API_BASE_URL: CURRENT_CONFIG.API_BASE_URL,
 
@@ -41,16 +42,16 @@ export const APIConfig = {
   // 重试次数
   API_RETRY_COUNT: CURRENT_CONFIG.API_RETRY_COUNT,
 
-  // 是否启用 HTTP 直连模式（微信小程序建议使用云函数）
-  // 注意：小程序环境需要使用云函数代理，避免 CORS 问题
-  USE_HTTP_DIRECT: false
+  // 是否启用 HTTP 直连模式
+  // 【P0 修复 - 2026-03-11】启用 HTTP 直连，云函数未部署时使用此模式
+  USE_HTTP_DIRECT: true
 };
 
 /**
  * 获取 API 基础地址
  * @returns {string} API 基础地址
  */
-export function getApiBaseUrl() {
+function getApiBaseUrl() {
   return APIConfig.API_BASE_URL;
 }
 
@@ -58,7 +59,7 @@ export function getApiBaseUrl() {
  * 获取请求超时时间
  * @returns {number} 超时时间（毫秒）
  */
-export function getApiTimeout() {
+function getApiTimeout() {
   return APIConfig.API_TIMEOUT;
 }
 
@@ -66,8 +67,13 @@ export function getApiTimeout() {
  * 检查是否启用 HTTP 直连模式
  * @returns {boolean} 是否直连
  */
-export function isHttpDirect() {
+function isHttpDirect() {
   return APIConfig.USE_HTTP_DIRECT;
 }
 
-export default APIConfig;
+// 导出（CommonJS 语法，兼容微信小程序）
+module.exports = APIConfig;
+module.exports.default = APIConfig; // 兼容 .default 导入方式
+module.exports.getApiBaseUrl = getApiBaseUrl;
+module.exports.getApiTimeout = getApiTimeout;
+module.exports.isHttpDirect = isHttpDirect;

@@ -426,7 +426,8 @@ class DiagnosisTransaction:
         self,
         report_id: int,
         analysis_type: str,
-        analysis_data: Dict[str, Any]
+        analysis_data: Dict[str, Any],
+        execution_id: str = None  # 【P2 修复 - 2026-03-11】添加 execution_id 参数
     ) -> int:
         """
         添加分析数据（事务操作）
@@ -435,15 +436,20 @@ class DiagnosisTransaction:
             report_id: 报告 ID
             analysis_type: 分析类型 (brand_analysis/competitive_analysis)
             analysis_data: 分析数据
+            execution_id: 执行 ID（可选，从实例获取）
 
         返回:
             analysis_id: 分析 ID
         """
         self._init_dependencies()
 
+        # 【P2 修复 - 2026-03-11】使用传入的 execution_id 或从实例获取
+        exec_id = execution_id or getattr(self, 'execution_id', '')
+
         # 执行添加
         analysis_id = self._analysis_repo.add(
             report_id,
+            exec_id,  # 【P2 修复】添加 execution_id
             analysis_type,
             analysis_data
         )

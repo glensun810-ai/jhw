@@ -2364,8 +2364,35 @@ def get_task_status_api(task_id):
             'status': task_status.get('status', 'init'),
             'results': task_status.get('results', []),
             'is_completed': task_status.get('status') == 'completed',
-            'created_at': task_status.get('start_time', None)
+            'created_at': task_status.get('start_time', None),
+            # 【P0 修复】添加详细结果字段，确保前端报告页面有数据
+            'detailed_results': task_status.get('detailed_results', []),
+            'brand_scores': task_status.get('brand_scores', {}),
+            'competitive_analysis': task_status.get('competitive_analysis', {}),
+            'semantic_drift_data': task_status.get('semantic_drift_data', {}),
+            'recommendation_data': task_status.get('recommendation_data', {}),
+            'negative_sources': task_status.get('negative_sources', []),
+            'overall_score': task_status.get('overall_score', 0)
         }
+
+        # 【P0 修复】如果 detailed_results 为空，尝试从 results 中提取
+        if not response_data['detailed_results'] and response_data['results']:
+            results = response_data['results']
+            if isinstance(results, dict):
+                response_data['detailed_results'] = results.get('detailed_results', [])
+                response_data['brand_scores'] = results.get('brand_scores', {})
+                response_data['competitive_analysis'] = results.get('competitive_analysis', {})
+                response_data['semantic_drift_data'] = results.get('semantic_drift_data', {})
+                response_data['recommendation_data'] = results.get('recommendation_data', {})
+                response_data['negative_sources'] = results.get('negative_sources', [])
+                response_data['overall_score'] = results.get('overall_score', 0)
+            elif isinstance(results, list) and len(results) > 0:
+                # results 可能是 detailed_results 列表
+                response_data['detailed_results'] = results
+
+        # 记录详细结果数量日志
+        detailed_results_count = len(response_data['detailed_results']) if response_data['detailed_results'] else 0
+        api_logger.info(f'✅ 从 execution_store 加载任务 {task_id}: detailed_results 数量={detailed_results_count}, stage={response_data["stage"]}, status={response_data["status"]}')
 
         # 【修复】确保 stage 与 status 同步：当 status == 'completed' 但 stage != 'completed' 时，同步 stage
         if response_data['status'] == 'completed' and response_data['stage'] != 'completed':
@@ -2512,6 +2539,46 @@ def get_task_result(task_id):
     return jsonify(deep_intelligence_result.to_dict()), 200
 
 # ... (Other endpoints remain the same)
+# ==================== P0 修复：添加兼容的 API 端点 ====================
+# 问题：前端调用 /api/history/list，但后端只有 /api/test-history
+# 解决：添加别名端点，保持向后兼容
+
+@wechat_bp.route('/api/history/list', methods=['GET'])
+@require_strict_auth
+@monitored_endpoint('/api/history/list', require_auth=True, validate_inputs=True)
+def get_history_list():
+    """
+    获取历史诊断报告列表（/api/test-history 的别名端点）
+    
+    兼容前端 pages/report/history/history.js 中的调用
+    
+    请求参数:
+        userOpenid: 用户 OpenID
+        limit: 每页数量 (默认 20)
+        offset: 偏移量 (默认 0)
+    
+    返回:
+        {
+            "status": "success",
+            "history": [...],
+            "count": 20
+        }
+    """
+    user_openid = request.args.get('userOpenid', 'anonymous')
+    # 用户数据访问控制：确保用户只能查看自己的历史记录
+    if hasattr(g, 'user_id') and g.user_id and g.user_id != 'anonymous':
+        user_openid = g.user_id
+
+    limit = int(request.args.get('limit', 20))
+    offset = int(request.args.get('offset', 0))
+    try:
+        history = get_user_test_history(user_openid, limit, offset)
+        return jsonify({'status': 'success', 'history': history, 'count': len(history)})
+    except Exception as e:
+        api_logger.error(f'获取历史列表失败：{e}')
+        return jsonify({'error': str(e)}), 500
+
+
 @wechat_bp.route('/api/test-history', methods=['GET'])
 @require_strict_auth
 @monitored_endpoint('/api/test-history', require_auth=True, validate_inputs=True)

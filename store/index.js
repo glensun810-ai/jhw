@@ -376,8 +376,6 @@ class Store {
 // 创建单例
 const store = new Store();
 
-// 导出默认实例
-export default store;
-
-// 同时支持 CommonJS
+// 导出（CommonJS 语法，兼容微信小程序）
 module.exports = store;
+module.exports.default = store; // 兼容 .default 导入方式

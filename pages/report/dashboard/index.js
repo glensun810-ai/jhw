@@ -136,7 +136,17 @@ Page({
    * 从服务器获取数据
    */
   fetchDataFromServer: function(executionId) {
-    logger.debug('开始获取 Dashboard 数据', { executionId });
+    // P21 修复：添加 executionId 验证
+    if (!executionId) {
+      logger.error('[Dashboard] executionId 为空');
+      this.setData({
+        loading: false,
+        loadError: '缺少执行 ID，请从历史记录进入'
+      });
+      return;
+    }
+
+    logger.debug('开始获取 Dashboard 数据', { executionId: executionId });
 
     wx.request({
       url: `${API_BASE_URL}/api/dashboard/aggregate`,
@@ -147,12 +157,49 @@ Page({
       },
       timeout: 30000, // 30 秒超时
       success: (res) => {
-        logger.debug('Dashboard API 响应成功', {
-          success: res.data?.success,
-          hasData: !!res.data?.dashboard
+        logger.debug('Dashboard API 响应', {
+          statusCode: res.statusCode,
+          hasData: !!res.data,
+          data: res.data
         });
 
-        if (res.data && res.data.success) {
+        // P21 修复：添加防御性检查
+        if (!res.data) {
+          logger.error('[Dashboard] API 返回数据为空');
+          this.setData({
+            loading: false,
+            loadError: '服务器返回数据为空'
+          });
+          return;
+        }
+
+        // P21 修复：处理 404 错误
+        if (res.statusCode === 404) {
+          logger.error('[Dashboard] 报告不存在 (404)');
+          this.setData({
+            loading: false,
+            loadError: '报告不存在或已被删除'
+          });
+          wx.showModal({
+            title: '报告不存在',
+            content: '该诊断报告不存在或已被删除，请从历史记录重新选择',
+            showCancel: false,
+            confirmText: '我知道了'
+          });
+          return;
+        }
+
+        // P21 修复：处理 500 错误
+        if (res.statusCode === 500) {
+          logger.error('[Dashboard] 服务器错误 (500)');
+          this.setData({
+            loading: false,
+            loadError: '服务器错误，请稍后重试'
+          });
+          return;
+        }
+
+        if (res.data.success) {
           // 【P0 关键修复】检查后端返回的 status 字段
           if (res.data.status === 'failed') {
             logger.error('[Dashboard] 后端返回 failed 状态，进入故障恢复模式');

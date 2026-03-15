@@ -388,6 +388,15 @@ class PollingManager {
       timestamp: new Date().toISOString()
     });
 
+    // 【P0 临时修复 - 2026-03-13】开发环境使用 HTTP 轮询，绕过云函数
+    const envVersion = this._getEnvVersion();
+    
+    if (envVersion === 'develop' || envVersion === 'trial') {
+      console.log('[PollingManager] 开发环境：使用 HTTP 轮询');
+      return await this._pollViaHttp(executionId);
+    }
+
+    console.log('[PollingManager] 生产环境：使用云函数轮询');
     try {
       const response = await wx.cloud.callFunction({
         name: 'getDiagnosisStatus',
@@ -432,6 +441,74 @@ class PollingManager {
       });
       throw error;
     }
+  }
+
+  /**
+   * 【P0 新增 - 2026-03-13】通过 HTTP 轮询状态（开发环境）
+   * @param {string} executionId - 执行 ID
+   * @returns {Promise<Object>} 状态数据
+   * @private
+   */
+  async _pollViaHttp(executionId) {
+    const API_BASE_URL = 'http://localhost:5001';  // 本地后端地址
+
+    try {
+      const response = await wx.request({
+        url: `${API_BASE_URL}/api/diagnosis/status/${executionId}`,
+        method: 'GET',
+        header: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      });
+
+      const result = response.data;
+
+      // 检查返回数据
+      if (!result) {
+        console.error('[PollingManager] HTTP 轮询返回空结果:', executionId);
+        throw new Error('HTTP 轮询返回空结果');
+      }
+
+      // 检查是否有错误
+      if (result.error_code || result.error) {
+        console.error('[PollingManager] HTTP 轮询失败:', executionId, result.error);
+        throw new Error(result.error_message || result.error || 'HTTP 轮询失败');
+      }
+
+      // 提取状态数据
+      const data = result.data || result;
+
+      console.log('[PollingManager] HTTP 轮询成功:', {
+        executionId,
+        status: data.status,
+        progress: data.progress,
+        stage: data.stage,
+        should_stop_polling: data.should_stop_polling,
+        timestamp: new Date().toISOString()
+      });
+
+      return data;
+    } catch (error) {
+      console.error('[PollingManager] HTTP 轮询失败:', {
+        executionId,
+        error: error,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * 【P0 新增 - 2026-03-13】获取当前环境版本
+   * @returns {string} 'develop' | 'trial' | 'release'
+   * @private
+   */
+  _getEnvVersion() {
+    if (typeof __wxConfig !== 'undefined' && __wxConfig.envVersion) {
+      return __wxConfig.envVersion;
+    }
+    return 'develop';  // 默认开发环境
   }
 
   /**
@@ -484,28 +561,32 @@ class PollingManager {
    * @returns {number} 轮询间隔（毫秒）
    */
   _calculateProgressBasedInterval(progress) {
-    // 【P0 修复 - 2026-03-02】init 阶段（进度=0）使用 2 秒间隔
+    // 【P1 修复 - 2026-03-11】init 阶段（进度=0）使用配置值
     if (progress === 0) {
       return this.stageIntervals.init;
     }
 
-    // P1-1 核心优化：进度越低，轮询越频繁；进度越高，轮询越慢
+    // 【P1 修复 - 2026-03-11】使用配置的阈值，确保配置与计算逻辑一致
+    // 进度越低，轮询越频繁；进度越高，轮询越慢
     if (progress < this.progressThresholds.low) {
-      // 0-30%: 快速轮询阶段，1 秒一次
-      // 公式：1 秒 + (进度/30) * 0.5 秒，范围：1000-1500ms
-      return this.stageIntervals.fast + (progress / 30) * 500;
+      // 0-30%: 快速轮询阶段
+      // 使用配置的 fast 间隔，随进度线性增加
+      return this.stageIntervals.fast + (progress / this.progressThresholds.low) * 500;
     } else if (progress < this.progressThresholds.medium) {
-      // 30-60%: 中速轮询阶段，2 秒一次
-      // 公式：2 秒 + ((进度 -30)/30) * 1 秒，范围：2000-3000ms
-      return this.stageIntervals.medium + ((progress - 30) / 30) * 1000;
+      // 30-60%: 中速轮询阶段
+      // 使用配置的 medium 间隔，随进度线性增加
+      const range = this.progressThresholds.medium - this.progressThresholds.low;
+      return this.stageIntervals.medium + ((progress - this.progressThresholds.low) / range) * 1000;
     } else if (progress < this.progressThresholds.high) {
-      // 60-80%: 慢速轮询阶段，3 秒一次
-      // 公式：3 秒 + ((进度 -60)/20) * 2 秒，范围：3000-5000ms
-      return this.stageIntervals.slow + ((progress - 60) / 20) * 2000;
+      // 60-80%: 慢速轮询阶段
+      // 使用配置的 slow 间隔，随进度线性增加
+      const range = this.progressThresholds.high - this.progressThresholds.medium;
+      return this.stageIntervals.slow + ((progress - this.progressThresholds.medium) / range) * 2000;
     } else {
-      // 80-100%: 最终阶段，5 秒一次（接近完成时减少轮询）
-      // 公式：5 秒 + ((进度 -80)/20) * 5 秒，范围：5000-10000ms
-      return this.stageIntervals.final + ((progress - 80) / 20) * 5000;
+      // 80-100%: 最终阶段
+      // 使用配置的 final 间隔，随进度线性增加
+      const range = 100 - this.progressThresholds.high;
+      return this.stageIntervals.final + ((progress - this.progressThresholds.high) / range) * 5000;
     }
   }
 
@@ -771,5 +852,7 @@ class PollingManager {
   }
 }
 
-// 导出单例
-export default new PollingManager();
+// 导出单例（CommonJS 语法，兼容微信小程序）
+const pollingManagerInstance = new PollingManager();
+module.exports = pollingManagerInstance;
+module.exports.default = pollingManagerInstance; // 兼容 .default 导入方式

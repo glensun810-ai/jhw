@@ -1,6 +1,9 @@
 <!--
-  历史记录详情页 - 增强版（整合报告展示）
-  与项目整体风格统一
+  历史记录详情页 - 性能优化版
+  【性能优化 P0 - 2026-03-11】
+  1. 使用 wx:if 替代三元表达式
+  2. 使用预先计算的 scoreClass
+  3. 简化全局变量保存
 -->
 
 <view class="page-container">
@@ -139,29 +142,37 @@
     <view class="detailed-results-section">
       <view class="section-title-wrap">
         <text class="section-title">详细测试结果</text>
-        <text class="section-subtitle">{{detailedResults.length}}/{{totalResults || detailedResults.length}} 条记录</text>
+        <text class="section-subtitle">{{detailedResults.length}}/{{totalResults || 0}} 条记录</text>
       </view>
 
-      <scroll-view class="result-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <!-- 【P0 修复 - 2026-03-15】移除 enhanced 属性，防止渲染引擎死循环 -->
+      <scroll-view class="result-scroll" scroll-y show-scrollbar="{{false}}">
         <view class="result-list">
           <view class="result-item" wx:for="{{detailedResults}}" wx:key="id" wx:for-item="item">
             <view class="result-header">
               <view class="result-brand">{{item.brand}}</view>
               <view class="result-model">{{item.model}}</view>
             </view>
+            
             <view class="result-question">
               <text class="question-label">问：</text>
               <text class="question-text">{{item.question}}</text>
             </view>
+            
+            <!-- 【性能优化 P0】使用 wx:if 切换，避免三元表达式响应式绑定 -->
             <view class="result-response" bindtap="toggleExpand" data-id="{{item.id}}">
               <text class="response-label">答：</text>
-              <text class="response-text">{{item.expanded ? item.fullResponse : item.response}}</text>
+              <text class="response-text" wx:if="{{!item.expanded}}">{{item.response}}</text>
+              <text class="response-text" wx:else>{{item.fullResponse}}</text>
+              
               <text wx:if="{{item.truncated && !item.expanded}}" class="expand-text">... 点击展开</text>
               <text wx:if="{{item.expanded}}" class="collapse-text"> 点击收起</text>
             </view>
+            
+            <!-- 【性能优化 P0】使用预先计算的 scoreClass -->
             <view class="result-score-simple">
               <text class="score-label-simple">综合评分：</text>
-              <text class="score-value-simple {{item.score >= 80 ? 'excellent' : (item.score >= 60 ? 'good' : 'poor')}}">{{item.score}}分</text>
+              <text class="score-value-simple {{item.scoreClass}}">{{item.score}}分</text>
             </view>
           </view>
         </view>

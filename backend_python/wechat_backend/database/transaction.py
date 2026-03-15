@@ -79,54 +79,64 @@ def database_transaction(description: str = "数据库操作"):
 def database_readonly_transaction(description: str = "数据库查询"):
     """
     数据库只读事务上下文管理器（使用 URI 模式）
-    
+
+    【修复 - 2026-03-12】
+    - 从连接池获取连接，而不是直接创建
+
     Args:
         description: 事务描述，用于日志记录
-    
+
     Yields:
         sqlite3.Connection: 只读数据库连接对象
-    
+
     Example:
         with database_readonly_transaction("查询诊断记录") as conn:
-            cursor = conn.cursor(
+            cursor = conn.cursor()
             cursor.execute("SELECT * FROM test_records WHERE ..."
     """
     conn = None
+    pool = None
     try:
-        # 以只读模式打开数据库
-        conn = sqlite3.connect(f'file:{DB_PATH}?mode=ro', uri=True
+        # 【修复 - 2026-03-12】从连接池获取连接
+        pool = get_db_pool()
+        conn = pool.get_connection(timeout=15.0)
         
-        db_logger.info(f"[Transaction] 开始只读事务：{description}"
+        # 设置为只读模式
+        conn.execute('PRAGMA query_only=ON')
         
+        db_logger.info(f"[Transaction] 开始只读事务：{description}")
+
         yield conn
-        
-        db_logger.debug(f"[Transaction] 只读事务完成：{description}"
-        
+
+        db_logger.debug(f"[Transaction] 只读事务完成：{description}")
+
     except Exception as e:
-        db_logger.error(f"[Transaction] 只读事务失败：{description}, 错误：{e}"
+        db_logger.error(f"[Transaction] 只读事务失败：{description}, 错误：{e}")
         raise
-    
+
     finally:
-        if conn:
-            conn.close(
+        # 【修复 - 2026-03-12】归还连接到连接池
+        if conn and pool:
+            pool.return_connection(conn)
 
 
 def get_connection(readonly: bool = False):
     """
-    获取数据库连接（不自动管理事务）
-    
+    获取数据库连接（从连接池）
+
+    【修复 - 2026-03-12】
+    - 从连接池获取连接，而不是直接创建
+    - 确保连接被连接池监控和管理
+
     Args:
-        readonly: 是否只读连接
-    
+        readonly: 是否只读连接（已忽略，统一使用连接池）
+
     Returns:
         sqlite3.Connection: 数据库连接对象
     """
-    if readonly:
-        return sqlite3.connect(f'file:{DB_PATH}?mode=ro', uri=True
-    else:
-        conn = sqlite3.connect(DB_PATH
-        conn.execute('PRAGMA journal_mode=WAL'
-        return conn
+    # 【修复 - 2026-03-12】从连接池获取连接
+    pool = get_db_pool()
+    return pool.get_connection(timeout=15.0)
 
 
 # 批量操作辅助函数

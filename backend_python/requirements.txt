@@ -34,6 +34,12 @@ bcrypt>=4.0.0         # 用于密码加密
 reportlab>=4.0.0      # PDF 生成库
 xhtml2pdf>=0.2.11     # HTML to PDF 转换（支持中文）
 
+# P1-02 报告导出相关依赖包
+openpyxl>=3.1.0       # Excel 文件生成
+
+# P1-04 关键词提取相关依赖包
+jieba>=0.42.0         # 中文分词库
+
 # P2-4 消息队列相关依赖包
 celery>=5.3.0         # 异步任务队列
 kombu>=5.3.0          # Celery 消息库

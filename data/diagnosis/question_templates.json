@@ -1,0 +1,208 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-03-14",
+  "templates": [
+    {
+      "id": "tpl_001",
+      "name": "品牌知名度诊断",
+      "category": "品牌分析",
+      "industry": "通用",
+      "description": "评估品牌在目标市场中的知名度和认知度",
+      "questions": [
+        "请分析 {brand} 在消费者心中的品牌知名度如何？",
+        "{brand} 的主要品牌优势是什么？",
+        "消费者提到 {brand} 时最先想到的三个关键词是什么？",
+        "{brand} 与竞品相比，品牌认知度有何差异？",
+        "如何提升 {brand} 的市场知名度？"
+      ],
+      "tags": ["知名度", "认知度", "品牌形象"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_002",
+      "name": "竞品对比分析",
+      "category": "竞争分析",
+      "industry": "通用",
+      "description": "深度对比品牌与主要竞品的优劣势",
+      "questions": [
+        "请对比 {brand} 与竞品在产品质量方面的差异",
+        "{brand} 相比竞品有哪些独特的竞争优势？",
+        "消费者对 {brand} 和竞品的评价有何不同？",
+        "{brand} 在哪些方面落后于主要竞品？",
+        "如何制定差异化策略超越竞品？"
+      ],
+      "tags": ["竞品分析", "差异化", "竞争优势"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_003",
+      "name": "产品口碑分析",
+      "category": "产品分析",
+      "industry": "通用",
+      "description": "分析产品在市场上的口碑和用户评价",
+      "questions": [
+        "消费者对 {brand} 产品的整体评价如何？",
+        "{brand} 产品的主要优点和缺点是什么？",
+        "用户最满意 {brand} 产品的哪些功能？",
+        "用户对 {brand} 产品的主要投诉点是什么？",
+        "如何改善 {brand} 的产品口碑？"
+      ],
+      "tags": ["口碑", "用户评价", "产品质量"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_004",
+      "name": "智能锁行业诊断",
+      "category": "行业分析",
+      "industry": "智能家居",
+      "description": "针对智能锁行业的专业诊断模板",
+      "questions": [
+        "请分析 {brand} 在智能锁行业的市场地位",
+        "{brand} 智能锁的核心技术优势是什么？",
+        "消费者对智能锁安全性的关注点有哪些？",
+        "{brand} 与德施曼、小米、凯迪仕等品牌的差距在哪？",
+        "智能锁行业未来发展趋势如何？"
+      ],
+      "tags": ["智能锁", "智能家居", "安全性"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_005",
+      "name": "美妆品牌诊断",
+      "category": "行业分析",
+      "industry": "美妆护肤",
+      "description": "针对美妆护肤品牌的专业诊断模板",
+      "questions": [
+        "请分析 {brand} 在美妆市场的品牌定位",
+        "{brand} 的核心产品线和明星产品是什么？",
+        "消费者对 {brand} 护肤品的评价如何？",
+        "{brand} 与雅诗兰黛、兰蔻等国际品牌的差距？",
+        "如何提升 {brand} 在年轻消费者中的影响力？"
+      ],
+      "tags": ["美妆", "护肤", "品牌定位"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_006",
+      "name": "新能源汽车诊断",
+      "category": "行业分析",
+      "industry": "汽车出行",
+      "description": "针对新能源汽车品牌的专业诊断模板",
+      "questions": [
+        "请分析 {brand} 在新能源汽车市场的竞争力",
+        "{brand} 的核心技术和续航能力如何？",
+        "消费者对 {brand} 的充电便利性评价如何？",
+        "{brand} 与特斯拉、比亚迪、蔚来的差距在哪？",
+        "新能源汽车行业的发展趋势是什么？"
+      ],
+      "tags": ["新能源汽车", "竞争力", "续航"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_007",
+      "name": "餐饮服务诊断",
+      "category": "行业分析",
+      "industry": "餐饮美食",
+      "description": "针对餐饮品牌的专业诊断模板",
+      "questions": [
+        "请分析 {brand} 在餐饮市场的品牌认知度",
+        "{brand} 的招牌菜和特色是什么？",
+        "消费者对 {brand} 的口味和服务评价如何？",
+        "{brand} 与同品类竞品的优劣势对比？",
+        "如何提升 {brand} 的顾客满意度？"
+      ],
+      "tags": ["餐饮", "服务", "顾客满意度"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_008",
+      "name": "教育培训诊断",
+      "category": "行业分析",
+      "industry": "教育培训",
+      "description": "针对教育培训机构的专业诊断模板",
+      "questions": [
+        "请分析 {brand} 在教育培训市场的口碑",
+        "{brand} 的核心课程和教学优势是什么？",
+        "学员和家长对 {brand} 的评价如何？",
+        "{brand} 与新东方、好未来等机构的差距？",
+        "如何提升 {brand} 的教学质量？"
+      ],
+      "tags": ["教育", "培训", "教学质量"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_009",
+      "name": "电商品牌诊断",
+      "category": "行业分析",
+      "industry": "电子商务",
+      "description": "针对电商品牌的专业诊断模板",
+      "questions": [
+        "请分析 {brand} 在电商平台的销售表现",
+        "{brand} 的核心产品和价格策略如何？",
+        "消费者对 {brand} 的物流和售后评价如何？",
+        "{brand} 与同类电商品牌的竞争优势？",
+        "如何提升 {brand} 的复购率？"
+      ],
+      "tags": ["电商", "销售", "复购率"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_010",
+      "name": "数码产品诊断",
+      "category": "行业分析",
+      "industry": "数码科技",
+      "description": "针对数码产品品牌的专业诊断模板",
+      "questions": [
+        "请分析 {brand} 在数码市场的品牌影响力",
+        "{brand} 的核心技术和创新能力如何？",
+        "消费者对 {brand} 产品的性能和性价比评价？",
+        "{brand} 与华为、小米、苹果等品牌的差距？",
+        "如何提升 {brand} 在高端市场的份额？"
+      ],
+      "tags": ["数码", "科技", "创新"],
+      "usage_count": 0,
+      "is_default": true
+    },
+    {
+      "id": "tpl_011",
+      "name": "自定义诊断",
+      "category": "自定义",
+      "industry": "通用",
+      "description": "用户自定义问题，灵活配置",
+      "questions": [
+        "请介绍一下 {brand}",
+        "{brand} 的主要优势是什么？",
+        "消费者对 {brand} 的评价如何？"
+      ],
+      "tags": ["自定义", "灵活"],
+      "usage_count": 0,
+      "is_default": true
+    }
+  ],
+  "categories": [
+    "品牌分析",
+    "竞争分析",
+    "产品分析",
+    "行业分析",
+    "自定义"
+  ],
+  "industries": [
+    "通用",
+    "智能家居",
+    "美妆护肤",
+    "汽车出行",
+    "餐饮美食",
+    "教育培训",
+    "电子商务",
+    "数码科技"
+  ]
+}

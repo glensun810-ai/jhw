@@ -66,17 +66,67 @@ def get_user_test_history(
     limit: int = 20,
     offset: int = 0
 ) -> List[Dict[str, Any]]:
-    """获取用户测试历史"""
-    with get_db_connection() as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT * FROM test_records
-            WHERE user_openid = ?
-            ORDER BY test_date DESC
-            LIMIT ? OFFSET ?
-        ''', (user_openid, limit, offset))
-        return [dict(row) for row in cursor.fetchall()]
+    """
+    获取用户测试历史
+    
+    P0 修复：从 diagnosis_reports 表读取数据（而不是 test_records）
+    
+    参数:
+        user_openid: 用户 OpenID
+        limit: 每页数量 (默认 20)
+        offset: 偏移量 (默认 0)
+    
+    返回:
+        List[Dict]: 历史记录列表
+    """
+    try:
+        with get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # 从 diagnosis_reports 表读取（新架构）
+            cursor.execute('''
+                SELECT 
+                    r.id,
+                    r.execution_id,
+                    r.brand_name as brandName,
+                    r.status,
+                    r.progress,
+                    r.stage,
+                    r.is_completed as isCompleted,
+                    r.created_at as createdAt,
+                    r.completed_at as completedAt,
+                    r.error_message as errorMessage,
+                    -- 计算健康分数（从 progress 推导）
+                    CASE 
+                        WHEN r.status = 'completed' THEN 100
+                        WHEN r.status = 'failed' THEN 0
+                        ELSE r.progress
+                    END as healthScore,
+                    -- 兼容字段
+                    r.user_id as user_openid
+                FROM diagnosis_reports r
+                WHERE r.user_id = ? OR r.user_id = 'anonymous'
+                ORDER BY r.created_at DESC
+                LIMIT ? OFFSET ?
+            ''', (user_openid, limit, offset))
+            
+            records = [dict(row) for row in cursor.fetchall()]
+            
+            # 如果 diagnosis_reports 没有数据，尝试 test_records（向后兼容）
+            if not records:
+                cursor.execute('''
+                    SELECT * FROM test_records
+                    WHERE user_openid = ?
+                    ORDER BY test_date DESC
+                    LIMIT ? OFFSET ?
+                ''', (user_openid, limit, offset))
+                records = [dict(row) for row in cursor.fetchall()]
+            
+            return records
+    except Exception as e:
+        db_logger.error(f'获取用户历史失败：user_openid={user_openid}, error: {e}')
+        return []
 
 
 def get_test_record_by_id(record_id: int) -> Optional[Dict[str, Any]]:

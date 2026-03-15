@@ -3210,12 +3210,12 @@ def get_task_status_api(task_id):
 
     except Exception as e:
         api_logger.error(f'[TaskStatus] 数据库查询失败：{task_id}, 错误：{e}', exc_info=True)
-        
+
         # 降级：从 execution_store 读取
         if task_id in execution_store:
             task_status = execution_store[task_id]
-            # P0 修复：转换为 camelCase
-            return jsonify(convert_response_to_camel({
+            # 【P0 关键修复 - 2026-03-12 第 9 次】确保从 execution_store 读取时也返回 detailed_results
+            response_data = {
                 'task_id': task_id,
                 'status': task_status.get('status', 'unknown'),
                 'stage': task_status.get('stage', 'init'),
@@ -3223,7 +3223,21 @@ def get_task_status_api(task_id):
                 'is_completed': task_status.get('is_completed', False),
                 'should_stop_polling': task_status.get('status') in ['completed', 'failed'],
                 'source': 'cache'
-            })), 200
+            }
+            
+            # 【P0 关键修复】添加 detailed_results
+            detailed_results = task_status.get('detailed_results', [])
+            if detailed_results:
+                response_data['detailed_results'] = detailed_results
+                response_data['results'] = detailed_results  # 兼容旧格式
+                response_data['result_count'] = len(detailed_results)
+                api_logger.info(
+                    f"[TaskStatus-Cache] 返回数据：{task_id}, "
+                    f"detailed_results 数量={len(detailed_results)}, source=cache"
+                )
+            
+            # P0 修复：转换为 camelCase
+            return jsonify(convert_response_to_camel(response_data)), 200
 
         # P0 修复：转换为 camelCase
         return jsonify(convert_response_to_camel({

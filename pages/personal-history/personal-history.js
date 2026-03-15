@@ -42,8 +42,21 @@ Page({
     // 使用云端同步工具获取保存的结果（支持登录用户云端同步）
     getSavedResults()
       .then(searchResults => {
+        // 【L1 问题修复 - 2026-03-11】品牌名兜底处理
+        const processedResults = searchResults.map(item => {
+          const executionId = item.executionId || '';
+          const executionIdShort = executionId ? executionId.slice(-4) : '0000';
+          const brandName = item.brandName;
+          
+          // 兜底逻辑：空品牌名 → "未命名诊断 #ID 后 4 位"
+          if (!brandName || brandName.trim() === '') {
+            return { ...item, brandName: `未命名诊断 #${executionIdShort}` };
+          }
+          return item;
+        });
+        
         that.setData({
-          filteredHistory: searchResults,
+          filteredHistory: processedResults,
           isLoading: false
         });
       })

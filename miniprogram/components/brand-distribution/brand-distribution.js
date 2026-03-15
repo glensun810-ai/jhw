@@ -77,11 +77,9 @@ Component({
    */
   lifetimes: {
     attached() {
-      console.log('[BrandDistribution] Component attached');
       this._processData();
     },
     detached() {
-      console.log('[BrandDistribution] Component detached');
     }
   },
 
@@ -90,10 +88,8 @@ Component({
    */
   pageLifetimes: {
     show() {
-      console.log('[BrandDistribution] Page show');
     },
     hide() {
-      console.log('[BrandDistribution] Page hide');
     }
   },
 
@@ -106,7 +102,6 @@ Component({
      * @private
      */
     _onDataChange(newVal) {
-      console.log('[BrandDistribution] Data changed:', newVal);
       this._processData();
     },
 
@@ -149,7 +144,6 @@ Component({
         errorMessage: ''
       });
 
-      console.log('[BrandDistribution] Data processed:', chartData);
     },
 
     /**
@@ -231,7 +225,6 @@ Component({
       const { index } = event.currentTarget.dataset;
       const brand = this.data.chartData[index];
 
-      console.log('[BrandDistribution] Brand tapped:', brand);
 
       this.triggerEvent('brandTap', {
         brand: brand.name,
@@ -259,7 +252,6 @@ Component({
      * 刷新数据
      */
     refresh() {
-      console.log('[BrandDistribution] Refreshing data');
       this._processData();
     },
 
@@ -267,7 +259,6 @@ Component({
      * 导出图片
      */
     exportImage() {
-      console.log('[BrandDistribution] Export image requested');
       this.triggerEvent('exportImage', {
         chartType: this.properties.chartType,
         data: this.data.chartData

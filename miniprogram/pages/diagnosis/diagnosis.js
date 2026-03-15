@@ -294,23 +294,156 @@ Page({
    * 处理完成
    * @param {Object} result
    */
-  handleComplete(result) {
+  async handleComplete(result) {
     console.log('[DiagnosisPage] Task completed:', result);
     this.stopPolling();
 
-    // 显示成功提示
+    // 【P0 关键修复 - 2026-03-13 第 15 次】确保数据保存完成后再跳转
+    // 使用 Promise 确保异步操作完成
+    
+    try {
+      // 1. 从 result 中提取原始数据
+      const rawResults = result.detailed_results || result.results || result.data?.detailed_results || result.data?.results || [];
+
+      console.log('[DiagnosisPage] 提取的原始数据:', {
+        count: rawResults.length,
+        hasData: rawResults.length > 0
+      });
+
+      if (rawResults && rawResults.length > 0) {
+        // 2. 导入数据处理函数
+        const { generateDashboardData } = require('../../../services/brandTestService');
+
+        // 3. 生成看板数据
+        const dashboardData = generateDashboardData(rawResults, {
+          brandName: this.data.brandName || '',
+          competitorBrands: this.data.competitorBrands || []
+        });
+
+        console.log('[DiagnosisPage] 看板数据生成完成:', {
+          hasBrandDistribution: !!(dashboardData?.brandDistribution && Object.keys(dashboardData.brandDistribution).length > 0),
+          hasSentimentDistribution: !!(dashboardData?.sentimentDistribution && Object.keys(dashboardData.sentimentDistribution).length > 0),
+          keywordsCount: dashboardData?.keywords?.length || 0
+        });
+
+        // 4. 【P0 关键】保存到 globalData（使用 Promise 确保完成）
+        await this._saveToGlobalData(dashboardData, rawResults);
+
+        // 5. 【P0 关键】备份到 Storage（作为额外保障）
+        await this._backupToStorage(dashboardData, rawResults);
+
+        console.log('[DiagnosisPage] ✅ 数据保存完成');
+      } else {
+        console.warn('[DiagnosisPage] ⚠️ 没有可用的原始结果数据');
+      }
+    } catch (error) {
+      console.error('[DiagnosisPage] ❌ 数据处理失败:', error);
+      console.error('[DiagnosisPage] 错误堆栈:', error.stack);
+      
+      // 数据处理失败，显示错误提示
+      this._showDataProcessingError(error);
+      return; // 不执行跳转
+    }
+
+    // 【P0 关键修复】显示成功提示，等待用户准备后再跳转
     showToast({
       title: '诊断完成',
       icon: 'success',
-      duration: 2000
+      duration: 1500
     });
 
-    // 【修复】跳转到报告页面 v2
+    // 【P0 关键】等待提示显示完成后再跳转
     setTimeout(() => {
+      console.log('[DiagnosisPage] 跳转到报告页');
       wx.navigateTo({
         url: `/pages/report-v2/report-v2?executionId=${this.data.executionId}`
       });
     }, 1500);
+  },
+
+  /**
+   * 【P0 新增】保存到 globalData
+   */
+  async _saveToGlobalData(dashboardData, rawResults) {
+    return new Promise((resolve, reject) => {
+      try {
+        const app = getApp();
+        if (app && app.globalData) {
+          app.globalData.pendingReport = {
+            executionId: this.data.executionId,
+            dashboardData: dashboardData,
+            rawResults: rawResults,
+            timestamp: Date.now(),
+            saved: true  // 标记已保存
+          };
+          console.log('[DiagnosisPage] ✅ 数据已保存到 globalData.pendingReport');
+          resolve();
+        } else {
+          console.warn('[DiagnosisPage] ⚠️ getApp() 或 globalData 不可用');
+          reject(new Error('globalData 不可用'));
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  },
+
+  /**
+   * 【P0 新增】备份到 Storage
+   */
+  async _backupToStorage(dashboardData, rawResults) {
+    return new Promise((resolve, reject) => {
+      try {
+        wx.setStorageSync(`diagnosis_result_${this.data.executionId}`, {
+          executionId: this.data.executionId,
+          dashboardData: dashboardData,
+          rawResults: rawResults,
+          timestamp: Date.now(),
+          saved: true  // 标记已保存
+        });
+        console.log('[DiagnosisPage] ✅ 数据已备份到 Storage');
+        resolve();
+      } catch (storageErr) {
+        console.warn('[DiagnosisPage] ⚠️ Storage 备份失败:', storageErr);
+        resolve(); // 备份失败不影响主流程
+      }
+    });
+  },
+
+  /**
+   * 【P0 新增】显示数据处理错误
+   */
+  _showDataProcessingError(error) {
+    showModal({
+      title: '数据处理失败',
+      content: `诊断完成但数据处理失败：${error.message}\n\n建议：\n1. 点击"重试"重新处理数据\n2. 点击"取消"返回重新开始`,
+      showCancel: true,
+      confirmText: '重试',
+      cancelText: '取消',
+      success: (res) => {
+        if (res.confirm) {
+          // 重试逻辑
+          this._retryDataProcessing();
+        } else {
+          // 返回
+          wx.navigateBack();
+        }
+      }
+    });
+  },
+
+  /**
+   * 【P0 新增】重试数据处理
+   */
+  async _retryDataProcessing() {
+    console.log('[DiagnosisPage] 重试数据处理');
+    // 重新获取数据并处理
+    try {
+      const result = await diagnosisService.getStatus(this.data.executionId);
+      await this.handleComplete(result);
+    } catch (error) {
+      this._showDataProcessingError(error);
+    }
   },
 
   /**
@@ -376,23 +509,118 @@ Page({
 
   /**
    * 加载历史报告
-   * @param {string} reportId 
+   * @param {string} reportId - 报告 ID 或 executionId
    */
   async loadHistoryReport(reportId) {
-    console.log('[DiagnosisPage] Loading history report:', reportId);
+    console.log('[DiagnosisPage] 加载历史报告:', reportId);
+    
+    // 【死循环修复 - 2026-03-14】防止重复加载
+    if (this._isLoadingHistory) {
+      console.warn('[DiagnosisPage] ⚠️ 正在加载中，跳过重复请求');
+      return;
+    }
+    
     showLoading('加载中...');
+    this._isLoadingHistory = true;
 
     try {
-      // 这里应该调用获取历史报告的 API
-      // 暂时直接跳转到报告页面
-      wx.navigateTo({
-        url: `/pages/report/report?reportId=${reportId}`
-      });
+      // 1. 优先从本地缓存加载（P0-08 修复版 - 带 TTL 检查）
+      const cachedData = this._getHistoryReportFromCache(reportId);
+      if (cachedData && cachedData.executionId) {
+        console.log('[DiagnosisPage] ✅ 从本地缓存加载历史报告');
+
+        // 跳转到报告页，传递缓存数据
+        const app = getApp();
+        if (app && app.globalData) {
+          app.globalData.pendingReport = {
+            executionId: cachedData.executionId,
+            dashboardData: cachedData.dashboardData,
+            rawResults: cachedData.rawResults,
+            timestamp: cachedData.timestamp,
+            isHistory: true  // 标记为历史数据
+          };
+        }
+
+        hideLoading();
+        this._isLoadingHistory = false;
+        wx.navigateTo({
+          url: `/pages/report-v2/report-v2?executionId=${cachedData.executionId}`
+        });
+        return;
+      }
+
+      // 2. 从服务器加载
+      console.log('[DiagnosisPage] 从服务器加载历史报告');
+      const reportService = require('../../services/reportService').default;
+      const report = await reportService.getFullReport(reportId);
+
+      if (report && report.brandDistribution && report.brandDistribution.data) {
+        console.log('[DiagnosisPage] ✅ 服务器加载成功');
+
+        // 处理数据
+        const { generateDashboardData } = require('../../../services/brandTestService');
+        const rawResults = report.results || report.detailed_results || [];
+        const dashboardData = generateDashboardData(rawResults, {
+          brandName: report.brandName || '',
+          competitorBrands: report.competitorBrands || []
+        });
+
+        // 保存到全局变量
+        const app = getApp();
+        if (app && app.globalData) {
+          app.globalData.pendingReport = {
+            executionId: report.executionId || reportId,
+            dashboardData: dashboardData,
+            rawResults: rawResults,
+            timestamp: Date.now(),
+            isHistory: true
+          };
+          console.log('[DiagnosisPage] ✅ 数据已保存到 globalData.pendingReport');
+        }
+
+        // 缓存到本地（P0-08 修复版 - 带 TTL）
+        this._saveHistoryReportToCache(reportId, {
+          executionId: report.executionId || reportId,
+          dashboardData: dashboardData,
+          rawResults: rawResults,
+          timestamp: Date.now()
+        });
+        console.log('[DiagnosisPage] ✅ 数据已缓存到本地');
+
+        hideLoading();
+        this._isLoadingHistory = false;
+        wx.navigateTo({
+          url: `/pages/report-v2/report-v2?executionId=${report.executionId || reportId}`
+        });
+      } else {
+        console.warn('[DiagnosisPage] ⚠️ 报告数据不完整');
+        throw new Error('报告数据不完整');
+      }
     } catch (error) {
-      console.error('[DiagnosisPage] Failed to load history report:', error);
-      this.handleError(error);
-    } finally {
+      console.error('[DiagnosisPage] ❌ 加载历史报告失败:', error);
       hideLoading();
+      this._isLoadingHistory = false;
+
+      // 【死循环修复 - 2026-03-14】使用页面导航而非递归调用
+      wx.showModal({
+        title: '加载失败',
+        content: error.message || '无法加载历史报告，请稍后重试',
+        showCancel: true,
+        confirmText: '重试',
+        cancelText: '返回',
+        success: (res) => {
+          if (res.confirm) {
+            // 【修复】使用页面重新加载而非递归调用
+            const pages = getCurrentPages();
+            const currentPage = pages[pages.length - 1];
+            if (currentPage && currentPage.options && currentPage.options.reportId) {
+              currentPage.onLoad(currentPage.options);
+            }
+          } else {
+            wx.navigateBack();
+          }
+        }
+      });
     }
   },
 
@@ -542,5 +770,119 @@ Page({
     this.setData({
       showDetails: !this.data.showDetails
     });
+  },
+
+  /**
+   * 【P0-08 新增 - 2026-03-14】从缓存获取历史报告（带 TTL 检查）
+   * @param {string} reportId - 报告 ID
+   * @returns {Object|null} 缓存的数据，不存在或已过期则返回 null
+   * @private
+   */
+  _getHistoryReportFromCache(reportId) {
+    const cacheKey = `history_report_${reportId}`;
+    const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 天缓存 TTL
+
+    try {
+      const cachedData = wx.getStorageSync(cacheKey);
+      if (!cachedData) {
+        return null;
+      }
+
+      // 检查是否过期
+      const now = Date.now();
+      const cacheAge = now - cachedData.timestamp;
+
+      if (cacheAge > CACHE_TTL) {
+        console.log('[DiagnosisPage] ⏰ 缓存已过期，清理:', cacheKey);
+        wx.removeStorageSync(cacheKey);
+        return null;
+      }
+
+      // 计算剩余时间
+      const remainingTime = CACHE_TTL - cacheAge;
+      const remainingHours = Math.round(remainingTime / (1000 * 60 * 60));
+
+      console.log(
+        '[DiagnosisPage] ✅ 缓存命中:', cacheKey,
+        `剩余时间：${remainingHours}小时`
+      );
+
+      return cachedData;
+
+    } catch (error) {
+      console.error('[DiagnosisPage] ❌ 读取缓存失败:', error);
+      return null;
+    }
+  },
+
+  /**
+   * 【P0-08 新增 - 2026-03-14】保存历史报告到缓存（带 TTL 标记）
+   * @param {string} reportId - 报告 ID
+   * @param {Object} data - 要缓存的数据
+   * @private
+   */
+  _saveHistoryReportToCache(reportId, data) {
+    const cacheKey = `history_report_${reportId}`;
+    const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 天缓存 TTL
+
+    try {
+      const cacheData = {
+        ...data,
+        expiresAt: Date.now() + CACHE_TTL, // 过期时间戳
+        ttl: CACHE_TTL // TTL 毫秒数
+      };
+
+      wx.setStorageSync(cacheKey, cacheData);
+
+      const expiresAt = new Date(cacheData.expiresAt);
+      console.log(
+        '[DiagnosisPage] ✅ 缓存已保存:', cacheKey,
+        `过期时间：${expiresAt.toLocaleString('zh-CN')}`
+      );
+
+    } catch (error) {
+      console.error('[DiagnosisPage] ❌ 保存缓存失败:', error);
+    }
+  },
+
+  /**
+   * 【P0-08 新增 - 2026-03-14】清理过期历史报告缓存
+   * @private
+   */
+  _cleanupExpiredHistoryCache() {
+    const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 天缓存 TTL
+    const now = Date.now();
+    let cleanedCount = 0;
+
+    try {
+      // 获取所有缓存键
+      const info = wx.getStorageInfoSync();
+      const keys = info.keys || [];
+
+      for (const key of keys) {
+        if (key.startsWith('history_report_')) {
+          try {
+            const cachedData = wx.getStorageSync(key);
+            if (cachedData && cachedData.timestamp) {
+              const cacheAge = now - cachedData.timestamp;
+              if (cacheAge > CACHE_TTL) {
+                wx.removeStorageSync(key);
+                cleanedCount++;
+                console.log('[DiagnosisPage] 🗑️ 清理过期缓存:', key);
+              }
+            }
+          } catch (err) {
+            console.warn('[DiagnosisPage] ⚠️ 清理缓存失败:', key, err);
+          }
+        }
+      }
+
+      if (cleanedCount > 0) {
+        console.log('[DiagnosisPage] ✅ 清理完成，共清理', cleanedCount, '个过期缓存');
+      }
+
+    } catch (error) {
+      console.error('[DiagnosisPage] ❌ 清理缓存失败:', error);
+    }
   }
 });

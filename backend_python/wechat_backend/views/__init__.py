@@ -29,10 +29,7 @@ from . import analytics_views
 from . import audit_views
 from . import sync_views
 from . import diagnosis_retry_api  # M006 新增：重试 API
-from . import dashboard_api  # 2026-03-06 新增：Dashboard 看板 API
-
-# 注册 Dashboard API 路由
-dashboard_api.register_dashboard_routes(wechat_bp)
+# dashboard_api 现在使用独立的 Blueprint，在 app.py 中注册
 
 # 导出主蓝图供 app.py 使用
 __all__ = ['wechat_bp']

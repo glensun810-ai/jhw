@@ -124,9 +124,17 @@ const CURRENT_ENV = getCurrentEnv();
 // 完整的基础 URL
 const BASE_URL = CURRENT_ENV.baseURL;
 
+// 微信云开发配置
+const WECHAT_CLOUD = {
+  // 云环境 ID（从环境变量或默认值获取）
+  env: 'cloudbase-7gp7l6qu464a196a', // 默认云环境 ID
+  traceUser: true // 记录用户访问日志
+};
+
 module.exports = {
   API_ENDPOINTS,
   ENV_CONFIG,
   CURRENT_ENV,
-  BASE_URL
+  BASE_URL,
+  WECHAT_CLOUD
 };

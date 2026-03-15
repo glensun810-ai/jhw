@@ -29,6 +29,9 @@ END AS migration_status;
 -- 1. 从 test_records 迁移到 diagnosis_reports (如果旧表存在)
 -- ============================================================
 
+-- 【P0 修复 - 2026-03-11】修复：旧表 test_records 没有 execution_id 字段
+-- 使用 id 字段生成 execution_id
+
 INSERT OR IGNORE INTO diagnosis_reports (
     execution_id,
     user_id,
@@ -47,60 +50,60 @@ INSERT OR IGNORE INTO diagnosis_reports (
     server_version,
     checksum
 )
-SELECT 
-    -- execution_id: 使用 execution_id 字段或 id
-    COALESCE(execution_id, CAST(id AS TEXT)) AS execution_id,
-    
-    -- user_id: 转换为字符串
-    CAST(user_id AS TEXT) AS user_id,
-    
+SELECT
+    -- execution_id: 使用 id 生成唯一标识
+    'legacy_' || CAST(id AS TEXT) AS execution_id,
+
+    -- user_id: 从 user_openid 转换
+    COALESCE(user_openid, 'anonymous') AS user_id,
+
     -- brand_name
     COALESCE(brand_name, 'Unknown') AS brand_name,
-    
+
     -- competitor_brands: 空数组
     '[]' AS competitor_brands,
-    
+
     -- selected_models: 从 ai_models_used 转换
-    CASE 
+    CASE
         WHEN ai_models_used IS NOT NULL AND ai_models_used != ''
         THEN ai_models_used
         ELSE '[]'
     END AS selected_models,
-    
+
     -- custom_questions: 从 questions_used 转换
-    CASE 
+    CASE
         WHEN questions_used IS NOT NULL AND questions_used != ''
         THEN questions_used
         ELSE '[]'
     END AS custom_questions,
-    
+
     -- status
     'completed' AS status,
-    
+
     -- progress
     100 AS progress,
-    
+
     -- stage
     'completed' AS stage,
-    
+
     -- is_completed
     1 AS is_completed,
-    
+
     -- created_at
     COALESCE(test_date, datetime('now')) AS created_at,
-    
+
     -- updated_at
     COALESCE(test_date, datetime('now')) AS updated_at,
-    
+
     -- completed_at
     COALESCE(test_date, datetime('now')) AS completed_at,
-    
+
     -- data_schema_version
     '1.0' AS data_schema_version,
-    
+
     -- server_version
     'legacy' AS server_version,
-    
+
     -- checksum: 简单校验和
     substr(hex(randomblob(16)), 1, 32) AS checksum
 

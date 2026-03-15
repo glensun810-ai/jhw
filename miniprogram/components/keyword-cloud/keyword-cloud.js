@@ -92,11 +92,9 @@ Component({
    */
   lifetimes: {
     attached() {
-      console.log('[KeywordCloud] Component attached');
       this._processData();
     },
     detached() {
-      console.log('[KeywordCloud] Component detached');
     }
   },
 
@@ -109,7 +107,6 @@ Component({
      * @private
      */
     _onDataChange(newVal) {
-      console.log('[KeywordCloud] Data changed, count:', newVal?.length);
       this._processData();
     },
 
@@ -150,7 +147,6 @@ Component({
         errorMessage: ''
       });
 
-      console.log('[KeywordCloud] Data processed, keywords:', filtered.length);
     },
 
     /**
@@ -332,7 +328,6 @@ Component({
       const { index } = event.currentTarget.dataset;
       const keyword = this.data.processedKeywords[index];
 
-      console.log('[KeywordCloud] Keyword tapped:', keyword);
 
       this.setData({ selectedKeyword: keyword });
 
@@ -374,7 +369,6 @@ Component({
      * 刷新数据
      */
     refresh() {
-      console.log('[KeywordCloud] Refreshing data');
       this._processData();
     },
 
@@ -382,7 +376,6 @@ Component({
      * 导出词云图片
      */
     exportImage() {
-      console.log('[KeywordCloud] Export image requested');
       this.triggerEvent('exportImage', {
         keywords: this.data.processedKeywords,
         stats: this.data.stats

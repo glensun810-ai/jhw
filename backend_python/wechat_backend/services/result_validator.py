@@ -68,17 +68,19 @@ class RetryConfig:
         timeout: 总超时时间（秒）
         retryable_errors: 可重试的错误类型列表
     """
-    max_retries: int = 3
-    base_delay: float = 0.1  # 100ms
-    max_delay: float = 2.0   # 2s
+    max_retries: int = 10  # 【P0 关键修复 - 2026-03-12 第 5 次】从 3 增加到 10，确保 WAL 可见性
+    base_delay: float = 0.2  # 【P0 关键修复】从 100ms 增加到 200ms
+    max_delay: float = 3.0   # 【P0 关键修复】从 2 秒增加到 3 秒
     exponential_base: float = 2.0
     jitter: float = 0.1      # 10% 抖动
-    timeout: float = 10.0    # 10 秒总超时
+    timeout: float = 30.0    # 【P0 关键修复】从 10 秒增加到 30 秒
     retryable_errors: List[str] = field(default_factory=lambda: [
         'database_locked',
         'timeout',
         'connection_error',
         'visibility_delay',
+        '数据库锁定',
+        '数据可见性',
     ])
 
 

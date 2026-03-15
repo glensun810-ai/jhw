@@ -71,7 +71,7 @@
     </view>
   </view>
 
-  <!-- 搜索和筛选栏 - 产品架构优化版 -->
+  <!-- 搜索和筛选栏 - 2026-03-13 UI 优化（大师版） -->
   <view class="filter-section" wx:if="{{!batchMode}}">
     <view class="search-bar">
       <view class="search-input-wrapper">
@@ -84,20 +84,16 @@
           confirm-type="search"
         />
       </view>
-      <view class="filter-actions">
-        <button class="filter-btn" bindtap="toggleFilterPanel">
-          <text class="icon">☰</text>
-          <text class="btn-text">筛选</text>
-        </button>
-        <button class="filter-btn {{showSortMenu ? 'active' : ''}}" bindtap="toggleSortMenu">
-          <text class="icon">⇅</text>
-          <text class="btn-text">排序</text>
-        </button>
-        <button class="filter-btn export-btn" bindtap="showExportMenu">
-          <text class="icon">📥</text>
-          <text class="btn-text">导出</text>
-        </button>
-      </view>
+    </view>
+    <view class="filter-actions">
+      <button class="filter-btn" bindtap="toggleFilterPanel">
+        <text class="icon">☰</text>
+        <text class="btn-text">筛选</text>
+      </button>
+      <button class="filter-btn {{showSortMenu ? 'active' : ''}}" bindtap="toggleSortMenu">
+        <text class="icon">⇅</text>
+        <text class="btn-text">排序</text>
+      </button>
     </view>
 
     <!-- 筛选条件标签 -->
@@ -291,47 +287,47 @@
           </view>
         </view>
         
-        <!-- 卡片内容 -->
+        <!-- 卡片内容 - 2026-03-13 专业版 -->
         <view class="card-content">
-          <view class="card-left">
-            <view class="brand-info">
+          <view class="card-main">
+            <view class="brand-row">
               <text class="brand-name">{{item.brandName}}</text>
               <view class="status-tag {{item.status}}">
                 {{item.status === 'completed' ? '已完成' : (item.status === 'failed' ? '失败' : '处理中')}}
               </view>
             </view>
-            <text class="test-time">{{item.formattedTime}}</text>
+            <view class="info-row">
+              <view class="score-section">
+                <text class="score-label">综合评分</text>
+                <text class="score-value {{item.scoreLevel}}">{{item.overallScore}}</text>
+              </view>
+              <view class="divider"></view>
+              <view class="meta-section">
+                <text class="meta-item">
+                  <text class="meta-icon">🆔</text>
+                  <text>{{item.executionId ? item.executionId.slice(-6) : '0000'}}</text>
+                </text>
+                <text class="meta-divider">·</text>
+                <text class="meta-item">
+                  <text class="meta-icon">🕐</text>
+                  <text>{{item.formattedTime}}</text>
+                </text>
+              </view>
+            </view>
           </view>
-          
-          <view class="card-right">
-            <view class="score-wrapper">
-              <text class="score-num {{item.scoreLevel}}">{{item.overallScore}}</text>
-              <text class="score-label">分</text>
-            </view>
-            <view class="card-actions" wx:if="{{!batchMode}}">
-              <!-- 收藏按钮 -->
-              <button 
-                class="action-btn favorite-btn {{item.isFavorited ? 'favorited' : ''}}" 
-                bindtap="toggleFavorite"
-                data-execution-id="{{item.executionId}}"
-                data-brand-name="{{item.brandName}}"
-                data-is-favorited="{{item.isFavorited}}"
-              >
-                <text class="btn-icon">★</text>
-              </button>
-              <!-- 详情按钮 -->
-              <button class="action-btn" bindtap="viewReportDetail" data-execution-id="{{item.executionId}}" data-brand-name="{{item.brandName}}">
-                <text class="btn-icon">📄</text>
-              </button>
-              <!-- 删除按钮 -->
-              <button class="action-btn" bindtap="onDeleteReport"
-                data-execution-id="{{item.executionId}}"
-                data-report-id="{{item.id}}"
-                data-index="{{index}}"
-              >
-                <text class="btn-icon delete">🗑️</text>
-              </button>
-            </view>
+          <view class="card-actions" wx:if="{{!batchMode}}">
+            <button
+              class="action-icon-btn {{item.isFavorited ? 'favorited' : ''}}"
+              bindtap="toggleFavorite"
+              data-execution-id="{{item.executionId}}"
+              data-brand-name="{{item.brandName}}"
+              data-is-favorited="{{item.isFavorited}}"
+            >
+              <text class="action-icon">{{item.isFavorited ? '★' : '☆'}}</text>
+            </button>
+            <button class="action-icon-btn more-btn" bindtap="showActionMenu" data-execution-id="{{item.executionId}}" data-brand-name="{{item.brandName}}" data-index="{{index}}">
+              <text class="action-icon">⋮</text>
+            </button>
           </view>
         </view>
       </view>

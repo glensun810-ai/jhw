@@ -335,8 +335,9 @@ class AIAdapterFactory:
         Create an instance of an AI adapter for the specified platform
         If api_key is not provided, attempts to load from environment variables
         If model_name is not provided, uses platform-specific default
-        
-        For Doubao platform, uses DoubaoPriorityAdapter for automatic model selection
+
+        【P0 修复 - 2026-03-11】尊重用户选择
+        只有用户选择了豆包，才使用豆包优先级适配器
         """
         if isinstance(platform_type, str):
             # 先将输入名称通过 MODEL_NAME_MAP 转换
@@ -366,19 +367,36 @@ class AIAdapterFactory:
             from wechat_backend.config_manager import config_manager
             model_name = config_manager.get_platform_model(platform_type.value) or f"default-{platform_type.value}-model"
 
-        # 特殊处理：豆包平台使用优先级适配器
+        # 【P0 修复 - 2026-03-11】特殊处理：豆包平台使用优先级适配器
+        # 只有用户选择了豆包（model_name 为豆包模型），才使用豆包优先级适配器
         if platform_type == AIPlatformType.DOUBAO and DoubaoPriorityAdapter:
             # 检查是否配置了优先级模型
             from config import Config
             priority_models = Config.get_doubao_priority_models()
-            
+
+            # 【P0 修复】只有同时满足以下条件，才使用豆包优先级适配器：
+            # 1. 配置了优先级模型列表
+            # 2. 启用了自动选择功能
+            # 3. model_name 是豆包优先级模型之一（说明用户选择了豆包）
             if priority_models and Config.is_doubao_auto_select():
-                # 使用优先级适配器（自动选择可用模型）
-                api_logger.info(f"[Factory] 使用豆包优先级适配器，模型列表：{priority_models}")
-                return DoubaoPriorityAdapter(api_key, model_name, **kwargs)
-        
+                # 检查 model_name 是否在优先级模型列表中
+                is_priority_model = model_name in priority_models
+                
+                if is_priority_model:
+                    # 用户选择了豆包，使用优先级适配器（自动选择可用模型）
+                    api_logger.info(
+                        f"[Factory] ✅ 用户选择了豆包，使用豆包优先级适配器，模型列表：{priority_models}"
+                    )
+                    return DoubaoPriorityAdapter(api_key, model_name, **kwargs)
+                else:
+                    # 用户未选择豆包优先级模型，使用普通豆包适配器
+                    api_logger.info(
+                        f"[Factory] ⚠️ 用户未选择豆包优先级模型 (model={model_name})，使用普通豆包适配器"
+                    )
+
         # 使用普通适配器
         adapter_class = cls._adapters[platform_type]
+        api_logger.debug(f"[Factory] 使用普通适配器：{platform_type.value}, model={model_name}")
         return adapter_class(api_key, model_name, **kwargs)
 
 api_logger.info("=== Adapter Registration Debug Info ===")

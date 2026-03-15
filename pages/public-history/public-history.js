@@ -36,8 +36,22 @@ Page({
   loadPublicHistory: function() {
     try {
       const publicHistory = getPublicHistory();
+      
+      // 【L1 问题修复 - 2026-03-11】品牌名兜底处理
+      const processedHistory = publicHistory.map(item => {
+        const executionId = item.executionId || '';
+        const executionIdShort = executionId ? executionId.slice(-4) : '0000';
+        const brandName = item.brandName;
+        
+        // 兜底逻辑：空品牌名 → "未命名诊断 #ID 后 4 位"
+        if (!brandName || brandName.trim() === '') {
+          return { ...item, brandName: `未命名诊断 #${executionIdShort}` };
+        }
+        return item;
+      });
+      
       this.setData({
-        filteredHistory: publicHistory
+        filteredHistory: processedHistory
       });
     } catch (e) {
       console.error('加载公共历史记录失败', e);

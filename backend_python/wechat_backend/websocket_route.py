@@ -14,6 +14,7 @@ P1-3 修复：WebSocket 实时推送前端集成
 
 import asyncio
 import json
+import websockets
 from datetime import datetime
 from wechat_backend.v2.services.websocket_service import get_websocket_service
 from wechat_backend.logging_config import api_logger, app_logger
@@ -52,8 +53,8 @@ async def handle_websocket_connection(websocket, path=None):
         
         # 注册连接
         ws_service = get_websocket_service()
-        await ws_service.register_connection(websocket, execution_id)
-        
+        await ws_service.register(execution_id, websocket)
+
         api_logger.info(
             f"[WebSocket] 新连接：{execution_id}, 类型={client_type}"
         )
@@ -99,7 +100,7 @@ async def handle_websocket_connection(websocket, path=None):
         # 清理连接
         if execution_id:
             ws_service = get_websocket_service()
-            await ws_service.unregister_connection(websocket, execution_id)
+            await ws_service.unregister(execution_id, websocket)
             api_logger.info(f"[WebSocket] 连接清理：{execution_id}")
 
 

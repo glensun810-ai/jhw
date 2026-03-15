@@ -154,14 +154,24 @@ Page({
         const localHistory = getDiagnosisHistory() || [];
         historyList = localHistory;
         totalCount = localHistory.length;
-        
+
         console.log(`[历史记录] 从本地存储加载 ${localHistory.length} 条记录`);
+
+        // 【L2/L3/L4 调试】打印第一条记录的品牌名
+        if (localHistory.length > 0) {
+          console.log('[历史记录] 第一条记录:', {
+            executionId: localHistory[0].executionId,
+            brandName: localHistory[0].brandName,
+            brand_name: localHistory[0].brand_name
+          });
+        }
       } catch (localError) {
         console.warn('[历史记录] 本地存储加载失败，尝试从 API 加载:', localError);
       }
 
-      // 如果没有本地数据，尝试从 API 加载
+      // 【P21 修复 - 2026-03-15】如果没有本地数据，尝试从 API 加载
       if (historyList.length === 0) {
+        console.log('[历史记录] 本地数据为空，开始从 API 加载...');
         try {
           // 构建 API 请求参数
           const params = {
@@ -178,10 +188,18 @@ Page({
             params.status = filterStatus;
           }
 
+          console.log('[历史记录] API 请求参数:', params);
+
           // 调用 API
           const result = await getTestHistory(params);
-          const reports = result.reports || result.data || [];
+          console.log('[历史记录] API 返回结果:', result);
           
+          // 【P21 修复 - 2026-03-15】修复字段名不匹配问题
+          // API 返回格式：{status: 'success', history: [...], count: 20}
+          // 原代码访问：result.reports || result.data → 错误！
+          const reports = result.history || result.reports || result.data || [];
+          console.log('[历史记录] 提取 reports:', reports.length, '条');
+
           // 处理数据
           historyList = reports.map(report => ({
             ...report,
@@ -192,37 +210,46 @@ Page({
             overallScore: report.overall_score || report.overallScore || 0,
             status: report.status || 'completed'
           }));
-          
+
           totalCount = result.total || result.pagination?.total || historyList.length;
-          
-          console.log(`[历史记录] 从 API 加载 ${historyList.length} 条记录`);
+
+          console.log(`[历史记录] 从 API 加载 ${historyList.length} 条记录，totalCount=${totalCount}`);
         } catch (apiError) {
           console.error('[历史记录] API 加载失败:', apiError);
+          console.error('[历史记录] 错误堆栈:', apiError.stack);
         }
+      } else {
+        console.log('[历史记录] 使用本地数据，不从 API 加载');
       }
 
       // 【产品架构优化 - 2026-03-10】获取收藏列表
       const favorites = wx.getStorageSync('favorites') || [];
 
       // 处理数据
-      const processedReports = historyList.map(report => ({
-        ...report,
-        // 确保字段一致性
-        id: report.id || report.reportId,
-        executionId: report.execution_id || report.executionId,
-        brandName: report.brand_name || report.brandName,
-        createdAt: report.created_at || report.createdAt,
-        overallScore: report.overall_score || report.overallScore || 0,
-        status: report.status || 'completed',
-        // 计算得分等级
-        scoreLevel: this.calculateScoreLevel(report.overall_score || report.overallScore || 0),
-        // 格式化时间
-        formattedTime: this.formatTime(report.created_at || report.createdAt),
-        // 短日期显示
-        shortDate: this.formatShortDate(report.created_at || report.createdAt),
-        // 【产品架构优化 - 2026-03-10】添加收藏状态标记
-        isFavorited: favorites.some(f => f.executionId === (report.execution_id || report.executionId))
-      }));
+      const processedReports = historyList.map(report => {
+        // 获取 executionId 用于兜底品牌名
+        const executionId = report.execution_id || report.executionId || '';
+        
+        return {
+          ...report,
+          // 确保字段一致性
+          id: report.id || report.reportId,
+          executionId: executionId,
+          // 【L1 问题修复 - 2026-03-11】使用统一兜底函数处理品牌名
+          brandName: this.getBrandName(report),
+          createdAt: report.created_at || report.createdAt,
+          overallScore: report.overall_score || report.overallScore || 0,
+          status: report.status || 'completed',
+          // 计算得分等级
+          scoreLevel: this.calculateScoreLevel(report.overall_score || report.overallScore || 0),
+          // 格式化时间
+          formattedTime: this.formatTime(report.created_at || report.createdAt),
+          // 短日期显示
+          shortDate: this.formatShortDate(report.created_at || report.createdAt),
+          // 【产品架构优化 - 2026-03-10】添加收藏状态标记
+          isFavorited: favorites.some(f => f.executionId === executionId)
+        };
+      });
 
       // 更新数据
       const historyListData = currentPage === 1
@@ -332,6 +359,34 @@ Page({
     if (score >= 80) return 'excellent';
     if (score >= 60) return 'good';
     return 'poor';
+  },
+
+  /**
+   * 【L1 问题修复 - 2026-03-11】获取品牌名（带兜底逻辑）
+   * 确保品牌名永不为空，用于列表展示和搜索筛选
+   * @param {Object} report - 报告对象
+   * @returns {String} 品牌名（兜底后）
+   */
+  getBrandName(report) {
+    const brandName = report.brand_name || report.brandName;
+    const executionId = report.execution_id || report.executionId || '';
+    const executionIdShort = executionId ? executionId.slice(-4) : '0000';
+    
+    // 调试日志
+    console.log('[getBrandName] 输入 report:', {
+      brand_name: report.brand_name,
+      brandName: report.brandName,
+      executionId: executionId
+    });
+    
+    // 兜底逻辑：空品牌名/空字符串 → "未命名诊断 #ID 后 4 位"
+    if (!brandName || brandName.trim() === '') {
+      const result = `未命名诊断 #${executionIdShort}`;
+      console.log('[getBrandName] 使用兜底逻辑:', result);
+      return result;
+    }
+    console.log('[getBrandName] 使用原始品牌名:', brandName);
+    return brandName;
   },
 
   /**
@@ -1155,5 +1210,49 @@ Page({
    */
   createNewDiagnosis() {
     navigationService.navigateToHome();
+  },
+
+  /**
+   * 显示操作菜单 - 2026-03-13 UI 优化
+   */
+  showActionMenu: function(e) {
+    const { executionId, brandName, index } = e.currentTarget.dataset;
+
+    wx.showActionSheet({
+      itemList: ['查看报告', '分享报告', '导出 PDF', '删除记录'],
+      itemColor: '#e8e8e8',
+      success: (res) => {
+        switch (res.tapIndex) {
+          case 0: // 查看报告
+            this.viewReportDetail({
+              currentTarget: {
+                dataset: { executionId, brandName }
+              }
+            });
+            break;
+          case 1: // 分享报告
+            this.onShareReport({
+              currentTarget: {
+                dataset: { brandName }
+              }
+            });
+            break;
+          case 2: // 导出 PDF
+            this.onExportReport({
+              currentTarget: {
+                dataset: { executionId, brandName }
+              }
+            });
+            break;
+          case 3: // 删除记录
+            this.onDeleteReport({
+              currentTarget: {
+                dataset: { executionId, index }
+              }
+            });
+            break;
+        }
+      }
+    });
   }
 });

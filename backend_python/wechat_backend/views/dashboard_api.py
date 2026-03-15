@@ -11,7 +11,7 @@ Dashboard API 模块 - 品牌诊断报告看板数据
 版本：1.0.0
 """
 
-from flask import request, jsonify, g
+from flask import Blueprint, request, jsonify, g
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -164,19 +164,14 @@ def enrich_dashboard_with_brand_analysis(dashboard_data: dict, execution_id: str
 
 # ==================== Dashboard API 路由 ====================
 
-def register_dashboard_routes(wechat_bp):
-    """
-    注册 Dashboard API 路由
-    
-    Args:
-        wechat_bp: Flask Blueprint
-    """
-    
-    @wechat_bp.route('/api/dashboard/aggregate', methods=['GET'])
-    @require_auth_optional
-    @rate_limit(limit=30, window=60, per='endpoint')
-    @monitored_endpoint('/api/dashboard/aggregate', require_auth=False, validate_inputs=True)
-    def get_dashboard_aggregate():
+# 创建独立的 Blueprint
+dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/api/dashboard')
+
+@dashboard_bp.route('/aggregate', methods=['GET'])
+@require_auth_optional
+@rate_limit(limit=30, window=60, per='endpoint')
+@monitored_endpoint('/api/dashboard/aggregate', require_auth=False, validate_inputs=True)
+def get_dashboard_aggregate():
         """
         获取 Dashboard 聚合数据 (增强版 - P0 级空缺修复)
 

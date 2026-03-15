@@ -7,7 +7,7 @@
 /**
  * 特性开关配置
  */
-export const FeatureFlags = {
+const FeatureFlags = {
   // 诊断相关
   diagnosis: {
     useNewPolling: true,        // 使用新的轮询机制
@@ -37,10 +37,10 @@ export const FeatureFlags = {
  * @param {string} featurePath - 功能路径（如 'diagnosis.useNewPolling'）
  * @returns {boolean} 是否启用
  */
-export function isFeatureEnabled(featurePath) {
+function isFeatureEnabled(featurePath) {
   const parts = featurePath.split('.');
   let current = FeatureFlags;
-  
+
   for (const part of parts) {
     if (current[part] === undefined) {
       console.warn(`Feature flag not found: ${featurePath}`);
@@ -48,7 +48,7 @@ export function isFeatureEnabled(featurePath) {
     }
     current = current[part];
   }
-  
+
   return current === true;
 }
 
@@ -57,7 +57,7 @@ export function isFeatureEnabled(featurePath) {
  * @param {string} userId - 用户 ID
  * @returns {boolean} 是否在灰度中
  */
-export function isUserInGray(userId) {
+function isUserInGray(userId) {
   // 检查是否在灰度名单
   if (FeatureFlags.gray.users.includes(userId)) {
     return true;
@@ -87,7 +87,7 @@ function hashCode(str) {
  * 获取特性开关配置（用于调试）
  * @returns {Object} 特性开关配置
  */
-export function getFeatureFlags() {
+function getFeatureFlags() {
   return { ...FeatureFlags };
 }
 
@@ -96,7 +96,7 @@ export function getFeatureFlags() {
  * @param {string} featurePath - 功能路径
  * @param {any} value - 新值
  */
-export function setFeatureFlag(featurePath, value) {
+function setFeatureFlag(featurePath, value) {
   if (!FeatureFlags.debug.enableLogging) {
     console.warn('Cannot modify feature flags in production mode');
     return;
@@ -104,7 +104,7 @@ export function setFeatureFlag(featurePath, value) {
 
   const parts = featurePath.split('.');
   let current = FeatureFlags;
-  
+
   for (let i = 0; i < parts.length - 1; i++) {
     if (current[parts[i]] === undefined) {
       console.warn(`Feature flag path not found: ${featurePath}`);
@@ -112,9 +112,19 @@ export function setFeatureFlag(featurePath, value) {
     }
     current = current[parts[i]];
   }
-  
+
   const lastPart = parts[parts.length - 1];
   current[lastPart] = value;
-  
+
   console.log(`Feature flag updated: ${featurePath} = ${value}`);
 }
+
+// 导出（CommonJS 语法，兼容微信小程序）
+module.exports = {
+  FeatureFlags,
+  isFeatureEnabled,
+  isUserInGray,
+  getFeatureFlags,
+  setFeatureFlag,
+  hashCode
+};

@@ -35,32 +35,49 @@ def run_migration(migration_file: str) -> dict:
     print(f"\n{'='*60}")
     print(f"执行迁移：{migration_file}")
     print('='*60)
-    
+
     conn = get_connection()
     cursor = conn.cursor()
-    
+
     try:
         # 读取 SQL 文件
         with open(os.path.join(MIGRATIONS_DIR, migration_file), 'r', encoding='utf-8') as f:
             sql_script = f.read()
-        
+
+        # 【P0 修复 - 2026-03-11】检查是否是添加字段的迁移，如果是则先检查字段是否存在
+        if '005_add_geo_data_field' in migration_file:
+            cursor.execute("""
+                SELECT COUNT(*) FROM PRAGMA_TABLE_INFO('diagnosis_results')
+                WHERE name = 'geo_data'
+            """)
+            exists = cursor.fetchone()[0]
+            if exists > 0:
+                print("ℹ️  geo_data 字段已存在，跳过此迁移")
+                return {'status': 'skipped', 'file': migration_file, 'reason': 'Field already exists'}
+
         # 执行 SQL
         cursor.executescript(sql_script)
         conn.commit()
-        
+
         # 获取结果
         cursor.execute("SELECT '✅ 迁移成功' AS status")
         result = cursor.fetchone()
-        
+
         print(f"结果：{result[0]}")
-        
+
         return {'status': 'success', 'file': migration_file}
-        
+
     except Exception as e:
         conn.rollback()
+        error_msg = str(e)
+        # 【P0 修复】如果是"duplicate column"错误，认为迁移已成功（字段已存在）
+        if 'duplicate column' in error_msg.lower():
+            print(f"ℹ️  字段已存在，跳过此迁移")
+            return {'status': 'skipped', 'file': migration_file, 'reason': error_msg}
+
         print(f"❌ 迁移失败：{e}")
-        return {'status': 'error', 'file': migration_file, 'error': str(e)}
-        
+        return {'status': 'error', 'file': migration_file, 'error': error_msg}
+
     finally:
         conn.close()
 

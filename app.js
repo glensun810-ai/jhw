@@ -13,6 +13,9 @@ App({
   onLaunch: function () {
     console.log('应用启动');
 
+    // 初始化微信云开发
+    this.initWeChatCloud();
+
     // 初始化页面过渡动画系统
     this.initPageTransition();
 
@@ -47,6 +50,25 @@ App({
       console.log('✅ 页面状态管理已初始化');
     } catch (error) {
       console.error('❌ 页面状态管理初始化失败:', error);
+    }
+  },
+
+  /**
+   * 初始化微信云开发
+   * 必须在调用云函数前调用
+   */
+  initWeChatCloud: function() {
+    try {
+      const config = require('./utils/config');
+      const cloudEnv = config.WECHAT_CLOUD?.env || 'cloudbase-7gp7l6qu464a196a';
+      
+      wx.cloud.init({
+        env: cloudEnv,
+        traceUser: true // 记录用户访问日志
+      });
+      console.log('✅ 微信云开发已初始化，环境 ID:', cloudEnv);
+    } catch (error) {
+      console.error('❌ 微信云开发初始化失败:', error);
     }
   },
 

@@ -32,23 +32,32 @@ const API_BASE_URL = (function() {
     console.log('[配置] 使用环境变量 API_BASE_URL:', process.env.API_BASE_URL);
     return process.env.API_BASE_URL;
   }
-  
-  // 2. 使用云函数配置（config 集合）
-  // 注意：需要在云开发控制台创建 config 集合，并添加文档 { _id: 'system', apiBaseUrl: 'xxx' }
-  // 由于云函数初始化时无法异步获取，这里使用硬编码的生产环境配置
-  // 生产环境配置 - 请根据实际部署域名修改
-  const PRODUCTION_API_URL = 'https://api.your-domain.com';  // TODO: 替换为实际生产域名
-  
-  // 3. 开发环境配置
-  const DEVELOPMENT_API_URL = 'http://localhost:5001';
-  
-  // 根据云函数环境判断使用哪个配置
+
+  // 2. 根据云函数环境判断使用哪个配置
   const env = process.env.WX_CONTEXT_ENV_ID || 'production';
+  
+  // 开发/测试环境：使用本地后端
   if (env.includes('dev') || env.includes('test')) {
+    // 注意：微信小程序云函数无法访问本地 localhost
+    // 需要使用 ngrok 或其他内网穿透工具
+    const DEVELOPMENT_API_URL = process.env.DEV_API_URL || 'https://your-ngrok-url.ngrok.io';
     console.log('[配置] 开发环境:', DEVELOPMENT_API_URL);
     return DEVELOPMENT_API_URL;
   }
   
+  // 生产环境：使用实际部署的后端地址
+  // 【重要】请替换为你的实际后端地址
+  const PRODUCTION_API_URL = process.env.PROD_API_URL || 'https://api.your-actual-domain.com';
+  
+  // 检查是否是占位符
+  if (PRODUCTION_API_URL.includes('your-domain') || 
+      PRODUCTION_API_URL.includes('example.com')) {
+    console.error('[配置错误] API_BASE_URL 使用占位符，请配置实际后端地址！');
+    console.error('[配置错误] 请在云函数控制台设置环境变量 PROD_API_URL');
+    // 返回一个会失败的地址，让用户知道配置有问题
+    return 'https://api-config-not-set.example.com';
+  }
+
   console.log('[配置] 生产环境:', PRODUCTION_API_URL);
   return PRODUCTION_API_URL;
 })();
@@ -88,12 +97,13 @@ if (!isConfigValid) {
  * 云函数入口函数
  * @param {Object} event - 触发事件
  * @param {string} event.executionId - 执行 ID
+ * @param {boolean} event.isHistory - 是否为历史报告查询（可选）
  * @returns {Promise<Object>} 报告数据或错误信息
  */
 exports.main = async (event, context) => {
-  const { executionId } = event;
+  const { executionId, isHistory } = event;
 
-  console.log('[getDiagnosisReport] 开始获取报告，executionId:', executionId);
+  console.log('[getDiagnosisReport] 开始获取报告，executionId:', executionId, 'isHistory:', isHistory);
 
   if (!executionId) {
     console.error('[getDiagnosisReport] 缺少执行 ID');
@@ -108,9 +118,17 @@ exports.main = async (event, context) => {
     // 使用 axios 调用后端 API
     const axios = require('axios');
 
-    console.log('[getDiagnosisReport] 调用后端 API:', `${API_BASE_URL}/api/diagnosis/report/${executionId}`);
+    // 根据 isHistory 参数选择不同 API 端点
+    let apiUrl;
+    if (isHistory) {
+      apiUrl = `${API_BASE_URL}/api/diagnosis/report/${executionId}/history`;
+      console.log('[getDiagnosisReport] 获取历史报告 API:', apiUrl);
+    } else {
+      apiUrl = `${API_BASE_URL}/api/diagnosis/report/${executionId}`;
+      console.log('[getDiagnosisReport] 获取完整报告 API:', apiUrl);
+    }
 
-    const response = await axios.get(`${API_BASE_URL}/api/diagnosis/report/${executionId}`, {
+    const response = await axios.get(apiUrl, {
       timeout: 30000,  // 30 秒超时
       headers: {
         'Content-Type': 'application/json',

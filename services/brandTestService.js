@@ -279,9 +279,15 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
         // 连接错误，降级到轮询
         console.warn('[WebSocket] ⚠️ 连接失败，降级到轮询:', error);
 
+        // 【P0 关键修复 - 2026-03-11】检查轮询是否已在运行，防止重复启动
+        if (pollingInstance && pollingInstance.isActive) {
+          console.warn('[onError] ⚠️ 轮询已在运行中，跳过重复启动');
+          return;
+        }
+
         // 【P0 关键修复 - 2026-03-05】重置诊断中标志
         isDiagnosing = false;
-        pollingInstance = null;
+        // 【P0 关键修复 - 2026-03-11】不要在这里清除 pollingInstance，让 createPollingController 处理
 
         // 启动 HTTP 轮询
         const pollingController = createPollingController(
@@ -291,10 +297,17 @@ const startDiagnosis = async (inputData, onProgress, onComplete, onError) => {
 
       onFallback: () => {
         console.log('[WebSocket] 降级到轮询模式');
+
+        // 【P0 关键修复 - 2026-03-11】检查轮询是否已在运行，防止重复启动
+        if (pollingInstance && pollingInstance.isActive) {
+          console.warn('[onFallback] ⚠️ 轮询已在运行中，跳过重复启动');
+          return;
+        }
+
         // 【P0 关键修复 - 2026-03-05】重置诊断中标志
         isDiagnosing = false;
-        pollingInstance = null;
-        
+        // 【P0 关键修复 - 2026-03-11】不要在这里清除 pollingInstance
+
         // 启动轮询
         const pollingController = createPollingController(
           executionId, onProgress, onComplete, onError
@@ -1066,21 +1079,41 @@ const createUserFriendlyError = (errorInfo) => {
  * 生成战略看板数据
  */
 const generateDashboardData = (processedReportData, pageContext) => {
+  console.log('[generateDashboardData] ========== 开始生成看板数据 ==========');
+  console.log('[generateDashboardData] 输入参数:', {
+    isArray: Array.isArray(processedReportData),
+    isObject: processedReportData && typeof processedReportData === 'object',
+    keys: processedReportData ? Object.keys(processedReportData) : [],
+    pageContext: pageContext
+  });
+
   try {
     let rawResults = null;
 
     if (Array.isArray(processedReportData)) {
       rawResults = processedReportData;
+      console.log('[generateDashboardData] 输入是数组，长度:', rawResults.length);
     } else if (processedReportData && typeof processedReportData === 'object') {
-      rawResults = processedReportData.detailed_results
-        || processedReportData.results
-        || processedReportData.data?.detailed_results
-        || processedReportData.data?.results
-        || [];
+      // P0 修复 - 2026-03-11: 兼容 camelCase 和 snake_case
+      rawResults = processedReportData.detailedResults  // camelCase
+                || processedReportData.detailed_results  // snake_case
+                || processedReportData.results
+                || processedReportData.data?.detailedResults
+                || processedReportData.data?.detailed_results
+                || processedReportData.data?.results
+                || [];
+      console.log('[generateDashboardData] 输入是对象，提取后的 rawResults 长度:', rawResults ? rawResults.length : 0);
     }
+
+    console.log('[generateDashboardData] rawResults:', {
+      isArray: Array.isArray(rawResults),
+      length: rawResults ? rawResults.length : 'null',
+      firstItem: rawResults && rawResults.length > 0 ? JSON.stringify(rawResults[0]).substring(0, 100) + '...' : 'none'
+    });
 
     if (!rawResults || rawResults.length === 0) {
       console.warn('[generateDashboardData] ⚠️ 没有可用的原始结果数据');
+      console.warn('[generateDashboardData] 调用位置:', new Error().stack);
       return {
         _error: 'NO_DATA',
         errorMessage: '没有可用的诊断结果数据',
@@ -1102,16 +1135,75 @@ const generateDashboardData = (processedReportData, pageContext) => {
     const brandName = pageContext?.brandName || '';
     const competitors = pageContext?.competitorBrands || [];
 
+    console.log('[generateDashboardData] 调用 aggregateReport:', {
+      brandName,
+      competitors,
+      resultsCount: rawResults.length
+    });
+
     const additionalData = {
-      semantic_drift_data: processedReportData?.semantic_drift_data || null,
-      recommendation_data: processedReportData?.recommendation_data || null,
-      negative_sources: processedReportData?.negative_sources || null,
-      competitive_analysis: processedReportData?.competitive_analysis || null
+      semantic_drift_data: processedReportData?.semantic_drift_data || processedReportData?.semanticDriftData || null,
+      recommendation_data: processedReportData?.recommendation_data || processedReportData?.recommendationData || null,
+      negative_sources: processedReportData?.negative_sources || processedReportData?.negativeSources || null,
+      competitive_analysis: processedReportData?.competitive_analysis || processedReportData?.competitiveAnalysis || null
     };
 
     const dashboardData = aggregateReport(rawResults, brandName, competitors, additionalData);
 
-    console.log('[generateDashboardData] ✅ 看板数据生成成功');
+    // P0 修复 - 2026-03-11: 如果 keywords 为空，从 rawResults 中提取
+    if (!dashboardData.keywords || dashboardData.keywords.length === 0) {
+      console.log('[generateDashboardData] 尝试从 rawResults 中提取关键词...');
+      const extractedKeywords = [];
+      const seen = new Set();
+
+      rawResults.forEach(result => {
+        // 方式 1: 从 geoData 提取
+        const geoData = result.geo_data || result.geoData;
+        if (geoData?.keywords && Array.isArray(geoData.keywords)) {
+          geoData.keywords.forEach(kw => {
+            const word = typeof kw === 'string' ? kw : kw?.word;
+            if (word && !seen.has(word)) {
+              extractedKeywords.push({ word, count: 1 });
+              seen.add(word);
+            }
+          });
+        }
+
+        // 方式 2: 从 responseContent 提取 top3_brands（P0 修复）
+        const responseContent = result.response_content || result.responseContent;
+        if (responseContent && typeof responseContent === 'string') {
+          try {
+            const jsonMatch = responseContent.match(/\{.*?"top3_brands".*?\}/s);
+            if (jsonMatch) {
+              const jsonData = JSON.parse(jsonMatch[0]);
+              const top3 = jsonData.top3_brands || [];
+              if (Array.isArray(top3)) {
+                top3.forEach(brand => {
+                  if (brand?.name && !seen.has(brand.name)) {
+                    extractedKeywords.push({ word: brand.name, count: 1, source: 'top3' });
+                    seen.add(brand.name);
+                  }
+                });
+              }
+            }
+          } catch (e) {
+            console.debug('[generateDashboardData] 从 responseContent 提取关键词失败:', e);
+          }
+        }
+      });
+
+      if (extractedKeywords.length > 0) {
+        dashboardData.keywords = extractedKeywords;
+        console.log('[generateDashboardData] ✅ 从 rawResults 中提取到', extractedKeywords.length, '个关键词');
+      }
+    }
+
+    console.log('[generateDashboardData] ✅ 看板数据生成成功:', {
+      hasBrandDistribution: dashboardData?.brandDistribution && Object.keys(dashboardData.brandDistribution).length > 0,
+      hasSentimentDistribution: dashboardData?.sentimentDistribution && Object.keys(dashboardData.sentimentDistribution).length > 0,
+      keywordsCount: dashboardData?.keywords ? dashboardData.keywords.length : 0,
+      brandScoresCount: dashboardData?.brandScores ? Object.keys(dashboardData.brandScores).length : 0
+    });
 
     const app = getApp();
     if (app && app.globalData) {
@@ -1122,9 +1214,11 @@ const generateDashboardData = (processedReportData, pageContext) => {
       };
     }
 
+    console.log('[generateDashboardData] ========== 看板数据生成结束 ==========');
     return dashboardData;
   } catch (error) {
     console.error('[generateDashboardData] 生成战略看板数据失败:', error);
+    console.error('[generateDashboardData] 错误堆栈:', error.stack);
     return {
       _error: 'GENERATION_ERROR',
       errorMessage: error.message || '生成看板数据失败',

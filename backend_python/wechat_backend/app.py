@@ -286,6 +286,11 @@ register_pdf_export_blueprints(app)
 from wechat_backend.views_pdf_export_v2 import register_blueprints as register_pdf_export_blueprints_v2
 register_pdf_export_blueprints_v2(app)
 
+# Register Dashboard API blueprints (Dashboard 聚合数据)
+from wechat_backend.views.dashboard_api import dashboard_bp
+app.register_blueprint(dashboard_bp)
+app_logger.info("✅ Dashboard API 已注册 (/api/dashboard/aggregate)")
+
 # Register Cache API blueprints (API 缓存)
 from wechat_backend.cache.api_cache import cache_bp, start_cache_maintenance
 app.register_blueprint(cache_bp)
@@ -738,41 +743,109 @@ def initialize_wal_recovery():
         app_logger.error(f"[WAL 恢复] 初始化失败：{e}\n{traceback.format_exc()}")
 
 
+def check_port_available(port):
+    """检查端口是否可用"""
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind(('0.0.0.0', port))
+        sock.close()
+        return True
+    except OSError:
+        return False
+
+def kill_process_on_port(port):
+    """终止占用端口的进程"""
+    import subprocess
+    try:
+        # macOS: 使用 lsof 查找并终止进程
+        result = subprocess.run(['lsof', '-ti', f':{port}'], capture_output=True, text=True)
+        if result.stdout.strip():
+            pids = result.stdout.strip().split('\n')
+            for pid in pids:
+                subprocess.run(['kill', '-9', pid], capture_output=True)
+            return True
+    except Exception:
+        pass
+    return False
+
 def start_websocket_server():
     """
     启动 WebSocket 服务器（后台线程）
-    
+
     功能：
     1. 在后台线程中启动 WebSocket 服务器
     2. 监听端口 8765
     3. 处理小程序 WebSocket 连接
-    
+
     @author: 系统架构组
     @date: 2026-03-02
     """
     import asyncio
     import threading
+    import time
+    
     try:
-        from websockets import serve
+        from websockets.asyncio.server import serve
         from wechat_backend.websocket_route import handle_websocket_connection
-        
+
+        # 【WebSocket 修复 - 2026-03-11】检查端口占用并清理
+        if not check_port_available(8765):
+            app_logger.warning("⚠️  [WebSocket] 端口 8765 被占用，尝试清理...")
+            if kill_process_on_port(8765):
+                time.sleep(1)
+                if check_port_available(8765):
+                    app_logger.info("✅ [WebSocket] 端口 8765 已清理")
+                else:
+                    app_logger.error("❌ [WebSocket] 端口 8765 清理失败")
+                    return False
+            else:
+                app_logger.error("❌ [WebSocket] 无法终止占用端口的进程")
+                return False
+
+        # 用于捕获线程中的异常
+        thread_error = [None]
+
         def run_server():
+            # 创建新的事件循环
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            server = serve(
-                handle_websocket_connection,
-                "0.0.0.0",
-                8765,
-                ping_interval=20,
-                ping_timeout=10
-            )
-            loop.run_until_complete(server)
-            loop.run_forever()
-        
+            
+            async def start():
+                try:
+                    async with serve(
+                        handle_websocket_connection,
+                        "0.0.0.0",
+                        8765,
+                        ping_interval=20,
+                        ping_timeout=10
+                    ):
+                        app_logger.info("✅ [WebSocket] 服务器已启动在端口 8765")
+                        await asyncio.Future()  # 保持运行
+                except Exception as e:
+                    thread_error[0] = e
+                    app_logger.error(f"❌ [WebSocket] 线程内错误：{e}")
+                    raise
+            
+            loop.run_until_complete(start())
+
         thread = threading.Thread(target=run_server, daemon=True)
         thread.start()
-        app_logger.info("✅ [WebSocket] 服务器已启动在端口 8765")
-        return True
+        
+        # 等待一小段时间确认线程启动并检查错误
+        time.sleep(2)
+        
+        # 检查是否有错误
+        if thread_error[0]:
+            raise thread_error[0]
+        
+        # 检查线程是否还在运行
+        if thread.is_alive():
+            return True
+        else:
+            raise RuntimeError("WebSocket 服务器线程意外退出")
+            
     except Exception as e:
         app_logger.error(f"❌ [WebSocket] 服务器启动失败：{e}")
         app_logger.debug(f"[WebSocket] 错误详情：{traceback.format_exc()}")

@@ -1,161 +1,135 @@
 /**
- * 全局错误处理中间件
- * 
- * 提供统一的 API 请求错误处理
+ * 错误处理中间件
+ *
+ * 提供全局错误拦截和处理能力
  */
 
-import { handleApiError, logError, isRetryableError } from '../utils/errorHandler';
-import { showErrorToast, showErrorModal } from '../utils/uiHelper';
+const { handleApiError, showError, logError } = require('../utils/errorHandler');
 
-/**
- * 错误处理配置
- */
+// 默认配置
 const config = {
-  // 是否自动显示错误提示
-  autoShowError: true,
-  // 是否自动记录错误日志
-  autoLogError: true,
   // 是否启用错误上报
-  enableReport: false,
-  // 重试次数限制
-  maxRetries: 3,
-  // 重试延迟（毫秒）
-  retryDelay: 1000
+  enableReporting: false,
+  // 是否显示错误提示
+  showToast: true,
+  // 是否记录日志
+  enableLogging: true,
+  // 错误上报地址
+  reportUrl: '',
+  // 忽略的错误列表
+  ignoreErrors: []
 };
 
 /**
- * 错误处理器
+ * 错误处理类
  */
 class ErrorHandler {
-  constructor() {
-    this.errorQueue = [];
-    this.isProcessing = false;
-    this.listeners = [];
+  /**
+   * 构造函数
+   * @param {Object} options - 配置选项
+   */
+  constructor(options = {}) {
+    this.config = { ...config, ...options };
   }
 
   /**
    * 处理错误
    * @param {Object} error - 错误对象
    * @param {Object} options - 选项
-   * @returns {Object} 处理后的错误信息
+   * @returns {Object} 处理结果
    */
   handle(error, options = {}) {
+    const {
+      showToast = this.config.showToast,
+      showLogging = this.config.enableLogging,
+      context = {}
+    } = options;
+
+    // 处理错误
     const handled = handleApiError(error);
-    
-    // 记录错误日志
-    if (config.autoLogError && options.log !== false) {
-      logError(error, options.context || {});
+
+    // 记录日志
+    if (showLogging) {
+      logError(error, context);
     }
-    
-    // 显示错误提示
-    if (config.autoShowError && options.showToast !== false) {
-      if (options.modal) {
-        showErrorModal(error, options);
-      } else {
-        showErrorToast(error, options);
-      }
+
+    // 显示提示
+    if (showToast) {
+      this._showErrorToast(handled);
     }
-    
-    // 通知监听器
-    this.notifyListeners(handled);
-    
+
+    // 上报错误
+    if (this.config.enableReporting) {
+      this._reportError(handled, context);
+    }
+
     return handled;
   }
 
   /**
-   * 异步处理错误（支持重试）
-   * @param {Function} fn - 可能出错的函数
-   * @param {Object} options - 选项
-   * @returns {Promise<any>}
+   * 显示错误提示
+   * @private
+   * @param {Object} handled - 处理后的错误
    */
-  async handleAsync(fn, options = {}) {
-    let lastError;
-    let retries = 0;
-    const maxRetries = options.retries || config.maxRetries;
-    
-    while (retries <= maxRetries) {
-      try {
-        const result = await fn();
-        return result;
-      } catch (error) {
-        lastError = error;
-        const handled = handleApiError(error);
-        
-        // 记录错误
-        if (config.autoLogError) {
-          logError(error, options.context || {});
-        }
-        
-        // 判断是否可重试
-        if (!isRetryableError(handled) || retries >= maxRetries) {
-          // 不可重试或达到最大重试次数
-          if (config.autoShowError && options.showToast !== false) {
-            if (options.modal) {
-              const shouldRetry = await showErrorModal(error, {
-                showRetry: handled.retryable
-              });
-              if (shouldRetry && handled.retryable) {
-                retries = 0;
-                continue;
-              }
-            } else {
-              showErrorToast(error, options);
-            }
-          }
-          break;
-        }
-        
-        // 等待后重试
-        retries++;
-        const delay = options.retryDelay || config.retryDelay;
-        await new Promise(resolve => setTimeout(resolve, delay * retries));
-      }
-    }
-    
-    // 所有重试失败
-    throw lastError;
-  }
-
-  /**
-   * 添加错误监听器
-   * @param {Function} listener - 监听函数
-   */
-  addListener(listener) {
-    if (typeof listener === 'function' && !this.listeners.includes(listener)) {
-      this.listeners.push(listener);
-    }
-  }
-
-  /**
-   * 移除错误监听器
-   * @param {Function} listener - 监听函数
-   */
-  removeListener(listener) {
-    const index = this.listeners.indexOf(listener);
-    if (index > -1) {
-      this.listeners.splice(index, 1);
-    }
-  }
-
-  /**
-   * 通知所有监听器
-   * @param {Object} error - 错误信息
-   */
-  notifyListeners(error) {
-    this.listeners.forEach(listener => {
-      try {
-        listener(error);
-      } catch (e) {
-        console.error('Error listener failed:', e);
-      }
+  _showErrorToast(handled) {
+    wx.showToast({
+      title: handled.message,
+      icon: 'none',
+      duration: 3000,
+      mask: true
     });
   }
 
   /**
-   * 清除所有监听器
+   * 上报错误
+   * @private
+   * @param {Object} handled - 处理后的错误
+   * @param {Object} context - 上下文
    */
-  clearListeners() {
-    this.listeners = [];
+  _reportError(handled, context) {
+    const errorData = {
+      ...handled,
+      context,
+      timestamp: new Date().toISOString()
+    };
+
+    // 发送到错误上报服务
+    wx.request({
+      url: this.config.reportUrl,
+      method: 'POST',
+      data: errorData
+    }).catch(() => {
+      // 上报失败，忽略
+    });
+  }
+
+  /**
+   * 全局错误处理（拦截未捕获的错误）
+   */
+  installGlobalHandler() {
+    const self = this;
+
+    // 微信小程序全局错误处理
+    wx.onError = function(error) {
+      self.handle(error, {
+        context: { source: 'global' }
+      });
+    };
+
+    // Promise 未捕获错误
+    const originalPromise = Promise;
+    Promise = function(executor) {
+      return new originalPromise((resolve, reject) => {
+        executor(resolve, (error) => {
+          self.handle(error, {
+            context: { source: 'promise' }
+          });
+          reject(error);
+        });
+      });
+    };
+
+    console.log('[ErrorHandler] Global error handler installed');
   }
 
   /**
@@ -163,7 +137,7 @@ class ErrorHandler {
    * @param {Object} newConfig - 新配置
    */
   updateConfig(newConfig) {
-    Object.assign(config, newConfig);
+    Object.assign(this.config, newConfig);
   }
 
   /**
@@ -171,16 +145,15 @@ class ErrorHandler {
    * @returns {Object} 当前配置
    */
   getConfig() {
-    return { ...config };
+    return { ...this.config };
   }
 }
 
-// 导出单例
-export const errorHandler = new ErrorHandler();
-
-/**
- * 默认导出处理函数
- */
-export default function handle(error, options) {
-  return errorHandler.handle(error, options);
-}
+// 导出单例（CommonJS 语法，兼容微信小程序）
+const errorHandlerInstance = new ErrorHandler();
+module.exports = {
+  errorHandler: errorHandlerInstance,
+  default: function handle(error, options) {
+    return errorHandlerInstance.handle(error, options);
+  }
+};
