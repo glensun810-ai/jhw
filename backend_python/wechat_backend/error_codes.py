@@ -140,6 +140,9 @@ class ErrorCode(Enum):
     VALIDATION_INVALID_JSON = ("6000-010", "无效的 JSON 格式：{detail}", 400)
     VALIDATION_SCHEMA_MISMATCH = ("6000-011", "数据模式不匹配：{detail}", 400)
     
+    # 【P0 架构级修复 - 2026-03-18】数据不存在错误
+    DATA_NOT_FOUND = ("6000-012", "数据不存在", 404)
+    
     # ==================== 7000: 前端/客户端错误 ====================
     CLIENT_ERROR = ("7000-001", "客户端错误：{detail}", 400)
     CLIENT_NETWORK_ERROR = ("7000-002", "客户端网络错误", 503)

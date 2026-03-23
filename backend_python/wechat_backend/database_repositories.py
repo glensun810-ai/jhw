@@ -86,7 +86,7 @@ def get_user_test_history(
             
             # 从 diagnosis_reports 表读取（新架构）
             cursor.execute('''
-                SELECT 
+                SELECT
                     r.id,
                     r.execution_id,
                     r.brand_name as brandName,
@@ -98,11 +98,17 @@ def get_user_test_history(
                     r.completed_at as completedAt,
                     r.error_message as errorMessage,
                     -- 计算健康分数（从 progress 推导）
-                    CASE 
+                    CASE
                         WHEN r.status = 'completed' THEN 100
                         WHEN r.status = 'failed' THEN 0
                         ELSE r.progress
                     END as healthScore,
+                    -- 计算综合评分（基于 progress 和 status）
+                    CASE
+                        WHEN r.status = 'completed' THEN ROUND(r.progress * 0.85 + 15, 1)
+                        WHEN r.status = 'failed' THEN 0
+                        ELSE r.progress * 0.8
+                    END as overall_score,
                     -- 兼容字段
                     r.user_id as user_openid
                 FROM diagnosis_reports r
@@ -127,6 +133,47 @@ def get_user_test_history(
     except Exception as e:
         db_logger.error(f'获取用户历史失败：user_openid={user_openid}, error: {e}')
         return []
+
+
+def get_user_test_history_count(user_openid: str) -> int:
+    """
+    获取用户测试历史总记录数（用于分页）
+    
+    【修复 - 2026-03-20】新增函数，支持前端分页
+    
+    参数:
+        user_openid: 用户 OpenID
+    
+    返回:
+        int: 总记录数
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # 从 diagnosis_reports 表读取（新架构）
+            cursor.execute('''
+                SELECT COUNT(*) as total
+                FROM diagnosis_reports
+                WHERE user_id = ? OR user_id = 'anonymous'
+            ''', (user_openid,))
+            row = cursor.fetchone()
+            total = row[0] if row else 0
+            
+            # 如果 diagnosis_reports 没有数据，尝试 test_records（向后兼容）
+            if total == 0:
+                cursor.execute('''
+                    SELECT COUNT(*) as total
+                    FROM test_records
+                    WHERE user_openid = ?
+                ''', (user_openid,))
+                row = cursor.fetchone()
+                total = row[0] if row else 0
+            
+            return total
+    except Exception as e:
+        db_logger.error(f'获取用户历史总数失败：user_openid={user_openid}, error: {e}')
+        return 0
 
 
 def get_test_record_by_id(record_id: int) -> Optional[Dict[str, Any]]:

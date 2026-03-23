@@ -868,7 +868,7 @@ if __name__ == '__main__':
     app.run(
         debug=Config.DEBUG,
         host='0.0.0.0',
-        port=5000,
+        port=5001,
         use_reloader=False,  # 禁用 reloader 避免双进程竞争
         threaded=True        # 启用多线程处理请求
     )

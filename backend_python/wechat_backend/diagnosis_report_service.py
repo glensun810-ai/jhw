@@ -52,7 +52,7 @@ except ImportError:
 class DiagnosisReportService:
     """
     诊断报告服务 - 业务逻辑层
-    
+
     职责：
     1. 诊断报告创建
     2. 结果添加
@@ -60,7 +60,36 @@ class DiagnosisReportService:
     4. 报告完成（快照 + 归档）
     5. 报告查询
     """
-    
+
+    @staticmethod
+    def _extract_response_text(result: Dict[str, Any]) -> str:
+        """
+        从结果字典中安全提取 response 文本
+
+        【P1 修复 - 2026-03-20】处理 response 可能是 dict 或 string 的情况
+
+        Args:
+            result: 结果字典
+
+        Returns:
+            response 文本字符串
+        """
+        if not result:
+            return ''
+
+        response = result.get('response', '')
+
+        # 处理 response 是 dict 的情况
+        if isinstance(response, dict):
+            return response.get('content', '') or response.get('text', '') or str(response)
+        # 处理 response 是 string 的情况
+        elif isinstance(response, str):
+            return response
+        # 处理其他类型
+        elif response:
+            return str(response)
+        return ''
+
     def __init__(self):
         self.report_repo = DiagnosisReportRepository()
         self.result_repo = DiagnosisResultRepository()
@@ -459,7 +488,63 @@ class DiagnosisReportService:
         if fallback_scenarios:
             validation['fallback_scenarios'] = fallback_scenarios
 
-        # 7. 构建完整报告（增强版）
+        # 7. 【P0 关键修复 - 2026-03-22】计算核心指标、评分维度、问题诊断墙
+        # 这些字段在诊断执行时由 aggregate_report 计算，但从数据库读取时需要重新计算
+        try:
+            # 计算核心指标（SOV、情感得分、排名、影响力）
+            from wechat_backend.services.metrics_calculator import calculate_diagnosis_metrics
+            metrics = calculate_diagnosis_metrics(
+                brand_name=report.get('brand_name', ''),
+                sov_data=brand_distribution,
+                results=results
+            )
+            db_logger.info(
+                f"[核心指标] execution_id={execution_id}, "
+                f"SOV={metrics['sov']}, sentiment={metrics['sentiment']}, "
+                f"rank={metrics['rank']}, influence={metrics['influence']}"
+            )
+        except Exception as e:
+            db_logger.error(f"计算核心指标失败：{e}")
+            metrics = {'sov': 0, 'sentiment': 0, 'rank': 1, 'influence': 0}
+
+        try:
+            # 计算评分维度（权威度、可见度、纯净度、一致性）
+            # 注意：calculate_dimension_scores 在 metrics_calculator.py 中定义
+            from wechat_backend.services.metrics_calculator import calculate_dimension_scores
+            dimension_scores = calculate_dimension_scores(
+                brand_name=report.get('brand_name', ''),
+                results=results,
+                sov_data=brand_distribution
+            )
+            db_logger.info(
+                f"[评分维度] execution_id={execution_id}, "
+                f"authority={dimension_scores['authority']}, visibility={dimension_scores['visibility']}, "
+                f"purity={dimension_scores['purity']}, consistency={dimension_scores['consistency']}"
+            )
+        except Exception as e:
+            db_logger.error(f"计算评分维度失败：{e}")
+            dimension_scores = {'authority': 50, 'visibility': 50, 'purity': 50, 'consistency': 50}
+
+        try:
+            # 生成问题诊断墙
+            # 注意：generate_diagnostic_wall 在 metrics_calculator.py 中定义
+            from wechat_backend.services.metrics_calculator import generate_diagnostic_wall
+            diagnostic_wall = generate_diagnostic_wall(
+                brand_name=report.get('brand_name', ''),
+                metrics=metrics,
+                dimension_scores=dimension_scores,
+                results=results
+            )
+            db_logger.info(
+                f"[问题诊断墙] execution_id={execution_id}, "
+                f"high_risks={len(diagnostic_wall.get('risk_levels', {}).get('high', []))}, "
+                f"medium_risks={len(diagnostic_wall.get('risk_levels', {}).get('medium', []))}"
+            )
+        except Exception as e:
+            db_logger.error(f"生成问题诊断墙失败：{e}")
+            diagnostic_wall = {'risk_levels': {'high': [], 'medium': []}, 'priority_recommendations': []}
+
+        # 8. 构建完整报告（增强版）
         full_report = {
             'report': report,
             'results': results,
@@ -468,6 +553,10 @@ class DiagnosisReportService:
             'brandDistribution': brand_distribution,
             'sentimentDistribution': sentiment_distribution,
             'keywords': keywords,
+            # 【P0 关键修复 - 2026-03-22】品牌影响力诊断核心字段
+            'metrics': metrics,
+            'dimension_scores': dimension_scores,
+            'diagnosticWall': diagnostic_wall,
             'meta': {
                 'data_schema_version': report.get('data_schema_version', DATA_SCHEMA_VERSION),
                 'server_version': report.get('server_version', 'unknown'),
@@ -487,6 +576,13 @@ class DiagnosisReportService:
         checksum = report.get('checksum')
         if checksum:
             full_report['checksum_verified'] = True
+
+        # 9. 【P0 修复 - 2026-03-22】确保 report 对象包含 execution_id
+        # 防止因字段缺失导致验证失败
+        if 'report' in full_report and isinstance(full_report['report'], dict):
+            if not full_report['report'].get('execution_id') and not full_report['report'].get('executionId'):
+                full_report['report']['execution_id'] = execution_id
+                db_logger.info(f"补充 execution_id 到 report 对象：{execution_id}")
 
         db_logger.info(f"✅ 获取完整报告成功：{execution_id}, 结果数：{len(results)}")
         # P0 修复：转换为 camelCase
@@ -558,6 +654,7 @@ class DiagnosisReportService:
         })
 
         # P0 修复：转换为 camelCase
+        # 【P0 修复 - 2026-03-15】增强错误报告结构，便于前端检测
         return convert_response_to_camel({
             'report': report or {
                 'execution_id': execution_id,
@@ -566,14 +663,20 @@ class DiagnosisReportService:
             },
             'results': [],
             'analysis': {},
-            'brandDistribution': {'data': {}, 'total_count': 0},
+            'brandDistribution': {
+                'data': {},
+                'total_count': 0,
+                'total_count': 0,
+                'error': '无品牌数据'  # 【新增】明确标注数据缺失
+            },
             'sentimentDistribution': {'data': {'positive': 0, 'neutral': 0, 'negative': 0}, 'total_count': 0},
             'keywords': [],
             'error': {
                 'status': error_type,
                 'message': error_message,
                 'suggestion': self._get_error_suggestion(error_type),
-                'fallback_info': fallback_config
+                'fallback_info': fallback_config,
+                'is_empty_data': True  # 【新增】明确标注这是空数据场景
             },
             'meta': {
                 'data_schema_version': DATA_SCHEMA_VERSION,
@@ -584,12 +687,14 @@ class DiagnosisReportService:
                 'is_valid': False,
                 'errors': [error_message],
                 'warnings': [],
-                'fallback_scenarios': [error_type]
+                'fallback_scenarios': [error_type],
+                'is_empty_data': True  # 【新增】明确标注数据为空
             },
             'qualityHints': {
                 'has_low_quality_results': False,
                 'has_partial_analysis': True,
-                'warnings': [error_message]
+                'warnings': [error_message],
+                'is_empty_data': True  # 【新增】明确标注数据为空
             }
         })
 
@@ -963,13 +1068,77 @@ class DiagnosisReportService:
 
         return scenarios
 
+    def _clean_brand_name(self, brand: str) -> str:
+        """
+        清理品牌名称（P0 修复 - 2026-03-17：增强清理逻辑）
+        
+        清理规则：
+        1. 去除前后空格
+        2. 去除括号及括号内内容（如 "特斯拉 (Tesla)" -> "特斯拉"）
+        3. 去除常见后缀词（如 "品牌"、"公司"、"汽车"等）- 迭代清理
+        4. 统一大小写（英文品牌）
+        5. 去除特殊字符
+        
+        参数:
+            brand: 原始品牌名称
+            
+        返回:
+            清理后的品牌名称
+        """
+        if not brand or not str(brand).strip():
+            return ''
+        
+        brand = str(brand).strip()
+        
+        # 1. 去除括号及括号内内容（中英文括号）
+        import re
+        brand = re.sub(r'\([^)]*\)', '', brand)  # 英文括号
+        brand = re.sub(r'（[^)]*）', '', brand)  # 中文括号
+        brand = re.sub(r'\[[^\]]*\]', '', brand)  # 方括号
+        brand = re.sub(r'【[^\]]*】', '', brand)  # 中文方括号
+        brand = brand.strip()
+        
+        # 2. 去除常见后缀词（迭代清理，直到没有后缀可去除）
+        suffixes = [
+            '新能源汽车', '智能汽车', '电动汽车', '汽车品牌', '汽车公司',
+            '有限公司', '有限责任公司', '股份有限公司', '集团公司',
+            '品牌', '公司', '汽车', '手机', '科技', '集团', '股份', '有限',
+            'Co.', 'Corp.', 'Inc.', 'Ltd.', 'LLC'
+        ]
+        
+        # 迭代清理后缀（最多 5 次，避免死循环）
+        for _ in range(5):
+            found_suffix = False
+            for suffix in suffixes:
+                if brand.endswith(suffix) and len(brand) > len(suffix) + 1:
+                    brand = brand[:-len(suffix)].strip()
+                    found_suffix = True
+                    break  # 找到一个后缀后重新开始检查
+            if not found_suffix:
+                break
+        
+        # 3. 英文品牌首字母大写（其余小写）
+        if brand.isascii():
+            brand = brand.title()
+        
+        # 4. 再次清理空格
+        brand = brand.strip()
+        
+        return brand if brand else ''
+
     def _calculate_brand_distribution(
         self,
         results: List[Dict[str, Any]],
         expected_brands: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
-        计算品牌分布数据（增强版 - 支持少样本和空数据兜底）
+        计算品牌分布数据（P0 修复 - 2026-03-17：增强数据保证）
+        
+        核心改进：
+        1. 优先使用 extracted_brand，但有更智能的降级策略
+        2. 品牌名称清理和标准化
+        3. 多层降级保证：extracted_brand → brand → expected_brands → response 分析
+        4. 确保始终返回有效数据
 
         参数:
             results: 结果列表
@@ -986,30 +1155,71 @@ class DiagnosisReportService:
         """
         distribution = {}
         valid_results_count = 0
+        extracted_brand_success = 0
+        fallback_to_brand = 0
+        fallback_to_response = 0
 
         for result in results:
             # P0 修复：检查结果是否为 None
             if not result:
                 continue
 
-            # 【P0 关键修复 - 2026-03-13 第 11 次】优先使用 extracted_brand（从 AI 响应中提取的品牌）
-            brand = result.get('extracted_brand') if result else None
-            
-            # 如果 extracted_brand 不存在，使用 brand 字段
-            if not brand or not str(brand).strip():
-                brand = result.get('brand') if result else None
-            
-            # 如果还是为空，使用 'Unknown'
-            if not brand or not str(brand).strip():
+            brand = None
+            brand_source = 'unknown'
+
+            # 【P0 关键修复 - 第 12 次】多层降级策略提取品牌
+            # 层级 1: 优先使用 extracted_brand（从 AI 响应中提取的品牌）
+            if not brand:
+                extracted = result.get('extracted_brand')
+                if extracted and str(extracted).strip():
+                    cleaned = self._clean_brand_name(extracted)
+                    if cleaned:
+                        brand = cleaned
+                        brand_source = 'extracted_brand'
+                        extracted_brand_success += 1
+
+            # 层级 2: 使用 brand 字段（诊断配置中的品牌）
+            if not brand:
+                brand_val = result.get('brand')
+                if brand_val and str(brand_val).strip():
+                    cleaned = self._clean_brand_name(brand_val)
+                    if cleaned:
+                        brand = cleaned
+                        brand_source = 'brand'
+                        fallback_to_brand += 1
+
+            # 层级 3: 从 response 内容中提取品牌关键词
+            if not brand:
+                response_text = result.get('response') or result.get('response_content') or ''
+                # 【P1 修复 - 2026-03-20】处理 response 可能是 dict 的情况
+                if isinstance(response_text, dict):
+                    response_text = response_text.get('content', '') or response_text.get('text', '') or str(response_text)
+                elif not isinstance(response_text, str):
+                    response_text = str(response_text) if response_text else ''
+                if response_text and expected_brands:
+                    # 在 response 中查找预期品牌
+                    for expected_brand in expected_brands:
+                        if expected_brand and expected_brand in response_text:
+                            brand = self._clean_brand_name(expected_brand)
+                            if brand:
+                                brand_source = 'response_keyword'
+                                fallback_to_response += 1
+                                break
+
+            # 层级 4: 如果都失败，使用 'Unknown'
+            if not brand:
                 brand = 'Unknown'
-                db_logger.warning(f"[品牌分布] 发现空 brand，已替换为 'Unknown': result={result}")
+                db_logger.warning(
+                    f"[品牌分布] 所有品牌提取方式均失败，使用 'Unknown': "
+                    f"result_id={result.get('id', 'N/A')}, source={brand_source}"
+                )
 
             distribution[brand] = distribution.get(brand, 0) + 1
             valid_results_count += 1
 
         total_count = sum(distribution.values())
 
-        # 【P0 关键修复 - 2026-03-12 第 10 次】如果 results 为空，使用 expected_brands 创建兜底数据
+        # 【P0 关键修复 - 第 12 次】如果 results 为空，使用 expected_brands 创建兜底数据
         if not results or len(results) == 0:
             db_logger.warning(
                 f"⚠️ [品牌分布] results 为空，使用 expected_brands 创建兜底数据："
@@ -1018,9 +1228,13 @@ class DiagnosisReportService:
 
             # 使用预期品牌创建空分布
             if expected_brands:
-                for brand in expected_brands:
-                    if brand and str(brand).strip():
-                        distribution[brand] = 0
+                for expected_brand in expected_brands:
+                    if expected_brand and str(expected_brand).strip():
+                        cleaned_brand = self._clean_brand_name(expected_brand)
+                        if cleaned_brand:
+                            distribution[cleaned_brand] = 0
+                        else:
+                            distribution[expected_brand] = 0
 
             # 如果 expected_brands 也为空，使用 'Unknown'
             if not distribution:
@@ -1031,11 +1245,12 @@ class DiagnosisReportService:
                 f"[品牌分布] 兜底数据创建完成：distribution={distribution}"
             )
 
-        # 【P0 关键修复】如果 total_count 为 0 但 distribution 有数据，至少返回数据
-        if total_count == 0 and distribution:
-            db_logger.warning(
-                f"⚠️ [品牌分布] total_count 为 0 但 distribution 有数据，返回空分布："
-                f"distribution={distribution}"
+        # 【P0 关键修复 - 第 12 次】确保 distribution 不为空
+        # 即使 total_count 为 0，也要保证 distribution 有数据
+        if not distribution:
+            distribution['Unknown'] = 0
+            db_logger.error(
+                f"❌ [品牌分布] distribution 为空，已添加 'Unknown' 占位: {distribution}"
             )
 
         # 检测数据不足
@@ -1058,7 +1273,7 @@ class DiagnosisReportService:
             'total_count': total_count,
             'success_rate': success_rate,
             'quality_warning': quality_warning,
-            # 【P0 关键修复 - 第 10 次】添加调试信息，便于前端降级
+            # 【P0 关键修复 - 第 12 次】添加详细调试信息，便于前端降级
             '_debug_info': {
                 'results_count': len(results) if results else 0,
                 'valid_results_count': valid_results_count,
@@ -1066,9 +1281,17 @@ class DiagnosisReportService:
                 'distribution_keys': list(distribution.keys()),
                 'has_data': bool(distribution),
                 'total_count': total_count,
-                # 【P0 关键修复 - 第 11 次】添加 extracted_brand 统计
-                'extracted_brand_count': sum(1 for r in results if r.get('extracted_brand')),
-                'extraction_success_rate': sum(1 for r in results if r.get('extracted_brand')) / len(results) if results else 0
+                # 品牌提取统计
+                'extracted_brand_count': extracted_brand_success,
+                'fallback_to_brand_count': fallback_to_brand,
+                'fallback_to_response_count': fallback_to_response,
+                'extraction_success_rate': extracted_brand_success / len(results) if results else 0,
+                'brand_source_distribution': {
+                    'extracted_brand': extracted_brand_success,
+                    'brand': fallback_to_brand,
+                    'response_keyword': fallback_to_response,
+                    'unknown': valid_results_count - extracted_brand_success - fallback_to_brand - fallback_to_response
+                }
             }
         }
 
@@ -1143,6 +1366,16 @@ class DiagnosisReportService:
             # 方式 2: 如果 geo_data 为空，从 responseContent 中提取关键词（P0 修复 - 2026-03-11）
             if not extracted_keywords:
                 response_content = result.get('response_content') or result.get('responseContent')
+                # 【P1 修复 - 2026-03-20】处理 response_content 可能是 dict 的情况
+                if isinstance(response_content, dict):
+                    response_content = response_content.get('content', '') or response_content.get('text', '')
+                elif not isinstance(response_content, str):
+                    # 从 response 对象中获取
+                    response = result.get('response', {})
+                    if isinstance(response, dict):
+                        response_content = response.get('content', '') or response.get('text', '')
+                    else:
+                        response_content = ''
                 if response_content and isinstance(response_content, str):
                     # 从 JSON 片段中提取 top3_brands
                     try:

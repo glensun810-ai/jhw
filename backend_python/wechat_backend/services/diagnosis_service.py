@@ -35,43 +35,52 @@ class DiagnosisService:
     ) -> Dict[str, Any]:
         """
         启动品牌诊断
-        
+
         参数：
         - brand_list: 品牌列表
         - selected_models: 选中的 AI 模型列表
         - custom_questions: 自定义问题列表
         - user_id: 用户 ID
         - user_level: 用户等级
-        
+
         返回：
         - execution_id: 执行 ID
         - status: 状态
         - message: 消息
+        
+        【P0 修复 - 2026-03-20】增强验证，确保诊断结果数量充足
         """
         try:
             # 生成执行 ID
             execution_id = str(uuid.uuid4())
-            
+
             # 验证输入
             if not brand_list or len(brand_list) == 0:
                 return {
                     'success': False,
                     'error': '品牌列表不能为空'
                 }
-            
+
+            # 【P0 修复 - 2026-03-20】验证最少模型数
             if not selected_models or len(selected_models) == 0:
                 return {
                     'success': False,
                     'error': '至少选择一个 AI 模型'
                 }
             
-            # 处理自定义问题
+            if len(selected_models) < 2:
+                return {
+                    'success': False,
+                    'error': '建议选择至少 2 个 AI 模型，获得更全面的分析结果（当前已默认勾选 4 个主流模型）'
+                }
+
+            # 【P0 修复 - 2026-03-20】验证最少问题数
             questions = custom_questions or []
-            if len(questions) == 0:
-                questions = [
-                    f"介绍一下{brand_list[0]}",
-                    f"{brand_list[0]}的主要产品是什么"
-                ]
+            if len(questions) < 2:
+                return {
+                    'success': False,
+                    'error': '建议输入至少 2 个问题，获得更丰富的分析结果（当前已默认填充 3 个标准问题）'
+                }
             
             # 提取主品牌和竞品
             main_brand = brand_list[0]

@@ -2549,19 +2549,20 @@ def get_task_result(task_id):
 def get_history_list():
     """
     获取历史诊断报告列表（/api/test-history 的别名端点）
-    
+
     兼容前端 pages/report/history/history.js 中的调用
-    
+
     请求参数:
         userOpenid: 用户 OpenID
         limit: 每页数量 (默认 20)
         offset: 偏移量 (默认 0)
-    
+
     返回:
         {
             "status": "success",
             "history": [...],
-            "count": 20
+            "count": 20,
+            "total": 167  // 【修复 - 2026-03-20】添加总记录数，支持分页
         }
     """
     user_openid = request.args.get('userOpenid', 'anonymous')
@@ -2573,7 +2574,16 @@ def get_history_list():
     offset = int(request.args.get('offset', 0))
     try:
         history = get_user_test_history(user_openid, limit, offset)
-        return jsonify({'status': 'success', 'history': history, 'count': len(history)})
+        
+        # 【修复 - 2026-03-20】获取总记录数，支持前端分页
+        total = get_user_test_history_count(user_openid)
+        
+        return jsonify({
+            'status': 'success',
+            'history': history,
+            'count': len(history),
+            'total': total  # 【修复】添加总记录数
+        })
     except Exception as e:
         api_logger.error(f'获取历史列表失败：{e}')
         return jsonify({'error': str(e)}), 500

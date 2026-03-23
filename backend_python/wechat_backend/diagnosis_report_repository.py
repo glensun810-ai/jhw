@@ -595,7 +595,7 @@ class DiagnosisResultRepository:
         # 【P0 关键修复 - 2026-03-13 第 11 次】使用 AI 结果中提取的品牌，而不是主品牌
         # 优先使用 extracted_brand 字段（从 AI 响应中提取的品牌）
         brand = result.get('extracted_brand', '')
-        
+
         # 【调试日志】记录 result 字典的键和值（使用 INFO 级别确保日志可见）
         api_logger.info(
             f"[调试] add() 方法：execution_id={execution_id}, "
@@ -608,12 +608,12 @@ class DiagnosisResultRepository:
         # 如果 extracted_brand 不存在，尝试从 brand 字段获取
         if not brand or not str(brand).strip():
             brand = result.get('brand', '')
-        
+
         # 如果还是为空，使用多层推断策略（第 10 次修复的逻辑）
         if not brand or not str(brand).strip():
             # 尝试 1: 从其他字段推断品牌名称
             brand = result.get('brand_name', '') or result.get('target_brand', '')
-            
+
             # 尝试 2: 如果还是为空，使用问题中的品牌名称
             if not brand or not str(brand).strip():
                 question = result.get('question', '')
@@ -622,12 +622,12 @@ class DiagnosisResultRepository:
                     match = re.search(r'分析\s*(.+?)\s*品牌', question)
                     if match:
                         brand = match.group(1).strip()
-                    
+
                     if not brand or not str(brand).strip():
                         match = re.search(r'^(.+?)\s*(?:vs|对比 | 与)', question)
                         if match:
                             brand = match.group(1).strip()
-            
+
             # 尝试 3: 从 response_content 提取
             if not brand or not str(brand).strip():
                 response_content = result.get('response_content', '')
@@ -635,7 +635,7 @@ class DiagnosisResultRepository:
                     match = re.search(r'(?:品牌 | 分析 | 对比)[:：]?\s*([^\s,，.]+)', response_content)
                     if match:
                         brand = match.group(1).strip()
-            
+
             # 最终兜底：使用 'Unknown'
             if not brand or not str(brand).strip():
                 brand = 'Unknown'
@@ -649,11 +649,34 @@ class DiagnosisResultRepository:
                     f"original_brand={result.get('brand', '')}, inferred_brand={brand}"
                 )
         else:
-            # 使用了 extracted_brand，记录日志
-            db_logger.info(
-                f"✅ [P0 修复 - 第 11 次] 使用 extracted_brand：execution_id={execution_id}, "
-                f"extracted_brand={brand}, main_brand={result.get('brand', '')}"
-            )
+            # 【P0 关键修复 - 2026-03-16 第 16 次】清理 extracted_brand 中的无效字符
+            import re
+            original_brand = brand
+            brand = brand.strip()
+            # 去除括号及括号内内容（中英文括号）
+            brand = re.sub(r'\s*[（(][^）)]*[）)]', '', brand)
+            brand = re.sub(r'\s*[（(].*$', '', brand)
+            # 去除引号
+            brand = re.sub(r'^["\'"`]|["\'"`]$', '', brand)
+            # 去除冒号、破折号及之后的描述
+            brand = re.sub(r'\s*[-:：—]\s*.*$', '', brand)
+            # 去除常见后缀词
+            brand = re.sub(r'\s*(推荐 | 首选 | 优先 | 建议使用 | 可以选择).*$', '', brand)
+            brand = brand.strip()
+            
+            # 验证清理后的品牌是否有效
+            if not brand or len(brand) < 2:
+                # 清理后品牌名为空或太短，使用主品牌
+                brand = result.get('brand', original_brand)
+                db_logger.warning(
+                    f"⚠️ [P0 关键修复 - 第 16 次] extracted_brand 清理后无效，使用主品牌："
+                    f"execution_id={execution_id}, original={original_brand}, cleaned={brand}"
+                )
+            else:
+                db_logger.info(
+                    f"✅ [P0 关键修复 - 第 16 次] extracted_brand 清理成功："
+                    f"execution_id={execution_id}, original={original_brand}, cleaned={brand}"
+                )
 
         # 【P0 修复】处理 AI 返回内容为空的情况
         response_content = response.get('content', '') if isinstance(response, dict) else ''

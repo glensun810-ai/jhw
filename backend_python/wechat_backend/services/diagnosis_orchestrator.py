@@ -1420,6 +1420,7 @@ class DiagnosisOrchestrator:
                     )
                     
                     # 【P3 修复 - 2026-03-07】创建报告快照
+                    # 【P0 关键修复 - 2026-03-17】修复：使用 _report_repo 而非 _report_service
                     try:
                         snapshot_data = {
                             'final_report': final_report,
@@ -1427,14 +1428,17 @@ class DiagnosisOrchestrator:
                             'report_quality': final_report.get('quality', {}),
                             'timestamp': datetime.now().isoformat()
                         }
-                        
-                        snapshot_id = tx._report_service.create_snapshot(
+
+                        # 确保依赖项已初始化
+                        tx._init_dependencies()
+
+                        snapshot_id = tx._report_repo.create_snapshot(
                             report_id=self._report_id,
                             execution_id=self.execution_id,
                             snapshot_data=snapshot_data,
                             reason='diagnosis_completed'
                         )
-                        
+
                         if snapshot_id > 0:
                             api_logger.info(
                                 f"[Orchestrator] ✅ 报告快照已创建：{self.execution_id}, "
@@ -1444,7 +1448,7 @@ class DiagnosisOrchestrator:
                             api_logger.warning(
                                 f"[Orchestrator] ⚠️ 报告快照创建失败：{self.execution_id}"
                             )
-                            
+
                     except Exception as snapshot_err:
                         api_logger.error(
                             f"[Orchestrator] ❌ 创建报告快照失败：{self.execution_id}, "
@@ -1687,14 +1691,16 @@ class DiagnosisOrchestrator:
             # 这是前端能获取完整报告数据的关键步骤
             try:
                 from wechat_backend.diagnosis_report_service import get_report_service
-                
+
                 report_service = get_report_service()
-                
-                # 构建完整的报告数据结构
+
+                # 【P0 关键修复 - 2026-03-22】正确构建 full_report_data
+                # final_report 是 aggregate_report 返回的扁平化数据，不是 {report, results, analysis} 格式
+                # 需要从 results 变量和 final_report 正确构建
                 full_report_data = {
-                    'report': final_report.get('report', {}),
-                    'results': final_report.get('results', []),
-                    'analysis': final_report.get('analysis', {})
+                    'report': final_report,  # final_report 本身就是完整的报告数据
+                    'results': results,  # 使用 results 变量（原始诊断结果列表）
+                    'analysis': analysis_results  # 使用 analysis_results（后台分析结果）
                 }
                 
                 # 创建快照和归档

@@ -47,6 +47,35 @@ class BrandAnalysisService:
     # 优先使用环境变量配置的固定 Judge 模型，降级时按此列表选择
     JUDGE_MODEL_FALLBACK = ['deepseek', 'qwen', 'doubao', 'kimi', 'chatgpt', 'gemini', 'zhipu', 'wenxin']
 
+    @staticmethod
+    def _extract_response_text(result: Dict[str, Any]) -> str:
+        """
+        从结果字典中安全提取 response 文本
+
+        【P1 修复 - 2026-03-20】处理 response 可能是 dict 或 string 的情况
+
+        Args:
+            result: 结果字典
+
+        Returns:
+            response 文本字符串
+        """
+        if not result:
+            return ''
+
+        response = result.get('response', '')
+
+        # 处理 response 是 dict 的情况
+        if isinstance(response, dict):
+            return response.get('content', '') or response.get('text', '') or str(response)
+        # 处理 response 是 string 的情况
+        elif isinstance(response, str):
+            return response
+        # 处理其他类型
+        elif response:
+            return str(response)
+        return ''
+
     def __init__(self, judge_model: Optional[str] = None, user_selected_models: Optional[List[str]] = None):
         """
         初始化品牌分析服务
@@ -367,6 +396,7 @@ class BrandAnalysisService:
             - competitor_analysis: 竞品分析
             - comparison: 对比分析
             - top3_brands: 从回答中提取的 TOP3 品牌
+            - keywords: 关键词提取（新增）
 
         性能说明：
             使用批量提取策略，每个回答仅需 1 次 LLM 调用即可提取所有品牌，
@@ -378,12 +408,13 @@ class BrandAnalysisService:
                 f"[BrandAnalysis] Starting brand analysis: execution_id={execution_id}, "
                 f"results_count={len(results)}, user_brand={user_brand}"
             )
-            
+
             analysis = {
                 'user_brand_analysis': {},
                 'competitor_analysis': [],
                 'comparison': {},
-                'top3_brands': []
+                'top3_brands': [],
+                'keywords': []  # 【P1 修复 - 2026-03-17】添加关键词字段
             }
 
             # 【P0 关键修复 - 2026-03-07】批量提取优化：合并所有回答，单次 AI 调用提取所有品牌
@@ -392,11 +423,12 @@ class BrandAnalysisService:
             # 预期效果：AI 调用次数减少 90%，耗时从 100 秒降至 15 秒
             
             api_logger.info(f"[BrandAnalysis] 开始批量提取优化：results_count={len(results)}")
-            
+
             # 合并所有回答为一个文本
+            # 【P1 修复 - 2026-03-20】处理 response 可能是 dict 的情况
             all_responses_text = "\n\n=== 回答分隔符 ===\n\n".join([
-                f"问题：{r.get('question', '')}\n回答：{r.get('response', '')}"
-                for r in results if r.get('response')
+                f"问题：{r.get('question', '')}\n回答：{self._extract_response_text(r)}"
+                for r in results if self._extract_response_text(r)
             ])
             
             # 单次 AI 调用提取所有品牌
@@ -419,7 +451,8 @@ class BrandAnalysisService:
             # 步骤 2: 提取 TOP3 品牌作为竞品
             all_top3_brands = []
             for result in results:
-                top3 = self._extract_top3_brands(result.get('response', ''))
+                response_text = self._extract_response_text(result)
+                top3 = self._extract_top3_brands(response_text)
                 if top3:
                     all_top3_brands.extend(top3)
 
@@ -484,12 +517,17 @@ class BrandAnalysisService:
                 competitor_analyses=analysis['competitor_analysis']
             )
 
+            # 【P1 修复 - 2026-03-17】步骤 7: 提取关键词
+            keywords = self._extract_keywords_from_results(results, user_brand)
+            analysis['keywords'] = keywords
+
             api_logger.info(
                 f"[BrandAnalysis] ✅ 分析完成：{user_brand}, "
                 f"提及率={analysis['user_brand_analysis']['mention_rate']:.1%}, "
-                f"竞品数={len(analysis['competitor_analysis'])}"
+                f"竞品数={len(analysis['competitor_analysis'])}, "
+                f"关键词数={len(keywords)}"
             )
-            
+
             return analysis
             
         except Exception as e:
@@ -1047,6 +1085,100 @@ class BrandAnalysisService:
         """
         sentiments = [m['sentiment'] for m in mentions if m.get('brand_mentioned', False)]
         return sum(sentiments) / len(sentiments) if sentiments else 0
+
+    def _extract_keywords_from_results(
+        self,
+        results: List[Dict[str, Any]],
+        brand_name: str,
+        top_k: int = 15
+    ) -> List[Dict[str, Any]]:
+        """
+        从诊断结果中提取关键词（P1 修复 - 2026-03-17）
+
+        策略：
+        1. 从 AI 回答中提取 2-4 字短语
+        2. 过滤停用词
+        3. 统计频率
+        4. 提取与品牌相关的关键词
+
+        参数：
+            results: AI 回答列表
+            brand_name: 品牌名称
+            top_k: 返回的关键词数量
+
+        Returns:
+            关键词列表，每个包含：keyword, frequency, relevance
+        """
+        if not results:
+            return []
+
+        # 中文停用词表（简化版）
+        stop_words = {
+            '的', '了', '是', '在', '我', '有', '和', '就', '不', '人',
+            '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去',
+            '你', '会', '着', '没有', '看', '好', '自己', '这', '那',
+            '他', '她', '它', '们', '这个', '那个', '什么', '怎么',
+            '可以', '没', '下', '自己', '这些', '那些', '以及', '等',
+            '之', '用', '里', '从', '将', '与', '而', '于', '但', '或'
+        }
+
+        # 收集所有文本
+        all_text = ""
+        for result in results:
+            response_text = self._extract_response_text(result)
+            if response_text:
+                all_text += response_text + " "
+
+        if not all_text.strip():
+            return []
+
+        # 提取 2-4 字短语
+        phrases = re.findall(r'[\u4e00-\u9fa5]{2,4}', all_text)
+
+        # 过滤停用词和无效词
+        valid_phrases = []
+        for phrase in phrases:
+            if phrase not in stop_words and len(phrase) >= 2:
+                # 检查是否包含品牌名（增加相关性）
+                is_related = brand_name in phrase or any(
+                    brand_char in phrase for brand_char in brand_name[:2]
+                )
+                valid_phrases.append((phrase, is_related))
+
+        # 统计频率
+        from collections import Counter
+        phrase_counts = Counter([p[0] for p in valid_phrases])
+
+        # 计算相关性分数并排序
+        keywords = []
+        for phrase, count in phrase_counts.most_common(top_k * 2):
+            # 计算相关性分数
+            is_related = any(p[0] == phrase and p[1] for p in valid_phrases)
+            relevance = 1.0 if is_related else 0.5
+
+            # 长度适中的词相关性更高
+            if 2 <= len(phrase) <= 3:
+                relevance *= 1.2
+
+            keywords.append({
+                'keyword': phrase,
+                'frequency': count,
+                'relevance': round(relevance, 2),
+                'category': 'brand' if is_related else 'general'
+            })
+
+        # 按相关性和频率综合排序
+        keywords.sort(key=lambda x: (x['relevance'], x['frequency']), reverse=True)
+
+        # 返回前 top_k 个
+        result_keywords = keywords[:top_k]
+
+        api_logger.info(
+            f"[BrandAnalysis] 关键词提取完成：{brand_name}, "
+            f"提取数={len(result_keywords)}, 前 3={result_keywords[:3]}"
+        )
+
+        return result_keywords
 
     def _generate_comparison(
         self,

@@ -68,7 +68,7 @@ execution_store = {}
 
 # 用户认证装饰器导入
 from wechat_backend.security.auth import jwt_manager
-from wechat_backend.app import APP_ID, APP_SECRET
+
 @wechat_bp.route('/wechat/verify', methods=['GET', 'POST'])
 def wechat_verify():
     """Handle WeChat server verification"""
@@ -110,7 +110,9 @@ def wechat_verify():
 @monitored_endpoint('/api/login', require_auth=False, validate_inputs=True)
 def wechat_login():
     """Handle login with WeChat Mini Program code"""
-    from wechat_backend.app import APP_ID, APP_SECRET
+    # 使用 Config 获取 APP_ID 和 APP_SECRET，避免循环导入
+    app_id = Config.WECHAT_APP_ID
+    app_secret = Config.WECHAT_APP_SECRET
     from wechat_backend.security.auth import jwt_manager
 
     data = request.get_json()
@@ -122,8 +124,8 @@ def wechat_login():
         return jsonify({'error': 'Valid code is required'}), 400
 
     params = {
-        'appid': APP_ID,
-        'secret': APP_SECRET,
+        'appid': app_id,
+        'secret': app_secret,
         'js_code': js_code,
         'grant_type': 'authorization_code'
     }

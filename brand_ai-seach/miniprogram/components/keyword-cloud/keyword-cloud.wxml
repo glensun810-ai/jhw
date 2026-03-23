@@ -1,0 +1,142 @@
+<!--
+  关键词云组件模板
+
+  支持词云和列表两种展示模式
+  包含关键词统计和详情展示
+-->
+
+<view class="keyword-cloud {{displayMode}}">
+  <!-- 标题栏 -->
+  <view class="header">
+    <text class="title">{{title}}</text>
+    <view class="actions">
+      <text class="stats-info" wx:if="{{hasData}}">
+        {{stats.totalKeywords}}个关键词
+      </text>
+      <text class="toggle-btn" bindtap="onToggleDisplayMode">
+        {{displayMode === 'cloud' ? '列表' : '词云'}}
+      </text>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-state" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:elif="{{!hasData}}">
+    <image class="empty-icon" src="/images/empty-data.png" mode="aspectFit"></image>
+    <text class="empty-text">{{errorMessage || '暂无数据'}}</text>
+  </view>
+
+  <!-- 统计卡片 -->
+  <view class="stats-card" wx:if="{{hasData}}">
+    <view class="stat-item">
+      <text class="stat-value positive">{{stats.positiveCount}}</text>
+      <text class="stat-label">正面</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value neutral">{{stats.neutralCount}}</text>
+      <text class="stat-label">中性</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value negative">{{stats.negativeCount}}</text>
+      <text class="stat-label">负面</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value avg">{{stats.avgSentiment}}</text>
+      <text class="stat-label">平均情感</text>
+    </view>
+  </view>
+
+  <!-- 词云模式 -->
+  <view class="cloud-container" wx:if="{{displayMode === 'cloud' && hasData}}">
+    <view class="cloud-wrapper">
+      <view
+        class="cloud-word"
+        wx:for="{{cloudLayout}}"
+        wx:key="word"
+        data-index="{{index}}"
+        bindtap="onKeywordTap"
+        bindlongpress="onKeywordLongPress"
+        style="left: {{item.x}}px; top: {{item.y}}px; font-size: {{item.fontSize}}rpx; color: {{item.color}};"
+      >
+        {{item.word}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 列表模式 -->
+  <view class="list-container" wx:elif="{{hasData}}">
+    <view 
+      class="list-item"
+      wx:for="{{processedKeywords}}"
+      wx:key="word"
+      data-index="{{index}}"
+      bindtap="onKeywordTap"
+      bindlongpress="onKeywordLongPress"
+    >
+      <view class="list-left">
+        <text class="list-rank">{{index + 1}}</text>
+        <text class="list-word">{{item.word}}</text>
+        <text class="list-sentiment {{getSentimentClass(item.sentiment)}}">
+          {{getSentimentLabel(item.sentiment)}}
+        </text>
+      </view>
+      <view class="list-right">
+        <view class="list-bar">
+          <view 
+            class="list-bar-fill"
+            style="width: {{(item.count / processedKeywords[0].count * 100)}}%;"
+          ></view>
+        </view>
+        <text class="list-count" wx:if="{{showCount}}">{{item.count}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 选中关键词详情 -->
+  <view class="selected-overlay" wx:if="{{selectedKeyword}}" bindtap="closeSelected">
+    <view class="selected-card" catchtap="closeSelected">
+      <view class="selected-header">
+        <text class="selected-word">{{selectedKeyword.word}}</text>
+        <text class="selected-close">✕</text>
+      </view>
+      <view class="selected-content">
+        <view class="selected-row">
+          <text class="selected-label">出现次数</text>
+          <text class="selected-value">{{selectedKeyword.count}}次</text>
+        </view>
+        <view class="selected-row">
+          <text class="selected-label">情感倾向</text>
+          <text class="selected-value {{getSentimentClass(selectedKeyword.sentiment)}}">
+            {{getSentimentLabel(selectedKeyword.sentiment)}}
+          </text>
+        </view>
+        <view class="selected-row">
+          <text class="selected-label">情感得分</text>
+          <text class="selected-value">{{selectedKeyword.sentiment}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 警告提示 -->
+  <view class="warning-tip" wx:if="{{warningMessage}}">
+    <text class="warning-icon">⚠️</text>
+    <text class="warning-text">{{warningMessage}}</text>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-buttons" wx:if="{{hasData}}">
+    <button class="action-btn" bindtap="exportImage">
+      <text class="btn-icon">📷</text>
+      <text class="btn-text">保存图片</text>
+    </button>
+  </view>
+</view>

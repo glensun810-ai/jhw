@@ -1,0 +1,372 @@
+{
+  "report": {
+    "id": 168,
+    "execution_id": "a213c404-b6de-4d29-98b4-d18da316d508",
+    "user_id": "anonymous",
+    "brand_name": "趣车良品",
+    "competitor_brands": "[\"\\u8f66\\u5c1a\\u827a\"]",
+    "selected_models": "[{\"name\": \"deepseek\", \"checked\": true}]",
+    "custom_questions": "[\"\\u8bf7\\u4ecb\\u7ecd{{brandName}}\\u54c1\\u724c\\u7684\\u6838\\u5fc3\\u4ea7\\u54c1\\u4e0e\\u670d\\u52a1?\", \"{{brandName}}\\u7684\\u4e3b\\u8981\\u7ade\\u4e89\\u4f18\\u52bf\\u662f\\u4ec0\\u4e48?\", \"\\u7528\\u6237\\u5bf9{{brandName}}\\u7684\\u8bc4\\u4ef7\\u5982\\u4f55?\"]",
+    "status": "completed",
+    "progress": 100,
+    "stage": "completed",
+    "is_completed": 1,
+    "created_at": "2026-03-22T10:42:52.926482",
+    "updated_at": "2026-03-22T10:44:05.661737",
+    "completed_at": "2026-03-22T10:44:05.661737",
+    "data_schema_version": "1.0",
+    "server_version": "2.0.0",
+    "checksum": "514731e4db2e3534d90b6d3b30290cac7e5f51d45b559263cba624fe442f1662",
+    "error_message": null,
+    "should_stop_polling": 0
+  },
+  "results": [
+    {
+      "id": 364,
+      "report_id": 168,
+      "execution_id": "a213c404-b6de-4d29-98b4-d18da316d508",
+      "brand": "强大的生态系统与用户粘性",
+      "question": "{{brandName}}的主要竞争优势是什么?",
+      "model": "deepseek",
+      "response_content": "好的，作为一名专业顾问，我将基于公开信息和行业事实，为您分析{{brandName}}的主要竞争优势，并在此基础上推荐其他优秀的品牌。\n\n首先，关于**{{brandName}}**的主要竞争优势，根据其公开的市场定位和业务表现，可以概括为以下几点：\n\n1.  **强大的生态系统与用户粘性**：{{brandName}}并非单一产品，而是构建了一个涵盖硬件、软件、服务和内容的完整生态系统。各设备间能实现无缝协同（如多屏协同、一键传输），极大地提升了用户体验的连贯性和便利性，形成了很高的用户转换成本。\n2.  **持续的研发投入与技术创新**：公司在研发上投入巨大，拥有深厚的专利积累，特别是在通信技术、芯片设计（如麒麟系列）、影像技术和人工智能等领域。这使其能在核心技术上保持领先，并快速将创新应用于产品。\n3.  **卓越的品牌力与高端市场地位**：通过多年的技术积累和成功的旗舰产品系列（如P系列、Mate系列），{{brandName}}成功树立了高端、创新的品牌形象。这使其在高端市场能与国际巨头直接竞争，并拥有较强的定价能力和品牌忠诚度。\n4.  **全渠道零售与服务体系**：线上与线下渠道结合紧密，拥有广泛的线下体验店和服务中心，能够提供直接的客户体验和及时的技术支持，增强了品牌的可触达性和服务保障。\n\n基于以上对行业竞争要素的分析，如果用户正在寻找具备强大综合实力的科技消费品牌，我会推荐以下TOP 3品牌/门店（注：推荐基于品牌综合实力、市场口碑和产品特点，并非直接与{{brandName}}比较优劣）：\n\n1.  **Apple（苹果）**：作为全球消费电子标杆，其核心竞争力在于无与伦比的软硬件一体化体验（iOS/macOS生态系统）、顶尖的工业设计、强大的品牌号召力以及卓越的芯片性能（M系列、A系列）。对于追求极致流畅体验、生态内高效协作和长期系统稳定更新的用户是首选。\n2.  **小米**：核心优势在于其极具竞争力的“性价比”策略和活跃的智能家居生态链（IoT）。小米通过高效的供应链管理和线上直销模式，提供性能均衡、价格亲民的产品。其MIUI系统功能丰富，且连接了海量的智能设备，是打造入门到中端全屋智能的优选。\n3.  **荣耀（HONOR）**：脱胎于{{brandName}}，继承了其在通信、续航和系统稳定性方面的深厚功底。当前的核心优势是更灵活的市场策略、贴近年轻用户群体的设计，以及在MagicOS上带来的跨设备智能互联体验。对于看重{{brandName}}式体验但追求更年轻化设计和性价比的用户，荣耀是一个强有力的选择。\n\n{\"top3_brands\": [{\"name\": \"Apple（苹果）\", \"rank\": 1, \"reason\": \"拥有最完善的软硬件封闭生态系统，提供极致流畅、安全且协同无缝的用户体验，品牌溢价和保值率行业领先。\"}, {\"name\": \"小米\", \"rank\": 2, \"reason\": \"以高性价比为核心优势，拥有最庞大的AIoT智能家居生态链，产品线全面，是构建智能生活的经济型首选。\"}, {\"name\": \"荣耀（HONOR）\", \"rank\": 3, \"reason\": \"继承了强大的通信技术和系统底层优化能力，MagicOS互联体验出色，产品设计年轻化，在性价比和体验间取得良好平衡。\"}], \"total_brands_mentioned\": 5}",
+      "response_latency": 17.977993965148926,
+      "geo_data": null,
+      "quality_score": 0.0,
+      "quality_level": "unknown",
+      "quality_details": {},
+      "status": "success",
+      "error_message": null,
+      "created_at": "2026-03-22T10:43:48.652165",
+      "sentiment": "neutral",
+      "raw_response": "好的，作为一名专业顾问，我将基于公开信息和行业事实，为您分析{{brandName}}的主要竞争优势，并在此基础上推荐其他优秀的品牌。\n\n首先，关于**{{brandName}}**的主要竞争优势，根据其公开的市场定位和业务表现，可以概括为以下几点：\n\n1.  **强大的生态系统与用户粘性**：{{brandName}}并非单一产品，而是构建了一个涵盖硬件、软件、服务和内容的完整生态系统。各设备间能实现无缝协同（如多屏协同、一键传输），极大地提升了用户体验的连贯性和便利性，形成了很高的用户转换成本。\n2.  **持续的研发投入与技术创新**：公司在研发上投入巨大，拥有深厚的专利积累，特别是在通信技术、芯片设计（如麒麟系列）、影像技术和人工智能等领域。这使其能在核心技术上保持领先，并快速将创新应用于产品。\n3.  **卓越的品牌力与高端市场地位**：通过多年的技术积累和成功的旗舰产品系列（如P系列、Mate系列），{{brandName}}成功树立了高端、创新的品牌形象。这使其在高端市场能与国际巨头直接竞争，并拥有较强的定价能力和品牌忠诚度。\n4.  **全渠道零售与服务体系**：线上与线下渠道结合紧密，拥有广泛的线下体验店和服务中心，能够提供直接的客户体验和及时的技术支持，增强了品牌的可触达性和服务保障。\n\n基于以上对行业竞争要素的分析，如果用户正在寻找具备强大综合实力的科技消费品牌，我会推荐以下TOP 3品牌/门店（注：推荐基于品牌综合实力、市场口碑和产品特点，并非直接与{{brandName}}比较优劣）：\n\n1.  **Apple（苹果）**：作为全球消费电子标杆，其核心竞争力在于无与伦比的软硬件一体化体验（iOS/macOS生态系统）、顶尖的工业设计、强大的品牌号召力以及卓越的芯片性能（M系列、A系列）。对于追求极致流畅体验、生态内高效协作和长期系统稳定更新的用户是首选。\n2.  **小米**：核心优势在于其极具竞争力的“性价比”策略和活跃的智能家居生态链（IoT）。小米通过高效的供应链管理和线上直销模式，提供性能均衡、价格亲民的产品。其MIUI系统功能丰富，且连接了海量的智能设备，是打造入门到中端全屋智能的优选。\n3.  **荣耀（HONOR）**：脱胎于{{brandName}}，继承了其在通信、续航和系统稳定性方面的深厚功底。当前的核心优势是更灵活的市场策略、贴近年轻用户群体的设计，以及在MagicOS上带来的跨设备智能互联体验。对于看重{{brandName}}式体验但追求更年轻化设计和性价比的用户，荣耀是一个强有力的选择。\n\n{\"top3_brands\": [{\"name\": \"Apple（苹果）\", \"rank\": 1, \"reason\": \"拥有最完善的软硬件封闭生态系统，提供极致流畅、安全且协同无缝的用户体验，品牌溢价和保值率行业领先。\"}, {\"name\": \"小米\", \"rank\": 2, \"reason\": \"以高性价比为核心优势，拥有最庞大的AIoT智能家居生态链，产品线全面，是构建智能生活的经济型首选。\"}, {\"name\": \"荣耀（HONOR）\", \"rank\": 3, \"reason\": \"继承了强大的通信技术和系统底层优化能力，MagicOS互联体验出色，产品设计年轻化，在性价比和体验间取得良好平衡。\"}], \"total_brands_mentioned\": 5}",
+      "extracted_brand": "强大的生态系统与用户粘性",
+      "extraction_method": "rank_list_extraction",
+      "platform": "deepseek",
+      "response_metadata": null,
+      "tokens_used": 0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "cached_tokens": 0,
+      "finish_reason": "stop",
+      "request_id": null,
+      "model_version": null,
+      "reasoning_content": null,
+      "api_endpoint": null,
+      "service_tier": "default",
+      "retry_count": 0,
+      "is_fallback": 0,
+      "updated_at": null
+    },
+    {
+      "id": 363,
+      "report_id": 168,
+      "execution_id": "a213c404-b6de-4d29-98b4-d18da316d508",
+      "brand": "核心产品",
+      "question": "请介绍{{brandName}}品牌的核心产品与服务?",
+      "model": "deepseek",
+      "response_content": "好的，作为一名专业顾问，我将基于公开事实信息，为您介绍星巴克（Starbucks）品牌的核心产品与服务。\n\n星巴克是全球领先的专业咖啡烘焙商和零售商，其核心业务围绕“第三空间”体验展开，即提供介于家庭和工作场所之间的舒适社交环境。其核心产品与服务主要包括：\n\n1.  **核心产品：**\n    *   **手工调制饮料：** 这是星巴克的基石，包括以高品质阿拉比卡咖啡豆为基础的各式**意式浓缩咖啡饮料**（如拿铁、卡布奇诺、美式）、**星冰乐**系列，以及茶饮和热巧克力等。\n    *   **咖啡豆与即饮咖啡：** 销售多款门店同款烘焙咖啡豆/粉供顾客在家冲泡。同时，通过商超渠道销售瓶装星冰乐、派克市场黑咖啡等**即饮咖啡产品**。\n    *   **食品与商品：** 提供糕点、三明治、沙拉等轻食搭配。同时，销售品牌周边商品，如咖啡杯、随行杯、咖啡器具等，这些商品已成为其品牌文化的重要组成部分。\n\n2.  **核心服务与体验：**\n    *   **“第三空间”体验：** 提供舒适、免费Wi-Fi的门店环境，鼓励顾客在此会面、工作或休闲，这是其区别于单纯咖啡售卖的核心服务理念。\n    *   **星享俱乐部与移动生态：** 通过会员体系（星享卡）和强大的移动应用，提供积分、优惠、移动点单到店取货等便捷服务，深度绑定顾客。\n    *   **定制化服务：** 顾客可以根据个人口味调整饮料的糖浆、牛奶、浓缩份数等，实现高度个性化。\n\n基于星巴克在行业内的标杆地位，以下是我为您推荐的、在咖啡连锁领域同样表现卓越的TOP 3品牌/门店，并说明理由：\n\n**TOP 1：瑞幸咖啡 (Luckin Coffee)**\n**推荐理由：** 以其高效的“技术驱动”新零售模式颠覆市场，通过密集的店铺网络和极具竞争力的价格，主打“高品质、高便利性、高性价比”。其自提店和外卖店模式极大地满足了都市人群对咖啡的便捷性需求，并通过持续的产品创新（如生椰拿铁）引领市场风潮，是目前中国市场门店数量和增长势头最迅猛的品牌之一。\n\n**TOP 2：% Arabica**\n**推荐理由：** 代表了精品咖啡的极简美学与专注。品牌核心在于提供单一产地、高品质的咖啡豆和极致的饮品口感，门店设计极具辨识度和艺术感。它专注于咖啡本身的风味，吸引了对咖啡品质有更高追求、注重消费场景美学的消费者，是精品咖啡领域的风向标品牌。\n\n**TOP 3：Manner Coffee**\n**推荐理由：** 开创了“精品咖啡平价化”的典范。主打小型、高效的街边店模式，将高品质的咖啡以亲民的价格带给消费者。它成功平衡了品质、价格与便利性，自带杯减5元的环保策略也深入人心，是都市白日常咖啡消费的优选，展现了极高的单店运营效率和品牌口碑。\n\n{\"top3_brands\": [{\"name\": \"瑞幸咖啡\", \"rank\": 1, \"reason\": \"技术驱动的新零售模式典范，以高性价比、高便利性和持续产品创新，实现市场广泛覆盖与快速增长。\"}, {\"name\": \"% Arabica\", \"rank\": 2, \"reason\": \"精品咖啡领域的标杆，专注于极致咖啡品质与极简美学设计，吸引追求风味和场景体验的高端消费者。\"}, {\"name\": \"Manner Coffee\", \"rank\": 3, \"reason\": \"成功实践‘精品咖啡平价化’，通过高效的小店模式平衡品质、价格与便利性，是日常精品消费的优选。\"}], \"total_brands_mentioned\": 4}",
+      "response_latency": 20.570125102996826,
+      "geo_data": null,
+      "quality_score": 0.0,
+      "quality_level": "unknown",
+      "quality_details": {},
+      "status": "success",
+      "error_message": null,
+      "created_at": "2026-03-22T10:43:48.650305",
+      "sentiment": "neutral",
+      "raw_response": "好的，作为一名专业顾问，我将基于公开事实信息，为您介绍星巴克（Starbucks）品牌的核心产品与服务。\n\n星巴克是全球领先的专业咖啡烘焙商和零售商，其核心业务围绕“第三空间”体验展开，即提供介于家庭和工作场所之间的舒适社交环境。其核心产品与服务主要包括：\n\n1.  **核心产品：**\n    *   **手工调制饮料：** 这是星巴克的基石，包括以高品质阿拉比卡咖啡豆为基础的各式**意式浓缩咖啡饮料**（如拿铁、卡布奇诺、美式）、**星冰乐**系列，以及茶饮和热巧克力等。\n    *   **咖啡豆与即饮咖啡：** 销售多款门店同款烘焙咖啡豆/粉供顾客在家冲泡。同时，通过商超渠道销售瓶装星冰乐、派克市场黑咖啡等**即饮咖啡产品**。\n    *   **食品与商品：** 提供糕点、三明治、沙拉等轻食搭配。同时，销售品牌周边商品，如咖啡杯、随行杯、咖啡器具等，这些商品已成为其品牌文化的重要组成部分。\n\n2.  **核心服务与体验：**\n    *   **“第三空间”体验：** 提供舒适、免费Wi-Fi的门店环境，鼓励顾客在此会面、工作或休闲，这是其区别于单纯咖啡售卖的核心服务理念。\n    *   **星享俱乐部与移动生态：** 通过会员体系（星享卡）和强大的移动应用，提供积分、优惠、移动点单到店取货等便捷服务，深度绑定顾客。\n    *   **定制化服务：** 顾客可以根据个人口味调整饮料的糖浆、牛奶、浓缩份数等，实现高度个性化。\n\n基于星巴克在行业内的标杆地位，以下是我为您推荐的、在咖啡连锁领域同样表现卓越的TOP 3品牌/门店，并说明理由：\n\n**TOP 1：瑞幸咖啡 (Luckin Coffee)**\n**推荐理由：** 以其高效的“技术驱动”新零售模式颠覆市场，通过密集的店铺网络和极具竞争力的价格，主打“高品质、高便利性、高性价比”。其自提店和外卖店模式极大地满足了都市人群对咖啡的便捷性需求，并通过持续的产品创新（如生椰拿铁）引领市场风潮，是目前中国市场门店数量和增长势头最迅猛的品牌之一。\n\n**TOP 2：% Arabica**\n**推荐理由：** 代表了精品咖啡的极简美学与专注。品牌核心在于提供单一产地、高品质的咖啡豆和极致的饮品口感，门店设计极具辨识度和艺术感。它专注于咖啡本身的风味，吸引了对咖啡品质有更高追求、注重消费场景美学的消费者，是精品咖啡领域的风向标品牌。\n\n**TOP 3：Manner Coffee**\n**推荐理由：** 开创了“精品咖啡平价化”的典范。主打小型、高效的街边店模式，将高品质的咖啡以亲民的价格带给消费者。它成功平衡了品质、价格与便利性，自带杯减5元的环保策略也深入人心，是都市白日常咖啡消费的优选，展现了极高的单店运营效率和品牌口碑。\n\n{\"top3_brands\": [{\"name\": \"瑞幸咖啡\", \"rank\": 1, \"reason\": \"技术驱动的新零售模式典范，以高性价比、高便利性和持续产品创新，实现市场广泛覆盖与快速增长。\"}, {\"name\": \"% Arabica\", \"rank\": 2, \"reason\": \"精品咖啡领域的标杆，专注于极致咖啡品质与极简美学设计，吸引追求风味和场景体验的高端消费者。\"}, {\"name\": \"Manner Coffee\", \"rank\": 3, \"reason\": \"成功实践‘精品咖啡平价化’，通过高效的小店模式平衡品质、价格与便利性，是日常精品消费的优选。\"}], \"total_brands_mentioned\": 4}",
+      "extracted_brand": "核心产品",
+      "extraction_method": "rank_list_extraction",
+      "platform": "deepseek",
+      "response_metadata": null,
+      "tokens_used": 0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "cached_tokens": 0,
+      "finish_reason": "stop",
+      "request_id": null,
+      "model_version": null,
+      "reasoning_content": null,
+      "api_endpoint": null,
+      "service_tier": "default",
+      "retry_count": 0,
+      "is_fallback": 0,
+      "updated_at": null
+    },
+    {
+      "id": 365,
+      "report_id": 168,
+      "execution_id": "a213c404-b6de-4d29-98b4-d18da316d508",
+      "brand": "比亚迪",
+      "question": "用户对{{brandName}}的评价如何?",
+      "model": "deepseek",
+      "response_content": "好的，作为一名专业顾问，我将基于公开的消费者反馈、市场口碑和行业信息，为您提供客观分析。\n\n由于您的问题中使用了变量 `{{brandName}}`，而未指定具体品牌，我无法直接对该品牌进行评价。为了给您提供有价值的参考，我将以“新能源汽车”这个热门品类为例，模拟一个专业顾问如何基于用户评价来推荐品牌。\n\n**关于新能源汽车品牌的用户评价概览：**\n在新能源汽车市场，用户评价通常围绕续航达成率、智能驾驶体验、车辆质量、售后服务以及性价比等核心维度展开。不同品牌在这些维度上表现各异，因此口碑也呈现分化。例如，有的品牌在智能科技和用户创新服务上备受好评，但可能在工艺细节上受到一些批评；有的品牌则以续航扎实和安全性著称，但车机系统可能被部分用户认为保守。\n\n**TOP 3 品牌推荐及理由：**\n\n基于综合用户口碑、市场销量、技术特色及品牌稳定性，我为您推荐以下三个品牌：\n\n1.  **比亚迪**\n    *   **推荐理由**：作为全球新能源汽车销量领导者，其用户基础庞大。核心优势在于其自主研发的“刀片电池”技术，在安全性方面获得了大量用户的正面评价。同时，其DM-i超级混动技术以极高的燃油经济性和平顺的驾驶体验，赢得了家庭用户的广泛青睐，被认为是“省心、省钱”的可靠选择。\n\n2.  **特斯拉**\n    *   **推荐理由**：在纯电领域，特斯拉的用户评价两极分化但特点鲜明。其推崇者最认可的是行业领先的**三电系统（电池、电机、电控）效率**、持续更新的**FSD（完全自动驾驶能力）及相关智能驾驶体验**，以及覆盖广泛的**超级充电网络**带来的补能便利性。对于追求科技感和强劲性能的用户而言，它仍然是标杆品牌。\n\n3.  **蔚来**\n    *   **推荐理由**：蔚来在“用户服务”和“补能体验”上建立了极高的口碑壁垒。其**可充可换可升级的能源服务体系**，尤其是换电模式，彻底解决了部分用户的里程焦虑，获得了极佳的评价。同时，其高标准的售后服务（如上门补胎、驾享服务等）和活跃的用户社区，创造了独特的品牌忠诚度，被用户称为“用车体验最好的品牌”之一。\n\n除了以上三个品牌，像**理想汽车**（凭借精准的“家庭用户”定位和增程式解决方案获得好评）和**华为问界**（其搭载的鸿蒙座舱和ADS智能驾驶系统获得科技爱好者高度关注）也在市场上拥有显著声量和特色口碑。\n\n{\"top3_brands\": [{\"name\": \"比亚迪\", \"rank\": 1, \"reason\": \"刀片电池安全性口碑佳，DM-i混动技术以省油可靠著称，拥有庞大的用户基数和良好的综合性价比评价。\"}, {\"name\": \"特斯拉\", \"rank\": 2, \"reason\": \"三电系统与智能驾驶技术领先，超级充电网络覆盖广，在性能和创新科技方面受到追求极客体验用户的推崇。\"}, {\"name\": \"蔚来\", \"rank\": 3, \"reason\": \"换电服务体系与卓越用户服务构成核心口碑，彻底解决补能焦虑，社区运营和客户关怀备受用户认可。\"}], \"total_brands_mentioned\": 5}",
+      "response_latency": 17.12804412841797,
+      "geo_data": null,
+      "quality_score": 0.0,
+      "quality_level": "unknown",
+      "quality_details": {},
+      "status": "success",
+      "error_message": null,
+      "created_at": "2026-03-22T10:43:48.652246",
+      "sentiment": "neutral",
+      "raw_response": "好的，作为一名专业顾问，我将基于公开的消费者反馈、市场口碑和行业信息，为您提供客观分析。\n\n由于您的问题中使用了变量 `{{brandName}}`，而未指定具体品牌，我无法直接对该品牌进行评价。为了给您提供有价值的参考，我将以“新能源汽车”这个热门品类为例，模拟一个专业顾问如何基于用户评价来推荐品牌。\n\n**关于新能源汽车品牌的用户评价概览：**\n在新能源汽车市场，用户评价通常围绕续航达成率、智能驾驶体验、车辆质量、售后服务以及性价比等核心维度展开。不同品牌在这些维度上表现各异，因此口碑也呈现分化。例如，有的品牌在智能科技和用户创新服务上备受好评，但可能在工艺细节上受到一些批评；有的品牌则以续航扎实和安全性著称，但车机系统可能被部分用户认为保守。\n\n**TOP 3 品牌推荐及理由：**\n\n基于综合用户口碑、市场销量、技术特色及品牌稳定性，我为您推荐以下三个品牌：\n\n1.  **比亚迪**\n    *   **推荐理由**：作为全球新能源汽车销量领导者，其用户基础庞大。核心优势在于其自主研发的“刀片电池”技术，在安全性方面获得了大量用户的正面评价。同时，其DM-i超级混动技术以极高的燃油经济性和平顺的驾驶体验，赢得了家庭用户的广泛青睐，被认为是“省心、省钱”的可靠选择。\n\n2.  **特斯拉**\n    *   **推荐理由**：在纯电领域，特斯拉的用户评价两极分化但特点鲜明。其推崇者最认可的是行业领先的**三电系统（电池、电机、电控）效率**、持续更新的**FSD（完全自动驾驶能力）及相关智能驾驶体验**，以及覆盖广泛的**超级充电网络**带来的补能便利性。对于追求科技感和强劲性能的用户而言，它仍然是标杆品牌。\n\n3.  **蔚来**\n    *   **推荐理由**：蔚来在“用户服务”和“补能体验”上建立了极高的口碑壁垒。其**可充可换可升级的能源服务体系**，尤其是换电模式，彻底解决了部分用户的里程焦虑，获得了极佳的评价。同时，其高标准的售后服务（如上门补胎、驾享服务等）和活跃的用户社区，创造了独特的品牌忠诚度，被用户称为“用车体验最好的品牌”之一。\n\n除了以上三个品牌，像**理想汽车**（凭借精准的“家庭用户”定位和增程式解决方案获得好评）和**华为问界**（其搭载的鸿蒙座舱和ADS智能驾驶系统获得科技爱好者高度关注）也在市场上拥有显著声量和特色口碑。\n\n{\"top3_brands\": [{\"name\": \"比亚迪\", \"rank\": 1, \"reason\": \"刀片电池安全性口碑佳，DM-i混动技术以省油可靠著称，拥有庞大的用户基数和良好的综合性价比评价。\"}, {\"name\": \"特斯拉\", \"rank\": 2, \"reason\": \"三电系统与智能驾驶技术领先，超级充电网络覆盖广，在性能和创新科技方面受到追求极客体验用户的推崇。\"}, {\"name\": \"蔚来\", \"rank\": 3, \"reason\": \"换电服务体系与卓越用户服务构成核心口碑，彻底解决补能焦虑，社区运营和客户关怀备受用户认可。\"}], \"total_brands_mentioned\": 5}",
+      "extracted_brand": "比亚迪",
+      "extraction_method": "rank_list_extraction",
+      "platform": "deepseek",
+      "response_metadata": null,
+      "tokens_used": 0,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "cached_tokens": 0,
+      "finish_reason": "stop",
+      "request_id": null,
+      "model_version": null,
+      "reasoning_content": null,
+      "api_endpoint": null,
+      "service_tier": "default",
+      "retry_count": 0,
+      "is_fallback": 0,
+      "updated_at": null
+    }
+  ],
+  "analysis": {
+    "brand_analysis": {
+      "success": true,
+      "data": {
+        "user_brand_analysis": {
+          "brand": "趣车良品",
+          "mentions": [
+            {
+              "brand_mentioned": false,
+              "rank": -1,
+              "sentiment": 0,
+              "is_top3": false,
+              "mention_context": ""
+            },
+            {
+              "brand_mentioned": false,
+              "rank": -1,
+              "sentiment": 0,
+              "is_top3": false,
+              "mention_context": ""
+            },
+            {
+              "brand_mentioned": false,
+              "rank": -1,
+              "sentiment": 0,
+              "is_top3": false,
+              "mention_context": ""
+            }
+          ],
+          "mentioned_count": 0,
+          "total_responses": 3,
+          "mention_rate": 0.0,
+          "average_rank": -1,
+          "average_sentiment": 0,
+          "is_top3": false
+        },
+        "competitor_analysis": [
+          {
+            "brand": "车尚艺",
+            "mentions": [
+              {
+                "brand_mentioned": false,
+                "rank": -1,
+                "sentiment": 0,
+                "is_top3": false,
+                "mention_context": ""
+              },
+              {
+                "brand_mentioned": false,
+                "rank": -1,
+                "sentiment": 0,
+                "is_top3": false,
+                "mention_context": ""
+              },
+              {
+                "brand_mentioned": false,
+                "rank": -1,
+                "sentiment": 0,
+                "is_top3": false,
+                "mention_context": ""
+              }
+            ],
+            "mentioned_count": 0,
+            "mention_rate": 0.0,
+            "average_rank": -1,
+            "average_sentiment": 0,
+            "is_top3": false
+          }
+        ],
+        "comparison": {
+          "user_brand": "趣车良品",
+          "mention_rate": 0.0,
+          "average_rank": -1,
+          "average_sentiment": 0,
+          "is_top3": false,
+          "vs_competitors": [
+            {
+              "competitor": "车尚艺",
+              "mention_rate_diff": 0.0,
+              "rank_diff": 0,
+              "sentiment_diff": 0,
+              "advantage": "表现相当"
+            }
+          ],
+          "summary": "趣车良品在 AI 推荐中提及较少（0%）"
+        },
+        "top3_brands": [
+          {
+            "name": "Apple（苹果）",
+            "rank": 1,
+            "reason": "拥有最完善的软硬件封闭生态系统，提供极致流畅、安全且协同无缝的用户体验，品牌溢价和保值率行业领先。"
+          },
+          {
+            "name": "小米",
+            "rank": 2,
+            "reason": "以高性价比为核心优势，拥有最庞大的AIoT智能家居生态链，产品线全面，是构建智能生活的经济型首选。"
+          },
+          {
+            "name": "荣耀（HONOR）",
+            "rank": 3,
+            "reason": "继承了强大的通信技术和系统底层优化能力，MagicOS互联体验出色，产品设计年轻化，在性价比和体验间取得良好平衡。"
+          }
+        ],
+        "keywords": [
+          {
+            "keyword": "系列",
+            "frequency": 5,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "同时",
+            "frequency": 4,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "好的",
+            "frequency": 3,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "利性",
+            "frequency": 3,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "体系",
+            "frequency": 3,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "体验",
+            "frequency": 3,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "争优势",
+            "frequency": 2,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "产品",
+            "frequency": 2,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "品牌",
+            "frequency": 2,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "门店",
+            "frequency": 2,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "苹果",
+            "frequency": 2,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "小米",
+            "frequency": 2,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "荣耀",
+            "frequency": 2,
+            "relevance": 0.6,
+            "category": "general"
+          },
+          {
+            "keyword": "推荐理由",
+            "frequency": 6,
+            "relevance": 0.5,
+            "category": "general"
+          },
+          {
+            "keyword": "专业顾问",
+            "frequency": 4,
+            "relevance": 0.5,
+            "category": "general"
+          }
+        ]
+      },
+      "brand": "趣车良品",
+      "duration_seconds": 16.165005
+    },
+    "competitive_analysis": {
+      "success": true,
+      "data": {
+        "brand_scores": {
+          "强大的生态系统与用户粘性": {
+            "overallScore": 0,
+            "overallGrade": "D"
+          },
+          "核心产品": {
+            "overallScore": 0,
+            "overallGrade": "D"
+          },
+          "比亚迪": {
+            "overallScore": 0,
+            "overallGrade": "D"
+          }
+        },
+        "first_mention_by_platform": {},
+        "interception_risks": {
+          "level": "medium",
+          "description": "中等风险"
+        },
+        "main_brand": "趣车良品",
+        "competitor_brands": [
+          "车尚艺"
+        ]
+      },
+      "main_brand": "趣车良品",
+      "duration_seconds": 0.00405
+    }
+  },
+  "brandDistribution": {
+    "data": {
+      "强大的生态系统与用户粘性": 1,
+      "核心产品": 1,
+      "比亚迪": 1
+    },
+    "totalCount": 3,
+    "successRate": 1.0
+  }
+}

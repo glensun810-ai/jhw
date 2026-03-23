@@ -207,6 +207,9 @@ class ResultProcessor:
             attribution_analysis
         )
 
+        # 【P1 新增】Token 使用追踪
+        token_usage = self._aggregate_token_usage(test_results)
+
         result = {
             'processed_results': processed_results,
             'digital_vitality_index': digital_vitality,
@@ -214,6 +217,7 @@ class ResultProcessor:
             'attribution_analysis': attribution_analysis,
             'competitive_analysis': competitive_analysis,
             'actionable_insights': insights,
+            'token_usage': token_usage,  # 【P1 新增】Token 使用统计
             'processing_timestamp': datetime.now().isoformat()
         }
 
@@ -224,7 +228,94 @@ class ResultProcessor:
         if attribution_analysis:
             api_logger.info(f"Attribution analysis completed for {brand_name}: risk_score={attribution_analysis.get('attribution_metrics', {}).get('risk_score', 'N/A')}")
 
+        if token_usage:
+            api_logger.info(f"Token usage tracking: total_tokens={token_usage.get('total_tokens', 0)}, total_cost_estimate=${token_usage.get('total_cost_estimate', 0):.4f}")
+
         return result
+
+    def _aggregate_token_usage(self, test_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        【P1 新增】聚合 Token 使用统计
+
+        Args:
+            test_results: Raw test results from AI platforms
+
+        Returns:
+            Dictionary with aggregated token usage statistics
+        """
+        if not test_results or len(test_results) == 0:
+            return {
+                'total_tokens': 0,
+                'prompt_tokens': 0,
+                'completion_tokens': 0,
+                'cached_tokens': 0,
+                'total_requests': 0,
+                'successful_requests': 0,
+                'avg_tokens_per_request': 0,
+                'total_cost_estimate': 0.0,
+                'breakdown_by_model': {}
+            }
+
+        total_tokens = 0
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
+        total_cached_tokens = 0
+        successful_requests = 0
+        model_usage = {}
+
+        for result in test_results:
+            # 提取 token 使用信息
+            tokens_used = result.get('tokens_used', 0) or 0
+            prompt_tokens = result.get('prompt_tokens', 0) or 0
+            completion_tokens = result.get('completion_tokens', 0) or 0
+            cached_tokens = result.get('cached_tokens', 0) or 0
+
+            total_tokens += tokens_used
+            total_prompt_tokens += prompt_tokens
+            total_completion_tokens += completion_tokens
+            total_cached_tokens += cached_tokens
+
+            if tokens_used > 0:
+                successful_requests += 1
+
+            # 按模型聚合
+            model_name = result.get('model', 'unknown')
+            if model_name not in model_usage:
+                model_usage[model_name] = {
+                    'total_tokens': 0,
+                    'prompt_tokens': 0,
+                    'completion_tokens': 0,
+                    'cached_tokens': 0,
+                    'request_count': 0
+                }
+
+            model_usage[model_name]['total_tokens'] += tokens_used
+            model_usage[model_name]['prompt_tokens'] += prompt_tokens
+            model_usage[model_name]['completion_tokens'] += completion_tokens
+            model_usage[model_name]['cached_tokens'] += cached_tokens
+            model_usage[model_name]['request_count'] += 1
+
+        # 估算成本（简化版本，实际应该根据不同模型的定价计算）
+        # 假设平均价格：$0.002 / 1K tokens
+        cost_per_1k_tokens = 0.002
+        total_cost_estimate = (total_tokens / 1000) * cost_per_1k_tokens
+
+        return {
+            'total_tokens': total_tokens,
+            'prompt_tokens': total_prompt_tokens,
+            'completion_tokens': total_completion_tokens,
+            'cached_tokens': total_cached_tokens,
+            'total_requests': len(test_results),
+            'successful_requests': successful_requests,
+            'avg_tokens_per_request': round(total_tokens / max(successful_requests, 1), 2),
+            'total_cost_estimate': round(total_cost_estimate, 4),
+            'breakdown_by_model': model_usage,
+            'token_efficiency': {
+                'prompt_ratio': round(total_prompt_tokens / max(total_tokens, 1), 3),
+                'completion_ratio': round(total_completion_tokens / max(total_tokens, 1), 3),
+                'cache_hit_ratio': round(total_cached_tokens / max(total_prompt_tokens, 1), 3)
+            }
+        }
     
     def _process_basic_scoring(self, test_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Process basic scoring for each result"""

@@ -47,7 +47,7 @@ diagnosis_bp = Blueprint('diagnosis_api', __name__, url_prefix='/api/diagnosis')
 @rate_limit(limit=30, window=60, per='user')
 def get_user_history():
     """
-    获取用户历史报告
+    获取用户历史报告（P0 修复 - 2026-03-17：确保 execution_id 正确传递）
 
     请求参数:
     - page: 页码 (默认 1)
@@ -59,12 +59,15 @@ def get_user_history():
             {
                 "id": 1,
                 "execution_id": "xxx",
+                "executionId": "xxx",  // P0 修复：同时返回 camelCase 格式
                 "brand_name": "品牌名称",
+                "brandName": "品牌名称",  // P0 修复：同时返回 camelCase 格式
                 "status": "completed",
                 "progress": 100,
                 "stage": "completed",
                 "is_completed": true,
                 "created_at": "2026-02-28T10:00:00",
+                "createdAt": "2026-02-28T10:00:00",  // P0 修复：同时返回 camelCase 格式
                 "completed_at": "2026-02-28T10:05:00"
             }
         ],
@@ -92,7 +95,25 @@ def get_user_history():
 
         api_logger.info(f"获取用户历史：user_id={user_id}, page={page}, limit={limit}, count={len(result['reports'])}")
 
-        # P21 修复：直接返回 snake_case 格式，不转换
+        # 【P0 修复 - 2026-03-17】同时返回 snake_case 和 camelCase 格式
+        # 确保前端可以使用任一格式访问
+        if 'reports' in result and isinstance(result['reports'], list):
+            for report in result['reports']:
+                if isinstance(report, dict):
+                    # 确保 executionId 可用
+                    if 'execution_id' in report and 'executionId' not in report:
+                        report['executionId'] = report['execution_id']
+                    # 确保 brandName 可用
+                    if 'brand_name' in report and 'brandName' not in report:
+                        report['brandName'] = report['brand_name']
+                    # 确保 createdAt 可用
+                    if 'created_at' in report and 'createdAt' not in report:
+                        report['createdAt'] = report['created_at']
+                    # 确保 overallScore 可用
+                    if 'overall_score' in report and 'overallScore' not in report:
+                        report['overallScore'] = report['overall_score']
+
+        # P21 修复：直接返回结果（包含双格式字段）
         return jsonify(result), 200
 
     except BusinessException as e:
@@ -209,292 +230,154 @@ def get_history_report_api(execution_id):
 def get_full_report(execution_id):
     """
     获取完整诊断报告
+    【P0 架构级修复 - 2026-03-18】使用统一响应格式和服务层验证器
+    【P0 关键修复 - 2026-03-20】强化数据校验，防止空响应体导致前端崩溃
 
     路径参数:
     - execution_id: 执行 ID
 
     返回:
     {
-        "report": {...},
-        "results": [...],
-        "analysis": {...},
-        "brandDistribution": {...},
-        "sentimentDistribution": {...},
-        "keywords": [...],
-        "meta": {...},
-        "validation": {
-            "is_valid": true,
-            "errors": [],
-            "warnings": [],
-            "quality_score": 95
+        "success": True,
+        "data": {
+            "report": {...},
+            "results": [...],
+            "analysis": {...},
+            ...
         },
-        "qualityHints": {...}
+        "metadata": {...},
+        "timestamp": "..."
     }
     """
     try:
-        # 获取服务
+        # 【P0 架构级修复】导入统一响应格式和服务层验证器
+        from wechat_backend.middleware.response_formatter import StandardizedResponse
+        from wechat_backend.validators.service_validator import ServiceDataValidator
+
+        # 1. 获取服务
         service = get_report_service()
 
-        # 获取完整报告
+        # 2. 获取完整报告
         report = service.get_full_report(execution_id)
 
-        # P2-2 优化：使用统一错误码处理报告不存在的情况
+        # 3. 【P0 关键修复 - 2026-03-20】空报告拦截
+        # 如果 service 层返回 None 或空字典，立即返回明确错误
         if not report:
-            api_logger.warning(f"报告不存在：execution_id={execution_id}")
-            raise ReportException(
-                ErrorCode.REPORT_NOT_FOUND,
-                detail=f'execution_id={execution_id}'
+            api_logger.error(f"❌ [服务层返回空报告] execution_id={execution_id}")
+            return StandardizedResponse.error(
+                ErrorCode.DATA_NOT_FOUND,
+                detail={
+                    'execution_id': execution_id,
+                    'suggestion': '诊断报告不存在或数据为空，请尝试重新诊断',
+                    'recovery_actions': [
+                        '点击"重试"重新加载',
+                        '点击"重新诊断"创建新任务',
+                        '查看历史报告记录'
+                    ]
+                },
+                http_status=404
             )
 
-        # 【P0-缓存修复】处理报告为字典但包含 error 字段的情况
+        # 4. 【P0 架构级修复】服务层数据验证
+        ServiceDataValidator.validate_report_data(report, execution_id)
+
+        # 5. 【P0 关键修复 - 2026-03-20】检查报告状态
+        # 处理报告为失败状态的情况
         if isinstance(report, dict) and report.get('error'):
-            api_logger.warning(f"报告为失败状态：execution_id={execution_id}, error={report.get('error', {})}")
-            return jsonify(report), 200
-
-        # 【P0-缓存修复】确保 report 是正确的结构
-        if not isinstance(report, dict):
-            api_logger.error(f"报告格式错误：execution_id={execution_id}, type={type(report)}")
-            raise ReportException(
-                ErrorCode.REPORT_INVALID_FORMAT,
-                {'detail': f'Unexpected type: {type(report)}'},
-                detail=f'execution_id={execution_id}'
+            api_logger.warning(f"报告为失败状态：execution_id={execution_id}")
+            # 返回失败状态但使用统一格式，确保前端可以渲染错误卡片
+            return StandardizedResponse.partial_success(
+                data=report,
+                warnings=[report.get('error_message', '诊断执行失败')],
+                message='报告为失败状态，包含错误信息',
+                metadata={
+                    'execution_id': execution_id,
+                    'error_type': report.get('error', {}).get('status', 'unknown'),
+                    'fallback_info': report.get('error', {}).get('fallback_info', {})
+                }
             )
 
-        # 【P0 关键修复 - 2026-03-12】添加详细的数据结构验证日志
-        api_logger.info(
-            f"[报告数据检查] execution_id={execution_id}, "
-            f"keys={list(report.keys())}, "
-            f"results_count={len(report.get('results', []))}"
-        )
-
-        brand_dist = report.get('brandDistribution', {})
-        sentiment_dist = report.get('sentimentDistribution', {})
-        keywords = report.get('keywords', [])
-
-        # 【P0 关键修复 - 2026-03-13 第 14 次】兼容 camelCase 和 snake_case
-        # 注意：report 数据已经通过 convert_response_to_camel() 转换为 camelCase
-        # 所以 total_count 已转换为 totalCount，但验证代码仍在使用 total_count
-        total_count = brand_dist.get('totalCount') or brand_dist.get('total_count', 0)
-        sentiment_total = sentiment_dist.get('totalCount') or sentiment_dist.get('total_count', 0)
-
-        api_logger.info(
-            f"[报告数据详情] execution_id={execution_id}, "
-            f"brandDistribution.totalCount={brand_dist.get('totalCount', 'N/A')}, "
-            f"brandDistribution.total_count={brand_dist.get('total_count', 'N/A')}, "
-            f"brandDistribution.data.keys={list(brand_dist.get('data', {}).keys()) if isinstance(brand_dist.get('data'), dict) else 'N/A'}, "
-            f"sentimentDistribution.totalCount={sentiment_dist.get('totalCount', 'N/A')}, "
-            f"sentimentDistribution.total_count={sentiment_dist.get('total_count', 'N/A')}, "
-            f"keywords_count={len(keywords) if isinstance(keywords, list) else 'N/A'}"
-        )
-
-        # 【P0 关键修复 - 2026-03-13 第 15 次】增强数据验证和降级处理
-        # 验证数据是否有效
-        has_valid_data = (
-            brand_dist.get('data') and 
-            isinstance(brand_dist.get('data'), dict) and 
-            len(brand_dist.get('data', {})) > 0 and 
-            total_count > 0
-        )
-
-        # 【P0 关键修复 - 2026-03-13 第 18 次】即使数据不完整，也返回已有数据
-        # 核心原则：优先返回原始结果，让前端决定如何展示
-        
+        # 6. 检查是否有原始结果
         has_raw_results = len(report.get('results', [])) > 0
-        
-        if not has_valid_data:
-            api_logger.warning(
-                f"⚠️ [数据验证警告] execution_id={execution_id}, "
-                f"brandDistribution 为空，但有原始结果：{has_raw_results}"
-            )
-
-            # 尝试从数据库重建
-            if has_raw_results:
-                try:
-                    # 从原始结果重建 brandDistribution
-                    brand_data = {}
-                    for result in report.get('results', []):
-                        brand = result.get('extracted_brand') or result.get('brand')
-                        if brand:
-                            brand_data[brand] = brand_data.get(brand, 0) + 1
-
-                    if brand_data:
-                        report['brandDistribution'] = {
-                            'data': brand_data,
-                            'totalCount': sum(brand_data.values()),
-                            'successRate': 1.0
-                        }
-                        brand_dist = report['brandDistribution']
-                        total_count = sum(brand_data.values())
-
-                        # 添加质量警告
-                        if 'qualityHints' not in report:
-                            report['qualityHints'] = {}
-                        report['qualityHints']['partial_success'] = True
-                        report['qualityHints']['warnings'] = [
-                            '品牌分布数据已从原始结果重建'
-                        ]
-
-                        api_logger.info(
-                            f"✅ [数据重建成功] execution_id={execution_id}, "
-                            f"brands={len(brand_data)}, total={total_count}"
-                        )
-                except Exception as rebuild_err:
-                    api_logger.error(
-                        f"❌ [数据重建失败] execution_id={execution_id}, error={rebuild_err}"
-                    )
-
-        # 【P0 关键修复 - 第 18 次】即使数据不完全，也返回 200 成功
-        # 让前端决定如何展示
-        final_has_data = (
-            brand_dist.get('data') and
-            isinstance(brand_dist.get('data'), dict) and
-            len(brand_dist.get('data', {})) > 0
+        has_valid_data = (
+            report.get('brandDistribution', {}).get('data') and
+            len(report.get('brandDistribution', {}).get('data', {})) > 0
         )
 
-        if not final_has_data and not has_raw_results:
-            # 真的没有任何数据
+        # 7. 【P0 关键修复 - 2026-03-20】数据完全为空时返回明确错误（增强版）
+        if not has_valid_data and not has_raw_results:
             api_logger.error(
                 f"❌ [数据完全为空] execution_id={execution_id}, "
-                f"无原始结果，返回错误"
+                f"brandDistribution.data={report.get('brandDistribution', {}).get('data')}"
             )
-            return jsonify({
-                'success': False,
-                'error': {
-                    'code': 'DATA_NOT_FOUND',
-                    'message': '诊断数据为空，无法生成报告',
-                    'suggestion': '请尝试重新诊断或联系客服'
+            # 尝试从 report 中提取错误信息
+            error_msg = '诊断数据为空'
+            if report.get('validation', {}).get('errors'):
+                error_msg = report['validation']['errors'][0]
+            elif report.get('qualityHints', {}).get('warnings'):
+                error_msg = report['qualityHints']['warnings'][0]
+
+            return StandardizedResponse.error(
+                ErrorCode.DATA_NOT_FOUND,
+                detail={
+                    'execution_id': execution_id,
+                    'suggestion': '诊断已完成但未生成有效数据，可能原因：AI 调用失败或数据保存失败',
+                    'error_message': error_msg,
+                    'recovery_actions': [
+                        '检查后端日志查看详细错误',
+                        '点击"重新诊断"创建新任务',
+                        '查看历史报告记录'
+                    ]
+                },
+                http_status=404
+            )
+
+        # 8. 数据不完整但有原始结果时，返回部分成功
+        if not has_valid_data and has_raw_results:
+            api_logger.warning(f"⚠️ [部分成功] execution_id={execution_id}, 有原始结果")
+            # 【P0 关键修复】尝试重建 brandDistribution
+            try:
+                brand_data = {}
+                for result in report.get('results', []):
+                    brand = result.get('extracted_brand') or result.get('brand')
+                    if brand:
+                        brand_data[brand] = brand_data.get(brand, 0) + 1
+
+                if brand_data:
+                    report['brandDistribution'] = {
+                        'data': brand_data,
+                        'totalCount': sum(brand_data.values()),
+                        'successRate': 1.0
+                    }
+                    api_logger.info(
+                        f"✅ [重建成功] execution_id={execution_id}, brands={list(brand_data.keys())}"
+                    )
+            except Exception as rebuild_err:
+                api_logger.warning(f"⚠️ [重建失败] execution_id={execution_id}, error={rebuild_err}")
+
+            return StandardizedResponse.partial_success(
+                data=report,
+                warnings=report.get('qualityHints', {}).get('warnings', []),
+                message='数据部分成功，包含原始结果',
+                metadata={
+                    'execution_id': execution_id,
+                    'results_count': len(report.get('results', [])),
+                    'rebuilt_brand_distribution': 'brand_data' in locals()
                 }
-            }), 404
+            )
 
-        # 【P0 关键】返回成功响应，包含部分成功标志
-        return jsonify({
-            'success': True,
-            'data': report,
-            'hasPartialData': not final_has_data and has_raw_results,
-            'warnings': report.get('qualityHints', {}).get('warnings', [])
-        }), 200
-
-        # P1-3 修复：验证报告并返回验证信息（包含质量评分和质量等级）
-        try:
-            validation = get_validation_service().validate_report(report)
-        except Exception as validation_err:
-            api_logger.warning(f"验证服务失败：{validation_err}，使用默认验证结果")
-            validation = {
-                'is_valid': True,
-                'errors': [],
-                'warnings': [],
-                'quality_score': 80
+        # 9. 【P0 架构级修复】数据完整，返回标准成功响应
+        api_logger.info(f"✅ [报告获取成功] execution_id={execution_id}")
+        return StandardizedResponse.success(
+            data=report,
+            message='报告获取成功',
+            metadata={
+                'execution_id': execution_id,
+                'data_version': report.get('data_schema_version', '1.0'),
+                'results_count': len(report.get('results', [])),
+                'brand_count': len(report.get('brandDistribution', {}).get('data', {}))
             }
-
-        # P1-3 增强：添加质量等级和详细提示
-        quality_score = validation.get('quality_score', 0) if validation else 0
-
-        # 定义质量等级
-        quality_level_info = {
-            'level': 'excellent',
-            'label': '优秀',
-            'color': '#28a745',
-            'description': '报告质量优秀，数据完整可靠',
-            'recommendation': '可以直接使用报告结果进行决策'
-        }
-
-        if quality_score >= 80:
-            quality_level_info = {
-                'level': 'excellent',
-                'label': '优秀',
-                'color': '#28a745',
-                'description': '报告质量优秀，数据完整可靠',
-                'recommendation': '可以直接使用报告结果进行决策'
-            }
-        elif quality_score >= 60:
-            quality_level_info = {
-                'level': 'good',
-                'label': '良好',
-                'color': '#17a2b8',
-                'description': '报告质量良好，部分数据可能需要关注',
-                'recommendation': '建议查看警告信息，了解可改进的方面'
-            }
-        elif quality_score >= 40:
-            quality_level_info = {
-                'level': 'fair',
-                'label': '一般',
-                'color': '#ffc107',
-                'description': '报告质量一般，存在较多数据质量问题',
-                'recommendation': '建议优化配置后重新诊断，以获得更准确的结果'
-            }
-        elif quality_score >= 20:
-            quality_level_info = {
-                'level': 'poor',
-                'label': '较差',
-                'color': '#fd7e14',
-                'description': '报告质量较差，数据完整性不足',
-                'recommendation': '强烈建议优化配置后重新诊断'
-            }
-        else:
-            quality_level_info = {
-                'level': 'critical',
-                'label': '严重',
-                'color': '#dc3545',
-                'description': '报告质量严重不足，参考价值有限',
-                'recommendation': '请检查配置并重新诊断，或联系技术支持'
-            }
-
-        # 添加质量等级到验证信息
-        if validation:
-            validation['quality_level'] = quality_level_info
-
-        # 记录质量指标
-        api_logger.info(
-            f"获取完整报告：execution_id={execution_id}, "
-            f"results={len(report.get('results', []))}, "
-            f"quality_score={quality_score}, "
-            f"quality_level={quality_level_info['label']}"
         )
-
-        # 如果质量评分低，记录警告
-        if quality_score < 60:
-            api_logger.warning(
-                f"报告质量评分低：execution_id={execution_id}, "
-                f"quality_score={quality_score}, "
-                f"quality_level={quality_level_info['label']}, "
-                f"errors={len(validation.get('errors', []) if validation else [])}, "
-                f"warnings={len(validation.get('warnings', []) if validation else [])}"
-            )
-
-        # 如果质量评分极低，记录错误
-        if quality_score < 30:
-            api_logger.error(
-                f"报告质量评分极低：execution_id={execution_id}, "
-                f"quality_score={quality_score}, "
-                f"quality_level={quality_level_info['label']}, "
-                f"quality_issues={validation.get('quality_issues', []) if validation else []}"
-            )
-
-        # P2-3 优化：记录质量指标
-        try:
-            record_quality_score(execution_id, quality_score, {
-                'quality_level': quality_level_info['level'],
-                'result_count': len(report.get('results', []))
-            })
-            
-            # 检查是否有告警
-            alerts = check_quality_alerts(execution_id)
-            if alerts:
-                api_logger.warning(
-                    f"质量告警触发：execution_id={execution_id}, "
-                    f"alerts={[a['rule_name'] for a in alerts]}"
-                )
-                # 在响应中添加告警信息
-                report['qualityAlerts'] = alerts
-        except Exception as monitoring_err:
-            api_logger.error(f"质量监控记录失败：{monitoring_err}")
-
-        # 将验证信息添加到响应中
-        if validation:
-            report['validation'] = validation
-
-        # P0 修复：转换为 camelCase
-        return jsonify(convert_response_to_camel(report)), 200
 
     except BusinessException as e:
         # P2-2 优化：使用统一错误码处理业务异常
@@ -502,25 +385,16 @@ def get_full_report(execution_id):
             f"获取完整报告业务异常：execution_id={execution_id}, "
             f"{e.error_code.code} - {e.message}"
         )
-        response = {
-            'error_code': e.error_code.code,
-            'error_message': e.message,
-            'http_status': e.http_status,
-            'execution_id': execution_id
-        }
-        if e.detail:
-            response['detail'] = e.detail
-        return jsonify(response), e.http_status
+        return StandardizedResponse.error(e.error_code, e.detail, e.http_status)
+
     except Exception as e:
-        # P0-2 修复：增强错误处理
-        api_logger.error(f"获取完整报告失败：execution_id={execution_id}, 错误：{e}", exc_info=True)
-        return jsonify({
-            'error_code': ErrorCode.INTERNAL_ERROR.code,
-            'error_message': get_error_message(ErrorCode.INTERNAL_ERROR),
-            'http_status': 500,
-            'execution_id': execution_id,
-            'suggestion': '请稍后重试或联系技术支持'
-        }), 500
+        # 系统异常：返回内部错误
+        api_logger.error(f"获取报告失败：execution_id={execution_id}, 错误：{e}", exc_info=True)
+        return StandardizedResponse.error(
+            ErrorCode.INTERNAL_ERROR,
+            detail={'execution_id': execution_id, 'detail': str(e)},
+            http_status=500
+        )
 
 
 @diagnosis_bp.route('/report/<execution_id>/validate', methods=['GET'])

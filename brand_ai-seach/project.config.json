@@ -1,0 +1,141 @@
+{
+  "description": "项目配置文件",
+  "packOptions": {
+    "ignore": [
+      {
+        "value": "_archive",
+        "type": "folder"
+      },
+      {
+        "value": "backend_python",
+        "type": "folder"
+      },
+      {
+        "value": ".ai",
+        "type": "folder"
+      },
+      {
+        "value": ".idea",
+        "type": "folder"
+      },
+      {
+        "value": ".venv",
+        "type": "folder"
+      },
+      {
+        "value": ".pytest_cache",
+        "type": "folder"
+      },
+      {
+        "value": "logs",
+        "type": "folder"
+      },
+      {
+        "value": "tests",
+        "type": "folder"
+      },
+      {
+        "value": "docs",
+        "type": "folder"
+      },
+      {
+        "value": "*.bak",
+        "type": "suffix"
+      },
+      {
+        "value": "**/*.md",
+        "type": "suffix"
+      },
+      {
+        "value": "*.sh",
+        "type": "suffix"
+      },
+      {
+        "value": "*.py",
+        "type": "suffix"
+      },
+      {
+        "value": "*.ini",
+        "type": "suffix"
+      },
+      {
+        "value": "HISTORY_DETAIL_*.js",
+        "type": "file"
+      },
+      {
+        "value": "DIAGNOSIS_*.js",
+        "type": "file"
+      },
+      {
+        "value": "FIX_*.js",
+        "type": "file"
+      }
+    ],
+    "include": []
+  },
+  "cloudfunctionRoot": "cloudfunctions/",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "coverView": true,
+    "autoAudits": false,
+    "showShadowRootInWxmlPanel": true,
+    "scopeDataCheck": false,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotReLoad": true,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "useIsolateContext": true,
+    "useCompilerModule": true,
+    "userConfirmedUseCompilerModuleSwitch": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "disableUseStrict": false,
+    "minifyWXML": true,
+    "showES6CompileOption": false,
+    "useCompilerPlugins": false,
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "enhance": false,
+    "localPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.14.2",
+  "appid": "wxfd3b695920a78e1b",
+  "projectname": "进化湾 GEO",
+  "isGameTourist": false,
+  "condition": {
+    "search": {
+      "list": []
+    },
+    "conversation": {
+      "list": []
+    },
+    "plugin": {
+      "list": []
+    },
+    "game": {
+      "list": []
+    },
+    "miniprogram": {
+      "list": []
+    }
+  },
+  "simulatorPluginLibVersion": {},
+  "editorSetting": {}
+}

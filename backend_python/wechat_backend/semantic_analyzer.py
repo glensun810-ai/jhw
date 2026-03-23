@@ -51,54 +51,69 @@ class SemanticAnalyzer:
         }
     
     def analyze_semantic_drift(
-        self, 
-        official_definition: str, 
+        self,
+        official_definition: str,
         ai_responses: List[str],
         brand_name: str = None
     ) -> Dict[str, any]:
         """
         Analyze semantic drift between official definition and AI responses
-        
+
         Args:
             official_definition: Brand's official definition/description
             ai_responses: List of AI responses to analyze
             brand_name: Brand name for context (optional)
-            
+
         Returns:
             Dictionary with semantic analysis results
         """
-        # Combine all AI responses for analysis
-        combined_ai_response = " ".join(ai_responses)
+        # Validate inputs
+        if not official_definition or not official_definition.strip():
+            api_logger.warning(f"[SemanticAnalyzer] official_definition is empty for brand: {brand_name}")
+            return self._create_empty_analysis_result()
         
+        if not ai_responses or len(ai_responses) == 0:
+            api_logger.warning(f"[SemanticAnalyzer] ai_responses is empty for brand: {brand_name}")
+            return self._create_empty_analysis_result()
+        
+        # Filter out empty responses
+        valid_responses = [r for r in ai_responses if r and r.strip()]
+        if len(valid_responses) == 0:
+            api_logger.warning(f"[SemanticAnalyzer] All ai_responses are empty for brand: {brand_name}")
+            return self._create_empty_analysis_result()
+
+        # Combine all AI responses for analysis
+        combined_ai_response = " ".join(valid_responses)
+
         # Extract keywords from both texts
         official_keywords = self.extract_keywords(official_definition, top_k=20)
         ai_keywords = self.extract_keywords(combined_ai_response, top_k=20)
-        
+
         # Calculate semantic similarity
         similarity_score = self.calculate_semantic_similarity(official_definition, combined_ai_response)
-        
+
         # Find missing keywords (in official but not in AI)
         missing_keywords = [kw for kw in official_keywords if kw not in ai_keywords]
-        
+
         # Find unexpected keywords (in AI but not in official)
         unexpected_keywords = [kw for kw in ai_keywords if kw not in official_keywords]
-        
+
         # Calculate semantic drift score (0-100, higher means more drift)
         drift_score = self.calculate_drift_score(
-            official_definition, 
-            combined_ai_response, 
+            official_definition,
+            combined_ai_response,
             similarity_score
         )
-        
+
         # Classify drift severity
         drift_severity = self.classify_drift_severity(drift_score)
-        
+
         # Identify potential negative terms in AI responses
         negative_terms = self.identify_negative_terms(combined_ai_response)
-        
+
         # Identify positive terms in AI responses
         positive_terms = self.identify_positive_terms(combined_ai_response)
-        
+
         return {
             'semantic_drift_score': drift_score,
             'drift_severity': drift_severity,
@@ -115,37 +130,76 @@ class SemanticAnalyzer:
                 'official_keyword_count': len(official_keywords),
                 'ai_keyword_count': len(ai_keywords),
                 'missing_count': len(missing_keywords),
-                'unexpected_count': len(unexpected_keywords)
+                'unexpected_count': len(unexpected_keywords),
+                'valid_responses_count': len(valid_responses),
+                'total_responses_count': len(ai_responses)
+            }
+        }
+
+    def _create_empty_analysis_result(self) -> Dict[str, any]:
+        """
+        Create an empty analysis result structure when inputs are invalid
+
+        Returns:
+            Dictionary with empty analysis results
+        """
+        return {
+            'semantic_drift_score': 0,
+            'drift_severity': '无法分析',
+            'similarity_score': 0,
+            'official_keywords': [],
+            'ai_keywords': [],
+            'missing_keywords': [],
+            'unexpected_keywords': [],
+            'negative_terms': [],
+            'positive_terms': [],
+            'detailed_analysis': {
+                'official_text_length': 0,
+                'ai_response_length': 0,
+                'official_keyword_count': 0,
+                'ai_keyword_count': 0,
+                'missing_count': 0,
+                'unexpected_count': 0,
+                'valid_responses_count': 0,
+                'total_responses_count': 0,
+                'analysis_error': '输入数据无效或为空'
             }
         }
     
     def extract_keywords(self, text: str, top_k: int = 10) -> List[str]:
         """
         Extract keywords from text using TF-IDF and Jieba
-        
+
         Args:
             text: Input text to extract keywords from
             top_k: Number of top keywords to return
-            
+
         Returns:
             List of extracted keywords
         """
         if not text or len(text.strip()) < 5:
             return []
-        
-        # Clean text
-        cleaned_text = self.clean_text(text)
-        
-        # Use Jieba to extract keywords
-        keywords = jieba.analyse.extract_tags(cleaned_text, topK=top_k*2, withWeight=False)
-        
-        # Filter out stop words and short words
-        filtered_keywords = [
-            kw for kw in keywords 
-            if len(kw) >= 2 and kw not in self.stop_words
-        ][:top_k]
-        
-        return filtered_keywords
+
+        try:
+            # Clean text
+            cleaned_text = self.clean_text(text)
+            
+            if not cleaned_text or len(cleaned_text) < 5:
+                return []
+
+            # Use Jieba to extract keywords
+            keywords = jieba.analyse.extract_tags(cleaned_text, topK=top_k*2, withWeight=False)
+
+            # Filter out stop words and short words
+            filtered_keywords = [
+                kw for kw in keywords
+                if len(kw) >= 2 and kw not in self.stop_words
+            ][:top_k]
+
+            return filtered_keywords
+        except Exception as e:
+            api_logger.error(f"[SemanticAnalyzer] Error extracting keywords: {e}")
+            return []
     
     def calculate_semantic_similarity(self, text1: str, text2: str) -> float:
         """
@@ -397,39 +451,58 @@ class AttributionAnalyzer:
         api_logger.info("AttributionAnalyzer initialized")
     
     def analyze_attribution(
-        self, 
-        official_definition: str, 
-        ai_responses: List[str], 
+        self,
+        official_definition: str,
+        ai_responses: List[str],
         response_sources: List[str],  # List of source URLs from AI responses
         brand_name: str = None
     ) -> Dict[str, any]:
         """
         Analyze attribution between source weights and semantic drift
-        
+
         Args:
             official_definition: Brand's official definition
             ai_responses: List of AI responses
             response_sources: List of source URLs from AI responses
             brand_name: Brand name for context (optional)
-            
+
         Returns:
             Dictionary with attribution analysis results
         """
+        # Validate inputs
+        if not official_definition or not official_definition.strip():
+            api_logger.warning(f"[AttributionAnalyzer] official_definition is empty for brand: {brand_name}")
+            return self._create_empty_attribution_result()
+        
+        if not ai_responses or len(ai_responses) == 0:
+            api_logger.warning(f"[AttributionAnalyzer] ai_responses is empty for brand: {brand_name}")
+            return self._create_empty_attribution_result()
+
         # Perform semantic analysis
         semantic_analysis = self.semantic_analyzer.analyze_semantic_drift(
             official_definition, ai_responses, brand_name
         )
-        
-        # Extract domains from sources
-        domains = self.source_weight_lib.extract_domains_from_urls(response_sources)
-        
+
+        # Check if semantic analysis failed
+        if semantic_analysis.get('detailed_analysis', {}).get('analysis_error'):
+            api_logger.warning(f"[AttributionAnalyzer] Semantic analysis failed for brand: {brand_name}")
+            return self._create_empty_attribution_result()
+
+        # Extract domains from sources (handle empty/None sources)
+        domains = []
+        if response_sources and len(response_sources) > 0:
+            domains = self.source_weight_lib.extract_domains_from_urls(response_sources)
+
         # Get weights for domains
-        domain_weights = self.source_weight_lib.get_multiple_source_weights(domains)
-        
+        domain_weights = {}
+        if domains and len(domains) > 0:
+            domain_weights = self.source_weight_lib.get_multiple_source_weights(domains)
+
         # Separate high and low weight sources
         high_weight_sources = []
         low_weight_sources = []
-        
+        unknown_weight_sources = []
+
         for domain, weight_info in domain_weights.items():
             if weight_info:
                 weight_score, site_name, category = weight_info
@@ -439,17 +512,31 @@ class AttributionAnalyzer:
                     'weight_score': weight_score,
                     'category': category
                 }
-                
+
                 if weight_score >= 0.7:
                     high_weight_sources.append(source_info)
                 else:
                     low_weight_sources.append(source_info)
-        
+            else:
+                # Unknown weight sources
+                unknown_weight_sources.append({
+                    'domain': domain,
+                    'site_name': 'Unknown',
+                    'weight_score': 0.5,  # Default to medium weight
+                    'category': 'Unknown'
+                })
+
         # Calculate source purity (ratio of high weight sources)
         total_sources = len([w for w in domain_weights.values() if w is not None])
         high_weight_count = len(high_weight_sources)
-        source_purity = (high_weight_count / total_sources * 100) if total_sources > 0 else 0
         
+        # Handle case with no sources
+        if total_sources == 0:
+            source_purity = 0
+            api_logger.info(f"[AttributionAnalyzer] No sources found for brand: {brand_name}")
+        else:
+            source_purity = (high_weight_count / total_sources * 100)
+
         # Identify potential pollution sources (low weight sources with negative terms)
         pollution_sources = []
         for source_info in low_weight_sources:
@@ -461,16 +548,17 @@ class AttributionAnalyzer:
                         **source_info,
                         'negative_contexts': negative_terms
                     })
-        
+
         # Calculate risk score based on semantic drift and source weights
         risk_score = self._calculate_risk_score(semantic_analysis, high_weight_count, total_sources)
-        
+
         return {
             'semantic_analysis': semantic_analysis,
             'source_analysis': {
                 'total_sources': total_sources,
                 'high_weight_sources': high_weight_sources,
                 'low_weight_sources': low_weight_sources,
+                'unknown_weight_sources': unknown_weight_sources,
                 'source_purity_percentage': round(source_purity, 2),
                 'pollution_sources': pollution_sources
             },
@@ -478,6 +566,31 @@ class AttributionAnalyzer:
                 'risk_score': risk_score,
                 'high_weight_ratio': round(high_weight_count / total_sources if total_sources > 0 else 0, 3),
                 'semantic_drift_impact': semantic_analysis['semantic_drift_score'] * (1 - source_purity/100)
+            }
+        }
+
+    def _create_empty_attribution_result(self) -> Dict[str, any]:
+        """
+        Create an empty attribution result structure when inputs are invalid
+
+        Returns:
+            Dictionary with empty attribution results
+        """
+        return {
+            'semantic_analysis': self.semantic_analyzer._create_empty_analysis_result(),
+            'source_analysis': {
+                'total_sources': 0,
+                'high_weight_sources': [],
+                'low_weight_sources': [],
+                'unknown_weight_sources': [],
+                'source_purity_percentage': 0,
+                'pollution_sources': [],
+                'analysis_error': '输入数据无效或为空'
+            },
+            'attribution_metrics': {
+                'risk_score': 0,
+                'high_weight_ratio': 0,
+                'semantic_drift_impact': 0
             }
         }
     

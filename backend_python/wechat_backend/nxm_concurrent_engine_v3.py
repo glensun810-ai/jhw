@@ -330,10 +330,10 @@ class NxMParallelExecutor:
                     # 推送进度更新
                     await self._increment_progress("ai_fetching")
 
-                    # 【P0 关键修复 - 2026-03-13 第 11 次】从 AI 响应内容中提取推荐的品牌名称
+                    # 【P0 关键修复 - 2026-03-13 第 11 次】【增强版】从 AI 响应内容中提取推荐的品牌名称
                     # 而不是直接使用主品牌，确保 brand 字段是 AI 实际推荐的品牌
                     ai_content = str(ai_result.content)
-                    extracted_brand = self._extract_recommended_brand(ai_content, main_brand)
+                    extracted_brand, extraction_method = self._extract_recommended_brand(ai_content, main_brand)
 
                     # 【P1 修复 - 2026-03-07】传递 tokens_used 到结果字典
                     # 【P0 关键修复 - 2026-03-13 第 15 次】添加 platform 字段，确保数据库能正确识别平台
@@ -341,7 +341,7 @@ class NxMParallelExecutor:
                                    'qwen' if 'qwen' in actual_model.lower() else \
                                    'deepseek' if 'deepseek' in actual_model.lower() else \
                                    actual_model.split('-')[0] if actual_model else ''
-                    
+
                     return {
                         'success': True,
                         'data': {
@@ -365,7 +365,12 @@ class NxMParallelExecutor:
                             # 【P0 关键修复 - 第 11 次】保存原始 AI 响应，用于后续分析
                             'raw_response': ai_result.content,
                             'extracted_brand': extracted_brand,
-                            'extraction_method': self._get_extraction_method()
+                            'extraction_method': extraction_method,  # 【增强版】使用实际提取方法
+                            # 【P1 新增】添加 request_id 和 reasoning_content 追踪
+                            'request_id': (ai_result.metadata or {}).get('request_id', ''),
+                            'reasoning_content': (ai_result.metadata or {}).get('reasoning_content', ''),
+                            'finish_reason': (ai_result.metadata or {}).get('finish_reason', ''),
+                            'model_version': (ai_result.metadata or {}).get('model_version', '')
                         }
                     }
                 else:
@@ -406,7 +411,12 @@ class NxMParallelExecutor:
                             'tokens_used': ai_result.tokens_used if ai_result.tokens_used > 0 else 0,  # 【P1 修复】
                             'prompt_tokens': (ai_result.metadata or {}).get('prompt_tokens', 0),  # 【P1 修复】
                             'completion_tokens': (ai_result.metadata or {}).get('completion_tokens', 0),  # 【P1 修复】
-                            'cached_tokens': (ai_result.metadata or {}).get('cached_tokens', 0)  # 【P1 修复】
+                            'cached_tokens': (ai_result.metadata or {}).get('cached_tokens', 0),  # 【P1 修复】
+                            # 【P1 新增】添加 request_id 和 reasoning_content 追踪（失败情况）
+                            'request_id': (ai_result.metadata or {}).get('request_id', ''),
+                            'reasoning_content': '',  # 失败情况下无推理内容
+                            'finish_reason': (ai_result.metadata or {}).get('finish_reason', 'error'),
+                            'model_version': (ai_result.metadata or {}).get('model_version', '')
                         }
                     }
 
@@ -427,6 +437,7 @@ class NxMParallelExecutor:
                         'brand': main_brand,  # 【P0 修复 - 2026-03-07】添加 brand 字段
                         'question': question,
                         'model': model_name,
+                        'platform': platform_name if 'platform_name' in locals() else '',
                         'response': {
                             'content': None,
                             'latency': task_elapsed,
@@ -439,7 +450,12 @@ class NxMParallelExecutor:
                         'tokens_used': 0,  # 异常情况下无 token 消耗
                         'prompt_tokens': 0,
                         'completion_tokens': 0,
-                        'cached_tokens': 0
+                        'cached_tokens': 0,
+                        # 【P1 新增】添加 request_id 和 reasoning_content 追踪（异常情况）
+                        'request_id': '',
+                        'reasoning_content': '',
+                        'finish_reason': 'error',
+                        'model_version': ''
                     }
                 }
     
@@ -468,79 +484,117 @@ class NxMParallelExecutor:
         self,
         ai_content: str,
         main_brand: str
-    ) -> str:
+    ) -> Tuple[str, str]:
         """
-        【P0 关键修复 - 2026-03-13 第 11 次】从 AI 响应内容中提取推荐的品牌名称
-        
+        【P0 关键修复 - 2026-03-13 第 11 次】【增强版】从 AI 响应内容中提取推荐的品牌名称
+
         从 AI 返回的自然语言文本中提取第一个推荐的品牌，而不是使用主品牌
-        
+        返回提取的品牌名称和提取方法
+
         参数:
             ai_content: AI 返回的原始内容
             main_brand: 主品牌名称（用于排除）
-        
+
         返回:
-            提取的品牌名称
+            tuple: (提取的品牌名称，提取方法标识)
         """
         import re
-        
-        if not ai_content:
+
+        if not ai_content or not ai_content.strip():
             api_logger.warning(f"[品牌提取] AI 内容空，使用主品牌：{main_brand}")
-            return main_brand
-        
+            return main_brand, "fallback_to_main_brand"
+
+        def clean_brand(brand: str) -> str:
+            """清理品牌名称，去除多余字符"""
+            if not brand:
+                return brand
+            
+            brand = brand.strip()
+            
+            # 去除括号及括号内内容（中英文括号）
+            brand = re.sub(r'\s*[（(][^）)]*[）)]', '', brand)
+            brand = re.sub(r'\s*[（(].*$', '', brand)  # 去除开头括号及之后内容
+            
+            # 去除引号
+            brand = re.sub(r'^["\'"`]|["\'"`]$', '', brand)
+            
+            # 去除冒号、破折号及之后的描述
+            brand = re.sub(r'\s*[-:：—]\s*.*$', '', brand)
+            
+            # 去除常见后缀词
+            brand = re.sub(r'\s*(推荐 | 首选 | 优先 | 建议使用 | 可以选择).*$', '', brand)
+            
+            # 去除空格
+            brand = brand.strip()
+            
+            return brand
+
         # 策略 1: 从排名列表中提取第一个品牌
         # 匹配模式："1. **品牌名**" 或 "1. 品牌名" 或 "1、品牌名"
         rank_pattern = r'(?:^|\n)\s*1[\.\)]\s*\*?\*?([^\n\*\*]+)\*?\*?'
         match = re.search(rank_pattern, ai_content, re.MULTILINE)
         if match:
             brand = match.group(1).strip()
-            # 清理品牌名（去除前后缀）
-            brand = re.sub(r'^["\']|["\']$', '', brand)  # 去除引号
-            brand = re.sub(r'\s*[-:：]\s*.*$', '', brand)  # 去除描述
+            brand = clean_brand(brand)
             # 排除主品牌和通用词
-            if brand and brand != main_brand and len(brand) > 1 and brand not in ['好的', '以下是', '推荐']:
+            if brand and brand != main_brand and len(brand) > 1 and brand not in ['好的', '以下是', '推荐', '首先', '第一']:
                 api_logger.info(
                     f"[品牌提取] ✅ 从排名列表提取：brand={brand}, main_brand={main_brand}"
                 )
-                return brand
-        
+                return brand, "rank_list_extraction"
+
         # 策略 2: 从推荐语句中提取
         # 匹配模式："推荐 XX"、"XX 品牌"、"选择 XX"
-        recommend_pattern = r'(?:推荐 | 选择 | 首选 | 优先)\s*["\']?([^\s,，."\'\)]{2,20})["\']?'
+        recommend_pattern = r'(?:推荐 | 选择 | 首选 | 优先 | 建议使用)\s*["\']?([^\s,，."\'\)]{2,20})["\']?'
         match = re.search(recommend_pattern, ai_content)
         if match:
             brand = match.group(1).strip()
+            brand = clean_brand(brand)
             if brand and brand != main_brand and len(brand) > 2:
                 api_logger.info(
                     f"[品牌提取] ✅ 从推荐语句提取：brand={brand}, main_brand={main_brand}"
                 )
-                return brand
-        
+                return brand, "recommendation_statement_extraction"
+
         # 策略 3: 从品牌提及中提取（排除主品牌）
         # 匹配模式："XX 店"、"XX 品牌"、"XX 改装"
-        brand_mention_pattern = r'([^\s,，.]{2,15})\s*(?:店 | 品牌 | 改装 | 服务| 中心)'
+        brand_mention_pattern = r'([^\s,，.]{2,15})\s*(?:店 | 品牌 | 改装 | 服务 | 中心)'
         matches = re.findall(brand_mention_pattern, ai_content)
         for brand in matches:
             brand = brand.strip()
+            brand = clean_brand(brand)
             if brand and brand != main_brand and len(brand) > 2:
                 api_logger.info(
                     f"[品牌提取] ✅ 从品牌提及提取：brand={brand}, main_brand={main_brand}"
                 )
-                return brand
-        
-        # 策略 4: 使用主品牌作为兜底
+                return brand, "brand_mention_extraction"
+
+        # 策略 4: 从"是"字句中提取（"是 XX"、"就是 XX"）
+        is_pattern = r'(?:就 | 便 | 正)\s*是\s*["\']?([^\s,，."\'\)]{2,20})["\']?'
+        match = re.search(is_pattern, ai_content)
+        if match:
+            brand = match.group(1).strip()
+            brand = clean_brand(brand)
+            if brand and brand != main_brand and len(brand) > 2:
+                api_logger.info(
+                    f"[品牌提取] ✅ 从是字句提取：brand={brand}, main_brand={main_brand}"
+                )
+                return brand, "is_statement_extraction"
+
+        # 策略 5: 使用主品牌作为兜底
         api_logger.warning(
             f"[品牌提取] ⚠️ 无法提取品牌，使用主品牌：{main_brand}"
         )
-        return main_brand
-    
+        return main_brand, "fallback_to_main_brand"
+
     def _get_extraction_method(self) -> str:
         """
         【P0 关键修复 - 2026-03-13 第 11 次】获取品牌提取方法标识
-        
+
         返回:
             提取方法字符串
         """
-        return "nxm_parallel_v3_brand_extraction"
+        return "nxm_parallel_v3_enhanced_brand_extraction"
     
     async def _push_progress(
         self,

@@ -12,6 +12,8 @@
 - sync_views: 同步相关路由 (数据同步、下载)
 - diagnosis_retry_api: 重试 API (维度重试、报告重新生成) [M006 新增]
 - dashboard_api: Dashboard 看板 API (报告聚合数据查询) [2026-03-06 新增]
+
+【Flask 3.x 兼容修复】所有子模块必须在蓝图注册前导入
 """
 
 from flask import Blueprint
@@ -19,7 +21,7 @@ from flask import Blueprint
 # 创建主蓝图
 wechat_bp = Blueprint('wechat', __name__)
 
-# 导入所有视图模块（模块加载时会自动注册路由）
+# 【Flask 3.x 兼容修复】先导入所有子模块，确保路由在蓝图注册前完成注册
 # 注意：所有子模块共享同一个 wechat_bp 蓝图实例
 from . import diagnosis_views
 from . import user_views

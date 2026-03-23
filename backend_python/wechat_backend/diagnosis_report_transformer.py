@@ -74,9 +74,57 @@ class ReportTransformer:
         }
 
     @staticmethod
+    def _clean_brand_name(brand: str) -> str:
+        """
+        清理品牌名称（静态方法，便于前端格式转换时使用）
+        
+        清理规则：
+        1. 去除前后空格
+        2. 去除括号及括号内内容
+        3. 去除常见后缀词
+        4. 统一英文品牌大小写
+        
+        参数:
+            brand: 原始品牌名称
+            
+        返回:
+            清理后的品牌名称
+        """
+        if not brand or not str(brand).strip():
+            return ''
+        
+        import re
+        brand = str(brand).strip()
+        
+        # 去除括号及括号内内容
+        brand = re.sub(r'\([^)]*\)', '', brand)
+        brand = re.sub(r'（[^)]*）', '', brand)
+        brand = re.sub(r'\[[^\]]*\]', '', brand)
+        brand = re.sub(r'【[^\]]*】', '', brand)
+        brand = brand.strip()
+        
+        # 去除常见后缀词
+        suffixes = ['品牌', '公司', '汽车', '科技', '集团', 'Co.', 'Corp.', 'Inc.', 'Ltd.']
+        for suffix in suffixes:
+            if brand.endswith(suffix) and len(brand) > len(suffix) + 1:
+                brand = brand[:-len(suffix)].strip()
+        
+        # 英文品牌首字母大写
+        if brand.isascii():
+            brand = brand.title()
+        
+        return brand.strip() if brand else ''
+
+    @staticmethod
     def _calculate_brand_distribution(results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        计算品牌分布数据
+        计算品牌分布数据（增强版 - 与 diagnosis_report_service 保持一致）
+        
+        核心改进：
+        1. 优先使用 extracted_brand
+        2. 品牌名称清理和标准化
+        3. 多层降级：extracted_brand → brand → Unknown
+        4. 确保始终返回有效数据
 
         参数:
             results: 结果列表
@@ -88,13 +136,42 @@ class ReportTransformer:
             }
         """
         distribution = {}
+        
         for result in results:
-            brand = result.get('brand', 'Unknown')
+            if not result:
+                continue
+
+            brand = None
+
+            # 层级 1: 优先使用 extracted_brand
+            if not brand:
+                extracted = result.get('extracted_brand')
+                if extracted and str(extracted).strip():
+                    cleaned = ReportTransformer._clean_brand_name(extracted)
+                    if cleaned:
+                        brand = cleaned
+
+            # 层级 2: 使用 brand 字段
+            if not brand:
+                brand_val = result.get('brand')
+                if brand_val and str(brand_val).strip():
+                    cleaned = ReportTransformer._clean_brand_name(brand_val)
+                    if cleaned:
+                        brand = cleaned
+
+            # 层级 3: 使用 'Unknown'
+            if not brand:
+                brand = 'Unknown'
+
             distribution[brand] = distribution.get(brand, 0) + 1
+
+        # 确保 distribution 不为空
+        if not distribution:
+            distribution['Unknown'] = 0
 
         return {
             'data': distribution,
-            'total_count': len(results)
+            'total_count': len(results) if results else 0
         }
 
     @staticmethod

@@ -1,0 +1,724 @@
+/**
+ * 报告页面 V2 样式 - 统一设计系统版本
+ *
+ * 设计系统规范：
+ * 1. 采用首页同款深色科技主题 (#121826 背景)
+ * 2. 使用统一的主色调：科技青 (#00E5FF) 和 深空蓝 (#1A237E)
+ * 3. 简洁卡片效果（去除模糊渐变）
+ * 4. 渐变按钮和流光动画
+ * 5. 统一的圆角、阴影、间距规范
+ *
+ * @author: 系统架构组
+ * @date: 2026-03-11
+ * @version: 2.0.1 - 修复背景色和模糊效果
+ */
+
+/* 导入全局样式 - 修复路径 */
+@import "../../../app.wxss";
+
+/* ==================== 页面容器 ==================== */
+.report-page {
+  min-height: 100vh;
+  background-color: #121826 !important;  /* 【P0 修复 - 2026-03-11】强制深色背景 */
+  padding-bottom: 140rpx;
+  color: #e8e8e8;
+}
+
+/* 【P0 修复 - 2026-03-11】确保所有 view 容器都使用深色背景 */
+.report-page view {
+  background-color: transparent;
+}
+
+/* ==================== 顶部导航栏 ==================== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx;
+  background: #1A202C;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.header-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  background: linear-gradient(135deg, #00E5FF 0%, #00F5A0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-subtitle {
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+.header-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.action-icon {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(0, 169, 255, 0.15) 0%, rgba(0, 245, 160, 0.15) 100%);
+  border-radius: 50%;
+  border: 1rpx solid rgba(0, 169, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.action-icon:active {
+  background: linear-gradient(135deg, rgba(0, 169, 255, 0.25) 0%, rgba(0, 245, 160, 0.25) 100%);
+  transform: scale(0.95);
+  box-shadow: 0 0 20rpx rgba(0, 229, 255, 0.4);
+}
+
+.icon-refresh,
+.icon-share {
+  font-size: 30rpx;
+}
+
+.icon-refresh.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== 标签页切换 ==================== */
+.tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  background: #1A202C;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.05);
+  padding: 0 16rpx;
+}
+
+.tab-item {
+  flex: 1;
+  padding: 28rpx 0;
+  text-align: center;
+  font-size: 28rpx;
+  color: #8c8c8c;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-item.active {
+  color: #00E5FF;
+  font-weight: 600;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48rpx;
+  height: 4rpx;
+  background: linear-gradient(90deg, #00E5FF, #00F5A0);
+  border-radius: 2rpx;
+  box-shadow: 0 0 12rpx rgba(0, 229, 255, 0.5);
+}
+
+.tab-item:active {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ==================== 报告内容区 ==================== */
+.report-content {
+  height: calc(100vh - 240rpx);
+}
+
+.tab-content {
+  padding: 24rpx 16rpx;
+}
+
+/* ==================== 摘要卡片 - 简洁风格 ==================== */
+.summary-card {
+  background: #1A202C;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  margin: 16rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.3);
+}
+
+.summary-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  background: linear-gradient(135deg, #00E5FF 0%, #00F5A0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 32rpx;
+}
+
+.summary-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 24rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.stat-value {
+  font-size: 44rpx;
+  font-weight: 700;
+  background: linear-gradient(135deg, #00E5FF 0%, #00F5A0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+/* ==================== 区块容器 ==================== */
+.section {
+  margin: 24rpx 16rpx;
+}
+
+.component-wrapper {
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+/* ==================== 图表卡片 - 统一风格 ==================== */
+.interpretation-card {
+  background: #1A202C;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  margin: 24rpx 16rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.3);
+  border-left: 4rpx solid #00E5FF;
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #e8e8e8;
+  margin-bottom: 20rpx;
+}
+
+.interpretation-content {
+  padding: 24rpx;
+  background: rgba(0, 169, 255, 0.05);
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(0, 169, 255, 0.15);
+}
+
+.interpretation-text {
+  font-size: 28rpx;
+  color: #d9d9d9;
+  line-height: 1.8;
+}
+
+/* ==================== 底部操作栏 - 悬浮风格 ==================== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  padding: 20rpx 32rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background: #1A202C;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -8rpx 32rpx rgba(0, 0, 0, 0.4);
+  gap: 20rpx;
+  z-index: 100;
+}
+
+.bottom-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 24rpx 0;
+  background: linear-gradient(135deg, rgba(58, 58, 58, 0.8) 0%, rgba(38, 38, 38, 0.8) 100%);
+  color: #e8e8e8;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bottom-btn.primary {
+  background: linear-gradient(135deg, #00A9FF 0%, #00F5A0 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 8rpx 24rpx rgba(0, 169, 255, 0.3);
+}
+
+.bottom-btn:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+.btn-icon {
+  font-size: 34rpx;
+}
+
+.btn-text {
+  font-weight: 600;
+}
+
+/* ==================== 错误状态 ==================== */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 160rpx 32rpx;
+  text-align: center;
+}
+
+.error-icon {
+  width: 180rpx;
+  height: 180rpx;
+  opacity: 0.5;
+  filter: drop-shadow(0 0 20rpx rgba(255, 77, 79, 0.3));
+}
+
+.error-text {
+  margin: 32rpx 0;
+  font-size: 30rpx;
+  color: #a6a6a6;
+  line-height: 1.6;
+}
+
+.retry-btn {
+  margin-top: 40rpx;
+  padding: 20rpx 64rpx;
+  background: linear-gradient(135deg, #00A9FF 0%, #00F5A0 100%);
+  color: #ffffff;
+  border-radius: 48rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 8rpx 24rpx rgba(0, 169, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.retry-btn:active {
+  transform: scale(0.96);
+  box-shadow: 0 4rpx 16rpx rgba(0, 169, 255, 0.4);
+}
+
+/* ==================== 加载状态 ==================== */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 32rpx;
+}
+
+.loading-spinner {
+  width: 80rpx;
+  height: 80rpx;
+  border: 4rpx solid rgba(0, 229, 255, 0.2);
+  border-top-color: #00E5FF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: 32rpx;
+  font-size: 28rpx;
+  color: #8c8c8c;
+}
+
+/* ==================== 空数据状态 ==================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 32rpx;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 200rpx;
+  height: 200rpx;
+  opacity: 0.4;
+  margin-bottom: 32rpx;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #a6a6a6;
+  margin-bottom: 16rpx;
+}
+
+.empty-desc {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+  max-width: 500rpx;
+}
+
+/* ==================== 响应式调整 ==================== */
+@media (max-width: 375px) {
+  .header {
+    padding: 24rpx 24rpx;
+  }
+
+  .header-title {
+    font-size: 32rpx;
+  }
+
+  .tab-item {
+    font-size: 26rpx;
+    padding: 24rpx 0;
+  }
+
+  .stat-value {
+    font-size: 40rpx;
+  }
+
+  .summary-stats {
+    gap: 16rpx;
+  }
+
+  .summary-card,
+  .interpretation-card {
+    padding: 24rpx;
+  }
+
+  .bottom-btn {
+    padding: 20rpx 0;
+    font-size: 26rpx;
+  }
+}
+
+/* ==================== 暗黑模式增强 ==================== */
+/* 注：小程序默认支持暗黑模式，此处为增强样式 */
+@media (prefers-color-scheme: dark) {
+  .report-page {
+    background-color: #121826;
+  }
+
+  .header {
+    background: #1A202C;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .tab-bar {
+    background: #1A202C;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .summary-card,
+  .interpretation-card {
+    background: #1A202C;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .bottom-bar {
+    background: #1A202C;
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .bottom-btn {
+    background: linear-gradient(135deg, rgba(58, 58, 58, 0.9) 0%, rgba(38, 38, 38, 0.9) 100%);
+  }
+}
+
+/* ==================== 动画效果 ==================== */
+
+/* 页面进入动画 */
+.page-enter {
+  animation: pageEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(30rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 卡片进入动画 */
+.card-enter {
+  animation: cardEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 渐变动画 */
+.gradient-flow {
+  background-size: 200% 200%;
+  animation: gradientFlow 3s ease infinite;
+}
+
+@keyframes gradientFlow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* 脉冲发光效果 */
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 20rpx rgba(0, 229, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40rpx rgba(0, 229, 255, 0.6);
+  }
+}
+
+/* ==================== 组件包装器样式 ==================== */
+.component-wrapper {
+  border-radius: 20rpx;
+  overflow: hidden;
+  background: #1A202C;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+/* 【P0 修复 - 2026-03-11】强制组件使用深色主题 */
+brand-distribution,
+sentiment-chart,
+keyword-cloud {
+  display: block;
+  background: #1A202C !important;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin: 16rpx 0;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+/* 【P0 修复】组件内部白色背景覆盖 */
+brand-distribution view,
+sentiment-chart view,
+keyword-cloud view {
+  background-color: transparent !important;
+}
+
+/* ==================== 数据源标识（调试用） ==================== */
+.data-source-badge {
+  display: inline-block;
+  padding: 8rpx 16rpx;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1rpx solid rgba(0, 229, 255, 0.3);
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: #00E5FF;
+  margin-top: 16rpx;
+}
+
+/* ==================== 错误状态样式 ==================== */
+/* 【P0 关键修复 - 2026-03-20】诊断失败卡片样式 */
+.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #121826;
+  padding: 40rpx;
+}
+
+.error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 600rpx;
+  padding: 48rpx 32rpx;
+  background: #1A202C;
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.4);
+}
+
+.error-card-icon {
+  width: 120rpx;
+  height: 120rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  margin-bottom: 32rpx;
+}
+
+.error-card-icon .icon {
+  font-size: 64rpx;
+  font-style: normal;
+}
+
+.error-card-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #e8e8e8;
+  margin-bottom: 12rpx;
+  text-align: center;
+}
+
+.error-card-subtitle {
+  font-size: 26rpx;
+  color: #8c8c8c;
+  margin-bottom: 32rpx;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.error-card-tips {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 40rpx;
+  padding: 24rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16rpx;
+  border-left: 4rpx solid rgba(0, 229, 255, 0.5);
+}
+
+.tip-item {
+  font-size: 24rpx;
+  color: #b0b0b0;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.error-card-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.action-btn {
+  width: 100%;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #00E5FF 0%, #00F5A0 100%);
+  color: #121826;
+  border: none;
+}
+
+.action-btn.primary:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.action-btn.secondary {
+  background: transparent;
+  color: #00E5FF;
+  border: 1rpx solid rgba(0, 229, 255, 0.3);
+}
+
+.action-btn.secondary:active {
+  background: rgba(0, 229, 255, 0.1);
+}
+
+/* 简单错误状态（兼容旧版） */
+.error-state-simple {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #121826;
+  padding: 40rpx;
+}
+
+.error-icon-fallback {
+  width: 160rpx;
+  height: 160rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  margin-bottom: 32rpx;
+  font-size: 80rpx;
+  opacity: 0.6;
+}
+
+.error-text {
+  font-size: 28rpx;
+  color: #8c8c8c;
+  text-align: center;
+  margin-bottom: 40rpx;
+  line-height: 1.6;
+}
+
+.retry-btn {
+  width: 240rpx;
+  height: 72rpx;
+  background: linear-gradient(135deg, #00E5FF 0%, #00F5A0 100%);
+  color: #121826;
+  border-radius: 36rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+}

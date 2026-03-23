@@ -5,79 +5,612 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4cdaf5a6-c4b4-4420-820f-64aa1f888247" name="更改" comment="修复env文件">
-      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/test-doubaoAPI.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AI_SEARCH_RESULTS_DIAGNOSIS_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/API_REQUEST_RESULTS_CHECK.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ASYNC_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BACKEND_STARTUP_DIAGNOSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BLUEPRINT_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BRAND_DIAGNOSIS_VERIFICATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHIEF_ARCHITECT_FIX_PLAN_ROUND12_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHIEF_ARCHITECT_FIX_PLAN_ROUND13_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHIEF_ARCHITECT_FIX_PLAN_ROUND14_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHIEF_ARCHITECT_FIX_PLAN_ROUND15_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHIEF_ARCHITECT_FIX_PLAN_ROUND15_SUPPLEMENT_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHIEF_ARCHITECT_FIX_PLAN_ROUND16_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHIEF_ARCHITECT_FIX_PLAN_ROUND18_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHIEF_ENGINEER_SELF_CHECK_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CLOUD_FUNCTION_DEPLOYMENT_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CLOUD_FUNCTION_HTTP_FALLBACK_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPILE_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DATABASE_CONNECTION_OPTIMIZATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DESIGN_SYSTEM.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DIAGNOSIS_DATABASE_RETRIEVAL_COMPLETE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DIAGNOSIS_FAILURE_FIX_REPORT_ROUND16_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DIAGNOSIS_REPORT_FIX_2026-03-11.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ERROR_HANDLING_ARCHITECTURE_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_FIX_REPORT_ROUND10_2026-03-12.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_FIX_REPORT_ROUND11_DATA_SOURCE_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_FIX_REPORT_ROUND5.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_FIX_REPORT_ROUND7_2026-03-12.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_FIX_REPORT_ROUND9_2026-03-12.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_VALIDATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIX_EXECUTION_STATUS_ROUND12_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FRONTEND_DATA_LOAD_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FRONTEND_DIAGNOSIS_API_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_DETAIL_API_FORMAT_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_DETAIL_DEADLOCK_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_DETAIL_EMERGENCY_FIX.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_DETAIL_FINAL_DEADLOCK_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_DETAIL_FINAL_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_DETAIL_SIMPLIFY_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_PAGE_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_REPORT_DETAIL_FIX_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_REPORT_FEATURE_IMPLEMENTATION_PLAN.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_REPORT_IMPLEMENTATION_COMPLETE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_ZERO_RECORDS_FINAL_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HISTORY_ZERO_RECORDS_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/IMPORT_PATH_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/INFINITE_LOOP_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LATEST_ISSUE_ANALYSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LEGACY_ISSUES_CHECK_REPORT_ROUND10.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P0_P1_FIXES_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P21_FINAL_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P21_FINAL_FIX_HISTORY_DISPLAY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P21_IMPLEMENTATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/P21_VERIFICATION_CHECKLIST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PAGE_UNLOAD_SETDATA_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROOT_CAUSE_ANALYSIS_FIX_2026-03-12_ROUND6.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROOT_CAUSE_ANALYSIS_FIX_2026-03-12_ROUND8.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROOT_CAUSE_ANALYSIS_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROOT_CAUSE_ANALYSIS_REPORT_ROUND21.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROOT_CAUSE_ANALYSIS_ROUND11_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROOT_CAUSE_ANALYSIS_ROUND5.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROOT_CAUSE_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROUND13_FIX_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROUND14_FIX_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROUND8_FIX_IMPLEMENTATION_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SYSTEMIC_FIX_COMPLETION_REPORT_ROUND12_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SYSTEMIC_FIX_PLAN_ROUND12_2026-03-13.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TECHNICAL_REVIEW_FINAL_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TEST_VALIDATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UI_OPTIMIZATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/WAL_CHECKPOINT_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/analytics.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/analytics.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/auth.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/brand-enhanced-api.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/brand-enhanced-api.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/competitive-analysis.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/competitive-analysis.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/data-sync.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/data-sync.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/export.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/export.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/history.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/history.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/home.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/mock-data.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/mock-data.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/sync.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/sync.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/user.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/api/user.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.wxss" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/database.db-shm" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database.db-shm" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/database.db-wal" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database.db-wal" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/database/migrations/003_migrate_legacy_data.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database/migrations/003_migrate_legacy_data.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/database/migrations/004_fix_diagnosis_results_table.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database/migrations/004_fix_diagnosis_results_table.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/database/migrations/005_add_geo_data_field.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database/migrations/005_add_geo_data_field.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/database/run_migration.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/database/run_migration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/run.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/ai_adapters/factory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/src/adapters/deepseek_provider.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/src/adapters/deepseek_provider.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/database/transaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/database/transaction.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/database_repositories.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/database_repositories.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_repository.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_repository.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_logger.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/multi_model_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/multi_model_executor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_transformer.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/diagnosis_report_transformer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/error_codes.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/error_codes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/middleware/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/middleware/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_concurrent_engine_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/nxm_concurrent_engine_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/security/auth_enhanced.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/security/auth_enhanced.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/result_processor.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/result_processor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/semantic_analyzer.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/semantic_analyzer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/brand_analysis_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/brand_analysis_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_orchestrator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_orchestrator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_transaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_transaction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/result_validator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/result_validator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/tasks/diagnosis_tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/tasks/diagnosis_tasks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/diagnosis_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/services/report_aggregator.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/services/report_aggregator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/dashboard_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/dashboard_api.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/diagnosis_views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/websocket_route.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/websocket_route.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend_python/wechat_backend/views/user_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend_python/wechat_backend/views/user_views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCard/AnalysisCard.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/AnalysisCharts.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/AnalysisCharts.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/AnalysisCharts.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/AnalysisCharts.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/RadarChart/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/RadarChart/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/RadarChart/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/TrendChart/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/TrendChart/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/AnalysisCharts/TrendChart/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BaseChart/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BaseChart/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BaseChart/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BaseChart/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/BattlefieldMatrix.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/MatrixCell/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/MatrixCell/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/MatrixCell/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/MatrixLegend/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/MatrixLegend/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BattlefieldMatrix/MatrixLegend/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BrandComparison/BrandRadar.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BrandComparison/BrandRadar.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BrandComparison/BrandRadar.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BrandComparison/BrandRadar.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BrandComparison/SentimentBar.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BrandComparison/SentimentBar.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BrandComparison/SentimentBar.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/BrandComparison/SentimentBar.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitiveAnalysis/CompetitiveAnalysis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitiveAnalysis/CompetitiveAnalysis.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitiveAnalysis/CompetitiveAnalysis.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitiveAnalysis/CompetitiveAnalysis.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitiveIntelligenceView/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitiveIntelligenceView/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitiveIntelligenceView/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitiveIntelligenceView/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitorList/CompetitorList.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitorList/CompetitorList.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitorList/CompetitorList.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitorList/CompetitorList.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitorMatrix/CompetitorMatrix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitorMatrix/CompetitorMatrix.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitorMatrix/CompetitorMatrix.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CompetitorMatrix/CompetitorMatrix.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CountUp/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CountUp/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CountUp/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/CountUp/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/DashboardCard/DashboardCard.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/DashboardCard/DashboardCard.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportFormatSelector/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportFormatSelector/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportFormatSelector/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportOptions.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportOptions.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportOptions.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportOptions.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportProgress/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportProgress/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ExportOptions/ExportProgress/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ImpactGauge/ImpactGauge.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ImpactGauge/ImpactGauge.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ImpactGauge/ImpactGauge.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ImpactGauge/ImpactGauge.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligenceDrawer/IntelligenceDrawer.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligenceDrawer/IntelligenceDrawer.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligenceDrawer/IntelligenceDrawer.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligenceDrawer/IntelligenceDrawer.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/IntelligencePipeline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/IntelligencePipeline.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/IntelligencePipeline.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/IntelligencePipeline.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/PipelineProgress/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/PipelineProgress/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/PipelineProgress/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/PipelineStage/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/PipelineStage/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/IntelligencePipeline/PipelineStage/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ROICard/ROICard.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ROICard/ROICard.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ROICard/ROICard.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ROICard/ROICard.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ScoreRadar/ScoreRadar.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ScoreRadar/ScoreRadar.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ScoreRadar/ScoreRadar.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ScoreRadar/ScoreRadar.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/Skeleton/Skeleton.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/Skeleton/Skeleton.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/Skeleton/Skeleton.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/Skeleton/Skeleton.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceCard/SourceCard.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceCard/SourceCard.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceCard/SourceCard.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceCard/SourceCard.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceGraph/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceGraph/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceGraph/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceGraph/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceList/SourceList.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceList/SourceList.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceList/SourceList.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/SourceList/SourceList.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/TrendChart/TrendChart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/TrendChart/TrendChart.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/TrendChart/TrendChart.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/TrendChart/TrendChart.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ViewSwitcher/ViewSwitcher.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ViewSwitcher/ViewSwitcher.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ViewSwitcher/ViewSwitcher.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ViewSwitcher/ViewSwitcher.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/WorkflowFindings/WorkflowFindings.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/WorkflowFindings/WorkflowFindings.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/WorkflowFindings/WorkflowFindings.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/WorkflowFindings/WorkflowFindings.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/auth-wrapper/auth-wrapper.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/auth-wrapper/auth-wrapper.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/auth-wrapper/auth-wrapper.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/bar-chart/bar-chart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/bar-chart/bar-chart.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/bar-chart/bar-chart.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/bar-chart/bar-chart.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/line-chart/line-chart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/line-chart/line-chart.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/line-chart/line-chart.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/line-chart/line-chart.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/radar-chart/radar-chart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/radar-chart/radar-chart.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/radar-chart/radar-chart.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/radar-chart/radar-chart.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/score-gauge/score-gauge.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/score-gauge/score-gauge.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/score-gauge/score-gauge.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/score-gauge/score-gauge.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/word-cloud/word-cloud.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/word-cloud/word-cloud.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/word-cloud/word-cloud.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/charts/word-cloud/word-cloud.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/DrawerContent/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/DrawerContent/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/DrawerContent/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/DrawerCore/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/DrawerCore/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/DrawerCore/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/diagnostic-drawer/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ec-canvas/ec-canvas.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ec-canvas/ec-canvas.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ec-canvas/ec-canvas.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ec-canvas/ec-canvas.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ec-canvas/echarts.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/guide-tips/guide-tips.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/guide-tips/guide-tips.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/guide-tips/guide-tips.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/login-prompt/login-prompt.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/login-prompt/login-prompt.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/login-prompt/login-prompt.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/report/question-wall/question-wall.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/report/question-wall/question-wall.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/report/question-wall/question-wall.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/report/question-wall/question-wall.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/report/source-list/source-list.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/report/source-list/source-list.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/report/source-list/source-list.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/report/source-list/source-list.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/constants/brandTest.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/constants/brandTest.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/constants/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/constants/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/constants/taskStatus.js" beforeDir="false" afterPath="$PROJECT_DIR$/brand_ai-seach/constants/taskStatus.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend-polling-optimization.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/getDiagnosisReport/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/cloudfunctions/getDiagnosisReport/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/brand-distribution/brand-distribution.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/brand-distribution/brand-distribution.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/brand-distribution/brand-distribution.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/brand-distribution/brand-distribution.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/keyword-cloud/keyword-cloud.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/keyword-cloud/keyword-cloud.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/keyword-cloud/keyword-cloud.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/keyword-cloud/keyword-cloud.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/sentiment-chart/sentiment-chart.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/sentiment-chart/sentiment-chart.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/sentiment-chart/sentiment-chart.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/sentiment-chart/sentiment-chart.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/components/virtual-list/virtualList.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/components/virtual-list/virtualList.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/config/apiConfig.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/config/apiConfig.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/config/featureFlags.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/config/featureFlags.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/middleware/errorMiddleware.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/middleware/errorMiddleware.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/services/diagnosisService.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/diagnosisService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/services/pollingManager.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/pollingManager.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/services/reportService.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/reportService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/services/webSocketClient.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/services/webSocketClient.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/utils/errorHandler.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/utils/errorHandler.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/utils/retryStrategy.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/utils/retryStrategy.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/miniprogram/utils/uiHelper.js" beforeDir="false" afterPath="$PROJECT_DIR$/miniprogram/utils/uiHelper.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history-detail/history-detail.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history-detail/history-detail.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history-detail/history-detail.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history/history.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history/history.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/history/history.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/pages/history/history.wxss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/personal-history/personal-history.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/personal-history/personal-history.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/public-history/public-history.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/public-history/public-history.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/dashboard/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/detail/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/detail/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/history/history.js" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/history/history.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/report/history/history.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/pages/report/history/history.wxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project.private.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/project.private.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/brandTestService.js" beforeDir="false" afterPath="$PROJECT_DIR$/services/brandTestService.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/store/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/getDiagnosisReport/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/getDiagnosisReport/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/getDiagnosisStatus/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/getDiagnosisStatus/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/getDiagnosisStatus/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/startDiagnosis/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/startDiagnosis/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/startDiagnosis/package-lock.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/cloudfunctions/startDiagnosis/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/brand-distribution/brand-distribution.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/brand-distribution/brand-distribution.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/brand-distribution/brand-distribution.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/brand-distribution/brand-distribution.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-display/error-display.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-display/error-display.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-display/error-display.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-display/error-display.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-toast/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-toast/error-toast.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-toast/error-toast.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-toast/error-toast.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/error-toast/error-toast.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/keyword-cloud/keyword-cloud.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/keyword-cloud/keyword-cloud.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/keyword-cloud/keyword-cloud.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/keyword-cloud/keyword-cloud.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/quality-indicator/quality-indicator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/quality-indicator/quality-indicator.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/quality-indicator/quality-indicator.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/quality-indicator/quality-indicator.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/sentiment-chart/sentiment-chart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/sentiment-chart/sentiment-chart.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/sentiment-chart/sentiment-chart.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/sentiment-chart/sentiment-chart.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/skeleton/skeleton.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/skeleton/skeleton.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/skeleton/skeleton.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/skeleton/skeleton.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/components/virtual-list/virtualList.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/config/apiConfig.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/config/cacheConfig.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/config/featureFlags.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/middleware/errorMiddleware.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/components/ProgressDisplay.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/components/ProgressDisplay.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/components/ProgressDisplay.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/components/ProgressDisplay.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/diagnosis/diagnosis.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/pages/report-v2/report-v2.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/service-worker.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/diagnosisService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/pollingManager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/questionTemplateService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/reportExportService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/reportService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/services/webSocketClient.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/test/polling_optimization.test.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/tests/serviceWorker.test.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/tests/webSocketClient.test.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/types/api.d.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/utils/cacheManager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/utils/errorHandler.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/utils/retryStrategy.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/utils/uiHelper.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/miniprogram/utils/websocketManager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/analytics/analytics.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/analytics/analytics.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/analytics/analytics.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/analytics/analytics.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/audit-logs/audit-logs.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/audit-logs/audit-logs.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/audit-logs/audit-logs.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/audit-logs/audit-logs.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/dashboard/dashboard.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/dashboard/dashboard.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/dashboard/dashboard.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/dashboard/dashboard.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/monitoring-dashboard.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/system/system.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/system/system.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/system/system.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/system/system.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/tests/tests.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/tests/tests.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/tests/tests.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/tests/tests.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/users/users.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/users/users.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/users/users.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/admin/users/users.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/analytics.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/analytics.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/analytics.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/analytics.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/brand-compare/brand-compare.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/brand-compare/brand-compare.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/brand-compare/brand-compare.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/brand-compare/brand-compare.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/brand-dimension/brand-dimension.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/brand-dimension/brand-dimension.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/brand-dimension/brand-dimension.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/brand-dimension/brand-dimension.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/platform-compare/platform-compare.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/platform-compare/platform-compare.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/platform-compare/platform-compare.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/platform-compare/platform-compare.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/question-analysis/question-analysis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/question-analysis/question-analysis.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/question-analysis/question-analysis.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/question-analysis/question-analysis.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/time-dimension/time-dimension.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/time-dimension/time-dimension.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/time-dimension/time-dimension.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/time-dimension/time-dimension.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/trend-analysis/trend-analysis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/trend-analysis/trend-analysis.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/trend-analysis/trend-analysis.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/analytics/trend-analysis/trend-analysis.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/competitive-analysis/competitive-analysis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/competitive-analysis/competitive-analysis.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/competitive-analysis/competitive-analysis.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/competitive-analysis/competitive-analysis.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/config-manager/config-manager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/config-manager/config-manager.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/config-manager/config-manager.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/config-manager/config-manager.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/data-manager/data-manager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/data-manager/data-manager.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/data-manager/data-manager.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/data-manager/data-manager.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/edit-saved-result/edit-saved-result.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/edit-saved-result/edit-saved-result.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/edit-saved-result/edit-saved-result.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/edit-saved-result/edit-saved-result.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/example-brand-test/example-brand-test.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/example-brand-test/example-brand-test.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/example-brand-test/example-brand-test.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/example-brand-test/example-brand-test.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/favorites/favorites.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/favorites/favorites.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/favorites/favorites.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/favorites/favorites.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/history-detail/history-detail.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/history/history.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/history/history.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/history/history.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/history/history.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index.js.bak3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index_副本.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/index/index_副本2.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/login/login.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/login/login.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/login/login.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/login/login.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-index/mvp-index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-index/mvp-index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-index/mvp-index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-index/mvp-index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-platform-selector/mvp-platform-selector.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-platform-selector/mvp-platform-selector.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-platform-selector/mvp-platform-selector.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-platform-selector/mvp-platform-selector.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-results/mvp-results.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-results/mvp-results.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-results/mvp-results.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/mvp-results/mvp-results.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/permission-manager/permission-manager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/permission-manager/permission-manager.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/permission-manager/permission-manager.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/permission-manager/permission-manager.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/personal-history/personal-history.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/personal-history/personal-history.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/personal-history/personal-history.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/personal-history/personal-history.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/public-history/public-history.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/public-history/public-history.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/public-history/public-history.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/public-history/public-history.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/register/register.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/register/register.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/register/register.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/register/register.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/dashboard/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/detail/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/detail/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/detail/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/detail/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/detail/index_p21.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/history.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/history.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/history.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/history.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/history_fixed.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/index.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/index.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/history/index.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/raw-data/raw-data.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/raw-data/raw-data.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/raw-data/raw-data.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/raw-data/raw-data.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/roi-detail/roi-detail.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/roi-detail/roi-detail.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/roi-detail/roi-detail.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/roi-detail/roi-detail.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/source-graph/detail.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/source-graph/detail.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/source-graph/detail.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/report/source-graph/detail.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/saved-results/saved-results.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/saved-results/saved-results.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/saved-results/saved-results.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/saved-results/saved-results.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-guide/user-guide.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-guide/user-guide.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-guide/user-guide.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-guide/user-guide.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-profile/subpages/favorites/favorites.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-profile/subpages/favorites/favorites.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-profile/subpages/favorites/favorites.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-profile/subpages/favorites/favorites.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-profile/user-profile.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-profile/user-profile.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-profile/user-profile.wxml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/user-profile/user-profile.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project.config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project.private.config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/DiagnosisService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/attributionService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/backgroundDiagnosisService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/brand-question-service.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/brandTestService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/cacheIntegration.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/cacheService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/chartDataService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/configService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/dataLoaderService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/dataProcessorService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/dataSanitizer.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/diagnosisApi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/draftService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/homeService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/initService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/mvpService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/navigationService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/pageStateService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/pdfService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/performanceMonitor.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/platformSpecificMVPService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/reportAggregator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/resultDataService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/scoringService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/streamingReportAggregator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/syncService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taskStatusEnums.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/taskStatusService.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/store/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/styles/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/styles/glassmorphism.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/styles/progress-effects.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/styles/transition.wxss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/auth-middleware.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/auth.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/behavior-tracker.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/cache.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/chartRenderer.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/charts.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/config.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/data-sync.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/debug.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/helperUtils.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/inputManager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/lazy-load.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/local-storage.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/logger.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/networkMonitor.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/observer.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/page-transition.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/pdf-export.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/progressManager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/progressNotifier.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/progressValidator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/question-parser.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/radar-chart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/remainingTimeCalculator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/reportParser.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/request.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/safeReport.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/saved-results-sync.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/stageEstimator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/storage-manager.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/storage-validator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/storage.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/taskResultWriter.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/taskWeightProcessor.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/testHelper.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/timeEstimator.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/trend-chart.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/util.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/visual-enhancements.js" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -90,7 +623,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="21148" />
+    <option name="cachedIndexableFilesCount" value="21246" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -143,6 +676,7 @@
     &quot;Flask 服务器.Flask (backend_python/run.py).executor&quot;: &quot;Run&quot;,
     &quot;Python.live.executor&quot;: &quot;Run&quot;,
     &quot;Python.run.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test-doubaoAPI.executor&quot;: &quot;Run&quot;,
     &quot;Python.view_database.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
@@ -160,6 +694,11 @@
     &quot;wxn.project&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/brand_ai-seach" />
+    </key>
+  </component>
   <component name="RunManager" selected="Python.run.py">
     <configuration name="live" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PythonProject" />
@@ -210,6 +749,29 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="test-doubaoAPI" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PythonProject" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tests/test-doubaoAPI.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="view_database" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PythonProject" />
       <option name="ENV_FILES" value="" />
@@ -235,6 +797,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.test-doubaoAPI" />
         <item itemvalue="Python.view_database" />
         <item itemvalue="Python.live" />
       </list>

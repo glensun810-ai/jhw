@@ -130,12 +130,15 @@ class DeepSeekProvider(BaseAIProvider):
             content = ""
             reasoning_content = ""
             usage = {}
+            request_id = ""
+            finish_reason = ""
             choices = response_data.get("choices", [])
 
             if choices:
                 choice = choices[0]
                 message = choice.get("message", {})
                 content = message.get("content", "")
+                finish_reason = choice.get("finish_reason", "")
 
                 # 尝试提取推理链内容（如果 DeepSeek R1 支持）
                 if self.enable_reasoning_extraction:
@@ -144,6 +147,9 @@ class DeepSeekProvider(BaseAIProvider):
                     reasoning_content = self._extract_reasoning_content(choice, response_data)
 
             usage = response_data.get("usage", {})
+            
+            # 提取 request_id（从响应头或响应体）
+            request_id = response_data.get("id", "") or response.headers.get("x-request-id", "")
 
             # 返回成功的响应，包含推理链信息
             return {
@@ -155,6 +161,19 @@ class DeepSeekProvider(BaseAIProvider):
                 'raw_response': response_data,
                 'reasoning_content': reasoning_content,  # 推理链内容
                 'has_reasoning': bool(reasoning_content),  # 是否包含推理内容
+                'request_id': request_id,  # 【P1 新增】请求 ID
+                'finish_reason': finish_reason,  # 【P1 新增】完成原因
+                'model_version': response_data.get("model", ""),  # 【P1 新增】模型版本
+                'metadata': {  # 【P1 新增】统一 metadata 格式
+                    'request_id': request_id,
+                    'reasoning_content': reasoning_content,
+                    'finish_reason': finish_reason,
+                    'model_version': response_data.get("model", ""),
+                    'prompt_tokens': usage.get("prompt_tokens", 0),
+                    'completion_tokens': usage.get("completion_tokens", 0),
+                    'total_tokens': usage.get("total_tokens", 0),
+                    'cached_tokens': usage.get("prompt_tokens_details", {}).get("cached_tokens", 0)
+                },
                 'success': True
             }
 
